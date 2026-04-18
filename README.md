@@ -1,222 +1,190 @@
 # hyper-code2
 
-Процедурный TypeScript для AI-агента: функции, данные, REPL. Никаких классов, DI, middleware-цепочек.
+A self-extending AI agent server on Bun. ~1000 LOC, one tool (`evalCode`), procedural TypeScript.
 
-Вдохновлено [proc-ts](../proc-ts/README.md), приспособлено под Bun и типизацию через автогенерацию `ctx_ns.d.ts`.
+## What it is
 
-## Быстрый старт
+A tiny HTTP server that hosts a chat-driven agent at `/`. The agent has **exactly one tool** — `evalCode` — which runs JavaScript in the same Bun process. Through that single tool, the agent can:
 
-```bash
-bun install
-tmux new-session -d -s hyper 'bun src/\$main.ts'
-bun script/repl.ts '1 + 1'                        # → { success: true, result: 2 }
-curl http://localhost:3000/                        # → index.html
+- Compute anything (math, data processing, crypto, compression, …) via the Bun runtime.
+- Talk to the network (`fetch`), the disk (`Bun.file` / `Bun.write`), the shell (`` Bun.$ ``), databases (`bun:sqlite`, `Bun.sql`, `Bun.redis`), S3, etc.
+- **Read its own source code** (`Bun.file("src/agent/run.ts").text()`).
+- **Write new procedures** to `.hyper/<module>/<fn>.ts` and hot-reload them into the live runtime — no restart.
+- Add new HTTP routes on the fly (`$route_*.ts` → dynamic dispatch).
+- Mutate its own state, messages, tools, system prompt between turns.
+- Stash working data in `agent.scratchpad` so big payloads never pollute the LLM context.
+- Compact its own history (`ctx.fns.agent.compact(ctx, agent, …)`) when tool results grow too large.
+
+The philosophy: give the model a full programming language + the running process as its "tool set", and let it extend itself.
+
+## Architecture in one picture
+
+```
+Browser (chat UI)  ──POST /agent──▶  run loop  ──▶  LM Studio /v1/chat/completions
+     ▲                                  │
+     │                                  ▼  tool_calls → evalCode
+     │                             ┌────────────┐
+     └──GET /agent?offset=N────────┤ agent.events│
+                                   │ agent.messages
+                                   │ agent.scratchpad
+                                   └────────────┘
 ```
 
-Порт пишется в `.hyper/port` при старте — `script/repl.ts` читает его оттуда.
+- **Single file per function.** Folder = namespace. `src/<mod>/<fn>.ts` → `ctx.fns.<mod>.<fn>`. Inspired by [proc-ts](https://github.com/niquola/proc-ts).
+- **Global types** auto-generated from the filesystem into `src/ctx_ns.d.ts`. No imports of `Context`, `types.agent.Agent` needed anywhere.
+- **Dynamic routing.** `Bun.serve` with a single `fetch` handler that matches against a mutable `ctx.routes`. New routes take effect on the next request — no `server.reload()`, no restart.
+- **Stateless LLM protocol.** Each turn sends the full `messages[]` to LM Studio with a `prompt_cache_key` for prefix-cache. We do NOT use `previous_response_id` — that caused runaway context growth with minimax's reasoning tokens.
+- **Hot-reload.** `ctx.fns.repl.load(ctx, "<mod>")` re-imports a file with cache-busting, replaces the fn in `ctx.fns` — the rest of the process keeps running.
+- **`.hyper/` extension point.** Gitignored sibling of `src/` loaded by the same scanners. Where the agent writes its own code.
 
-## Конвенции
-
-### Функции — одна функция на файл
-
-```
-src/
-  db/
-    $start.ts           → ctx.fns.db.start(ctx)
-    query.ts            → ctx.fns.db.query(ctx, sql)
-    execute.ts          → ctx.fns.db.execute(ctx, sql)
-  server/
-    $start.ts           → ctx.fns.server.start(ctx)
-    match.ts            → ctx.fns.server.match(routes, method, pathname)
-  genTypes.ts           → ctx.genTypes(ctx)           # корневой файл → ctx.<name>
-  $main.ts              # entrypoint, не попадает в ctx
-```
-
-- `<module>/<fn>.ts` → `ctx.fns.<module>.<fn>`
-- `<fn>.ts` в корне → `ctx.<fn>`
-- Префикс `$` в имени файла отрезается (`$start.ts` → `ctx.fns.<mod>.start`)
-- `export default` — **без имени функции**: `export default async function (ctx: Context) { ... }`
-
-### Routes — через файловую конвенцию
-
-`<module>/$route_<path>_<METHOD>.ts`, где `_` = `/`, `$x` = `:x`.
-
-| Файл | Route |
-|------|-------|
-| `src/$route_GET.ts` | `GET /` |
-| `src/repl/$route__POST.ts` | `POST /repl` |
-| `src/ping/$route_$id_GET.ts` | `GET /ping/:id` |
-
-Handler: `export default async function (ctx: Context, session: any, req: Request) { ... }`
-Параметры пути — в `req.params`.
-
-Routes собирает `ctx.fns.http.loadRoutes(ctx)` в `ctx.routes: { [path]: { [METHOD]: handler } }`.
-
-### Типы — глобальные, через `$type_` + автогенерацию
-
-Типы пишутся в файлах `$type_<Name>.ts` и автоматически появляются в глобальном пространстве имён:
-
-- `src/$type_Context.ts` → глобальный `Context`
-- `src/<module>/$type_<Name>.ts` → `types.<module>.<Name>`
-
-```ts
-// src/session/$type_Session.ts
-export type Session = {
-    id: string;
-    options: types.session.SessionOptions;       // из session/$type_SessionOptions.ts
-};
-```
-
-Функция `ctx.genTypes(ctx)` сканирует `**/$type_*.ts` + все файлы функций и генерит `src/ctx_ns.d.ts`:
-
-```ts
-declare global {
-    type Context = import("./$type_Context").Context;
-
-    interface FnsRegistry {
-        db: {
-            start: typeof import("./db/$start").default;
-            query: typeof import("./db/query").default;
-            execute: typeof import("./db/execute").default;
-        };
-        // ...
-    }
-    interface RootFns {
-        genTypes: typeof import("./genTypes").default;
-    }
-    namespace types {
-        namespace session {
-            type Session = import("./session/$type_Session").Session;
-            type SessionOptions = import("./session/$type_SessionOptions").SessionOptions;
-        }
-    }
-}
-export {};
-```
-
-А `$type_Context.ts` композится из сгенерированных интерфейсов:
-
-```ts
-export type Context = RootFns & {
-    env: Record<string, string | undefined>;
-    state: Record<string, any>;
-    routes: Record<string, Record<string, Function>>;
-    fns: FnsRegistry;
-};
-```
-
-Итог:
-- Все функции пишутся с `(ctx: Context, ...)` — без импортов
-- Опечатка `ctx.fns.ups` → compile error
-- `ctx.fns.db.query` — полная сигнатура из реального файла
-- `types.session.Session` — доступен глобально
-
-### Динамический роутинг
-
-Сервер использует `Bun.serve({ fetch })` вместо `Bun.serve({ routes })`:
-
-```ts
-async fetch(req) {
-    const url = new URL(req.url);
-    const m = ctx.fns.server.match(ctx.routes, req.method, url.pathname);
-    if (!m) return new Response("Not Found", { status: 404 });
-    (req as any).params = m.params;
-    return m.handler(ctx, null, req);
-}
-```
-
-Мутации `ctx.routes` подхватываются на следующем запросе — `server.reload()` не нужен. Цена — линейный матчер (`server/match.ts`) вместо нативного uWebSocket-дерева Bun-а. На десятках роутов разницы нет.
-
-## REPL-воркфлоу
-
-Сервер держит state между изменениями. Код вычисляется внутри процесса.
-
-```bash
-# произвольный код — единственный биндинг это ctx
-bun script/repl.ts '1 + 1'
-bun script/repl.ts 'Object.keys(ctx.fns)'
-bun script/repl.ts 'await ctx.fns.db.query(ctx, "SELECT 1")'
-
-# горячая перезагрузка функций
-bun script/repl.ts 'await ctx.fns.repl.load(ctx, "db.query")'    # одна функция
-bun script/repl.ts 'await ctx.fns.repl.load(ctx, "db")'          # вся папка
-
-# добавить route на лету (без файла)
-bun script/repl.ts 'ctx.routes["/foo"] = { GET: () => new Response("hi") }; return "ok"'
-```
-
-После изменения структуры файлов (новый модуль/функция/тип) — регенерируй типы:
-
-```bash
-bun script/repl.ts 'return await ctx.genTypes(ctx)'
-```
-
-## Entrypoint
-
-`src/$main.ts` делает один проход:
-
-```ts
-const ctx = { env, state: {}, fns: {}, routes: {} } as Context;
-await loadFns(ctx);             // src/**/*.ts → ctx.fns.*.* и ctx.*
-await ctx.genTypes(ctx);        // регенерация src/ctx_ns.d.ts
-await ctx.fns.http.loadRoutes(ctx);  // src/**/$route_*.ts → ctx.routes
-await ctx.fns.server.start(ctx);     // Bun.serve с fetch → ctx.fns.server.match
-```
-
-## Тесты
-
-```bash
-bun test                                    # все тесты
-bun test ./src/repl/\$test.ts               # один файл
-```
-
-## Type-check
-
-```bash
-bunx tsc --noEmit
-```
-
-- `ctx.fns.boom` → error (нет в `FnsRegistry`)
-- `ctx.fns.db.bum` → error (нет в `db`)
-- `ctx.fns.db.query(ctx, 123)` → error (`query` ожидает `string`)
-
-## Что НЕ используем
-
-- Никакого `import { ... } from "..."` между модулями — всё через `ctx`
-- Никаких классов, DI-контейнеров, middleware-цепочек
-- `export default` — **без имён функций**
-- `Bun.serve({ routes: ... })` — взамен `fetch` + свой matcher для динамики
-
-## Архитектура
+## Layout
 
 ```
 src/
-  $main.ts              — entrypoint: load fns → genTypes → loadRoutes → server.start
-  $route_GET.ts         — GET /
-  $type_Context.ts      — глобальный Context
-  genTypes.ts           — ctx.genTypes: сканит src, генерит ctx_ns.d.ts
-  ctx_ns.d.ts           — АВТОГЕН: FnsRegistry, RootFns, types.*
+  $main.ts              entry: loadFns → genTypes → loadRoutes → http.start
+  $route_GET.ts         GET /  — Tailwind-powered chat UI
+  $type_Context.ts      global Context type
+  genTypes.ts           scans src/ + .hyper/ → writes ctx_ns.d.ts
+  ctx_ns.d.ts           AUTO-GENERATED — never edit
 
-  db/
-    $start.ts / query.ts / execute.ts
+  agent/                ctx.fns.agent.*
+    SYSTEM_PROMPT.md    agent behavior, editable in place
+    start / stream / run / compact / clear / stop / systemPrompt
+    $type_Agent.ts      types.agent.Agent
+    $route_*.ts         POST/GET/DELETE /agent, POST /agent/stop
 
-  server/
-    $start.ts           — Bun.serve с dynamic dispatch через server.match
-    match.ts            — линейный matcher path + params
+  markdown/             ctx.fns.markdown.*
+    render.ts           Bun.markdown.html + shiki post-processing
+    highlight.ts        shiki wrapper, lazy-init
 
-  http/
-    loadRoutes.ts       — сканит $route_*.ts → ctx.routes
+  repl/                 ctx.fns.repl.*
+    eval.ts             new Function("ctx", ...) + extra bindings
+    load.ts             hot-reload a fn or a folder (src/ and .hyper/)
+    $route__POST.ts     POST /repl — exposes eval over HTTP
 
-  repl/
-    eval.ts             — new Function("ctx", code), expression | statement
-    load.ts             — горячая перезагрузка функции / папки
-    $route__POST.ts     — POST /repl
-    $test.ts            — test для eval
+  http/                 ctx.fns.http.*
+    $start.ts           Bun.serve with dynamic dispatch
+    match.ts            path matcher (static + :params)
+    loadRoutes.ts       scans $route_*.ts files into ctx.routes
 
-  session/
-    start.ts / save.ts
-    $type_Session.ts / $type_SessionOptions.ts
+.hyper/                 runtime-writable, gitignored
+  port                  server writes current port here
+  <agent-generated>/    whatever the agent decides to add
 
 script/
-  repl.ts               — CLI клиент: читает .hyper/port, шлёт POST /repl
+  repl.ts               CLI: sends JS to POST /repl, reads .hyper/port
 ```
+
+## The one tool: `evalCode`
+
+```json
+{
+  "name": "evalCode",
+  "description": "Execute a JavaScript expression or statements. Returns the serialized result.",
+  "parameters": {
+    "type": "object",
+    "properties": { "code": { "type": "string" } },
+    "required": ["code"]
+  }
+}
+```
+
+When the model emits a tool call with this name, `src/agent/run.ts` passes `args.code` to `ctx.fns.repl.eval` with two bindings in scope: **`ctx`** (the runtime) and **`agent`** (the agent's live state). Everything else — Bun APIs, `fetch`, `crypto`, dynamic imports — is just the ambient Bun runtime.
+
+Typical agent turn:
+
+```js
+// model emits:
+ctx.fns.markdown.render(ctx, "## heading\n- a\n- b")
+// result is serialized (Bun.inspect), returned to the model as the tool result
+```
+
+Bigger example — agent extending itself:
+
+```js
+// Turn 1: write a new skill
+await Bun.write(".hyper/skill/wordCount.ts", [
+  "export default async function (ctx: Context, text: string) {",
+  "    return { words: text.trim().split(/\\s+/).filter(Boolean).length, chars: text.length, lines: text.split('\\n').length };",
+  "}",
+].join("\n"));
+
+// Turn 2: hot-load + regen types
+await ctx.fns.repl.load(ctx, "skill");
+await ctx.genTypes(ctx);
+
+// Turn 3: use it
+await ctx.fns.skill.wordCount(ctx, "The quick brown fox jumps over the lazy dog");
+// → { words: 9, chars: 43, lines: 1 }
+```
+
+## Context economy
+
+The full `agent.messages` ships to the model every turn. Rules baked into `SYSTEM_PROMPT.md`:
+
+- **Peek at shape first** — `({ keys: Object.keys(x), len: x?.length })` before returning the whole payload.
+- **Stash in `agent.scratchpad`** — a plain object the model can read/write across turns but that is NOT sent to the LLM. Use for fetched JSON, intermediate results, plans, caches.
+- **Compact after the fact** — `ctx.fns.agent.compact(ctx, agent, "summary")` rewrites the last tool result in place. Or `compact(ctx, agent, { message: 5, summary: "…" })` drops everything from index 5 onward and replaces it with a synthetic user note (walks back if it would orphan a tool call).
+
+## Quick start
+
+```bash
+# 1. install
+bun install
+
+# 2. point at LM Studio (or any OpenAI-compatible endpoint with tool calling)
+cp .env.test .env   # LMSTUDIO_URL=http://localhost:1234, MODEL=minimax/minimax-m2.7
+
+# 3. run
+tmux new-session -d -s hyper 'bun src/$main.ts'
+
+# 4. chat
+open http://localhost:3000/
+```
+
+## REPL workflow
+
+The server stays up. Everything iterates without restart:
+
+```bash
+bun script/repl.ts '1 + 1'                                      # quick eval
+bun script/repl.ts 'return Object.keys(ctx.fns)'                # introspect
+bun script/repl.ts -f /tmp/play.js                              # from file
+echo 'return ctx.state' | bun script/repl.ts                    # stdin
+
+bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent")'      # reload folder
+bun script/repl.ts 'return await ctx.genTypes(ctx)'             # regen types
+bun script/repl.ts 'return await ctx.fns.http.loadRoutes(ctx)'  # rescan routes
+```
+
+## Testing
+
+```bash
+bun test              # all tests (bun:test auto-discovers *.test.ts)
+bunx tsc --noEmit     # type check — must be clean
+```
+
+Integration tests for `agent/stream.ts` and `agent/run.ts` hit real LM Studio when `LMSTUDIO_URL` is set (via `.env.test`, auto-loaded by `bun test`).
+
+## Why "procedural, not OO"
+
+Inspired by [proc-ts](https://github.com/niquola/proc-ts). Consequences:
+
+- **One file, one function, anonymous default export.** No classes, no base abstractions, no DI containers.
+- **No cross-imports of project files.** Call other procedures via `ctx.fns.<ns>.<fn>(ctx, …)`. This is what makes hot-reload actually work: swapping a file in `ctx.fns` updates every call site instantly.
+- **Types live next to code in `$type_*.ts` files.** Scanned into a single generated `ctx_ns.d.ts` with `declare global` — no imports of `Context`, `types.agent.Agent` at usage sites.
+- **`$`-prefixed filenames carry intent:** `$main.ts` is the entry; `$start.ts` is a conventional lifecycle fn; `$route_<path>_<METHOD>.ts` is an HTTP route (`_` = `/`, `$foo` = `:foo`); `$type_<Name>.ts` is a type. Everything else is a plain function.
+
+This style is deliberately biased: optimized for an LLM-agent-driven codebase where the agent reads, writes, and hot-reloads files by itself.
+
+## What's not here (by design)
+
+- No build step. Bun runs TS directly.
+- No framework (no Express, no Next.js, no Vite). `Bun.serve`, `Bun.file`, `Bun.markdown`, `bun:test` cover everything.
+- No npm equivalents where a Bun built-in exists.
+- No streaming tokens to the UI yet — `/agent` returns immediately, the UI polls `GET /agent?offset=N`. This is enough for a usable chat and avoids a WebSocket layer.
+- No multi-agent orchestration (yet). One agent at `ctx.state.agent.default`.
+
+## License
+
+MIT.

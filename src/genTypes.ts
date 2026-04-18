@@ -3,39 +3,45 @@ import { resolve, dirname, basename } from "node:path";
 
 export default async function (_ctx: Context) {
     const srcDir = import.meta.dir;
+    const hyperDir = resolve(srcDir, "..", ".hyper");
 
     const globals: string[] = [];
     const typesByModule: Record<string, string[]> = {};
     const fnsByModule: Record<string, string[]> = {};
     const rootFns: string[] = [];
 
-    const glob = new Glob("**/*.ts");
-    for await (const file of glob.scan(srcDir)) {
-        if (shouldSkip(file)) continue;
-        const moduleDir = dirname(file);
-        const fileName = basename(file, ".ts");
-        const importPath = "./" + file.slice(0, -".ts".length);
+    for (const root of [srcDir, hyperDir]) {
+        const exists = await Bun.file(root).stat().then(() => true).catch(() => false);
+        if (!exists) continue;
+        const importPrefix = root === hyperDir ? "../.hyper/" : "./";
+        const glob = new Glob("**/*.ts");
+        for await (const file of glob.scan(root)) {
+            if (shouldSkip(file)) continue;
+            const moduleDir = dirname(file);
+            const fileName = basename(file, ".ts");
+            const importPath = importPrefix + file.slice(0, -".ts".length);
 
-        if (fileName.startsWith("$type_")) {
-            const typeName = fileName.slice("$type_".length);
-            if (!typeName) continue;
-            const line = `type ${typeName} = import("${importPath}").${typeName};`;
-            if (moduleDir === ".") {
-                globals.push(`    ${line}`);
-            } else {
-                typesByModule[moduleDir] = typesByModule[moduleDir] || [];
-                typesByModule[moduleDir].push(`            ${line}`);
+            if (fileName.startsWith("$type_")) {
+                const typeName = fileName.slice("$type_".length);
+                if (!typeName) continue;
+                const line = `type ${typeName} = import("${importPath}").${typeName};`;
+                if (moduleDir === ".") {
+                    globals.push(`    ${line}`);
+                } else {
+                    typesByModule[moduleDir] = typesByModule[moduleDir] || [];
+                    typesByModule[moduleDir].push(`            ${line}`);
+                }
+                continue;
             }
-            continue;
-        }
 
-        const fnName = fileName.startsWith("$") ? fileName.slice(1) : fileName;
-        const entry = `${fnName}: typeof import("${importPath}").default;`;
-        if (moduleDir === ".") {
-            rootFns.push(`    ${entry}`);
-        } else {
-            fnsByModule[moduleDir] = fnsByModule[moduleDir] || [];
-            fnsByModule[moduleDir].push(`        ${entry}`);
+            const fnName = fileName.startsWith("$") ? fileName.slice(1) : fileName;
+            const entry = `${fnName}: typeof import("${importPath}").default;`;
+            if (moduleDir === ".") {
+                rootFns.push(`    ${entry}`);
+            } else {
+                fnsByModule[moduleDir] = fnsByModule[moduleDir] || [];
+                fnsByModule[moduleDir].push(`        ${entry}`);
+            }
         }
     }
 

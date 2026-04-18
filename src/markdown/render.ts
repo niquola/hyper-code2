@@ -11,7 +11,7 @@ export default async function (ctx: Context, text: string): Promise<string> {
     const replacements: Array<{ full: string; pretty: string }> = [];
     for (const m of html.matchAll(re)) {
         const [full, lang, raw] = m;
-        const pretty = await ctx.fns.agent.highlight(ctx, decode(raw!), lang!);
+        const pretty = await ctx.fns.markdown.highlight(ctx, decode(raw!), lang!);
         replacements.push({ full: full!, pretty });
     }
     for (const { full, pretty } of replacements) html = html.replace(full, pretty);

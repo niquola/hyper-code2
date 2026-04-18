@@ -5,41 +5,34 @@ const METHODS = new Set(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIO
 
 export default async function (ctx: Context) {
     const srcDir = resolve(import.meta.dir, "..");
-    const glob = new Glob("**/$route_*.ts");
-
+    const hyperDir = resolve(srcDir, "..", ".hyper");
     ctx.routes = ctx.routes || {};
-
-    for await (const file of glob.scan(srcDir)) {
-        const abs = resolve(srcDir, file);
-        const rel = relative(srcDir, abs);
-        const moduleDir = dirname(rel);
-        const fileName = basename(rel, ".ts");
-
-        const parsed = parseRouteFile(fileName);
-        if (!parsed) {
-            console.warn(`[routes] skip (bad name): ${rel}`);
-            continue;
+    for (const root of [srcDir, hyperDir]) {
+        const exists = await Bun.file(root).stat().then(() => true).catch(() => false);
+        if (!exists) continue;
+        const label = root === hyperDir ? ".hyper" : "src";
+        const glob = new Glob("**/$route_*.ts");
+        for await (const file of glob.scan(root)) {
+            const abs = resolve(root, file);
+            const rel = relative(root, abs);
+            const moduleDir = dirname(rel);
+            const fileName = basename(rel, ".ts");
+            const parsed = parseRouteFile(fileName);
+            if (!parsed) { console.warn(`[routes] skip (bad name): ${label}/${rel}`); continue; }
+            const { pathParts, method } = parsed;
+            const moduleSegments = moduleDir === "." ? [] : moduleDir.split("/");
+            const allSegments = [...moduleSegments, ...pathParts]
+                .filter(s => s.length > 0)
+                .map(s => s.startsWith("$") ? `:${s.slice(1)}` : s);
+            const routePath = "/" + allSegments.join("/");
+            const mod = await import(abs + `?t=${Date.now()}`);
+            const handler = mod.default;
+            if (typeof handler !== "function") { console.warn(`[routes] skip (no default export): ${label}/${rel}`); continue; }
+            ctx.routes[routePath] = ctx.routes[routePath] || {};
+            ctx.routes[routePath][method] = handler;
+            console.log(`[routes] ${method.padEnd(6)} ${routePath}  ←  ${label}/${rel}`);
         }
-        const { pathParts, method } = parsed;
-
-        const moduleSegments = moduleDir === "." ? [] : moduleDir.split("/");
-        const allSegments = [...moduleSegments, ...pathParts]
-            .filter(s => s.length > 0)
-            .map(s => s.startsWith("$") ? `:${s.slice(1)}` : s);
-        const routePath = "/" + allSegments.join("/");
-
-        const mod = await import(abs + `?t=${Date.now()}`);
-        const handler = mod.default;
-        if (typeof handler !== "function") {
-            console.warn(`[routes] skip (no default export): ${rel}`);
-            continue;
-        }
-
-        ctx.routes[routePath] = ctx.routes[routePath] || {};
-        ctx.routes[routePath][method] = handler;
-        console.log(`[routes] ${method.padEnd(6)} ${routePath}  ←  ${rel}`);
     }
-
     return ctx.routes;
 }
 

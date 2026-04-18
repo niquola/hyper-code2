@@ -12,38 +12,40 @@ export default async function () {
     await loadFns(ctx);
     await ctx.genTypes(ctx);
     await ctx.fns.http.loadRoutes(ctx);
-    await ctx.fns.server.start(ctx);
+    await ctx.fns.http.start(ctx);
     return ctx;
 }
 
 async function loadFns(ctx: Context) {
     const srcDir = resolve(import.meta.dir);
-    const glob = new Glob("**/*.ts");
-
-    for await (const file of glob.scan(srcDir)) {
-        if (!shouldLoadFn(file)) continue;
-
-        const abs = resolve(srcDir, file);
-        const mod = await import(abs + `?t=${Date.now()}`);
-        const fn = mod.default;
-        if (typeof fn !== "function") continue;
-
-        const rawName = basename(file, ".ts");
-        const fnName = rawName.startsWith("$") ? rawName.slice(1) : rawName;
-        const modDir = dirname(file);
-
-        if (modDir === ".") {
-            (ctx as any)[fnName] = fn;
-            console.log(`[fns] ctx.${fnName}  ←  ${file}`);
-        } else {
-            const segments = modDir.split("/");
-            let target: any = ctx.fns;
-            for (const seg of segments) {
-                target[seg] = target[seg] || {};
-                target = target[seg];
+    const hyperDir = resolve(import.meta.dir, "..", ".hyper");
+    for (const root of [srcDir, hyperDir]) {
+        const exists = await Bun.file(root).stat().then(() => true).catch(() => false);
+        if (!exists) continue;
+        const label = root === hyperDir ? ".hyper" : "src";
+        const glob = new Glob("**/*.ts");
+        for await (const file of glob.scan(root)) {
+            if (!shouldLoadFn(file)) continue;
+            const abs = resolve(root, file);
+            const mod = await import(abs + `?t=${Date.now()}`);
+            const fn = mod.default;
+            if (typeof fn !== "function") continue;
+            const rawName = basename(file, ".ts");
+            const fnName = rawName.startsWith("$") ? rawName.slice(1) : rawName;
+            const modDir = dirname(file);
+            if (modDir === ".") {
+                (ctx as any)[fnName] = fn;
+                console.log(`[fns] ctx.${fnName}  ←  ${label}/${file}`);
+            } else {
+                const segments = modDir.split("/");
+                let target: any = ctx.fns;
+                for (const seg of segments) {
+                    target[seg] = target[seg] || {};
+                    target = target[seg];
+                }
+                target[fnName] = fn;
+                console.log(`[fns] ctx.fns.${segments.join(".")}.${fnName}  ←  ${label}/${file}`);
             }
-            target[fnName] = fn;
-            console.log(`[fns] ctx.fns.${segments.join(".")}.${fnName}  ←  ${file}`);
         }
     }
 }

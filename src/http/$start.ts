@@ -6,7 +6,7 @@ export default async function (ctx: Context) {
         hostname: "0.0.0.0",
         async fetch(req) {
             const url = new URL(req.url);
-            const m = ctx.fns.server.match(ctx.routes, req.method, url.pathname);
+            const m = ctx.fns.http.match(ctx.routes, req.method, url.pathname);
             if (!m) return new Response("Not Found", { status: 404 });
             (req as any).params = m.params;
             return m.handler(ctx, null, req);

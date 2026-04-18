@@ -6,8 +6,6 @@ declare global {
         agent: {
         clear: typeof import("./agent/clear").default;
         compact: typeof import("./agent/compact").default;
-        highlight: typeof import("./agent/highlight").default;
-        renderMarkdown: typeof import("./agent/renderMarkdown").default;
         run: typeof import("./agent/run").default;
         start: typeof import("./agent/start").default;
         stop: typeof import("./agent/stop").default;
@@ -21,15 +19,32 @@ declare global {
         };
         http: {
         loadRoutes: typeof import("./http/loadRoutes").default;
+        match: typeof import("./http/match").default;
+        start: typeof import("./http/$start").default;
+        };
+        markdown: {
+        highlight: typeof import("./markdown/highlight").default;
+        render: typeof import("./markdown/render").default;
+        };
+        memory: {
+        delete: typeof import("../.hyper/memory/delete").default;
+        init: typeof import("../.hyper/memory/init").default;
+        read: typeof import("../.hyper/memory/read").default;
+        search: typeof import("../.hyper/memory/search").default;
+        store: typeof import("../.hyper/memory/store").default;
         };
         repl: {
         eval: typeof import("./repl/eval").default;
         load: typeof import("./repl/load").default;
         start: typeof import("./repl/$start").default;
         };
-        server: {
-        match: typeof import("./server/match").default;
-        start: typeof import("./server/$start").default;
+        skill: {
+        hello: typeof import("../.hyper/skill/hello").default;
+        wordCount: typeof import("../.hyper/skill/wordCount").default;
+        };
+        tools: {
+        dice: typeof import("../.hyper/tools/dice").default;
+        password: typeof import("../.hyper/tools/password").default;
         };
     }
 
@@ -40,6 +55,13 @@ declare global {
     namespace types {
         namespace agent {
             type Agent = import("./agent/$type_Agent").Agent;
+        }
+        namespace memory {
+            type Entry = import("../.hyper/memory/$type_Entry").Entry;
+        }
+        namespace tools {
+            type DiceOpts = import("../.hyper/tools/$type_DiceOpts").DiceOpts;
+            type PasswordOpts = import("../.hyper/tools/$type_PasswordOpts").PasswordOpts;
         }
     }
 }

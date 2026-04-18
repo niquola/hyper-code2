@@ -2,8 +2,8 @@ import { test, expect, describe } from "bun:test";
 import start from "./start";
 import stream from "./stream";
 import run from "./run";
-import highlight from "./highlight";
-import renderMarkdown from "./renderMarkdown";
+import highlight from "../markdown/highlight";
+import render from "../markdown/render";
 import evalFn from "../repl/eval";
 
 const evalCodeTool = {
@@ -20,7 +20,8 @@ const mkCtx = () => ({
     state: {},
     env: { LMSTUDIO_URL: process.env.LMSTUDIO_URL, MODEL: process.env.MODEL },
     fns: {
-        agent: { stream, highlight, renderMarkdown },
+        agent: { stream },
+        markdown: { highlight, render },
         repl: { eval: evalFn },
     },
 } as unknown as Context);

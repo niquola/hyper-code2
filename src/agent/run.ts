@@ -3,10 +3,10 @@ async function highlightResult(ctx: Context, output: string): Promise<string> {
     if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
         try {
             const pretty = JSON.stringify(JSON.parse(trimmed), null, 2);
-            return await ctx.fns.agent.highlight(ctx, pretty, "json");
+            return await ctx.fns.markdown.highlight(ctx, pretty, "json");
         } catch { /* not JSON */ }
     }
-    return await ctx.fns.agent.highlight(ctx, output, "javascript");
+    return await ctx.fns.markdown.highlight(ctx, output, "javascript");
 }
 
 export default async function (ctx: Context, agent: types.agent.Agent, userText: string) {
@@ -32,7 +32,7 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
         agent.messages.push(assistantMsg);
 
         if (toolCalls.length === 0) {
-            const html = await ctx.fns.agent.renderMarkdown(ctx, text);
+            const html = await ctx.fns.markdown.render(ctx, text);
             agent.events.push({ type: "assistant", text, html, usage });
             return { text, usage };
         }
@@ -55,8 +55,8 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
                 isError = true;
             }
             const argsHtml = tc.name === "evalCode" && typeof args?.code === "string"
-                ? await ctx.fns.agent.highlight(ctx, args.code, "ts")
-                : await ctx.fns.agent.highlight(ctx, JSON.stringify(args, null, 2), "json");
+                ? await ctx.fns.markdown.highlight(ctx, args.code, "ts")
+                : await ctx.fns.markdown.highlight(ctx, JSON.stringify(args, null, 2), "json");
             const resultHtml = await highlightResult(ctx, output);
             agent.events.push({ type: "tool_call", name: tc.name, args, result: output, argsHtml, resultHtml, isError });
             agent.messages.push({ role: "tool", tool_call_id: tc.id, content: output });

@@ -1,111 +1,155 @@
 ---
-description: Use Bun instead of Node.js, npm, pnpm, or vite.
-globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
-alwaysApply: false
+description: hyper-code2 — procedural Bun codebase with a self-extending agent at `/`.
+alwaysApply: true
 ---
 
-Default to using Bun instead of Node.js.
+# hyper-code2
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
+Procedural TypeScript on Bun. Functions + data + REPL. Inspired by [proc-ts](../proc-ts). One tiny HTTP server, one agent at `/` driven by `evalCode` only, all code hot-reloadable.
 
-## APIs
+## Runtime environment
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+- **Bun, not Node.js.** Use `bun`, `bun test`, `bun install`, `bunx`, `bun build`. `.env` loads automatically.
+- Prefer Bun built-ins over npm packages:
+  - `Bun.serve()`, `Bun.file()`, `Bun.write()`, `Bun.$` shell, `Bun.Glob`, `Bun.spawn`, `Bun.hash`, `Bun.CryptoHasher`, `Bun.password`, `Bun.TOML.parse`, `Bun.gzipSync`, `Bun.randomUUIDv7`, `Bun.inspect`, `Bun.markdown.html`.
+  - `bun:sqlite`, `Bun.sql` (Postgres), `Bun.redis`, `Bun.s3()`.
+- Tests: `bun:test` — Jest-compatible. Filename must match `*.test.ts` for auto-discovery. `.env.test` loads automatically when `NODE_ENV=test` (bun test sets this).
 
-## Testing
+## Architecture: procedural ctx.fns
 
-Use `bun test` to run tests.
+**One function per file. Folder = namespace.** Files are loaded into `ctx.fns.<module>.<fn>`.
 
-```ts#index.test.ts
-import { test, expect } from "bun:test";
+```
+src/
+  $main.ts                 entry: loadFns → genTypes → loadRoutes → server.start
+  $type_Context.ts         global `Context` type
+  ctx_ns.d.ts              AUTO-GEN — FnsRegistry, RootFns, types.*
+  genTypes.ts              ctx.genTypes — rescans src/ + .hyper/, writes ctx_ns.d.ts
+  $route_GET.ts            GET /  (single-page chat UI)
 
-test("hello world", () => {
-  expect(1).toBe(1);
-});
+  agent/                   ctx.fns.agent.* — the agent runtime
+    SYSTEM_PROMPT.md       editable prompt (authoritative)
+    $type_Agent.ts
+    start / stream / run / compact / clear / stop / systemPrompt
+    renderMarkdown / highlight
+    $route_*.ts            HTTP: POST/GET/DELETE /agent, POST /agent/stop
+
+  repl/                    ctx.fns.repl.*
+    eval.ts                new Function("ctx", ...) + extra bindings
+    load.ts                hot-reload a fn or folder from src/ or .hyper/
+    $route__POST.ts        POST /repl — executes arbitrary JS
+
+  server/                  ctx.fns.server.*
+    $start.ts              Bun.serve with dynamic dispatch via server.match
+    match.ts               path matcher (supports :params)
+
+  http/                    ctx.fns.http.*
+    loadRoutes.ts          scans $route_*.ts files into ctx.routes
+
+  db/                      ctx.fns.db.* — stubs only
 ```
 
-## Frontend
+## Conventions
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
+- `export default async function (ctx: Context, ...)` — **anonymous**, no function name.
+- Cross-file calls go through `ctx.fns.<ns>.<fn>(ctx, ...)`. **No cross-imports between project files.** Only `import` from `bun`, `node:*`, or third-party.
+- Types are global via auto-generated `ctx_ns.d.ts`:
+  - `src/<mod>/$type_<Name>.ts` → `types.<mod>.<Name>` globally.
+  - `src/$type_Context.ts` → global `Context` (composed with `FnsRegistry` + `RootFns`).
+  - Never `import type { Agent }` — use `types.agent.Agent` directly.
+- Special filenames (`$` prefix stripped when registering in `ctx.fns`):
+  - `$main.ts` — entry point, NOT loaded into ctx.fns.
+  - `$test.ts` — deprecated; use `*.test.ts` for bun test discovery.
+  - `$route_<path>_<METHOD>.ts` — HTTP route. `_` in path = `/`, `$foo` = `:foo` param. See `src/http/loadRoutes.ts`.
+  - `$type_<Name>.ts` — type declaration, compile-time only.
+  - Other `$<name>.ts` (e.g. `$start.ts`) — regular function, loaded as `ctx.fns.<mod>.<name>`.
+- Test files named `*.test.ts`. `bun test` picks them up automatically.
 
-Server:
+## Routes
 
-```ts#index.ts
-import index from "./index.html"
+Dynamic dispatch — mutations to `ctx.routes` are effective on the next request without `server.reload()`. See `src/server/$start.ts` and `src/server/match.ts`.
 
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
+Current live routes:
+- `GET /` — chat UI (Tailwind via CDN)
+- `POST /agent` — send a message (non-blocking, queues run in background)
+- `GET /agent?offset=N` — poll for new events (`isStreaming`, `nextOffset`)
+- `DELETE /agent` — reset agent
+- `POST /agent/stop` — abort current run
+- `POST /repl` — evaluate arbitrary JS (used by `script/repl.ts`)
+
+## REPL workflow
+
+Long-running server in tmux session `hyper`. Everything iterated without restart.
+
+```bash
+# start
+tmux new-session -d -s hyper 'bun src/$main.ts'
+
+# evaluate code
+bun script/repl.ts '1 + 1'
+bun script/repl.ts 'return Object.keys(ctx.fns)'
+bun script/repl.ts -f /tmp/play.js          # from file
+echo '...' | bun script/repl.ts             # from stdin
+
+# hot-reload
+bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent")'         # whole folder
+bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent.run")'     # single fn
+bun script/repl.ts 'return await ctx.genTypes(ctx)'                # regen ctx_ns.d.ts
+bun script/repl.ts 'return await ctx.fns.http.loadRoutes(ctx)'     # rescan routes
+
+# reset agent (new SYSTEM_PROMPT picked up lazily)
+bun script/repl.ts 'ctx.fns.agent.clear(ctx, ctx.state.agent.default); delete ctx.state.agent.default; return "ok"'
 ```
 
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
+Server port written to `.hyper/port` (default 3000). `script/repl.ts` reads it.
 
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
+## Extension point: `.hyper/`
+
+Both `src/` and `.hyper/` are scanned by the loader, `genTypes`, `loadRoutes`, and `repl.load`. `.hyper/` is **gitignored** and reserved for runtime-written extensions (by the agent itself, mostly).
+
+```
+.hyper/
+  port                       ← server writes this
+  skill/
+    hello.ts                 → ctx.fns.skill.hello
+    $route_todos_GET.ts      → GET /skill/todos
+    $type_Todo.ts            → types.skill.Todo
 ```
 
-With the following `frontend.tsx`:
+`.hyper/` loads AFTER `src/` so it can override core functions by same name.
 
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
+## Agent (at `/`)
 
-// import .css files directly and it works
-import './index.css';
+- Single live agent stored at `ctx.state.agent.default`.
+- **Exactly one tool: `evalCode`**, declared in `src/agent/$route__POST.ts`. Agent writes JS, `ctx.fns.repl.eval` runs it with `ctx` and `agent` bound.
+- Stateless `/v1/chat/completions` to LM Studio (`LMSTUDIO_URL`, `MODEL` from env / `.env.test`). No `previous_response_id` — each turn sends full `agent.messages`, prefix cache via `prompt_cache_key: agent.id`.
+- Loop in `src/agent/run.ts`: user → stream → tool_calls → execute → tool results → stream → … until no tool_calls.
+- `agent.scratchpad` (plain object, per-agent) — persistent across turns, NOT sent to the model. For stashing fetched data, plans, caches.
+- `agent.events[]` — UI trace (user / tool_call / assistant / error). Surfaced via `GET /agent?offset=N`.
+- `agent.messages[]` — OpenAI chat transcript (user / assistant / tool). What the model sees.
+- Agent can read/write own source and hot-reload: `Bun.file("src/agent/run.ts").text()`, `Bun.write(".hyper/skill/x.ts", ...)`, `ctx.fns.repl.load(ctx, "skill")`, `ctx.genTypes(ctx)`.
 
-const root = createRoot(document.body);
+Authoritative agent behaviour lives in `src/agent/SYSTEM_PROMPT.md`. Edit that file, not the POST handler.
 
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
+## Adding things (cheat-sheet)
 
-root.render(<Frontend />);
-```
+- **New function** in module `foo`: write `.hyper/foo/bar.ts` with anonymous `export default async function (ctx: Context, ...)`, then `ctx.fns.repl.load(ctx, "foo")` + `ctx.genTypes(ctx)`. Now callable as `ctx.fns.foo.bar(ctx, ...)`.
+- **New HTTP route**: write `.hyper/<mod>/$route_<path>_<METHOD>.ts`, then `ctx.fns.http.loadRoutes(ctx)`.
+- **New type**: `.hyper/<mod>/$type_<Name>.ts` with `export type <Name> = …`, then `ctx.genTypes(ctx)` → `types.<mod>.<Name>` global.
+- **New agent capability**: add the function above, tell agent about it by editing `src/agent/SYSTEM_PROMPT.md`, reset the agent.
 
-Then, run index.ts
+## Testing discipline
 
-```sh
-bun --hot ./index.ts
-```
+- Run: `bun test` (all) or `bun test ./src/agent/run.test.ts` (one file).
+- Type-check: `bunx tsc --noEmit` — must be clean.
+- Integration tests hit real LM Studio when `process.env.LMSTUDIO_URL` is set (via `.env.test`).
+- Don't invent frameworks — `describe` / `test` / `expect` from `bun:test` only.
 
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+## What NOT to do
+
+- Don't use npm packages when a Bun built-in exists (`express`, `ws`, `better-sqlite3`, `glob`, `pg`, `ioredis`, `ts-node`, `dotenv`, `jest`, `vitest`, `node-fetch`, `execa`).
+- Don't import project files across module boundaries. Use `ctx.fns`.
+- Don't name your `export default` functions.
+- Don't write new files under `src/` for agent-produced extensions — use `.hyper/`.
+- Don't add `cache_control` markers or stateful `previous_response_id` — LM Studio's automatic prefix cache is enough.
+- Don't rename `ctx.fns.agent.run` carelessly — it's the loop everything runs inside.
