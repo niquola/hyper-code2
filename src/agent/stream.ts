@@ -4,6 +4,7 @@ export default async function (
     opts: { signal?: AbortSignal; onEvent?: (ev: any) => void } = {},
 ): Promise<{
     text: string;
+    thinking: string;
     toolCalls: Array<{ id: string; name: string; arguments: string }>;
     finishReason: string | null;
     usage: any;
@@ -32,6 +33,7 @@ export default async function (
     if (!res.body) throw new Error("empty response body");
 
     let text = "";
+    let thinking = "";
     const toolCalls: Record<number, { id: string; name: string; arguments: string }> = {};
     let finishReason: string | null = null;
     let usage: any = undefined;
@@ -48,6 +50,7 @@ export default async function (
             opts.onEvent?.({ type: "text_delta", delta: delta.content });
         }
         if (typeof delta.reasoning_content === "string" && delta.reasoning_content.length > 0) {
+            thinking += delta.reasoning_content;
             opts.onEvent?.({ type: "thinking_delta", delta: delta.reasoning_content });
         }
         if (Array.isArray(delta.tool_calls)) {
@@ -64,6 +67,7 @@ export default async function (
 
     return {
         text,
+        thinking,
         toolCalls: Object.keys(toolCalls).sort((a, b) => +a - +b).map(k => toolCalls[+k]!),
         finishReason,
         usage,

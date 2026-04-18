@@ -16,9 +16,11 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
     agent.messages.push({ role: "user", content: userText });
 
     while (true) {
-        const { text, toolCalls, finishReason, usage } = await ctx.fns.agent.stream(ctx, agent, {
+        const { text, thinking, toolCalls, usage } = await ctx.fns.agent.stream(ctx, agent, {
             signal: ac.signal,
         });
+
+        if (thinking) agent.events.push({ type: "thinking", text: thinking });
 
         const assistantMsg: any = { role: "assistant" };
         if (text) assistantMsg.content = text;
@@ -31,12 +33,14 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
         }
         agent.messages.push(assistantMsg);
 
+        // No tools → return the final text response
         if (toolCalls.length === 0) {
             const html = await ctx.fns.markdown.render(ctx, text);
             agent.events.push({ type: "assistant", text, html, usage });
             return { text, usage };
         }
 
+        // Execute tool calls and append results to messages
         for (const tc of toolCalls) {
             let output: string;
             let isError = false;
@@ -62,8 +66,6 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
             agent.messages.push({ role: "tool", tool_call_id: tc.id, content: output });
         }
 
-        if (finishReason !== "tool_calls") {
-            // model finished without tool_calls stop reason but emitted calls — loop anyway
-        }
+        // After one round of tool execution, loop back for model to see results
     }
 }

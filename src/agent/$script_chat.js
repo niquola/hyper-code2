@@ -43,9 +43,20 @@ function addToolCall(tc) {
     d.scrollIntoView({ block: "end" });
 }
 
+function addThinking(ev) {
+    const d = document.createElement("details");
+    d.className = "text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded px-3 py-1.5";
+    d.innerHTML =
+        '<summary class="cursor-pointer select-none">💭 thinking (' + (ev.text?.length ?? 0) + ' chars)</summary>' +
+        '<pre class="mt-2 whitespace-pre-wrap font-mono text-[11px] leading-snug text-gray-600">' + esc(ev.text || "") + '</pre>';
+    messagesEl.appendChild(d);
+    d.scrollIntoView({ block: "end" });
+}
+
 function renderEvents(list) {
     for (const ev of list) {
         if (ev.type === "user") addUser(ev.text);
+        else if (ev.type === "thinking") addThinking(ev);
         else if (ev.type === "tool_call") addToolCall(ev);
         else if (ev.type === "assistant") addAssistant(ev);
         else if (ev.type === "error") addError(ev.error);
@@ -53,6 +64,8 @@ function renderEvents(list) {
 }
 
 renderEvents(initialEvents);
+// Force scroll to the very bottom after initial render (browser scroll restoration may override scrollIntoView).
+requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
 
 async function poll() {
     while (true) {
