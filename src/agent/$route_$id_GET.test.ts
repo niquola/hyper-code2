@@ -1,11 +1,12 @@
 import { test, expect, describe } from "bun:test";
 import route from "./$route_$id_GET";
 import layout from "../ui/layout";
+import script from "../ui/script";
 
 const mkCtx = (agents: Record<string, any> = {}) => ({
     state: { agent: agents },
     env: {},
-    fns: { ui: { layout } },
+    fns: { ui: { layout, script } },
 } as unknown as Context);
 
 function req(id: string): any {
@@ -33,10 +34,11 @@ describe("GET /agent/:id", () => {
         expect(html).toContain('id="form"');
         expect(html).toContain("/agent/agent_abc/stop");
         expect(html).toContain("/agent/agent_abc/delete");
-        expect(html).toContain("/events?offset=");
+        expect(html).toContain('src="/agent/chat.js"');
+        expect(html).toContain("window.__init");
     });
 
-    test("seeds initial events into inline script", async () => {
+    test("seeds initial events into window.__init", async () => {
         const agent = {
             id: "agent_x",
             model: "m",
@@ -49,9 +51,11 @@ describe("GET /agent/:id", () => {
         const ctx = mkCtx({ agent_x: agent });
         const res = await route(ctx, null, req("agent_x"));
         const html = await res.text();
-        expect(html).toContain("const initialEvents = ");
+        expect(html).toContain("window.__init");
         expect(html).toContain('"user"');
         expect(html).toContain("hello");
+        // XSS guard: '<' inside the JSON payload must be escaped to \u003c
+        expect(html).toContain("\\u003cp>hello\\u003c/p>");
     });
 
     test("highlights current agent in sidebar", async () => {

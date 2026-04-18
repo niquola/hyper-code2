@@ -48,6 +48,7 @@ declare global {
         };
         ui: {
         layout: typeof import("./ui/layout").default;
+        script: typeof import("./ui/script").default;
         };
     }
 

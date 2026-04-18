@@ -32,6 +32,24 @@ export default async function (ctx: Context) {
             ctx.routes[routePath][method] = handler;
             console.log(`[routes] ${method.padEnd(6)} ${routePath}  ←  ${label}/${rel}`);
         }
+
+        // Static scripts: <module>/$script_<name>.<ext> → GET /<module>/<name>.<ext>
+        const scriptGlob = new Glob("**/$script_*.{js,mjs,css}");
+        for await (const file of scriptGlob.scan(root)) {
+            const abs = resolve(root, file);
+            const rel = relative(root, abs);
+            const moduleDir = dirname(rel);
+            const fileName = basename(rel);
+            const m = /^\$script_(.+?)(\.\w+)$/.exec(fileName);
+            if (!m || !m[1] || !m[2]) { console.warn(`[scripts] skip (bad name): ${label}/${rel}`); continue; }
+            const name = m[1]; const ext = m[2];
+            const segs = moduleDir === "." ? [] : moduleDir.split("/");
+            const routePath = "/" + [...segs, name + ext].join("/");
+            const handler = (() => async () => new Response(Bun.file(abs)))();
+            ctx.routes[routePath] = ctx.routes[routePath] || {};
+            ctx.routes[routePath].GET = handler;
+            console.log(`[scripts] GET    ${routePath}  ←  ${label}/${rel}`);
+        }
     }
     return ctx.routes;
 }
