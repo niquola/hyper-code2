@@ -46,6 +46,9 @@ declare global {
         dice: typeof import("../.hyper/tools/dice").default;
         password: typeof import("../.hyper/tools/password").default;
         };
+        ui: {
+        layout: typeof import("./ui/layout").default;
+        };
     }
 
     interface RootFns {
