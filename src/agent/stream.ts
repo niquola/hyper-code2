@@ -1,0 +1,87 @@
+export default async function (
+    ctx: Context,
+    agent: types.agent.Agent,
+    opts: { signal?: AbortSignal; onEvent?: (ev: any) => void } = {},
+): Promise<{
+    text: string;
+    toolCalls: Array<{ id: string; name: string; arguments: string }>;
+    finishReason: string | null;
+    usage: any;
+}> {
+    const messages: any[] = [];
+    if (agent.systemPrompt) messages.push({ role: "system", content: agent.systemPrompt });
+    messages.push(...agent.messages);
+
+    const body: any = {
+        model: agent.model,
+        messages,
+        stream: true,
+        stream_options: { include_usage: true },
+        prompt_cache_key: agent.id,
+    };
+    if (agent.tools?.length) body.tools = agent.tools.map(t => ({ type: "function", function: t }));
+
+    const url = (ctx.env.LMSTUDIO_URL ?? "http://localhost:1234") + "/v1/chat/completions";
+    const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+        signal: opts.signal,
+    });
+    if (!res.ok) throw new Error(`LMStudio ${res.status}: ${await res.text()}`);
+    if (!res.body) throw new Error("empty response body");
+
+    let text = "";
+    const toolCalls: Record<number, { id: string; name: string; arguments: string }> = {};
+    let finishReason: string | null = null;
+    let usage: any = undefined;
+
+    for await (const chunk of parseSSE(res.body)) {
+        if (chunk === "[DONE]") break;
+        const data: any = JSON.parse(chunk);
+        if (data.usage) usage = data.usage;
+        const choice = data.choices?.[0];
+        if (!choice) continue;
+        const delta = choice.delta ?? {};
+        if (typeof delta.content === "string" && delta.content.length > 0) {
+            text += delta.content;
+            opts.onEvent?.({ type: "text_delta", delta: delta.content });
+        }
+        if (typeof delta.reasoning_content === "string" && delta.reasoning_content.length > 0) {
+            opts.onEvent?.({ type: "thinking_delta", delta: delta.reasoning_content });
+        }
+        if (Array.isArray(delta.tool_calls)) {
+            for (const tc of delta.tool_calls) {
+                const idx = tc.index ?? 0;
+                const slot = toolCalls[idx] ??= { id: "", name: "", arguments: "" };
+                if (tc.id) slot.id = tc.id;
+                if (tc.function?.name) slot.name += tc.function.name;
+                if (tc.function?.arguments) slot.arguments += tc.function.arguments;
+            }
+        }
+        if (choice.finish_reason) finishReason = choice.finish_reason;
+    }
+
+    return {
+        text,
+        toolCalls: Object.keys(toolCalls).sort((a, b) => +a - +b).map(k => toolCalls[+k]!),
+        finishReason,
+        usage,
+    };
+}
+
+async function* parseSSE(body: ReadableStream<Uint8Array>) {
+    const decoder = new TextDecoder();
+    let buf = "";
+    for await (const chunk of body) {
+        buf += decoder.decode(chunk, { stream: true });
+        let idx: number;
+        while ((idx = buf.indexOf("\n\n")) >= 0) {
+            const raw = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            for (const line of raw.split("\n")) {
+                if (line.startsWith("data: ")) yield line.slice(6);
+            }
+        }
+    }
+}
