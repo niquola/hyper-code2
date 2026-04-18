@@ -1,10 +1,12 @@
 import { test, expect, describe } from "bun:test";
-import start from "./start";
+import start from "../agent/start";
 import stream from "./stream";
+import resolveEndpoint from "./resolveEndpoint";
 
 const mkCtx = () => ({
     state: {},
     env: { LMSTUDIO_URL: process.env.LMSTUDIO_URL, MODEL: process.env.MODEL },
+    fns: { ai: { resolveEndpoint } },
 } as unknown as Context);
 
 describe("agent.stream — stateless /v1/chat/completions (LM Studio)", () => {

@@ -51,7 +51,8 @@ src/
     render.ts              Bun.markdown.html + shiki code blocks
     highlight.ts           shiki wrapper
 
-  db/                      ctx.fns.db.* (stubs)
+  db/                      ctx.fns.db.*         — shared SQLite: connect, migrate, exec, select, insert
+  session/                 ctx.fns.session.*    — per-agent persistence: save, load, loadAll, list, search, delete
 ```
 
 **Conventions (see the existing files — don't invent new patterns):**
@@ -172,6 +173,38 @@ await ctx.fns.repl.load(ctx, "agent.run");
 
 In-memory monkey-patch (`ctx.fns.agent.run = async ...`) works for experiments but gets lost on full reload — prefer writing files.
 
+## LLM backends
+
+`agent.model` is a string like `"<provider>:<modelId>"`. Supported providers (OpenAI-compatible chat/completions with tool calls + streaming):
+
+| prefix        | endpoint                            | api key env           |
+|---------------|-------------------------------------|-----------------------|
+| `lmstudio:`   | `$LMSTUDIO_URL/v1` (local, default) | —                     |
+| `kimi:`       | `https://api.moonshot.ai/v1`        | `KIMI_API_KEY`        |
+| `openai:`     | `https://api.openai.com/v1`         | `OPENAI_API_KEY`      |
+| `groq:`       | `https://api.groq.com/openai/v1`    | `GROQ_API_KEY`        |
+| `openrouter:` | `https://openrouter.ai/api/v1`      | `OPENROUTER_API_KEY`  |
+
+If no prefix → defaults to `lmstudio:`. Example: `agent.model = "kimi:kimi-k2-turbo-preview"`.
+
+To swap your own model mid-session: just assign `agent.model = "kimi:..."` and persist via `ctx.fns.session.save(ctx, agent)`.
+
+## Runtime context
+
+Each LLM call has a freshly-injected block at the END of the system prompt with:
+- `cwd` — current working directory (root of this repo on disk)
+- `your agent id` — string id like `agent_abc12345`; also available inside evalCode as `agent.id`
+- `db path` — SQLite file (relative to cwd)
+
+So you can always refer to yourself and the filesystem without calling anything. Examples:
+```js
+// Your own past user messages (scoped to this agent):
+ctx.fns.db.select(ctx, "SELECT content, ts FROM messages WHERE agent_id = ? AND role='user' ORDER BY ts DESC LIMIT 10", [agent.id])
+
+// Read a file relative to cwd:
+await Bun.file("package.json").json()
+```
+
 ## Database
 
 One shared SQLite connection at `ctx.state.db` (path: `.hyper/sessions`). Access via:
@@ -197,6 +230,51 @@ _migrations (name, applied_at)                                                 -
 Then `ctx.fns.db.migrate(ctx)` picks it up (ts-order). `.down.sql` is paired but not auto-run.
 
 Agent sessions persist: `session.save(ctx, agent)` writes agents + messages + events; on server boot `session.loadAll` rehydrates everything into `ctx.state.agent`. Most mutating fns already save — you only need to call `ctx.fns.session.save(ctx, agent)` manually if you edit `agent.scratchpad` etc. mid-turn and want it persisted immediately.
+
+### Searching session history
+
+Use `ctx.fns.session.search(ctx, query)` for a built-in case-insensitive substring search over message content across ALL sessions:
+```js
+// Find every past message that mentioned "telescope":
+ctx.fns.session.search(ctx, "telescope")
+// → [{ agentId, idx, role, content, ts }, ...]
+```
+
+For anything more specific, hit the tables directly with `ctx.fns.db.select`:
+
+```js
+// All your own past user prompts, newest first:
+ctx.fns.db.select(ctx,
+    "SELECT content, ts FROM messages WHERE agent_id = ? AND role = 'user' ORDER BY ts DESC LIMIT 20",
+    [agent.id])
+```
+
+```js
+// Sessions that used a particular model, with turn counts:
+ctx.fns.db.select(ctx, `
+    SELECT a.id, a.model, COUNT(*) FILTER (WHERE m.role='user') AS turns
+    FROM agents a
+    LEFT JOIN messages m ON m.agent_id = a.id
+    WHERE a.model = ?
+    GROUP BY a.id
+    ORDER BY a.updated_at DESC`, ["minimax/minimax-m2.7"])
+```
+
+```js
+// Past tool calls you made (parse payload JSON on the way out):
+ctx.fns.db.select(ctx,
+    "SELECT agent_id, payload FROM events WHERE agent_id = ? AND type = 'tool_call' ORDER BY idx DESC LIMIT 10",
+    [agent.id]
+).map(r => ({ agentId: r.agent_id, ...JSON.parse(r.payload) }))
+```
+
+```js
+// All sessions where a tool errored:
+ctx.fns.db.select(ctx,
+    "SELECT DISTINCT agent_id FROM events WHERE type = 'error' OR (type = 'tool_call' AND payload LIKE '%\"isError\":true%')")
+```
+
+`ctx.fns.db.exec` lets you mutate — useful when you want to persist your own tables in the same db (run a migration once via `ctx.fns.db.migrate` after dropping a new `$migrate_*.up.sql`).
 
 ## Execution model
 

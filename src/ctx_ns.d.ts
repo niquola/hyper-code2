@@ -9,8 +9,11 @@ declare global {
         run: typeof import("./agent/run").default;
         start: typeof import("./agent/start").default;
         stop: typeof import("./agent/stop").default;
-        stream: typeof import("./agent/stream").default;
         systemPrompt: typeof import("./agent/systemPrompt").default;
+        };
+        ai: {
+        resolveEndpoint: typeof import("./ai/resolveEndpoint").default;
+        stream: typeof import("./ai/stream").default;
         };
         db: {
         connect: typeof import("./db/connect").default;

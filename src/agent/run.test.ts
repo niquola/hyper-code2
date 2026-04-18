@@ -1,6 +1,7 @@
 import { test, expect, describe } from "bun:test";
 import start from "./start";
-import stream from "./stream";
+import stream from "../ai/stream";
+import resolveEndpoint from "../ai/resolveEndpoint";
 import run from "./run";
 import highlight from "../markdown/highlight";
 import render from "../markdown/render";
@@ -20,7 +21,7 @@ const mkCtx = () => ({
     state: {},
     env: { LMSTUDIO_URL: process.env.LMSTUDIO_URL, MODEL: process.env.MODEL },
     fns: {
-        agent: { stream },
+        ai: { stream, resolveEndpoint },
         markdown: { highlight, render },
         repl: { eval: evalFn },
     },

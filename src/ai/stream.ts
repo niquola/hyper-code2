@@ -9,12 +9,24 @@ export default async function (
     finishReason: string | null;
     usage: any;
 }> {
+    const runtime = [
+        "",
+        "## Runtime context (auto-injected, fresh each turn)",
+        `- cwd: ${process.cwd()}`,
+        `- your agent id: ${agent.id}`,
+        `- db path: ${ctx.env.DB_PATH ?? ".hyper/sessions"}`,
+        "",
+        "Inside `evalCode` you also have direct access: `agent.id`, `process.cwd()`.",
+    ].join("\n");
+
     const messages: any[] = [];
-    if (agent.systemPrompt) messages.push({ role: "system", content: agent.systemPrompt });
+    if (agent.systemPrompt) messages.push({ role: "system", content: agent.systemPrompt + "\n" + runtime });
     messages.push(...agent.messages);
 
+    const ep = ctx.fns.ai.resolveEndpoint(ctx, agent.model);
+
     const body: any = {
-        model: agent.model,
+        model: ep.modelId,
         messages,
         stream: true,
         stream_options: { include_usage: true },
@@ -22,14 +34,16 @@ export default async function (
     };
     if (agent.tools?.length) body.tools = agent.tools.map(t => ({ type: "function", function: t }));
 
-    const url = (ctx.env.LMSTUDIO_URL ?? "http://localhost:1234") + "/v1/chat/completions";
-    const res = await fetch(url, {
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (ep.apiKey) headers["authorization"] = `Bearer ${ep.apiKey}`;
+
+    const res = await fetch(ep.url, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers,
         body: JSON.stringify(body),
         signal: opts.signal,
     });
-    if (!res.ok) throw new Error(`LMStudio ${res.status}: ${await res.text()}`);
+    if (!res.ok) throw new Error(`${ep.provider} ${res.status}: ${await res.text()}`);
     if (!res.body) throw new Error("empty response body");
 
     let text = "";

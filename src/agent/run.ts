@@ -16,7 +16,7 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
     agent.messages.push({ role: "user", content: userText });
 
     while (true) {
-        const { text, thinking, toolCalls, usage } = await ctx.fns.agent.stream(ctx, agent, {
+        const { text, thinking, toolCalls, usage } = await ctx.fns.ai.stream(ctx, agent, {
             signal: ac.signal,
         });
 
