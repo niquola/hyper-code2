@@ -13,9 +13,11 @@ declare global {
         systemPrompt: typeof import("./agent/systemPrompt").default;
         };
         db: {
-        execute: typeof import("./db/execute").default;
-        query: typeof import("./db/query").default;
-        start: typeof import("./db/$start").default;
+        connect: typeof import("./db/connect").default;
+        exec: typeof import("./db/exec").default;
+        insert: typeof import("./db/insert").default;
+        migrate: typeof import("./db/migrate").default;
+        select: typeof import("./db/select").default;
         };
         http: {
         loadRoutes: typeof import("./http/loadRoutes").default;
@@ -38,6 +40,14 @@ declare global {
         load: typeof import("./repl/load").default;
         start: typeof import("./repl/$start").default;
         };
+        session: {
+        delete: typeof import("./session/delete").default;
+        list: typeof import("./session/list").default;
+        load: typeof import("./session/load").default;
+        loadAll: typeof import("./session/loadAll").default;
+        save: typeof import("./session/save").default;
+        search: typeof import("./session/search").default;
+        };
         skill: {
         hello: typeof import("../.hyper/skill/hello").default;
         wordCount: typeof import("../.hyper/skill/wordCount").default;
@@ -54,6 +64,7 @@ declare global {
 
     interface RootFns {
     genTypes: typeof import("./genTypes").default;
+    loadFns: typeof import("./loadFns").default;
     }
 
     namespace types {

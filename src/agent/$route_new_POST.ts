@@ -14,5 +14,6 @@ export default async function (ctx: Context, _session: any, req: Request) {
     const systemPromptRaw = (form.get("systemPrompt") as string)?.trim();
     const systemPrompt = systemPromptRaw || await ctx.fns.agent.systemPrompt(ctx);
     const agent = ctx.fns.agent.start(ctx, { model, systemPrompt, tools: [EVAL_CODE_TOOL] });
+    try { ctx.fns.session?.save?.(ctx, agent); } catch (e: any) { console.error("[session.save]", e?.message); }
     return new Response(null, { status: 303, headers: { location: `/agent/${encodeURIComponent(agent.id)}` } });
 }

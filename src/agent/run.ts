@@ -37,6 +37,7 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
         if (toolCalls.length === 0) {
             const html = await ctx.fns.markdown.render(ctx, text);
             agent.events.push({ type: "assistant", text, html, usage });
+            try { ctx.fns.session?.save?.(ctx, agent); } catch (e: any) { console.error("[session.save]", e?.message); }
             return { text, usage };
         }
 

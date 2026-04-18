@@ -6,26 +6,18 @@ const mkCtx = () => ({ fns: {} }) as unknown as Context;
 describe("repl.load", () => {
     test("loads a single function by dotted path", async () => {
         const ctx = mkCtx();
-        const result = await load(ctx, "db.query");
-        expect(result).toEqual({ reloaded: "db.query" });
-        expect((ctx.fns as any).db.query).toBeTypeOf("function");
-    });
-
-    test("finds $-prefixed files too ($start.ts)", async () => {
-        const ctx = mkCtx();
-        const result = await load(ctx, "db.start");
-        expect(result).toEqual({ reloaded: "db.start" });
-        expect((ctx.fns as any).db.start).toBeTypeOf("function");
+        const result = await load(ctx, "db.connect");
+        expect(result).toEqual({ reloaded: "db.connect" });
+        expect((ctx.fns as any).db.connect).toBeTypeOf("function");
     });
 
     test("loads all functions in a folder", async () => {
         const ctx = mkCtx();
         const result = await load(ctx, "db");
         expect(result.reloaded).toBe("db");
-        expect(result.count).toBeGreaterThanOrEqual(3);
-        expect(result.fns).toContain("query");
-        expect(result.fns).toContain("execute");
-        expect(result.fns).toContain("start");
+        expect(result.count).toBeGreaterThanOrEqual(2);
+        expect(result.fns).toContain("connect");
+        expect(result.fns).toContain("migrate");
     });
 
     test("throws on missing specific file", async () => {

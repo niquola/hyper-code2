@@ -46,7 +46,16 @@ src/
   http/                    ctx.fns.http.*
     loadRoutes.ts          scans $route_*.ts files into ctx.routes
 
-  db/                      ctx.fns.db.* — stubs only
+  db/                      ctx.fns.db.* — shared SQLite infrastructure
+    connect.ts             opens db (WAL), stores on ctx.state.db
+    migrate.ts             scans **/$migrate_<ts>_<name>.up.sql, applies pending in ts-order, tracks in _migrations
+    exec.ts                exec(ctx, sql, params) → {changes, lastInsertRowid}
+    select.ts              select<T>(ctx, sql, params) → T[]
+    insert.ts              insert(ctx, table, {col: val}) → {changes, lastInsertRowid}
+
+  session/                 ctx.fns.session.* — per-agent persistence (uses db/)
+    $migrate_20260418000000_init.up.sql  — baseline schema (agents, messages, events)
+    save / load / loadAll / list / search / delete
 ```
 
 ## Conventions
@@ -102,6 +111,58 @@ bun script/repl.ts 'ctx.fns.agent.clear(ctx, ctx.state.agent.default); delete ct
 ```
 
 Server port written to `.hyper/port` (default 3000). `script/repl.ts` reads it.
+
+## Database & migrations
+
+`ctx.fns.db` is shared SQLite infra. One connection per process, stored on `ctx.state.db`. Default path: `.hyper/sessions` (override via `DB_PATH` env).
+
+**Procedural API:**
+- `ctx.fns.db.exec(ctx, sql, params)` — mutating statements → `{changes, lastInsertRowid}`
+- `ctx.fns.db.select<T>(ctx, sql, params)` — SELECT → `T[]`
+- `ctx.fns.db.insert(ctx, table, {col: val})` — object-to-INSERT shortcut
+- Raw `ctx.state.db` Bun `Database` is available for advanced use (transactions, prepared reuse)
+
+**Migrations:** any file `<module>/$migrate_<timestamp>_<name>.up.sql` gets applied on startup by `ctx.fns.db.migrate(ctx)`. Convention:
+- timestamp is `YYYYMMDDHHmmss` (lexicographic = chronological)
+- paired `.down.sql` for rollback (not auto-run)
+- scanned from both `src/` and `.hyper/`
+- applied names stored in `_migrations(name TEXT PK, applied_at INTEGER)`
+
+**Schema (baseline — `src/session/$migrate_20260418000000_init.up.sql`):**
+
+```sql
+CREATE TABLE agents (
+    id              TEXT PRIMARY KEY,
+    model           TEXT NOT NULL,
+    system_prompt   TEXT NOT NULL DEFAULT '',
+    tools           TEXT NOT NULL DEFAULT '[]',       -- JSON
+    scratchpad      TEXT NOT NULL DEFAULT '{}',       -- JSON
+    created_at      INTEGER NOT NULL,
+    updated_at      INTEGER NOT NULL
+);
+
+CREATE TABLE messages (                -- one row per OpenAI chat message
+    agent_id        TEXT NOT NULL,
+    idx             INTEGER NOT NULL,  -- position in agent.messages
+    role            TEXT NOT NULL,     -- "user" | "assistant" | "tool" | "system"
+    content         TEXT,              -- nullable for tool-only assistant turns
+    tool_calls      TEXT,              -- JSON, only on assistant messages
+    tool_call_id    TEXT,              -- only on role="tool"
+    ts              INTEGER NOT NULL,
+    PRIMARY KEY (agent_id, idx)
+);
+
+CREATE TABLE events (                  -- one row per UI trace event
+    agent_id        TEXT NOT NULL,
+    idx             INTEGER NOT NULL,
+    type            TEXT NOT NULL,     -- "user" | "thinking" | "tool_call" | "assistant" | "error"
+    payload         TEXT NOT NULL,     -- JSON (full event object)
+    ts              INTEGER NOT NULL,
+    PRIMARY KEY (agent_id, idx)
+);
+```
+
+**Lifecycle:** `$main.ts` calls `db.connect → db.migrate → session.loadAll` — all persisted agents are rehydrated into `ctx.state.agent[id]` on startup. Mutating ops call `session.save(ctx, agent)` after completing (HTTP create + `agent.run` at end).
 
 ## Extension point: `.hyper/`
 

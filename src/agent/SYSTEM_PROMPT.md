@@ -172,6 +172,32 @@ await ctx.fns.repl.load(ctx, "agent.run");
 
 In-memory monkey-patch (`ctx.fns.agent.run = async ...`) works for experiments but gets lost on full reload — prefer writing files.
 
+## Database
+
+One shared SQLite connection at `ctx.state.db` (path: `.hyper/sessions`). Access via:
+- `ctx.fns.db.exec(ctx, sql, params)` → `{changes, lastInsertRowid}`
+- `ctx.fns.db.select(ctx, sql, params)` → row array
+- `ctx.fns.db.insert(ctx, table, {col: val})` → insert shortcut
+- `ctx.fns.db.migrate(ctx)` — applies any new `<module>/$migrate_<ts>_<name>.up.sql` files
+
+**Tables (baseline schema):**
+
+```
+agents   (id, model, system_prompt, tools JSON, scratchpad JSON, created_at, updated_at)
+messages (agent_id, idx, role, content, tool_calls JSON, tool_call_id, ts)    -- one row per LLM-visible message
+events   (agent_id, idx, type, payload JSON, ts)                               -- one row per UI trace event
+_migrations (name, applied_at)                                                 -- migration ledger
+```
+
+**Migrations convention** — to evolve the schema, drop a new file under any module:
+```
+.hyper/<mymod>/$migrate_20260501120000_add_tags.up.sql
+.hyper/<mymod>/$migrate_20260501120000_add_tags.down.sql
+```
+Then `ctx.fns.db.migrate(ctx)` picks it up (ts-order). `.down.sql` is paired but not auto-run.
+
+Agent sessions persist: `session.save(ctx, agent)` writes agents + messages + events; on server boot `session.loadAll` rehydrates everything into `ctx.state.agent`. Most mutating fns already save — you only need to call `ctx.fns.session.save(ctx, agent)` manually if you edit `agent.scratchpad` etc. mid-turn and want it persisted immediately.
+
 ## Execution model
 
 Your code runs inside `new Function("ctx", "agent", ...)` wrapped in an async IIFE. That means:

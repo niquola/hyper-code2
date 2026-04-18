@@ -1,15 +1,21 @@
 export default function (ctx: Context, opts: { currentId?: string; title?: string; main: string; headExtra?: string }) {
-    const store: Record<string, any> = (ctx.state as any).agent ?? {};
-    const agents = Object.values(store).map((a: any) => {
-        const first = a.events?.find((e: any) => e.type === "user");
-        return {
-            id: a.id,
-            model: a.model,
-            turns: a.events.filter((e: any) => e.type === "user").length,
-            isStreaming: a.isStreaming,
-            title: first?.text?.slice(0, 40) ?? "(empty)",
-        };
-    });
+    // Prefer db listing (authoritative), fall back to in-memory in tests without db.
+    let agents: any[];
+    try {
+        agents = ctx.fns.session.list(ctx).map(a => ({ ...a, isStreaming: (ctx.state as any).agent?.[a.id]?.isStreaming ?? false }));
+    } catch {
+        const store: Record<string, any> = (ctx.state as any).agent ?? {};
+        agents = Object.values(store).map((a: any) => {
+            const first = a.events?.find((e: any) => e.type === "user");
+            return {
+                id: a.id,
+                model: a.model,
+                turns: a.events.filter((e: any) => e.type === "user").length,
+                isStreaming: a.isStreaming,
+                title: first?.text?.slice(0, 40) ?? "(empty)",
+            };
+        });
+    }
     const sidebar = renderSidebar(agents, opts.currentId);
     const pageTitle = opts.title ? `${opts.title} · hyper-code2` : "hyper-code2";
     return `<!doctype html>
