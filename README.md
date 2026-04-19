@@ -2,6 +2,10 @@
 
 A self-extending AI agent server on Bun. ~1000 LOC, one tool (`evalCode`), procedural TypeScript.
 
+**State is separated from functions.** Behaviour lives in files under `src/` / `.hyper/` and is loaded into `ctx.fns.<module>.<fn>`; runtime state lives on `ctx.state` (in-memory) and a SQLite DB (`agents`, `messages`, `events`, any table the agent chooses to add). Replacing a file + `ctx.fns.repl.load(ctx, "<module>")` swaps the function everywhere without touching state or restarting the process — routes, procedures, types, even the agent loop itself can be extended live.
+
+**All sessions are in SQLite and fully agent-accessible.** Every turn's messages and UI events for every agent are rows in `.hyper/sessions`. The agent can read and search its own + other agents' history in `evalCode` via `ctx.fns.db.select(ctx, "SELECT … FROM messages …")` — useful for recalling prior work, mining patterns, or building custom indexes on top.
+
 ## What it is
 
 A tiny HTTP server that hosts a chat-driven agent at `/`. The agent has **exactly one tool** — `evalCode` — which runs JavaScript in the same Bun process. Through that single tool, the agent can:
