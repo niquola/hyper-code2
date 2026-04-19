@@ -23,7 +23,7 @@ export default async function (
     if (agent.systemPrompt) messages.push({ role: "system", content: agent.systemPrompt + "\n" + runtime });
     messages.push(...agent.messages);
 
-    const ep = ctx.fns.ai.resolveEndpoint(ctx, agent.model);
+    const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
 
     const body: any = {
         model: ep.modelId,

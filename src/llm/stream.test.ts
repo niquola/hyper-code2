@@ -6,7 +6,7 @@ import resolveEndpoint from "./resolveEndpoint";
 const mkCtx = () => ({
     state: {},
     env: { LMSTUDIO_URL: process.env.LMSTUDIO_URL, MODEL: process.env.MODEL },
-    fns: { ai: { resolveEndpoint } },
+    fns: { llm: { resolveEndpoint } },
 } as unknown as Context);
 
 describe("agent.stream — stateless /v1/chat/completions (LM Studio)", () => {

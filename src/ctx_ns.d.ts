@@ -11,10 +11,6 @@ declare global {
         stop: typeof import("./agent/stop").default;
         systemPrompt: typeof import("./agent/systemPrompt").default;
         };
-        ai: {
-        resolveEndpoint: typeof import("./ai/resolveEndpoint").default;
-        stream: typeof import("./ai/stream").default;
-        };
         db: {
         connect: typeof import("./db/connect").default;
         exec: typeof import("./db/exec").default;
@@ -26,6 +22,10 @@ declare global {
         loadRoutes: typeof import("./http/loadRoutes").default;
         match: typeof import("./http/match").default;
         start: typeof import("./http/$start").default;
+        };
+        llm: {
+        resolveEndpoint: typeof import("./llm/resolveEndpoint").default;
+        stream: typeof import("./llm/stream").default;
         };
         markdown: {
         highlight: typeof import("./markdown/highlight").default;

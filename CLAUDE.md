@@ -27,7 +27,7 @@ src/
   genTypes.ts              ctx.genTypes — rescans src/ + .hyper/, writes ctx_ns.d.ts
   $route_GET.ts            GET /  (single-page chat UI)
 
-  ai/                      ctx.fns.ai.* — LLM layer
+  llm/                     ctx.fns.llm.* — LLM layer
     resolveEndpoint.ts     (ctx, "provider:modelId") → {url, apiKey, modelId, provider}
     stream.ts              stateless /v1/chat/completions with tool_calls + streaming (OpenAI-compat)
 
