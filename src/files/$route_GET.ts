@@ -9,8 +9,11 @@ export default async function (ctx: Context, _session: any, req: any) {
     const abs = ctx.fns.files.resolveSafe(ctx, path);
     const st = await stat(abs).catch(() => null);
     if (!st) {
-        const main = page(`<div class="p-6 text-red-700">not found: <code>${esc(path)}</code></div>`);
-        return new Response(ctx.fns.ui.layout(ctx, { title: path || "files", main }), { status: 404, headers: htmlHeaders() });
+        return {
+            status: 404,
+            title: path || "files",
+            main: page(`<div class="p-6 text-red-700">not found: <code>${esc(path)}</code></div>`),
+        };
     }
 
     if (st.isDirectory()) return renderDir(ctx, path);
@@ -34,7 +37,7 @@ async function renderDir(ctx: Context, path: string) {
     const body = `
 <div class="px-6 py-4 border-b border-gray-200 text-sm">${crumbs}</div>
 <div class="flex-1 overflow-y-auto">${rows || '<div class="p-6 text-gray-400">(empty)</div>'}</div>`;
-    return new Response(ctx.fns.ui.layout(ctx, { title: path || "files", main: page(body) }), { status: 200, headers: htmlHeaders() });
+    return { title: path || "files", main: page(body) };
 }
 
 async function renderFile(ctx: Context, path: string, tabParam: string) {
@@ -93,10 +96,7 @@ ${tab === "edit" ? `<div id="vim-status" class="hidden bg-gray-800 text-gray-100
 <div class="px-4 py-2 border-b border-gray-200 text-xs">${crumbs}</div>
 ${contentEl}`;
 
-    return new Response(
-        ctx.fns.ui.layout(ctx, { title: path, main: page(body), headExtra }),
-        { status: 200, headers: htmlHeaders() },
-    );
+    return { title: path, main: page(body), headExtra };
 }
 
 function page(body: string): string {
@@ -112,8 +112,6 @@ function breadcrumbs(path: string): string {
     }
     return links.join(` <span class="text-gray-400">/</span> `);
 }
-
-function htmlHeaders() { return { "content-type": "text/html; charset=utf-8" }; }
 
 function esc(s: any): string {
     return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]!));

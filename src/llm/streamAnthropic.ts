@@ -130,9 +130,11 @@ async function* parseSSE(body: ReadableStream<Uint8Array>): AsyncGenerator<{ typ
             buf = buf.slice(idx + 2);
             let type = "message";
             let dataLine = "";
+            // Kimi's SSE omits the space after the colon (event:foo / data:{...}),
+            // while Anthropic's uses "event: foo". Handle both.
             for (const line of raw.split("\n")) {
-                if (line.startsWith("event: ")) type = line.slice(7).trim();
-                else if (line.startsWith("data: ")) dataLine += line.slice(6);
+                if (line.startsWith("event:")) type = line.slice(6).trim();
+                else if (line.startsWith("data:")) dataLine += line.slice(5).trimStart();
             }
             if (!dataLine) continue;
             try { yield { type, data: JSON.parse(dataLine) }; } catch { /* skip malformed */ }

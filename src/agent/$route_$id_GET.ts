@@ -33,8 +33,7 @@ export default async function (ctx: Context, _session: any, req: any) {
 <script>window.__init = ${initJson};</script>
 ${ctx.fns.ui.script(ctx, "agent.chat")}`;
 
-    const html = ctx.fns.ui.layout(ctx, { currentId: id, title: id, main });
-    return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
+    return { currentId: id, title: id, main };
 }
 
 function esc(s: any): string {

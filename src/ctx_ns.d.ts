@@ -11,9 +11,6 @@ declare global {
         stop: typeof import("./agent/stop").default;
         systemPrompt: typeof import("./agent/systemPrompt").default;
         };
-        calc: {
-        add: typeof import("./calc/add").default;
-        };
         db: {
         connect: typeof import("./db/connect").default;
         exec: typeof import("./db/exec").default;
@@ -85,13 +82,13 @@ declare global {
         password: typeof import("../.hyper/tools/password").default;
         };
         ui: {
-        layout: typeof import("./ui/layout").default;
         script: typeof import("./ui/script").default;
         };
     }
 
     interface RootFns {
     genTypes: typeof import("./genTypes").default;
+    layout: typeof import("./$layout").default;
     loadFns: typeof import("./loadFns").default;
     }
 

@@ -31,8 +31,7 @@ export default async function (ctx: Context) {
   </div>
 </form>
 </div>`;
-    const html = ctx.fns.ui.layout(ctx, { title: "new agent", main });
-    return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
+    return { title: "new agent", main };
 }
 
 function esc(s: any): string {

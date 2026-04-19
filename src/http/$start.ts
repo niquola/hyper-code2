@@ -16,7 +16,8 @@ export default async function (ctx: Context) {
             }
             (req as any).params = m.params;
             try {
-                const res = await m.handler(ctx, null, req);
+                const raw = await m.handler(ctx, null, req);
+                const res = toResponse(ctx, raw);
                 log(logFile, req.method, url.pathname + url.search, res.status, performance.now() - t0);
                 return res;
             } catch (e: any) {
@@ -28,6 +29,31 @@ export default async function (ctx: Context) {
     ctx.state.server = { server, port };
     await Bun.write(".hyper/port", String(port));
     console.log(`[server] listening on http://localhost:${port}  (written to .hyper/port)`);
+}
+
+// Auto-wrap handler return values:
+//   Response              → passthrough
+//   string                → HTML, wrapped with ctx.layout({ main: string })
+//   { main, title?, ... } → HTML, wrapped with ctx.layout(opts)
+//   other                 → JSON
+function toResponse(ctx: Context, v: any): Response {
+    if (v instanceof Response) return v;
+    const layout = (ctx as any).layout;
+    if (typeof v === "string" && layout) {
+        return new Response(layout(ctx, { main: v }), { headers: htmlHeaders() });
+    }
+    if (v && typeof v === "object" && typeof v.main === "string" && layout) {
+        const { status, ...opts } = v;
+        return new Response(layout(ctx, opts), { status: status ?? 200, headers: htmlHeaders() });
+    }
+    return new Response(JSON.stringify(v ?? null), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+    });
+}
+
+function htmlHeaders() {
+    return { "content-type": "text/html; charset=utf-8" };
 }
 
 function log(sink: any, method: string, path: string, status: number, ms: number, err?: string) {

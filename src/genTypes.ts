@@ -82,6 +82,7 @@ export default async function (_ctx: Context) {
 
 function shouldSkip(file: string): boolean {
     if (file.endsWith(".test.ts") || file.endsWith(".d.ts")) return true;
+    if (file.endsWith(".entry.ts")) return true; // browser-only bundle entry
     const name = basename(file, ".ts");
     if (name === "$main" || name === "$test") return true;
     if (name.startsWith("$route_")) return true;

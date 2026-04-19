@@ -1,38 +1,38 @@
 // CodeMirror 6 editor with autosave + optional vim mode.
+// Uses the prebuilt bundle exposed on window.__cm (see src/ui/bundle.entry.ts).
 // Config comes from window.__editor = { saveUrl, content, lang }.
-// Lives at /files/editor.js via $script_ convention.
 (async function () {
-    const CDN = "https://esm.sh";
     const cfg = window.__editor;
     if (!cfg) return;
 
-    const [view, state, lang, cmds, search, autocomplete, lint] = await Promise.all([
-        import(CDN + "/@codemirror/view"),
-        import(CDN + "/@codemirror/state"),
-        import(CDN + "/@codemirror/language"),
-        import(CDN + "/@codemirror/commands"),
-        import(CDN + "/@codemirror/search"),
-        import(CDN + "/@codemirror/autocomplete"),
-        import(CDN + "/@codemirror/lint"),
-    ]);
+    // Wait for bundle.js to populate window.__cm (defer means it runs before
+    // other defer scripts in source order, but bundle is listed earlier).
+    let cm = window.__cm;
+    let waited = 0;
+    while (!cm && waited < 5000) {
+        await new Promise(r => setTimeout(r, 50));
+        cm = window.__cm;
+        waited += 50;
+    }
+    if (!cm) { console.error("[editor] bundle not loaded (run: bun script/build-bundle.ts)"); return; }
+
     const { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter,
-        drawSelection, dropCursor, rectangularSelection, highlightSpecialChars } = view;
-    const { EditorState } = state;
-    const { defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching, foldGutter, foldKeymap } = lang;
-    const { defaultKeymap, history, historyKeymap, indentWithTab } = cmds;
-    const { searchKeymap, highlightSelectionMatches } = search;
-    const { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } = autocomplete;
-    const { lintKeymap } = lint;
+        drawSelection, dropCursor, rectangularSelection, highlightSpecialChars } = cm.view;
+    const { EditorState, StateEffect } = cm.state;
+    const { defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching, foldGutter, foldKeymap } = cm.language;
+    const { defaultKeymap, history, historyKeymap, indentWithTab } = cm.commands;
+    const { searchKeymap, highlightSelectionMatches } = cm.search;
+    const { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } = cm.autocomplete;
+    const { lintKeymap } = cm.lint;
 
     const langExt = [];
     if (cfg.lang) {
+        const mod = cm.langs[cfg.lang];
         try {
-            const pkg = cfg.lang === "json" ? "javascript" : cfg.lang;
-            const mod = await import(CDN + "/@codemirror/lang-" + pkg);
             if (cfg.lang === "json") langExt.push(mod.javascript({ jsx: false }));
             else if (cfg.lang === "javascript") langExt.push(mod.javascript({ jsx: true, typescript: true }));
-            else if (typeof mod[cfg.lang] === "function") langExt.push(mod[cfg.lang]());
-        } catch (e) { console.warn("lang load failed:", cfg.lang, e); }
+            else if (mod && typeof mod[cfg.lang] === "function") langExt.push(mod[cfg.lang]());
+        } catch (e) { console.warn("[editor] lang", cfg.lang, e); }
     }
 
     const theme = EditorView.theme({
@@ -91,14 +91,9 @@
     const vimStatus = document.getElementById("vim-status");
     let vimExt = null;
 
-    async function enableVim() {
-        if (!vimExt) {
-            try {
-                const m = await import(CDN + "/@replit/codemirror-vim@6");
-                vimExt = m.vim();
-            } catch (e) { console.warn("vim load failed:", e); return; }
-        }
-        editor.dispatch({ effects: state.StateEffect.appendConfig.of(vimExt) });
+    function enableVim() {
+        if (!vimExt) vimExt = cm.vim.vim();
+        editor.dispatch({ effects: StateEffect.appendConfig.of(vimExt) });
         if (vimStatus) { vimStatus.classList.remove("hidden"); vimStatus.textContent = "-- NORMAL --"; }
     }
     function disableVim() {

@@ -4,12 +4,12 @@ export default async function (ctx: Context, _session: any, _req: Request) {
     if (ids.length > 0) {
         return new Response(null, { status: 302, headers: { location: `/agent/${encodeURIComponent(ids[0]!)}` } });
     }
-    const main = `<div class="flex-1 flex items-center justify-center text-gray-500">
+    return {
+        main: `<div class="flex-1 flex items-center justify-center text-gray-500">
   <div class="text-center">
     <p class="mb-4">No agents yet.</p>
     <a href="/agent/new" class="inline-block px-4 py-2 bg-gray-900 text-white rounded hover:bg-gray-700">+ new agent</a>
   </div>
-</div>`;
-    const html = ctx.fns.ui.layout(ctx, { main });
-    return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
+</div>`,
+    };
 }

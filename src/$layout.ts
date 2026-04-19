@@ -33,6 +33,7 @@ export default function (ctx: Context, opts: { currentId?: string; title?: strin
   .tool pre.shiki { padding: 0; margin: 0; overflow-x: auto; }
 </style>
 ${opts.headExtra ?? ""}
+<script src="/ui/bundle.js" defer></script>
 <script src="/events/client.js" defer></script>
 </head>
 <body class="bg-white text-gray-900 text-sm h-screen">

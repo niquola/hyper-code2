@@ -42,6 +42,7 @@ export default async function (ctx: Context): Promise<void> {
 
 function shouldLoadFn(file: string): boolean {
     if (file.endsWith(".test.ts") || file.endsWith(".d.ts")) return false;
+    if (file.endsWith(".entry.ts")) return false; // browser-only bundle entry
     const name = basename(file, ".ts");
     if (name === "$main" || name === "$test") return false;
     if (name.startsWith("$route_")) return false;

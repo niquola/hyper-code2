@@ -26,6 +26,15 @@ type ProviderConfig = {
 
 const envKey = (name: string) => (ctx: Context) => ctx.env[name] ?? null;
 
+function decodeJwtExp(token: string): number | null {
+    try {
+        const payload = token.split(".")[1];
+        if (!payload) return null;
+        const json = JSON.parse(Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
+        return typeof json.exp === "number" ? json.exp : null;
+    } catch { return null; }
+}
+
 const PROVIDERS: Record<string, ProviderConfig> = {
     lmstudio: {
         api: "openai",
@@ -38,7 +47,10 @@ const PROVIDERS: Record<string, ProviderConfig> = {
         resolveApiKey: envKey("KIMI_API_KEY"),
     },
     "kimi-coding": {
-        // Kimi coding subscription — Anthropic-messages protocol
+        // Kimi coding subscription — Anthropic-messages protocol.
+        // Token is read fresh from ~/.kimi/credentials/kimi-code.json on every
+        // call (no caching). JWT exp is checked; expired tokens return null so
+        // the caller fails loud instead of silently using a stale token.
         api: "anthropic",
         resolveBaseUrl: () => "https://api.kimi.com/coding",
         resolveApiKey: (ctx) => {
@@ -47,8 +59,20 @@ const PROVIDERS: Record<string, ProviderConfig> = {
                 const { readFileSync } = require("node:fs");
                 const home = ctx.env.HOME ?? process.env.HOME ?? "";
                 const raw = readFileSync(`${home}/.kimi/credentials/kimi-code.json`, "utf8");
-                return JSON.parse(raw).access_token ?? null;
-            } catch { return null; }
+                const j = JSON.parse(raw);
+                const tok = j.access_token;
+                if (!tok) return null;
+                const exp = decodeJwtExp(tok);
+                const now = Math.floor(Date.now() / 1000);
+                if (exp && exp < now - 5) {
+                    console.warn(`[kimi-coding] token expired ${now - exp}s ago — run \`kimi login\` to refresh`);
+                    return null;
+                }
+                return tok;
+            } catch (e: any) {
+                console.warn(`[kimi-coding] cannot read credentials: ${e?.message}`);
+                return null;
+            }
         },
     },
     anthropic: {
