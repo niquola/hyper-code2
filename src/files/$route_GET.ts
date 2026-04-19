@@ -1,18 +1,22 @@
 import { stat } from "node:fs/promises";
+import { basename, extname } from "node:path";
 
-// GET /files?path=... — directory listing OR file view/edit page (same route).
+// GET /files?path=... — directory listing OR file view (Preview/Code/Edit).
 export default async function (ctx: Context, _session: any, req: any) {
     const url = new URL(req.url);
     const path = url.searchParams.get("path") ?? "";
+    const tab = url.searchParams.get("tab") ?? "";
     const abs = ctx.fns.files.resolveSafe(ctx, path);
     const st = await stat(abs).catch(() => null);
     if (!st) {
-        const main = page(ctx, path, `<div class="p-6 text-red-700">not found: <code>${esc(path)}</code></div>`);
+        const main = page(`<div class="p-6 text-red-700">not found: <code>${esc(path)}</code></div>`);
         return new Response(ctx.fns.ui.layout(ctx, { title: path || "files", main }), { status: 404, headers: htmlHeaders() });
     }
 
     if (st.isDirectory()) return renderDir(ctx, path);
-    return renderFile(ctx, path);
+
+    ctx.fns.files.open(ctx, path);
+    return renderFile(ctx, path, tab);
 }
 
 async function renderDir(ctx: Context, path: string) {
@@ -28,28 +32,72 @@ async function renderDir(ctx: Context, path: string) {
     const body = `
 <div class="px-6 py-4 border-b border-gray-200 text-sm">${crumbs}</div>
 <div class="flex-1 overflow-y-auto">${rows || '<div class="p-6 text-gray-400">(empty)</div>'}</div>`;
-    return new Response(ctx.fns.ui.layout(ctx, { title: path || "files", main: page(ctx, path, body) }), { status: 200, headers: htmlHeaders() });
+    return new Response(ctx.fns.ui.layout(ctx, { title: path || "files", main: page(body) }), { status: 200, headers: htmlHeaders() });
 }
 
-async function renderFile(ctx: Context, path: string) {
+async function renderFile(ctx: Context, path: string, tabParam: string) {
     const content = await ctx.fns.files.read(ctx, path);
+    const name = basename(path);
+    const ext = extname(name).slice(1).toLowerCase();
+    const isMd = ext === "md" || ext === "markdown";
+    const isHtml = ext === "html" || ext === "htm";
+    const tab = tabParam || (isMd ? "preview" : "code");
+    const shikiLang = SHIKI_EXT[ext] ?? "text";
+    const cmLang = CM_EXT[ext] ?? null;
+
+    const tabCls = (id: string) => id === tab
+        ? "px-2.5 py-0.5 text-xs font-medium text-gray-900 bg-white border border-gray-300 rounded"
+        : "px-2.5 py-0.5 text-xs text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded cursor-pointer";
+    const tabLink = (id: string, label: string) =>
+        `<a href="/files?path=${encodeURIComponent(path)}&tab=${id}" class="${tabCls(id)}">${label}</a>`;
+
+    const tabs: string[] = [];
+    if (isMd) tabs.push(tabLink("preview", "Preview"));
+    if (isHtml) tabs.push(tabLink("preview", "Preview"));
+    tabs.push(tabLink("code", "Code"));
+    tabs.push(tabLink("edit", "Edit"));
+
+    let contentEl = "";
+    let headExtra = "";
+    if (tab === "preview" && isMd) {
+        const html = await ctx.fns.markdown.render(ctx, content);
+        contentEl = `<div class="flex-1 overflow-auto p-6"><div class="prose prose-sm max-w-none">${html}</div></div>`;
+    } else if (tab === "preview" && isHtml) {
+        contentEl = `<iframe srcdoc="${esc(content)}" class="flex-1 w-full border-0" sandbox="allow-scripts"></iframe>`;
+    } else if (tab === "edit") {
+        headExtra = `<script>window.__editor = ${JSON.stringify({
+            saveUrl: `/files?path=${encodeURIComponent(path)}`,
+            content,
+            lang: cmLang,
+        })};</script>
+<script src="/files/editor.js" defer></script>`;
+        contentEl = `<div id="cm-editor" class="flex-1 overflow-hidden"></div>`;
+    } else {
+        const html = await ctx.fns.markdown.highlight(ctx, content, shikiLang);
+        contentEl = `<div class="flex-1 overflow-auto text-xs bg-white [&_pre]:m-0 [&_pre]:rounded-none [&_pre]:p-4">${html}</div>`;
+    }
+
     const crumbs = breadcrumbs(path);
     const body = `
-<div class="px-6 py-3 border-b border-gray-200 text-sm flex items-center gap-3">
-  <span>${crumbs}</span>
-  <span class="text-xs text-gray-400 ml-auto">${content.length} chars · ${content.split("\n").length} lines</span>
+<div class="border-b border-gray-200 bg-gray-50 shrink-0 px-4 py-1.5 flex items-center gap-2">
+  <span class="text-xs font-mono text-gray-700 truncate mr-2">${esc(path)}</span>
+  ${tabs.join("")}
+  <span id="save-status" class="text-xs hidden"></span>
+  ${tab === "edit" ? `<label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer ml-2"><input type="checkbox" id="vim-toggle" class="w-3 h-3">vim</label>` : ""}
+  <span class="flex-1"></span>
+  <span class="text-xs text-gray-400 shrink-0">${content.length} chars · ${content.split("\n").length} lines</span>
 </div>
-<form method="POST" action="/files?path=${encodeURIComponent(path)}" class="flex-1 flex flex-col overflow-hidden">
-  <textarea name="content" spellcheck="false" class="flex-1 p-4 font-mono text-xs leading-relaxed resize-none outline-none border-0">${esc(content)}</textarea>
-  <div class="flex items-center gap-2 px-6 py-3 border-t border-gray-200 bg-gray-50">
-    <button type="submit" class="px-4 py-1.5 bg-gray-900 text-white rounded text-sm hover:bg-gray-700">Save</button>
-    <a href="/files?path=${encodeURIComponent(parentOf(path))}" class="px-4 py-1.5 border border-gray-300 rounded text-sm hover:bg-gray-100">Cancel</a>
-  </div>
-</form>`;
-    return new Response(ctx.fns.ui.layout(ctx, { title: path, main: page(ctx, path, body) }), { status: 200, headers: htmlHeaders() });
+${tab === "edit" ? `<div id="vim-status" class="hidden bg-gray-800 text-gray-100 text-xs px-3 py-0.5 font-mono shrink-0"></div>` : ""}
+<div class="px-4 py-2 border-b border-gray-200 text-xs">${crumbs}</div>
+${contentEl}`;
+
+    return new Response(
+        ctx.fns.ui.layout(ctx, { title: path, main: page(body), headExtra }),
+        { status: 200, headers: htmlHeaders() },
+    );
 }
 
-function page(_ctx: Context, _path: string, body: string): string {
+function page(body: string): string {
     return `<div class="flex-1 flex flex-col overflow-hidden">${body}</div>`;
 }
 
@@ -63,15 +111,21 @@ function breadcrumbs(path: string): string {
     return links.join(` <span class="text-gray-400">/</span> `);
 }
 
-function parentOf(path: string): string {
-    const i = path.lastIndexOf("/");
-    return i >= 0 ? path.slice(0, i) : "";
-}
-
-function htmlHeaders() {
-    return { "content-type": "text/html; charset=utf-8" };
-}
+function htmlHeaders() { return { "content-type": "text/html; charset=utf-8" }; }
 
 function esc(s: any): string {
     return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]!));
 }
+
+const SHIKI_EXT: Record<string, string> = {
+    ts: "typescript", tsx: "tsx", js: "javascript", jsx: "jsx", mjs: "javascript",
+    json: "json", md: "markdown", html: "html", css: "css", sql: "sql",
+    py: "python", rs: "rust", go: "go", java: "java", yaml: "yaml", yml: "yaml",
+    toml: "toml", sh: "bash", bash: "bash", zsh: "bash", xml: "xml", diff: "diff",
+};
+const CM_EXT: Record<string, string> = {
+    ts: "javascript", tsx: "javascript", js: "javascript", jsx: "javascript", mjs: "javascript",
+    json: "json", md: "markdown", html: "html", css: "css", sql: "sql",
+    py: "python", rs: "rust", go: "go", java: "java", yaml: "yaml", yml: "yaml",
+    xml: "xml",
+};

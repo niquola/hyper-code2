@@ -16,7 +16,9 @@ export default function (ctx: Context, opts: { currentId?: string; title?: strin
             };
         });
     }
-    const sidebar = renderSidebar(agents, opts.currentId);
+    const openFiles = ctx.fns.files?.listOpen ? ctx.fns.files.listOpen(ctx) : [];
+    const currentPath = extractCurrentPath(opts.title);
+    const sidebar = renderSidebar(agents, openFiles, opts.currentId, currentPath);
     const pageTitle = opts.title ? `${opts.title} · hyper-code2` : "hyper-code2";
     return `<!doctype html>
 <html>
@@ -31,6 +33,7 @@ export default function (ctx: Context, opts: { currentId?: string; title?: strin
   .tool pre.shiki { padding: 0; margin: 0; overflow-x: auto; }
 </style>
 ${opts.headExtra ?? ""}
+<script src="/events/client.js" defer></script>
 </head>
 <body class="bg-white text-gray-900 text-sm h-screen">
 <div class="flex h-screen">
@@ -41,8 +44,8 @@ ${opts.headExtra ?? ""}
 </html>`;
 }
 
-function renderSidebar(agents: any[], currentId?: string): string {
-    const rows = agents.length === 0
+function renderSidebar(agents: any[], openFiles: string[], currentId?: string, currentPath?: string): string {
+    const agentRows = agents.length === 0
         ? `<div class="px-4 py-3 text-xs text-gray-400">no agents yet</div>`
         : agents.map(a => {
             const active = a.id === currentId;
@@ -51,16 +54,37 @@ function renderSidebar(agents: any[], currentId?: string): string {
 <div class="text-gray-400 font-mono mt-0.5">${esc(a.id)} · ${a.turns} turns${a.isStreaming ? " · ●" : ""}</div>
 </a>`;
         }).join("");
+    const fileRows = openFiles.map(p => {
+        const active = p === currentPath;
+        const name = p.split("/").pop() ?? p;
+        const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
+        return `<div class="group flex items-stretch border-b border-gray-200 text-xs hover:bg-gray-100 ${active ? "bg-white font-semibold" : ""}">
+<a href="/files?path=${encodeURIComponent(p)}" class="flex-1 min-w-0 px-4 py-2" title="${esc(p)}">
+<div class="truncate">${esc(name)}</div>
+${dir ? `<div class="text-gray-400 font-mono mt-0.5 truncate">${esc(dir)}</div>` : ""}
+</a>
+<form method="POST" action="/files/close?path=${encodeURIComponent(p)}" class="shrink-0 flex">
+  <button type="submit" title="close" class="px-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100">×</button>
+</form>
+</div>`;
+    }).join("");
     return `<aside class="w-64 shrink-0 border-r border-gray-200 flex flex-col bg-gray-50">
-<div class="px-4 py-3 flex items-center justify-between border-b border-gray-200">
+<div class="px-4 py-3 flex items-center gap-3 border-b border-gray-200">
   <a href="/" class="font-semibold text-gray-700 hover:text-gray-900">agents</a>
-  <a href="/agent/new" class="text-xs px-2 py-0.5 border border-gray-300 rounded bg-white hover:bg-gray-100">+ new</a>
+  <a href="/files" title="files" class="text-gray-500 hover:text-gray-900 text-base leading-none">📁</a>
+  <a href="/agent/new" class="ml-auto text-xs px-2 py-0.5 border border-gray-300 rounded bg-white hover:bg-gray-100">+ new</a>
 </div>
-<div class="flex-1 overflow-y-auto">${rows}</div>
-<div class="border-t border-gray-200 px-4 py-2">
-  <a href="/files" class="block text-sm text-gray-700 hover:text-gray-900">📁 files</a>
+<div class="flex-1 overflow-y-auto">
+  ${agentRows}
+  ${fileRows ? `<div class="border-t-4 border-gray-300"></div>${fileRows}` : ""}
 </div>
 </aside>`;
+}
+
+function extractCurrentPath(title?: string): string | undefined {
+    if (!title) return undefined;
+    if (title === "files" || title === "hyper-code2") return undefined;
+    return title;
 }
 
 function esc(s: any): string {

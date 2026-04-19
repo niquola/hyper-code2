@@ -11,6 +11,9 @@ declare global {
         stop: typeof import("./agent/stop").default;
         systemPrompt: typeof import("./agent/systemPrompt").default;
         };
+        calc: {
+        add: typeof import("./calc/add").default;
+        };
         db: {
         connect: typeof import("./db/connect").default;
         exec: typeof import("./db/exec").default;
@@ -18,10 +21,22 @@ declare global {
         migrate: typeof import("./db/migrate").default;
         select: typeof import("./db/select").default;
         };
+        events: {
+        emit: typeof import("./events/emit").default;
+        subscribe: typeof import("./events/subscribe").default;
+        };
         files: {
+        close: typeof import("./files/close").default;
+        exists: typeof import("./files/exists").default;
         list: typeof import("./files/list").default;
+        listOpen: typeof import("./files/listOpen").default;
+        mkdir: typeof import("./files/mkdir").default;
+        open: typeof import("./files/open").default;
         read: typeof import("./files/read").default;
+        remove: typeof import("./files/remove").default;
+        rename: typeof import("./files/rename").default;
         resolveSafe: typeof import("./files/resolveSafe").default;
+        stat: typeof import("./files/stat").default;
         write: typeof import("./files/write").default;
         };
         http: {

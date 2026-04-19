@@ -205,6 +205,27 @@ ctx.fns.db.select(ctx, "SELECT content, ts FROM messages WHERE agent_id = ? AND 
 await Bun.file("package.json").json()
 ```
 
+## Driving the UI — `ctx.fns.files` + SSE
+
+The browser maintains an `EventSource` to `GET /events`. The server pushes JSON
+events and the client reacts. You can trigger UI actions from `evalCode`:
+
+```js
+// Open a file in the user's browser — navigates there if they're on /files,
+// otherwise the left-sidebar "open files" list silently refreshes.
+ctx.fns.files.open(ctx, "src/agent/run.ts");
+
+// Close a tab:
+ctx.fns.files.close(ctx, "src/agent/run.ts");
+
+// Fire an arbitrary event (no default handler — useful if you extend the client):
+ctx.fns.events.emit(ctx, { type: "note", text: "heads up" });
+```
+
+File operations available as procedures (all safe under cwd, path traversal refused):
+`ctx.fns.files.read / write / list / stat / exists / mkdir / remove / rename / open / close / listOpen / resolveSafe`.
+Prefer these over raw `Bun.file` when you want the UI to reflect the change.
+
 ## Database
 
 One shared SQLite connection at `ctx.state.db` (path: `.hyper/sessions`). Access via:
