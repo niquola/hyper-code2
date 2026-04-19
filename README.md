@@ -142,6 +142,35 @@ tmux new-session -d -s hyper 'bun src/$main.ts'
 open http://localhost:3000/
 ```
 
+## LLM providers & auth
+
+Models are addressed as `<provider>:<model-id>`. The prefix picks the endpoint and
+protocol; the API key is pulled from an env var or a local credentials file:
+
+| prefix          | endpoint                             | auth                                   |
+| --------------- | ------------------------------------ | -------------------------------------- |
+| *none* / `lmstudio:` | `LMSTUDIO_URL` (default `:1234`)     | none (local)                           |
+| `openai:`       | `https://api.openai.com/v1`          | `OPENAI_API_KEY`                       |
+| `anthropic:`    | `https://api.anthropic.com`          | `ANTHROPIC_API_KEY`                    |
+| `kimi:`         | `https://api.moonshot.ai/v1`         | `KIMI_API_KEY` (Moonshot console key)  |
+| `kimi-coding:`  | `https://api.kimi.com/coding`        | `KIMI_CODING_API_KEY` OR JWT from `~/.kimi/credentials/kimi-code.json` |
+| `groq:`         | `https://api.groq.com/openai/v1`     | `GROQ_API_KEY`                         |
+| `openrouter:`   | `https://openrouter.ai/api/v1`       | `OPENROUTER_API_KEY`                   |
+
+`kimi:` and `kimi-coding:` are **different services** — `kimi:` is the pay-per-token
+Moonshot API (OpenAI-compat), `kimi-coding:` is the monthly subscription that the
+`kimi` CLI uses (Anthropic-compat). If you get `{"type":"incorrect_api_key_error"}`
+you hit Moonshot without a Moonshot key; pick `kimi-coding:` instead.
+
+### Token handling (no caching)
+
+`src/llm/resolveEndpoint.ts` reads credentials on every call — nothing is cached
+in memory. For `kimi-coding:` the JWT is read fresh from
+`~/.kimi/credentials/kimi-code.json` (which `kimi login` maintains). Before
+returning the token we decode its `exp` claim; if expired, we return `null`
+and print a warning so you fail loud instead of getting a confusing 401. Run
+`kimi login` to refresh.
+
 ## REPL workflow
 
 The server stays up. Everything iterates without restart:
