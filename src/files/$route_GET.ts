@@ -15,7 +15,9 @@ export default async function (ctx: Context, _session: any, req: any) {
 
     if (st.isDirectory()) return renderDir(ctx, path);
 
-    ctx.fns.files.open(ctx, path);
+    // User is already navigating here — add to tabs but don't broadcast
+    // (self-echo would cancel the in-flight nav and re-trigger it).
+    ctx.fns.files.open(ctx, path, { broadcast: false });
     return renderFile(ctx, path, tab);
 }
 

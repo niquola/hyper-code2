@@ -1,12 +1,18 @@
 // Add a file path to the server-side "open tabs" list. Idempotent.
-// Broadcasts `files.open` via SSE so every connected browser reacts
-// (navigates to the file if on /files, or refreshes the sidebar otherwise).
-// Both UI (GET /files?path=...) and the agent (via evalCode) can call this.
-export default function (ctx: Context, path: string): string[] {
+// Broadcasts `files.open` via SSE (unless `broadcast:false`) so every connected
+// browser reacts — agent-initiated opens navigate the user's browser.
+// The GET /files handler passes `broadcast:false` (the user is already navigating,
+// no need to self-echo and re-navigate to the same URL).
+export default function (
+    ctx: Context,
+    path: string,
+    opts: { broadcast?: boolean } = {},
+): string[] {
     if (!path) return ((ctx.state as any).files?.open ?? []) as string[];
     const s = (ctx.state as any).files ?? ((ctx.state as any).files = { open: [] });
-    const wasOpen = s.open.includes(path);
-    if (!wasOpen) s.open.push(path);
-    ctx.fns.events?.emit?.(ctx, { type: "files.open", path });
+    if (!s.open.includes(path)) s.open.push(path);
+    if (opts.broadcast !== false) {
+        ctx.fns.events?.emit?.(ctx, { type: "files.open", path });
+    }
     return s.open;
 }
