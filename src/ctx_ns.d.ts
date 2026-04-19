@@ -24,6 +24,7 @@ declare global {
         start: typeof import("./http/$start").default;
         };
         llm: {
+        listModels: typeof import("./llm/listModels").default;
         resolveEndpoint: typeof import("./llm/resolveEndpoint").default;
         stream: typeof import("./llm/stream").default;
         };

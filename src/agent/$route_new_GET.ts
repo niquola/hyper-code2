@@ -1,12 +1,23 @@
 export default async function (ctx: Context) {
     const defaultModel = ctx.env.MODEL ?? "";
+    const groups = await ctx.fns.llm.listModels(ctx);
+    const optgroups = Object.entries(groups).map(([provider, ids]) => {
+        const opts = (ids as string[]).map(id =>
+            `<option value="${esc(id)}" ${id === defaultModel ? "selected" : ""}>${esc(id)}</option>`
+        ).join("");
+        return `<optgroup label="${esc(provider)}">${opts}</optgroup>`;
+    }).join("");
+
     const main = `<div class="flex-1 overflow-y-auto">
 <form method="POST" action="/agent/new" class="max-w-2xl mx-auto px-6 py-8 space-y-5">
   <h1 class="text-xl font-semibold text-gray-800">New agent</h1>
 
   <label class="block">
     <span class="block text-xs font-semibold text-gray-600 mb-1">model</span>
-    <input name="model" value="${esc(defaultModel)}" placeholder="e.g. minimax/minimax-m2.7" class="w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono" />
+    <select name="model" class="w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono bg-white">
+      ${optgroups}
+    </select>
+    <span class="block mt-1 text-xs text-gray-500">LM Studio models are fetched live; remote models use the provider-prefixed id (<code>kimi:...</code>, <code>openai:...</code>) and need the matching API key env var set.</span>
   </label>
 
   <label class="block">
