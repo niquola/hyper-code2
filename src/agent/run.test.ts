@@ -1,6 +1,9 @@
 import { test, expect, describe } from "bun:test";
 import start from "./start";
 import stream from "../llm/stream";
+import streamOpenAI from "../llm/streamOpenAI";
+import streamAnthropic from "../llm/streamAnthropic";
+import toAnthropicMessages from "../llm/toAnthropicMessages";
 import resolveEndpoint from "../llm/resolveEndpoint";
 import run from "./run";
 import highlight from "../markdown/highlight";
@@ -21,7 +24,7 @@ const mkCtx = () => ({
     state: {},
     env: { LMSTUDIO_URL: process.env.LMSTUDIO_URL, MODEL: process.env.MODEL },
     fns: {
-        llm: { stream, resolveEndpoint },
+        llm: { stream, streamOpenAI, streamAnthropic, resolveEndpoint, toAnthropicMessages },
         markdown: { highlight, render },
         repl: { eval: evalFn },
     },

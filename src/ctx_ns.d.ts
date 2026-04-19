@@ -27,6 +27,9 @@ declare global {
         listModels: typeof import("./llm/listModels").default;
         resolveEndpoint: typeof import("./llm/resolveEndpoint").default;
         stream: typeof import("./llm/stream").default;
+        streamAnthropic: typeof import("./llm/streamAnthropic").default;
+        streamOpenAI: typeof import("./llm/streamOpenAI").default;
+        toAnthropicMessages: typeof import("./llm/toAnthropicMessages").default;
         };
         markdown: {
         highlight: typeof import("./markdown/highlight").default;

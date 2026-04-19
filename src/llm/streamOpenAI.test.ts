@@ -1,8 +1,9 @@
 import { test, expect, describe } from "bun:test";
 import start from "../agent/start";
-import stream from "./stream";
+import stream from "./streamOpenAI";
 import resolveEndpoint from "./resolveEndpoint";
 
+// Exercises streamOpenAI directly, bypassing the stream.ts dispatcher.
 const mkCtx = () => ({
     state: {},
     env: { LMSTUDIO_URL: process.env.LMSTUDIO_URL, MODEL: process.env.MODEL },
