@@ -57,6 +57,9 @@ function renderSidebar(agents: any[], currentId?: string): string {
   <a href="/agent/new" class="text-xs px-2 py-0.5 border border-gray-300 rounded bg-white hover:bg-gray-100">+ new</a>
 </div>
 <div class="flex-1 overflow-y-auto">${rows}</div>
+<div class="border-t border-gray-200 px-4 py-2">
+  <a href="/files" class="block text-sm text-gray-700 hover:text-gray-900">📁 files</a>
+</div>
 </aside>`;
 }
 

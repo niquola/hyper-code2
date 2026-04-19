@@ -18,6 +18,12 @@ declare global {
         migrate: typeof import("./db/migrate").default;
         select: typeof import("./db/select").default;
         };
+        files: {
+        list: typeof import("./files/list").default;
+        read: typeof import("./files/read").default;
+        resolveSafe: typeof import("./files/resolveSafe").default;
+        write: typeof import("./files/write").default;
+        };
         http: {
         loadRoutes: typeof import("./http/loadRoutes").default;
         match: typeof import("./http/match").default;
