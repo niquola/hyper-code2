@@ -44,11 +44,17 @@ export default async function (
         "content-type": "application/json",
         "anthropic-version": "2023-06-01",
     };
-    if (ep.apiKey) {
-        if (ep.apiKey.startsWith("sk-ant-oat") || ep.provider === "kimi-coding") {
-            headers["authorization"] = `Bearer ${ep.apiKey}`;
+    // kimi-coding JWT has ~15min TTL — auto-refresh via refresh_token if near expiry.
+    let apiKey = ep.apiKey;
+    if (ep.provider === "kimi-coding") {
+        const fresh = await ctx.fns.llm.refreshKimiCode(ctx);
+        if (fresh) apiKey = fresh;
+    }
+    if (apiKey) {
+        if (apiKey.startsWith("sk-ant-oat") || ep.provider === "kimi-coding") {
+            headers["authorization"] = `Bearer ${apiKey}`;
         } else {
-            headers["x-api-key"] = ep.apiKey;
+            headers["x-api-key"] = apiKey;
         }
     }
 

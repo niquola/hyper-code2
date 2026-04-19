@@ -43,6 +43,7 @@ declare global {
         };
         llm: {
         listModels: typeof import("./llm/listModels").default;
+        refreshKimiCode: typeof import("./llm/refreshKimiCode").default;
         resolveEndpoint: typeof import("./llm/resolveEndpoint").default;
         stream: typeof import("./llm/stream").default;
         streamAnthropic: typeof import("./llm/streamAnthropic").default;

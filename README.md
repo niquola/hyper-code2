@@ -166,14 +166,22 @@ Moonshot API (OpenAI-compat), `kimi-coding:` is the monthly subscription that th
 `kimi` CLI uses (Anthropic-compat). If you get `{"type":"incorrect_api_key_error"}`
 you hit Moonshot without a Moonshot key; pick `kimi-coding:` instead.
 
-### Token handling (no caching)
+### Token handling (no caching, auto-refresh for `kimi-coding:`)
 
 `src/llm/resolveEndpoint.ts` reads credentials on every call — nothing is cached
 in memory. For `kimi-coding:` the JWT is read fresh from
-`~/.kimi/credentials/kimi-code.json` (which `kimi login` maintains). Before
-returning the token we decode its `exp` claim; if expired, we return `null`
-and print a warning so you fail loud instead of getting a confusing 401. Run
-`kimi login` to refresh.
+`~/.kimi/credentials/kimi-code.json` (which `kimi login` maintains).
+
+The access token lives ~15 min. `src/llm/refreshKimiCode.ts` (called from
+`streamAnthropic` before every `kimi-coding:` request) decodes the `exp` claim
+and — if less than 60 s remain — exchanges the `refresh_token` at
+`https://auth.kimi.com/api/oauth/token` for a fresh access + refresh pair, then
+writes the new creds back to the same file (so `kimi` CLI picks them up too).
+`KIMI_CODING_API_KEY` env var, if set, shortcircuits the whole flow.
+
+If refresh itself fails, you'll see a warning in the logs and the request goes
+out with no auth — so a 401 fails loud instead of being silently retried with a
+stale token. Run `kimi login` to start a new device session.
 
 ## REPL workflow
 
