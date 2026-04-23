@@ -129,7 +129,7 @@ The full `agent.messages` ships to the model every turn. Rules baked into `SYSTE
 ## Quick start
 
 ```bash
-# 1. install
+# 1. install (requires Bun >= 1.3.13)
 bun install
 
 # 2. point at LM Studio (or any OpenAI-compatible endpoint with tool calling)
