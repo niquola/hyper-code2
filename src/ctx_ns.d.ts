@@ -74,6 +74,12 @@ declare global {
         save: typeof import("./session/save").default;
         search: typeof import("./session/search").default;
         };
+        settings: {
+        logoutKimi: typeof import("./settings/logoutKimi").default;
+        saveEnv: typeof import("./settings/saveEnv").default;
+        startKimiLogin: typeof import("./settings/startKimiLogin").default;
+        status: typeof import("./settings/status").default;
+        };
         skill: {
         hello: typeof import("../.hyper/skill/hello").default;
         wordCount: typeof import("../.hyper/skill/wordCount").default;

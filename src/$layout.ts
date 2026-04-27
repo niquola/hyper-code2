@@ -73,6 +73,7 @@ ${dir ? `<div class="text-gray-400 font-mono mt-0.5 truncate">${esc(dir)}</div>`
 <div class="px-4 py-3 flex items-center gap-3 border-b border-gray-200">
   <a href="/" class="font-semibold text-gray-700 hover:text-gray-900">agents</a>
   <a href="/files" title="files" class="text-gray-500 hover:text-gray-900 text-base leading-none">📁</a>
+  <a href="/settings" title="settings" class="text-gray-500 hover:text-gray-900 text-base leading-none">⚙︎</a>
   <a href="/agent/new" class="ml-auto text-xs px-2 py-0.5 border border-gray-300 rounded bg-white hover:bg-gray-100">+ new</a>
 </div>
 <div class="flex-1 overflow-y-auto">
