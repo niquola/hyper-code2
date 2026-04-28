@@ -69,6 +69,7 @@ export default async function (ctx: Context) {
   <section>
     <h2 class="text-sm font-semibold text-gray-700 mb-2">Codex (ChatGPT subscription)</h2>
     <p class="text-xs text-gray-500 mb-2">Spawns <code>codex login --device-auth</code>; tokens land in <code>~/.codex/auth.json</code> (same file the <code>codex</code> CLI uses).</p>
+    <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-2">Note: this token authorizes <code>chatgpt.com/backend-api/codex</code> (Responses API), <strong>not</strong> standard <code>api.openai.com/v1/chat/completions</code>. To use <code>openai:</code> agents, paste a key from <a class="underline" target="_blank" href="https://platform.openai.com/api-keys">platform.openai.com</a> above. A dedicated <code>codex:</code> provider that uses this token is not wired yet.</p>
     <div class="flex items-center gap-3 py-2 border-b border-gray-100">
       <span class="text-sm">${s.codex.loggedIn ? "✓ logged in" : "— not logged in"}</span>
       <span class="text-xs text-gray-400 font-mono">${s.codex.email ? esc(s.codex.email) + " · " + expHuman(s.codex.expSec) : ""}</span>
