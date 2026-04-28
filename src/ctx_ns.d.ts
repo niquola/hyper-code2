@@ -6,6 +6,7 @@ declare global {
         agent: {
         clear: typeof import("./agent/clear").default;
         compact: typeof import("./agent/compact").default;
+        fullSystemPrompt: typeof import("./agent/fullSystemPrompt").default;
         run: typeof import("./agent/run").default;
         start: typeof import("./agent/start").default;
         stop: typeof import("./agent/stop").default;

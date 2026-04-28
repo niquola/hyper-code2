@@ -20,18 +20,8 @@ export default async function (
     if (!apiKey) throw new Error("codex: no access_token (run /settings → login)");
     const accountId = extractAccountId(apiKey);
 
-    const runtime = [
-        "",
-        "## Runtime context (auto-injected, fresh each turn)",
-        `- cwd: ${process.cwd()}`,
-        `- your agent id: ${agent.id}`,
-        `- db path: ${ctx.env.DB_PATH ?? ".hyper/sessions"}`,
-        "",
-        "Inside `evalCode` you also have direct access: `agent.id`, `process.cwd()`.",
-    ].join("\n");
-
-    const { instructions: msgInstructions, input } = ctx.fns.llm.toCodexInput(ctx, agent.messages as any);
-    const instructions = [agent.systemPrompt ?? "", msgInstructions, runtime].filter(Boolean).join("\n");
+    const { input } = ctx.fns.llm.toCodexInput(ctx, agent.messages as any);
+    const instructions = ctx.fns.agent.fullSystemPrompt(ctx, agent);
 
     const body: any = {
         model: ep.modelId,

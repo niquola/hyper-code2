@@ -13,14 +13,7 @@ export default async function (
 }> {
     const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
 
-    const runtime = [
-        "",
-        "## Runtime context (auto-injected, fresh each turn)",
-        `- cwd: ${process.cwd()}`,
-        `- your agent id: ${agent.id}`,
-        `- db path: ${ctx.env.DB_PATH ?? ".hyper/sessions"}`,
-    ].join("\n");
-    const system = (agent.systemPrompt ?? "") + runtime;
+    const system = ctx.fns.agent.fullSystemPrompt(ctx, agent);
 
     const body: any = {
         model: ep.modelId,

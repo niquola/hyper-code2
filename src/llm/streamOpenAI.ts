@@ -9,18 +9,9 @@ export default async function (
     finishReason: string | null;
     usage: any;
 }> {
-    const runtime = [
-        "",
-        "## Runtime context (auto-injected, fresh each turn)",
-        `- cwd: ${process.cwd()}`,
-        `- your agent id: ${agent.id}`,
-        `- db path: ${ctx.env.DB_PATH ?? ".hyper/sessions"}`,
-        "",
-        "Inside `evalCode` you also have direct access: `agent.id`, `process.cwd()`.",
-    ].join("\n");
-
     const messages: any[] = [];
-    if (agent.systemPrompt) messages.push({ role: "system", content: agent.systemPrompt + "\n" + runtime });
+    const sys = ctx.fns.agent.fullSystemPrompt(ctx, agent);
+    if (sys) messages.push({ role: "system", content: sys });
     messages.push(...agent.messages);
 
     const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);

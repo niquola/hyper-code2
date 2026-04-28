@@ -2,12 +2,13 @@ import { test, expect, describe } from "bun:test";
 import start from "../agent/start";
 import stream from "./streamOpenAI";
 import resolveEndpoint from "./resolveEndpoint";
+import fullSystemPrompt from "../agent/fullSystemPrompt";
 
 // Exercises streamOpenAI directly, bypassing the stream.ts dispatcher.
 const mkCtx = () => ({
     state: {},
     env: { LMSTUDIO_URL: process.env.LMSTUDIO_URL, MODEL: process.env.MODEL },
-    fns: { llm: { resolveEndpoint } },
+    fns: { llm: { resolveEndpoint }, agent: { fullSystemPrompt } },
 } as unknown as Context);
 
 describe("agent.stream — stateless /v1/chat/completions (LM Studio)", () => {

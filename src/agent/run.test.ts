@@ -9,6 +9,7 @@ import run from "./run";
 import highlight from "../markdown/highlight";
 import render from "../markdown/render";
 import evalFn from "../repl/eval";
+import fullSystemPrompt from "./fullSystemPrompt";
 
 const evalCodeTool = {
     name: "evalCode",
@@ -25,6 +26,7 @@ const mkCtx = () => ({
     env: { LMSTUDIO_URL: process.env.LMSTUDIO_URL, MODEL: process.env.MODEL },
     fns: {
         llm: { stream, streamOpenAI, streamAnthropic, resolveEndpoint, toAnthropicMessages },
+        agent: { fullSystemPrompt },
         markdown: { highlight, render },
         repl: { eval: evalFn },
     },
