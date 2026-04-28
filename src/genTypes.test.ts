@@ -1,9 +1,11 @@
 import { test, expect, describe } from "bun:test";
 import genTypes from "./genTypes";
+import roots from "./project/roots";
+import scan from "./project/scan";
 
 describe("genTypes", () => {
     test("scans src and writes ctx_ns.d.ts", async () => {
-        const ctx = {} as Context;
+        const ctx = { fns: { project: { roots, scan } } } as unknown as Context;
         const stats = await genTypes(ctx);
         expect(stats.roots).toBeGreaterThan(0);
         expect(stats.modules).toBeGreaterThan(0);
