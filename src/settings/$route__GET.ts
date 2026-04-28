@@ -1,9 +1,9 @@
 export default async function (ctx: Context) {
     const s = ctx.fns.settings.status(ctx);
     const kc = (ctx.state as any).settings?.kimi;
-    const expHuman = s.kimiCoding.expSec
-        ? `${Math.max(0, s.kimiCoding.expSec - Math.floor(Date.now() / 1000))}s left`
-        : "—";
+    const cx = (ctx.state as any).settings?.codex;
+    const expHuman = (e: number | null) =>
+        e ? `${Math.max(0, e - Math.floor(Date.now() / 1000))}s left` : "—";
 
     const envRow = (label: string, key: string, set: boolean, hint = "") => `
 <form method="POST" action="/settings/env" class="flex items-center gap-2 py-2 border-b border-gray-100">
@@ -16,21 +16,24 @@ export default async function (ctx: Context) {
   ${hint ? `<span class="text-xs text-gray-400">${esc(hint)}</span>` : ""}
 </form>`;
 
-    let kimiLoginBox = "";
-    if (kc?.status === "pending") {
-        const url = kc.verificationUriComplete ?? `${kc.verificationUri}?user_code=${encodeURIComponent(kc.userCode)}`;
-        kimiLoginBox = `
-<div class="rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm">
-  <div class="font-semibold mb-1">Authorize on auth.kimi.com</div>
-  <div class="mb-2">Open <a class="text-blue-700 underline" target="_blank" href="${esc(url)}">${esc(url)}</a> and confirm code <code class="px-1 bg-white border rounded font-mono">${esc(kc.userCode)}</code>.</div>
-  <div class="text-xs text-gray-500">Polling every ${kc.interval ?? 5}s — page auto-refreshes.</div>
+    const loginBox = (state: any, host: string): string => {
+        if (state?.status === "pending" && state.verificationUri && state.userCode) {
+            const url = state.verificationUriComplete ?? state.verificationUri;
+            return `<div class="rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm mt-3">
+  <div class="font-semibold mb-1">Authorize on ${esc(host)}</div>
+  <div class="mb-2">Open <a class="text-blue-700 underline" target="_blank" href="${esc(url)}">${esc(url)}</a> and enter code <code class="px-1 bg-white border rounded font-mono">${esc(state.userCode)}</code>.</div>
+  <div class="text-xs text-gray-500">Polling — page auto-refreshes.</div>
 </div>
 <script>setTimeout(() => location.reload(), 3000);</script>`;
-    } else if (kc?.status === "failed") {
-        kimiLoginBox = `<div class="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">login failed: ${esc(kc.error ?? "")}</div>`;
-    } else if (kc?.status === "expired") {
-        kimiLoginBox = `<div class="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm">device code expired — start again.</div>`;
-    }
+        }
+        if (state?.status === "failed") {
+            return `<div class="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 mt-3">login failed: ${esc(state.error ?? "")}</div>`;
+        }
+        if (state?.status === "expired") {
+            return `<div class="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm mt-3">device code expired — start again.</div>`;
+        }
+        return "";
+    };
 
     const main = `<div class="flex-1 overflow-y-auto">
 <div class="max-w-3xl mx-auto px-6 py-6 space-y-6">
@@ -51,7 +54,7 @@ export default async function (ctx: Context) {
     <p class="text-xs text-gray-500 mb-2">OAuth device flow — same credential file that <code>kimi</code> CLI uses (<code>~/.kimi/credentials/kimi-code.json</code>). Access tokens auto-refresh.</p>
     <div class="flex items-center gap-3 py-2 border-b border-gray-100">
       <span class="text-sm">${s.kimiCoding.loggedIn ? "✓ logged in" : "— not logged in"}</span>
-      <span class="text-xs text-gray-400 font-mono">${s.kimiCoding.loggedIn ? expHuman : ""}</span>
+      <span class="text-xs text-gray-400 font-mono">${s.kimiCoding.loggedIn ? expHuman(s.kimiCoding.expSec) : ""}</span>
       <span class="flex-1"></span>
       <form method="POST" action="/settings/kimi/login" class="inline">
         <button class="text-xs px-3 py-1 border border-gray-300 rounded bg-white hover:bg-gray-100">${s.kimiCoding.loggedIn ? "re-login" : "login"}</button>
@@ -60,7 +63,24 @@ export default async function (ctx: Context) {
         <button class="text-xs px-3 py-1 border border-gray-300 rounded bg-white hover:bg-gray-100">logout</button>
       </form>` : ""}
     </div>
-    ${kimiLoginBox ? `<div class="mt-3">${kimiLoginBox}</div>` : ""}
+    ${loginBox(kc, "auth.kimi.com")}
+  </section>
+
+  <section>
+    <h2 class="text-sm font-semibold text-gray-700 mb-2">Codex (ChatGPT subscription)</h2>
+    <p class="text-xs text-gray-500 mb-2">Spawns <code>codex login --device-auth</code>; tokens land in <code>~/.codex/auth.json</code> (same file the <code>codex</code> CLI uses).</p>
+    <div class="flex items-center gap-3 py-2 border-b border-gray-100">
+      <span class="text-sm">${s.codex.loggedIn ? "✓ logged in" : "— not logged in"}</span>
+      <span class="text-xs text-gray-400 font-mono">${s.codex.email ? esc(s.codex.email) + " · " + expHuman(s.codex.expSec) : ""}</span>
+      <span class="flex-1"></span>
+      <form method="POST" action="/settings/codex/login" class="inline">
+        <button class="text-xs px-3 py-1 border border-gray-300 rounded bg-white hover:bg-gray-100">${s.codex.loggedIn ? "re-login" : "login"}</button>
+      </form>
+      ${s.codex.loggedIn ? `<form method="POST" action="/settings/codex/logout" class="inline">
+        <button class="text-xs px-3 py-1 border border-gray-300 rounded bg-white hover:bg-gray-100">logout</button>
+      </form>` : ""}
+    </div>
+    ${loginBox(cx, "auth.openai.com")}
   </section>
 </div>
 </div>`;
