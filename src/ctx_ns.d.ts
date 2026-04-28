@@ -19,6 +19,12 @@ declare global {
         migrate: typeof import("./db/migrate").default;
         select: typeof import("./db/select").default;
         };
+        dev: {
+        readLog: typeof import("../.hyper/dev/readLog").default;
+        test: typeof import("../.hyper/dev/test").default;
+        testSummary: typeof import("../.hyper/dev/testSummary").default;
+        typecheck: typeof import("../.hyper/dev/typecheck").default;
+        };
         events: {
         emit: typeof import("./events/emit").default;
         subscribe: typeof import("./events/subscribe").default;
@@ -65,6 +71,11 @@ declare global {
         search: typeof import("../.hyper/memory/search").default;
         store: typeof import("../.hyper/memory/store").default;
         };
+        project: {
+        classify: typeof import("./project/classify").default;
+        roots: typeof import("./project/roots").default;
+        scan: typeof import("./project/scan").default;
+        };
         repl: {
         eval: typeof import("./repl/eval").default;
         load: typeof import("./repl/load").default;
@@ -109,6 +120,9 @@ declare global {
     namespace types {
         namespace agent {
             type Agent = import("./agent/$type_Agent").Agent;
+        }
+        namespace dev {
+            type TestRun = import("../.hyper/dev/$type_TestRun").TestRun;
         }
         namespace memory {
             type Entry = import("../.hyper/memory/$type_Entry").Entry;

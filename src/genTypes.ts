@@ -13,20 +13,22 @@ export default async function (ctx: Context) {
         const importPath = importPrefix + entry.rel.replace(/\.ts$/, '');
 
         if (entry.kind === 'type') {
-            const line =                 'type ' + entry.typeName + ' = import("' + importPath + '").' + entry.typeName + ';';
-            if (entry.moduleDir === '.') globals.push('    ' + line);
-            else {
-                typesByModule[entry.moduleDir] = typesByModule[entry.moduleDir] || [];
-                typesByModule[entry.moduleDir].push('            ' + line);
+            const line = 'type ' + entry.typeName + ' = import("' + importPath + '").' + entry.typeName + ';';
+            if (entry.moduleDir === '.') {
+                globals.push('    ' + line);
+            } else {
+                const bucket = (typesByModule[entry.moduleDir] ??= []);
+                bucket.push('            ' + line);
             }
             continue;
         }
 
         const line = entry.runtimeName + ': typeof import("' + importPath + '").default;';
-        if (entry.moduleDir === '.') rootFns.push('    ' + line);
-        else {
-            fnsByModule[entry.moduleDir] = fnsByModule[entry.moduleDir] || [];
-            fnsByModule[entry.moduleDir].push('        ' + line);
+        if (entry.moduleDir === '.') {
+            rootFns.push('    ' + line);
+        } else {
+            const bucket = (fnsByModule[entry.moduleDir] ??= []);
+            bucket.push('        ' + line);
         }
     }
 

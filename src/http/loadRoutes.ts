@@ -5,17 +5,20 @@ export default async function (ctx: Context) {
         if (entry.kind === 'route') {
             const mod = await import(entry.abs + `?t=${Date.now()}`);
             const handler = mod.default;
-            if (typeof handler !== 'function') { console.warn(`[routes] skip (no default export): ${entry.root}/${entry.rel}`); continue; }
-            ctx.routes[entry.routePath] = ctx.routes[entry.routePath] || {};
-            ctx.routes[entry.routePath][entry.method] = handler;
+            if (typeof handler !== 'function') {
+                console.warn(`[routes] skip (no default export): ${entry.root}/${entry.rel}`);
+                continue;
+            }
+            const routeBucket = (ctx.routes[entry.routePath] ??= {});
+            routeBucket[entry.method] = handler;
             console.log(`[routes] ${entry.method.padEnd(6)} ${entry.routePath}  ←  ${entry.root}/${entry.rel}`);
             continue;
         }
         if (entry.kind === 'script') {
             const abs = entry.abs;
             const handler = (() => async () => new Response(Bun.file(abs)))();
-            ctx.routes[entry.routePath] = ctx.routes[entry.routePath] || {};
-            ctx.routes[entry.routePath].GET = handler;
+            const routeBucket = (ctx.routes[entry.routePath] ??= {});
+            routeBucket.GET = handler;
             console.log(`[scripts] GET    ${entry.routePath}  ←  ${entry.root}/${entry.rel}`);
         }
     }

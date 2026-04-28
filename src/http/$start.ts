@@ -1,6 +1,6 @@
 export default async function (ctx: Context) {
     const port = Number(ctx.env.PORT) || 3000;
-    const logFile = Bun.file(".hyper/http.log").writer();
+    const logFile = Bun.file(".hyper/_runtime/http.log").writer();
     (ctx.state as any).http = { logFile };
 
     const server = Bun.serve({
@@ -27,8 +27,8 @@ export default async function (ctx: Context) {
         },
     });
     ctx.state.server = { server, port };
-    await Bun.write(".hyper/port", String(port));
-    console.log(`[server] listening on http://localhost:${port}  (written to .hyper/port)`);
+    await Bun.write(".hyper/_runtime/port", String(port));
+    console.log(`[server] listening on http://localhost:${port}  (written to .hyper/_runtime/port)`);
 }
 
 // Auto-wrap handler return values:
