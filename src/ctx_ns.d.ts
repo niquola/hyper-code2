@@ -43,12 +43,15 @@ declare global {
         };
         llm: {
         listModels: typeof import("./llm/listModels").default;
+        refreshCodex: typeof import("./llm/refreshCodex").default;
         refreshKimiCode: typeof import("./llm/refreshKimiCode").default;
         resolveEndpoint: typeof import("./llm/resolveEndpoint").default;
         stream: typeof import("./llm/stream").default;
         streamAnthropic: typeof import("./llm/streamAnthropic").default;
+        streamCodex: typeof import("./llm/streamCodex").default;
         streamOpenAI: typeof import("./llm/streamOpenAI").default;
         toAnthropicMessages: typeof import("./llm/toAnthropicMessages").default;
+        toCodexInput: typeof import("./llm/toCodexInput").default;
         };
         markdown: {
         highlight: typeof import("./markdown/highlight").default;

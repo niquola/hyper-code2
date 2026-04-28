@@ -7,5 +7,6 @@ export default async function (
 ) {
     const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
     if (ep.api === "anthropic") return ctx.fns.llm.streamAnthropic(ctx, agent, opts);
+    if (ep.api === "responses") return ctx.fns.llm.streamCodex(ctx, agent, opts);
     return ctx.fns.llm.streamOpenAI(ctx, agent, opts);
 }

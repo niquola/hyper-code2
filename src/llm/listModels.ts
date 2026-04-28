@@ -35,5 +35,25 @@ export default async function (ctx: Context): Promise<Record<string, string[]>> 
         "openrouter:google/gemini-2.5-pro",
     ];
 
+    // Codex (ChatGPT subscription) — only if user has a valid JWT.
+    // Models pulled live from /codex/models (subscription-gated whitelist).
+    try {
+        const tok = await ctx.fns.llm.refreshCodex?.(ctx);
+        if (tok) {
+            const url = "https://chatgpt.com/backend-api/codex/models?client_version=0.120.0";
+            const r = await fetch(url, {
+                headers: { "authorization": `Bearer ${tok}`, "originator": "hyper-code2" },
+                signal: AbortSignal.timeout(3000),
+            });
+            if (r.ok) {
+                const j: any = await r.json();
+                const ids = (j.models ?? [])
+                    .filter((m: any) => m.visibility !== "hidden" && m.supported_in_api !== false)
+                    .map((m: any) => `codex:${m.slug}`);
+                if (ids.length) out.codex = ids;
+            }
+        }
+    } catch { /* not logged in or unreachable — omit */ }
+
     return out;
 }

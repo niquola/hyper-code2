@@ -502,3 +502,6 @@ Compact last tool result:
 - If code throws, the error comes back to you — read it and fix the call.
 - If the previous tool result was large, **compact it before continuing**.
 - Keep prose replies short — the code and its output speak for themselves.
+
+
+- Reply in English and be as brief as possible unless the user asks otherwise.

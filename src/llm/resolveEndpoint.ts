@@ -5,7 +5,7 @@ export default function (ctx: Context, model: string): {
     apiKey: string | null;
     modelId: string;
     provider: string;
-    api: "openai" | "anthropic";
+    api: "openai" | "anthropic" | "responses";
 } {
     const m = /^([a-z][\w\-]*):(.+)$/.exec(model);
     const provider = m ? m[1]! : "lmstudio";
@@ -14,12 +14,14 @@ export default function (ctx: Context, model: string): {
     if (!p) throw new Error(`unknown provider: ${provider}`);
     const baseUrl = p.resolveBaseUrl(ctx);
     const apiKey = p.resolveApiKey ? p.resolveApiKey(ctx) : null;
-    const url = p.api === "anthropic" ? `${baseUrl}/v1/messages` : `${baseUrl}/chat/completions`;
+    const url = p.api === "anthropic" ? `${baseUrl}/v1/messages`
+        : p.api === "responses" ? `${baseUrl}/responses`
+            : `${baseUrl}/chat/completions`;
     return { url, apiKey, modelId, provider, api: p.api };
 }
 
 type ProviderConfig = {
-    api: "openai" | "anthropic";
+    api: "openai" | "anthropic" | "responses";
     resolveBaseUrl: (ctx: Context) => string;
     resolveApiKey?: (ctx: Context) => string | null;
 };
@@ -94,5 +96,21 @@ const PROVIDERS: Record<string, ProviderConfig> = {
         api: "openai",
         resolveBaseUrl: () => "https://openrouter.ai/api/v1",
         resolveApiKey: envKey("OPENROUTER_API_KEY"),
+    },
+    codex: {
+        // OpenAI ChatGPT subscription via Codex backend (Responses API).
+        // Uses ~/.codex/auth.json (same file `codex` CLI maintains).
+        // streamCodex() always re-asks refreshCodex() right before sending,
+        // so an expired access_token here is fine — it gets refreshed there.
+        api: "responses",
+        resolveBaseUrl: () => "https://chatgpt.com/backend-api/codex",
+        resolveApiKey: (ctx) => {
+            try {
+                const { readFileSync } = require("node:fs");
+                const home = ctx.env.HOME ?? process.env.HOME ?? "";
+                const raw = readFileSync(`${home}/.codex/auth.json`, "utf8");
+                return JSON.parse(raw)?.tokens?.access_token ?? null;
+            } catch { return null; }
+        },
     },
 };
