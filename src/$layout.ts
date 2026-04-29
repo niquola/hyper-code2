@@ -50,10 +50,18 @@ function renderSidebar(agents: any[], openFiles: string[], currentId?: string, c
         ? `<div class="px-4 py-3 text-xs text-gray-400">no agents yet</div>`
         : agents.map(a => {
             const active = a.id === currentId;
-            return `<a href="/agent/${encodeURIComponent(a.id)}" class="block w-full text-left px-4 py-2 border-b border-gray-200 text-xs hover:bg-gray-100 ${active ? "bg-white font-semibold" : ""}">
+            return `<div class="group flex items-stretch border-b border-gray-200 text-xs hover:bg-gray-100 ${active ? "bg-white font-semibold" : ""}">
+<a href="/agent/${encodeURIComponent(a.id)}" class="flex-1 min-w-0 px-4 py-2">
 <div class="truncate">${esc(a.title)}</div>
 <div class="text-gray-400 font-mono mt-0.5">${esc(a.id)} · ${a.turns} turns${a.isStreaming ? " · ●" : ""}</div>
-</a>`;
+</a>
+<form method="POST" action="/agent/${encodeURIComponent(a.id)}/archive" class="shrink-0 flex">
+  <button type="submit" title="archive" class="px-2 text-gray-400 hover:text-amber-600 opacity-0 group-hover:opacity-100">⤓</button>
+</form>
+<form method="POST" action="/agent/${encodeURIComponent(a.id)}/delete" class="shrink-0 flex" onsubmit="return confirm('delete this agent?')">
+  <button type="submit" title="delete" class="px-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100">×</button>
+</form>
+</div>`;
         }).join("");
     const fileRows = openFiles.map(p => {
         const active = p === currentPath;

@@ -11,7 +11,7 @@ if (args[0] === "-f" && args[1]) {
     process.exit(1);
 }
 
-const portFile = Bun.file(".hyper/port");
+const portFile = Bun.file(".hyper/_runtime/port");
 if (!(await portFile.exists())) {
     console.error("No .hyper/port — is the server running? (bun src/$main.ts)");
     process.exit(1);

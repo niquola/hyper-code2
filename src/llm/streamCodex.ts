@@ -44,21 +44,40 @@ export default async function (
         }));
     }
 
-    const res = await fetch(ep.url, {
-        method: "POST",
-        headers: {
-            "authorization": `Bearer ${apiKey}`,
-            "chatgpt-account-id": accountId,
-            "originator": "hyper-code2",
-            "OpenAI-Beta": "responses=experimental",
-            "accept": "text/event-stream",
-            "content-type": "application/json",
-            "session_id": agent.id,
-        },
-        body: JSON.stringify(body),
-        signal: opts.signal,
-    });
-    if (!res.ok) throw new Error(`${ep.provider} ${res.status}: ${(await res.text()).slice(0, 500)}`);
+    // ChatGPT backend occasionally returns 5xx / "upstream connect error"
+    // before any bytes ship. Retry pre-stream with exponential backoff.
+    const headers = {
+        "authorization": `Bearer ${apiKey}`,
+        "chatgpt-account-id": accountId,
+        "originator": "hyper-code2",
+        "OpenAI-Beta": "responses=experimental",
+        "accept": "text/event-stream",
+        "content-type": "application/json",
+        "session_id": agent.id,
+    };
+    const bodyJson = JSON.stringify(body);
+    const MAX_RETRIES = 3;
+    let res: Response | null = null;
+    let lastErr: any = null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (opts.signal?.aborted) throw new Error("aborted");
+        try {
+            res = await fetch(ep.url, { method: "POST", headers, body: bodyJson, signal: opts.signal });
+            if (res.ok) break;
+            const errText = await res.text();
+            lastErr = new Error(`${ep.provider} ${res.status}: ${errText.slice(0, 500)}`);
+            if (attempt >= MAX_RETRIES || !isRetryable(res.status, errText)) throw lastErr;
+        } catch (e: any) {
+            lastErr = e;
+            if (e?.message === "aborted") throw e;
+            if (attempt >= MAX_RETRIES) throw e;
+            if (res && !isRetryable(res.status, e?.message ?? "")) throw e;
+        }
+        const delay = 1000 * 2 ** attempt; // 1s, 2s, 4s
+        console.warn(`[codex] attempt ${attempt + 1}/${MAX_RETRIES + 1} failed (${lastErr?.message?.slice(0, 120)}); retrying in ${delay}ms`);
+        await Bun.sleep(delay);
+    }
+    if (!res?.ok) throw lastErr ?? new Error("codex: failed after retries");
     if (!res.body) throw new Error("empty response body");
 
     let text = "";
@@ -96,8 +115,13 @@ export default async function (
             const stop = ev.response?.incomplete_details?.reason;
             if (stop === "max_output_tokens") finishReason = "length";
         } else if (t === "response.failed" || t === "error") {
-            const msg = ev.response?.error?.message ?? ev.message ?? "codex stream error";
-            throw new Error(`codex: ${msg}`);
+            const msg =
+                ev.response?.error?.message ??
+                ev.error?.message ??
+                ev.message ??
+                ev.code ??
+                JSON.stringify(ev);
+            throw new Error(`codex ${t}: ${msg}`);
         }
     }
 
@@ -105,6 +129,12 @@ export default async function (
     if (calls.length > 0) finishReason = "tool_calls";
 
     return { text, thinking, toolCalls: calls, finishReason, usage };
+}
+
+function isRetryable(status: number, body: string): boolean {
+    if (status === 429 || status === 408) return true;
+    if (status >= 500 && status <= 599) return true;
+    return /upstream\s+connect|connection\s+(?:reset|termination|refused)|service\s+unavailable|overloaded|rate.?limit/i.test(body);
 }
 
 function mapStop(status: string | undefined): string | null {
