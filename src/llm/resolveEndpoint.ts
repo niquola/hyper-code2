@@ -21,7 +21,7 @@ export default function (ctx: Context, model: string): {
 }
 
 type ProviderConfig = {
-    api: "openai" | "anthropic" | "responses";
+    api: "openai" | "anthropic" | "responses" | "mock";
     resolveBaseUrl: (ctx: Context) => string;
     resolveApiKey?: (ctx: Context) => string | null;
 };

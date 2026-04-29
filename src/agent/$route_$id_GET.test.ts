@@ -2,11 +2,12 @@ import { test, expect, describe } from "bun:test";
 import route from "./$route_$id_GET";
 import layout from "../$layout";
 import script from "../ui/script";
+import renderEventHtml from "./renderEventHtml";
 
 const mkCtx = (agents: Record<string, any> = {}) => ({
     state: { agent: agents },
     env: {},
-    fns: { ui: { script } },
+    fns: { ui: { script }, agent: { renderEventHtml } },
     layout,
 } as unknown as Context);
 
@@ -45,23 +46,27 @@ describe("GET /agent/:id", () => {
         expect(html).toContain("window.__init");
     });
 
-    test("seeds initial events into window.__init", async () => {
+    test("server-renders initial events into #messages (SSR)", async () => {
         const agent = {
             id: "agent_x",
             model: "m",
             events: [
-                { type: "user", text: "hi" },
-                { type: "assistant", text: "hello", html: "<p>hello</p>" },
+                { type: "user", text: "hi", messageIdx: 0 },
+                { type: "assistant", text: "hello", html: "<p>hello</p>", messageIdx: 1 },
             ],
             isStreaming: false,
         };
         const ctx = mkCtx({ agent_x: agent });
         const html = await render(ctx, "agent_x");
+        // window.__init has the metadata, but events themselves live in #messages
         expect(html).toContain("window.__init");
-        expect(html).toContain('"user"');
-        expect(html).toContain("hello");
-        // XSS guard: '<' inside the JSON payload must be escaped to \u003c
-        expect(html).toContain("\\u003cp>hello\\u003c/p>");
+        expect(html).toContain('"agentId":"agent_x"');
+        // SSR'd user bubble (right-aligned, dark background)
+        expect(html).toContain("justify-end");
+        expect(html).toContain('data-delete-idx="0"');
+        // SSR'd assistant bubble with the markdown-rendered inner HTML
+        expect(html).toContain("justify-start");
+        expect(html).toContain("<p>hello</p>");
     });
 
     test("highlights current agent in sidebar", async () => {
