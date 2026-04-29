@@ -39,6 +39,7 @@ describe("GET /agent/:id", () => {
         expect(html).toContain('id="messages"');
         expect(html).toContain('id="form"');
         expect(html).toContain("/agent/agent_abc/stop");
+        expect(html).toContain("/agent/agent_abc/fork");
         expect(html).toContain("/agent/agent_abc/delete");
         expect(html).toContain('src="/agent/chat.js"');
         expect(html).toContain("window.__init");

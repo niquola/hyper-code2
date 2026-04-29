@@ -6,6 +6,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     const init = {
         agentId: id,
         initialEvents: agent.events,
+        inheritedCount: agent.parentId ? ctx.fns.session.getFullMessages(ctx, id).length - agent.messages.length : 0,
         offset: agent.events.length,
         isStreaming: agent.isStreaming,
     };
@@ -14,11 +15,15 @@ export default async function (ctx: Context, _session: any, req: any) {
     const main = `
 <header class="px-6 py-3 border-b border-gray-200 flex items-center gap-3 text-sm">
   <span class="font-semibold text-gray-700">${esc(id)}</span>
+  ${agent.parentId ? `<span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">fork · inherited ${ctx.fns.session.getFullMessages(ctx, id).length - agent.messages.length} msgs</span>` : ""}
   <span class="text-xs text-gray-400 font-mono">${esc(agent.model)}</span>
   <span id="context-usage" class="text-xs text-gray-500 font-mono">ctx: —</span>
   <div class="ml-auto flex gap-2">
     <form method="POST" action="/agent/${encodeURIComponent(id)}/stop" class="inline">
       <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">stop</button>
+    </form>
+    <form method="POST" action="/agent/${encodeURIComponent(id)}/fork" class="inline">
+      <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">fork</button>
     </form>
     <form method="POST" action="/agent/${encodeURIComponent(id)}/archive" class="inline">
       <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">archive</button>
