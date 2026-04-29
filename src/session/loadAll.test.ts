@@ -3,6 +3,7 @@ import loadFns from "../loadFns";
 import connect from "../db/connect";
 import migrate from "../db/migrate";
 import save from "./save";
+import appendUserMessage from "./appendUserMessage";
 import loadAll from "./loadAll";
 import start from "../agent/start";
 
@@ -23,8 +24,8 @@ describe("session.loadAll", () => {
     test("rehydrates every saved agent into ctx.state.agent", async () => {
         const ctx = await mkCtx();
         const a = start(ctx, { model: "m1" });
-        a.messages.push({ role: "user", content: "hi" });
         save(ctx, a);
+        appendUserMessage(ctx, a.id, 'hi');
         const b = start(ctx, { model: "m2", systemPrompt: "sp" });
         save(ctx, b);
 

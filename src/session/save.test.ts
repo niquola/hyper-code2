@@ -3,6 +3,8 @@ import loadFns from "../loadFns";
 import connect from "../db/connect";
 import migrate from "../db/migrate";
 import save from "./save";
+import appendMessage from "./appendMessage";
+import appendEvent from "./appendEvent";
 import start from "../agent/start";
 
 const mkCtx = async () => {
@@ -26,48 +28,17 @@ describe("session.save", () => {
         expect(JSON.parse(row.scratchpad)).toEqual({ x: 42 });
     });
 
-    test("each message is its own row with typed columns", async () => {
+    test("does not overwrite appended messages/events", async () => {
         const ctx = await mkCtx();
         const agent = start(ctx, { model: "m" });
-        agent.messages.push(
-            { role: "user", content: "hello" },
-            { role: "assistant", content: "", tool_calls: [{ id: "c1", type: "function", function: { name: "evalCode", arguments: "{}" } }] },
-            { role: "tool", tool_call_id: "c1", content: "42" },
-            { role: "assistant", content: "done" },
-        );
         save(ctx, agent);
-        const rows = ctx.fns.db.select<any>(ctx, "SELECT * FROM messages WHERE agent_id = ? ORDER BY idx", [agent.id]);
-        expect(rows).toHaveLength(4);
-        expect(rows[0]!.role).toBe("user");
-        expect(rows[0]!.content).toBe("hello");
-        expect(JSON.parse(rows[1]!.tool_calls)[0].function.name).toBe("evalCode");
-        expect(rows[2]!.role).toBe("tool");
-        expect(rows[2]!.tool_call_id).toBe("c1");
-    });
-
-    test("each event is its own row with type + payload", async () => {
-        const ctx = await mkCtx();
-        const agent = start(ctx, { model: "m" });
-        agent.events.push(
-            { type: "user", text: "hi" },
-            { type: "thinking", text: "..." },
-            { type: "tool_call", name: "evalCode", args: { code: "1+1" }, result: "2" },
-            { type: "assistant", text: "2" },
-        );
+        appendMessage(ctx, agent.id, { role: "user", content: "hello" });
+        appendEvent(ctx, agent.id, { type: "user", text: "hello" });
+        agent.scratchpad.note = "x";
         save(ctx, agent);
-        const rows = ctx.fns.db.select<any>(ctx, "SELECT * FROM events WHERE agent_id = ? ORDER BY idx", [agent.id]);
-        expect(rows.map(r => r.type)).toEqual(["user", "thinking", "tool_call", "assistant"]);
-        expect(JSON.parse(rows[2]!.payload).name).toBe("evalCode");
-    });
-
-    test("re-save replaces messages/events (no duplicates)", async () => {
-        const ctx = await mkCtx();
-        const agent = start(ctx, { model: "m" });
-        agent.messages.push({ role: "user", content: "a" });
-        save(ctx, agent);
-        agent.messages.push({ role: "assistant", content: "b" });
-        save(ctx, agent);
-        const [{ n }] = ctx.fns.db.select<any>(ctx, "SELECT COUNT(*) AS n FROM messages WHERE agent_id = ?", [agent.id]);
-        expect(n).toBe(2);
+        const msgs = ctx.fns.db.select<any>(ctx, "SELECT * FROM messages WHERE agent_id = ? ORDER BY idx", [agent.id]);
+        const evs = ctx.fns.db.select<any>(ctx, "SELECT * FROM events WHERE agent_id = ? ORDER BY idx", [agent.id]);
+        expect(msgs.map((m: any) => m.content)).toEqual(["hello"]);
+        expect(evs.map((e: any) => e.type)).toEqual(["user"]);
     });
 });

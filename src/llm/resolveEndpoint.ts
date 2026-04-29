@@ -5,7 +5,7 @@ export default function (ctx: Context, model: string): {
     apiKey: string | null;
     modelId: string;
     provider: string;
-    api: "openai" | "anthropic" | "responses";
+    api: "openai" | "anthropic" | "responses" | "mock";
 } {
     const m = /^([a-z][\w\-]*):(.+)$/.exec(model);
     const provider = m ? m[1]! : "lmstudio";
@@ -96,6 +96,10 @@ const PROVIDERS: Record<string, ProviderConfig> = {
         api: "openai",
         resolveBaseUrl: () => "https://openrouter.ai/api/v1",
         resolveApiKey: envKey("OPENROUTER_API_KEY"),
+    },
+    mock: {
+        api: "mock",
+        resolveBaseUrl: () => "mock://local",
     },
     codex: {
         // OpenAI ChatGPT subscription via Codex backend (Responses API).

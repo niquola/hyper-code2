@@ -13,16 +13,20 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
     const ac = new AbortController();
     agent.abortController = ac;
 
-    agent.messages.push({ role: "user", content: userText });
+    ctx.fns.session?.appendUserMessage?.(ctx, agent.id, userText);
+    ctx.fns.session?.syncAgentState?.(ctx, agent);
 
     while (true) {
         const { text, thinking, toolCalls, usage } = await ctx.fns.llm.stream(ctx, agent, {
             signal: ac.signal,
         });
 
-        if (thinking) agent.events.push({ type: "thinking", text: thinking });
+        if (thinking) {
+            ctx.fns.session?.appendThinkingEvent?.(ctx, agent.id, thinking);
+            ctx.fns.session?.syncAgentState?.(ctx, agent);
+        }
 
-        const assistantMsg: any = { role: "assistant" };
+        const assistantMsg: any = {};
         if (text) assistantMsg.content = text;
         if (toolCalls.length > 0) {
             assistantMsg.tool_calls = toolCalls.map(tc => ({
@@ -31,17 +35,16 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
                 function: { name: tc.name, arguments: tc.arguments },
             }));
         }
-        agent.messages.push(assistantMsg);
+        ctx.fns.session?.appendAssistantMessage?.(ctx, agent.id, assistantMsg);
+        ctx.fns.session?.syncAgentState?.(ctx, agent);
 
-        // No tools → return the final text response
         if (toolCalls.length === 0) {
             const html = await ctx.fns.markdown.render(ctx, text);
-            agent.events.push({ type: "assistant", text, html, usage });
-            try { ctx.fns.session?.save?.(ctx, agent); } catch (e: any) { console.error("[session.save]", e?.message); }
+            ctx.fns.session?.appendAssistantEvent?.(ctx, agent.id, { text, html, usage });
+            ctx.fns.session?.syncAgentState?.(ctx, agent);
             return { text, usage };
         }
 
-        // Execute tool calls and append results to messages
         for (const tc of toolCalls) {
             let output: string;
             let isError = false;
@@ -49,6 +52,7 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
             try {
                 args = JSON.parse(tc.arguments || "{}");
                 if (tc.name === "evalCode") {
+                    ctx.fns.session?.syncAgentState?.(ctx, agent);
                     const result = await ctx.fns.repl.eval(ctx, args.code, { agent });
                     output = typeof result === "string" ? result : Bun.inspect(result);
                 } else {
@@ -63,10 +67,9 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
                 ? await ctx.fns.markdown.highlight(ctx, args.code, "ts")
                 : await ctx.fns.markdown.highlight(ctx, JSON.stringify(args, null, 2), "json");
             const resultHtml = await highlightResult(ctx, output);
-            agent.events.push({ type: "tool_call", name: tc.name, args, result: output, argsHtml, resultHtml, isError });
-            agent.messages.push({ role: "tool", tool_call_id: tc.id, content: output });
+            ctx.fns.session?.appendToolCallEvent?.(ctx, agent.id, { name: tc.name, args, result: output, argsHtml, resultHtml, isError });
+            ctx.fns.session?.appendToolMessage?.(ctx, agent.id, tc.id, output);
+            ctx.fns.session?.syncAgentState?.(ctx, agent);
         }
-
-        // After one round of tool execution, loop back for model to see results
     }
 }

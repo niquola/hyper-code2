@@ -238,3 +238,21 @@ Use built-in git helpers instead of ad-hoc shell commands when possible:
 - `ctx.fns.git.stageCommitPush(ctx, { paths, message, dir?, push?, allowEmpty?, remote?, branch? })`
 
 These helpers avoid shell-escaping issues (especially with filenames containing `$`) and make it easy to test git flows against a temp repo via the optional `dir` parameter.
+
+
+## Forked sessions / agents
+
+- Forks should work like in hyper-code: child sessions/agents store `parent_id` + `fork_offset`, not a fully copied transcript.
+- The effective LLM-visible transcript must be assembled lazily by chaining parent context recursively, slicing the parent chain at `fork_offset`, then appending the child's own messages.
+- For nested forks, offsets must be based on the parent's FULL inherited transcript length, not only the parent's own local message count.
+- Keep procedure-per-file discipline when implementing fork behavior; add tests for parent/child, mid-conversation offsets, and nested forks.
+
+
+## DB-first transcript model
+
+- Treat the database as the source of truth for transcript and event history.
+- `agent.messages` and `agent.events` are synchronized runtime views, not the authoritative store.
+- Prefer `ctx.fns.session.append* / replace* / syncAgentState` helpers over direct mutation when changing transcript or event history in runtime code.
+- For forked agents, effective history should come from `ctx.fns.session.getFullMessages(ctx, agent.id)` semantics, not only local child messages.
+
+- Do not use direct `agent.messages.push(...)` / `agent.events.push(...)` in runtime code; prefer DB-first session helpers.

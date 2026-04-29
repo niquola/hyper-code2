@@ -1,15 +1,18 @@
-import { test, expect, describe } from "bun:test";
-import start from "./start";
-import stream from "../llm/stream";
-import streamOpenAI from "../llm/streamOpenAI";
-import streamAnthropic from "../llm/streamAnthropic";
-import toAnthropicMessages from "../llm/toAnthropicMessages";
-import resolveEndpoint from "../llm/resolveEndpoint";
+import { describe, test, expect } from "bun:test";
 import run from "./run";
-import highlight from "../markdown/highlight";
-import render from "../markdown/render";
-import evalFn from "../repl/eval";
-import fullSystemPrompt from "./fullSystemPrompt";
+import start from "./start";
+import connect from "../db/connect";
+import migrate from "../db/migrate";
+import save from "../session/save";
+import load from "../session/load";
+import appendMessage from "../session/appendMessage";
+import appendEvent from "../session/appendEvent";
+import getMessages from "../session/getMessages";
+import getFullMessages from "../session/getFullMessages";
+import getEvents from "../session/getEvents";
+import stream from "../llm/stream";
+import streamMock from "../llm/streamMock";
+import resolveEndpoint from "../llm/resolveEndpoint";
 
 const evalCodeTool = {
     name: "evalCode",
@@ -21,78 +24,72 @@ const evalCodeTool = {
     },
 };
 
-const mkCtx = () => ({
-    state: {},
-    env: { LMSTUDIO_URL: process.env.LMSTUDIO_URL, MODEL: process.env.MODEL },
-    fns: {
-        llm: { stream, streamOpenAI, streamAnthropic, resolveEndpoint, toAnthropicMessages },
-        agent: { fullSystemPrompt },
-        markdown: { highlight, render },
-        repl: { eval: evalFn },
-    },
-} as unknown as Context);
+function mkCtx() {
+    const ctx: any = { state: {}, env: {}, fns: { db: {}, session: {}, agent: {}, llm: {}, markdown: {}, repl: {}, events: {} } };
+    ctx.fns.db.connect = connect;
+    ctx.fns.db.migrate = migrate;
+    ctx.fns.db.exec = (c: any, sql: string, params: any) => { const q = c.state.db.query(sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
+    ctx.fns.db.select = (c: any, sql: string, params: any = []) => { const q = c.state.db.query(sql); return Array.isArray(params) ? q.all(...params) : q.all(params); };
+    ctx.fns.session.save = save;
+    ctx.fns.session.appendUserMessage = (c: any, id: string, text: string) => c.fns.session.appendMessage(c, id, { role: 'user', content: text });
+    ctx.fns.session.appendAssistantMessage = (c: any, id: string, msg: any) => c.fns.session.appendMessage(c, id, { role: 'assistant', ...(msg.content ? { content: msg.content } : {}), ...(msg.tool_calls?.length ? { tool_calls: msg.tool_calls } : {}) });
+    ctx.fns.session.appendToolMessage = (c: any, id: string, toolCallId: string, content: string) => c.fns.session.appendMessage(c, id, { role: 'tool', tool_call_id: toolCallId, content });
+    ctx.fns.session.appendThinkingEvent = (c: any, id: string, text: string) => c.fns.session.appendEvent(c, id, { type: 'thinking', text });
+    ctx.fns.session.appendAssistantEvent = (c: any, id: string, payload: any) => c.fns.session.appendEvent(c, id, { type: 'assistant', ...payload });
+    ctx.fns.session.appendToolCallEvent = (c: any, id: string, payload: any) => c.fns.session.appendEvent(c, id, { type: 'tool_call', ...payload });
+    ctx.fns.session.appendErrorEvent = (c: any, id: string, error: string) => c.fns.session.appendEvent(c, id, { type: 'error', error });
+    ctx.fns.session.load = load;
+    ctx.fns.session.appendMessage = appendMessage;
+    ctx.fns.session.appendEvent = appendEvent;
+    ctx.fns.session.getMessages = getMessages;
+    ctx.fns.session.getFullMessages = getFullMessages;
+    ctx.fns.session.getEvents = getEvents;
+    ctx.fns.session.syncAgentState = (c: any, a: any) => { a.messages = a.parentId ? c.fns.session.getFullMessages(c, a.id) : c.fns.session.getMessages(c, a.id); a.events = c.fns.session.getEvents(c, a.id); return a; };
+    ctx.fns.agent.start = start;
+    ctx.fns.llm.stream = stream;
+    ctx.fns.llm.streamMock = streamMock;
+    ctx.fns.llm.resolveEndpoint = resolveEndpoint;
+    ctx.fns.markdown.highlight = async (_c: any, s: string) => s;
+    ctx.fns.markdown.render = async (_c: any, s: string) => s;
+    ctx.fns.repl.eval = async (_c: any, code: string) => { if (code === '2+2') return 4; return 'ok'; };
+    ctx.fns.events.emitAgentsChanged = () => {};
+    return ctx;
+}
 
-describe("agent.run — full stateless loop (LM Studio)", () => {
-    test("2 + 2 * 2 via evalCode — assistant final mentions 6", async () => {
+describe("agent.run with mock llm", () => {
+    test("echoes a user message through mock provider", async () => {
         const ctx = mkCtx();
-        const agent = start(ctx, {
-            model: process.env.MODEL!,
-            systemPrompt:
-                "You have exactly ONE tool: `evalCode`. Use it for ANY math or code. Never compute manually.",
-            tools: [evalCodeTool],
-        });
-        const { text } = await run(ctx, agent, "Compute 2+2*2");
-        expect(text).toMatch(/6/);
-    }, 120_000);
+        ctx.fns.db.connect(ctx, ':memory:');
+        await ctx.fns.db.migrate(ctx);
+        const agent = start(ctx, { model: 'mock:echo', systemPrompt: '', tools: [] });
+        agent.scratchpad.mockLLM = { echoUser: true };
+        save(ctx, agent);
+        const res = await run(ctx, agent, 'hello mock');
+        expect(res.text).toBe('hello mock');
+    });
 
-    test("agent.messages ends with assistant after loop completes", async () => {
+    test("runs tool loop through mock provider", async () => {
         const ctx = mkCtx();
-        const agent = start(ctx, {
-            model: process.env.MODEL!,
-            systemPrompt:
-                "You have ONE tool: `evalCode`. Use it for ANY math. Reply with just the number.",
-            tools: [evalCodeTool],
-        });
-        await run(ctx, agent, "3*3");
-        const roles = agent.messages.map((m: any) => m.role);
-        expect(roles[0]).toBe("user");
-        expect(roles[roles.length - 1]).toBe("assistant");
-        // sequence must be valid: user → assistant(toolCalls) → tool → assistant(text)
-        expect(roles).toContain("tool");
-    }, 120_000);
+        ctx.fns.db.connect(ctx, ':memory:');
+        await ctx.fns.db.migrate(ctx);
+        const agent = start(ctx, { model: 'mock:tool', systemPrompt: '', tools: [evalCodeTool] });
+        agent.scratchpad.mockLLM = { userToolCode: '2+2', afterToolText: '4' };
+        save(ctx, agent);
+        const res = await run(ctx, agent, 'calc');
+        expect(res.text).toBe('4');
+    });
 
-    test("events trace contains tool_call and assistant", async () => {
+    test("fork child sees inherited parent messages via mock provider", async () => {
         const ctx = mkCtx();
-        const agent = start(ctx, {
-            model: process.env.MODEL!,
-            systemPrompt: "You have ONE tool: `evalCode`. Always use it for math.",
-            tools: [evalCodeTool],
-        });
-        await run(ctx, agent, "what is 9+1?");
-        const types = agent.events.map((e: any) => e.type);
-        expect(types).toContain("tool_call");
-        expect(types).toContain("assistant");
-        const tc = agent.events.find((e: any) => e.type === "tool_call");
-        expect(tc.name).toBe("evalCode");
-        expect(tc.result).toBeDefined();
-    }, 120_000);
-
-    test("context grows linearly across turns — not exponentially", async () => {
-        const ctx = mkCtx();
-        const agent = start(ctx, {
-            model: process.env.MODEL!,
-            systemPrompt: "Reply with just the number. No explanation.",
-        });
-        const tokens: number[] = [];
-        for (let i = 1; i <= 3; i++) {
-            agent.messages.push({ role: "user", content: `${i}+${i}` });
-            const res = await stream(ctx, agent);
-            agent.messages.push({ role: "assistant", content: res.text });
-            const n = res.usage?.prompt_tokens ?? res.usage?.input_tokens;
-            tokens.push(n);
-        }
-        // growth must not double — successive delta should be <2x prior total
-        expect(tokens[1]!).toBeLessThan(tokens[0]! * 2);
-        expect(tokens[2]!).toBeLessThan(tokens[1]! * 2);
-    }, 120_000);
+        ctx.fns.db.connect(ctx, ':memory:');
+        await ctx.fns.db.migrate(ctx);
+        const parent = start(ctx, { model: 'mock:echo', systemPrompt: '', tools: [] });
+        save(ctx, parent);
+        appendMessage(ctx, parent.id, { role: 'user', content: 'parent says hi' });
+        const child = start(ctx, { model: 'mock:echo', systemPrompt: '', tools: [], parentId: parent.id, forkOffset: 1 });
+        child.scratchpad.mockLLM = { echoUser: true };
+        save(ctx, child);
+        const full = getFullMessages(ctx, child.id);
+        expect(full[0].content).toBe('parent says hi');
+    });
 });

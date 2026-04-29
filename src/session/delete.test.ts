@@ -3,6 +3,8 @@ import loadFns from "../loadFns";
 import connect from "../db/connect";
 import migrate from "../db/migrate";
 import save from "./save";
+import appendUserMessage from "./appendUserMessage";
+import appendEvent from "./appendEvent";
 import del from "./delete";
 import start from "../agent/start";
 
@@ -18,9 +20,9 @@ describe("session.delete", () => {
     test("removes agent row + messages + events", async () => {
         const ctx = await mkCtx();
         const agent = start(ctx, { model: "m" });
-        agent.messages.push({ role: "user", content: "hi" });
-        agent.events.push({ type: "user", text: "hi" });
         save(ctx, agent);
+        appendUserMessage(ctx, agent.id, 'hi');
+        appendEvent(ctx, agent.id, { type: 'user', text: 'hi' });
 
         const r = del(ctx, agent.id);
         expect(r.ok).toBe(true);

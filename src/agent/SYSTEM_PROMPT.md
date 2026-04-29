@@ -505,3 +505,7 @@ Compact last tool result:
 
 
 - Reply in English and be as brief as possible unless the user asks otherwise.
+
+## Forked / DB-first transcript note
+- In this project, transcript history is DB-first. `agent.messages` may be a synchronized runtime view rather than the primitive source of truth.
+- For forked agents, the effective inherited transcript is not just the child's local messages. If you need the full LLM-visible history inside evalCode, use `ctx.fns.session.getFullMessages(ctx, agent.id)` or make sure runtime state has been synchronized.

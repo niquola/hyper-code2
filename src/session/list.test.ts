@@ -3,6 +3,7 @@ import loadFns from "../loadFns";
 import connect from "../db/connect";
 import migrate from "../db/migrate";
 import save from "./save";
+import appendUserMessage from "./appendUserMessage";
 import list from "./list";
 import start from "../agent/start";
 
@@ -22,8 +23,8 @@ describe("session.list", () => {
     test("returns lightweight summaries ordered by updated_at desc", async () => {
         const ctx = await mkCtx();
         const a = start(ctx, { model: "m1" });
-        a.messages.push({ role: "user", content: "first msg" });
         save(ctx, a);
+        appendUserMessage(ctx, a.id, 'first msg');
 
         await new Promise(r => setTimeout(r, 5));
         const b = start(ctx, { model: "m2" });
