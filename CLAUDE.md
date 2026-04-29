@@ -225,6 +225,7 @@ Authoritative agent behaviour lives in `src/agent/SYSTEM_PROMPT.md`. Edit that f
 - Files like `src/agent/$script_chat.js` are served by the script-route loader as browser assets, not as normal `ctx.fns` functions.
 - Changing a `$script_*.js` file may require reloading routes via `ctx.fns.http.loadRoutes(ctx)` rather than only using `ctx.fns.repl.load(ctx, ...)`.
 - If a frontend change seems ignored, verify the actual served asset over HTTP (for example `/agent/chat.js`) instead of trusting only the source file on disk.
+- After changing a route/UI surface, verify the actually served HTTP output yourself (including .hyper overrides), not just the source file you edited.
 
 
 ## Git helpers
