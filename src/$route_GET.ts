@@ -5,6 +5,7 @@ export default async function (ctx: Context, _session: any, _req: Request) {
         return new Response(null, { status: 302, headers: { location: `/agent/${encodeURIComponent(ids[0]!)}` } });
     }
     return {
+        head: '<script src="/ui/control.js"></script>',
         main: `<div class="flex-1 flex items-center justify-center text-gray-500">
   <div class="text-center">
     <p class="mb-4">No agents yet.</p>
