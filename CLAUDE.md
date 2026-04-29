@@ -218,3 +218,23 @@ Authoritative agent behaviour lives in `src/agent/SYSTEM_PROMPT.md`. Edit that f
 - Don't write new files under `src/` for agent-produced extensions — use `.hyper/`.
 - Don't add `cache_control` markers or stateful `previous_response_id` — LM Studio's automatic prefix cache is enough.
 - Don't rename `ctx.fns.agent.run` carelessly — it's the loop everything runs inside.
+
+
+## UI script routes
+
+- Files like `src/agent/$script_chat.js` are served by the script-route loader as browser assets, not as normal `ctx.fns` functions.
+- Changing a `$script_*.js` file may require reloading routes via `ctx.fns.http.loadRoutes(ctx)` rather than only using `ctx.fns.repl.load(ctx, ...)`.
+- If a frontend change seems ignored, verify the actual served asset over HTTP (for example `/agent/chat.js`) instead of trusting only the source file on disk.
+
+
+## Git helpers
+
+Use built-in git helpers instead of ad-hoc shell commands when possible:
+- `ctx.fns.git.run(ctx, args, { dir?, allowFailure? })`
+- `ctx.fns.git.stage(ctx, paths, { dir? })`
+- `ctx.fns.git.commit(ctx, message, { dir?, allowEmpty? })`
+- `ctx.fns.git.push(ctx, { dir?, remote?, branch? })`
+- `ctx.fns.git.status(ctx, { dir? })`
+- `ctx.fns.git.stageCommitPush(ctx, { paths, message, dir?, push?, allowEmpty?, remote?, branch? })`
+
+These helpers avoid shell-escaping issues (especially with filenames containing `$`) and make it easy to test git flows against a temp repo via the optional `dir` parameter.
