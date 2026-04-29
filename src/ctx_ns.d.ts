@@ -107,7 +107,16 @@ declare global {
         password: typeof import("../.hyper/tools/password").default;
         };
         ui: {
+        action: typeof import("../.hyper/ui/action").default;
+        controlScript: typeof import("../.hyper/ui/controlScript").default;
+        createAgent: typeof import("../.hyper/ui/createAgent").default;
+        eval: typeof import("../.hyper/ui/eval").default;
+        notify: typeof import("../.hyper/ui/notify").default;
+        openAgent: typeof import("../.hyper/ui/openAgent").default;
+        openFile: typeof import("../.hyper/ui/openFile").default;
+        pending: typeof import("../.hyper/ui/pending").default;
         script: typeof import("./ui/script").default;
+        sendToAgent: typeof import("../.hyper/ui/sendToAgent").default;
         };
     }
 
@@ -130,6 +139,9 @@ declare global {
         namespace tools {
             type DiceOpts = import("../.hyper/tools/$type_DiceOpts").DiceOpts;
             type PasswordOpts = import("../.hyper/tools/$type_PasswordOpts").PasswordOpts;
+        }
+        namespace ui {
+            type AgentLaunch = import("../.hyper/ui/$type_AgentLaunch").AgentLaunch;
         }
     }
 }

@@ -10,7 +10,7 @@ export default async function (
     usage: any;
 }> {
     const messages: any[] = [];
-    const sys = ctx.fns.agent.fullSystemPrompt(ctx, agent);
+    const sys = await ctx.fns.agent.fullSystemPrompt(ctx, agent);
     if (sys) messages.push({ role: "system", content: sys });
     messages.push(...agent.messages);
 

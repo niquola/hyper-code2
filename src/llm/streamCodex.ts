@@ -21,7 +21,7 @@ export default async function (
     const accountId = extractAccountId(apiKey);
 
     const { input } = ctx.fns.llm.toCodexInput(ctx, agent.messages as any);
-    const instructions = ctx.fns.agent.fullSystemPrompt(ctx, agent);
+    const instructions = await ctx.fns.agent.fullSystemPrompt(ctx, agent);
 
     const body: any = {
         model: ep.modelId,

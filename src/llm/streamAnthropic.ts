@@ -13,7 +13,7 @@ export default async function (
 }> {
     const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
 
-    const system = ctx.fns.agent.fullSystemPrompt(ctx, agent);
+    const system = await ctx.fns.agent.fullSystemPrompt(ctx, agent);
 
     const body: any = {
         model: ep.modelId,

@@ -86,7 +86,7 @@ form.addEventListener("submit", async (e) => {
     const text = input.value.trim();
     if (!text) return;
     input.value = "";
-    send.disabled = true;
+    if (send) send.disabled = true;
     const pending = addPending("thinking...");
     try {
         await fetch("/agent/" + encodeURIComponent(agentId), { method: "POST", body: text });
@@ -104,12 +104,12 @@ form.addEventListener("submit", async (e) => {
         pending.remove();
         addError(err.message);
     } finally {
-        send.disabled = false;
+        if (send) send.disabled = false;
         input.focus();
     }
 });
 
 input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) form.requestSubmit();
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
 });
 input.focus();
