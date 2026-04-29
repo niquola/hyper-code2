@@ -5,6 +5,7 @@ const messagesEl = document.getElementById("messages");
 const form = document.getElementById("form");
 const input = document.getElementById("input");
 const send = document.getElementById("send");
+const usageEl = document.getElementById("context-usage");
 
 function esc(s) {
     return String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]));
@@ -23,10 +24,29 @@ function addUser(t) { bubble("bg-gray-900 text-white rounded-lg px-4 py-3 whites
 function addError(t) { bubble("bg-gray-100 text-red-700 border border-red-200 rounded-lg px-4 py-3 whitespace-pre-wrap break-words", t); }
 function addPending(t) { return bubble("bg-gray-50 text-gray-500 italic rounded-lg px-4 py-3", t); }
 
+function fmtTok(n) {
+    if (n == null) return "—";
+    if (n < 1000) return String(n);
+    const v = Math.round(n / 100) / 10;
+    return String(v).replace(/\.0$/, "") + "k";
+}
+
+function updateUsage(usage) {
+    if (!usageEl) return;
+    if (!usage) return;
+    const inTok = usage.prompt_tokens ?? usage.input_tokens ?? usage.promptTokens ?? usage.inputTokens;
+    const total = usage.total_tokens ?? usage.totalTokens;
+    if (inTok != null && total != null) usageEl.textContent = "ctx: " + fmtTok(inTok) + " · total: " + fmtTok(total);
+    else if (inTok != null) usageEl.textContent = "ctx: " + fmtTok(inTok);
+    else if (total != null) usageEl.textContent = "ctx total: " + fmtTok(total);
+    else usageEl.textContent = "ctx: —";
+}
+
 function addAssistant(ev) {
     const d = document.createElement("div");
     d.className = "assistant bg-gray-50 rounded-lg px-4 py-3 prose prose-sm max-w-none prose-pre:my-2 prose-p:my-1 prose-headings:my-2";
     if (ev.html) d.innerHTML = ev.html; else d.textContent = ev.text || "";
+    updateUsage(ev.usage);
     messagesEl.appendChild(d);
     d.scrollIntoView({ block: "end" });
 }
@@ -75,6 +95,7 @@ async function poll() {
         const data = await res.json();
         renderEvents(data.events);
         offset = data.nextOffset;
+        updateUsage(data.usage);
         if (!data.isStreaming) return;
     }
 }
@@ -95,6 +116,7 @@ form.addEventListener("submit", async (e) => {
         pending.remove();
         renderEvents(data.events);
         offset = data.nextOffset;
+        updateUsage(data.usage);
         if (data.isStreaming) {
             const p = addPending("thinking...");
             await poll();
