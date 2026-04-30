@@ -185,19 +185,27 @@ stale token. Run `kimi login` to start a new device session.
 
 ## REPL workflow
 
-The server stays up. Everything iterates without restart:
+Long-running server in tmux session `hyper`. The entrypoint boots the app by connecting the DB, applying migrations, loading all sessions, then starting the HTTP server. Everything can be iterated without restart.
 
 ```bash
+# start
+tmux new-session -d -s hyper 'bun src/$main.ts'
+
+# evaluate code
 bun script/repl.ts '1 + 1'                                      # quick eval
 bun script/repl.ts 'return Object.keys(ctx.fns)'                # introspect
 bun script/repl.ts -f /tmp/play.js                              # from file
 echo 'return ctx.state' | bun script/repl.ts                    # stdin
 
-bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent")'      # reload folder
-bun script/repl.ts 'return await ctx.genTypes(ctx)'             # regen types
+# hot-reload
+bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent")'      # whole folder
+bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent.run")'  # single fn
+bun script/repl.ts 'return await ctx.genTypes(ctx)'             # regen ctx_ns.d.ts
 bun script/repl.ts 'return await ctx.fns.http.loadRoutes(ctx)'  # rescan routes
-```
 
+# reset agent (new SYSTEM_PROMPT picked up lazily)
+bun script/repl.ts 'ctx.fns.agent.clear(ctx, ctx.state.agent.default); delete ctx.state.agent.default; return "ok"'
+```
 ## Testing
 
 ```bash
