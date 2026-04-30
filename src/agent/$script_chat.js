@@ -80,7 +80,8 @@ function showToolToast(ev) {
     if (resultEl && !resultData.html) { const pre = resultEl.querySelector('pre'); if (pre) pre.textContent = resultData.text; }
     layer.appendChild(el);
     const entry = { el, fading: false, fadeTimer: null, removeTimer: null };
-    entry.fadeTimer = setTimeout(() => fadeToolToast(entry), 15000);
+    el.addEventListener('click', () => fadeToolToast(entry));
+    entry.fadeTimer = setTimeout(() => fadeToolToast(entry), 8000);
     activeToolToast = entry;
 }
 

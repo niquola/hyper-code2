@@ -10,6 +10,8 @@ declare global {
         delegateTask: typeof import("./agent/delegateTask").default;
         finishTask: typeof import("./agent/finishTask").default;
         fullSystemPrompt: typeof import("./agent/fullSystemPrompt").default;
+        llmCall: typeof import("./agent/llmCall").default;
+        readAndSummarize: typeof import("./agent/readAndSummarize").default;
         renderEventHtml: typeof import("./agent/renderEventHtml").default;
         run: typeof import("./agent/run").default;
         start: typeof import("./agent/start").default;
@@ -78,13 +80,6 @@ declare global {
         highlight: typeof import("./markdown/highlight").default;
         render: typeof import("./markdown/render").default;
         };
-        memory: {
-        delete: typeof import("./memory/delete").default;
-        init: typeof import("./memory/init").default;
-        read: typeof import("./memory/read").default;
-        search: typeof import("./memory/search").default;
-        store: typeof import("./memory/store").default;
-        };
         project: {
         classify: typeof import("./project/classify").default;
         roots: typeof import("./project/roots").default;
@@ -108,6 +103,7 @@ declare global {
         archive: typeof import("./session/archive").default;
         delete: typeof import("./session/delete").default;
         deleteMessageAt: typeof import("./session/deleteMessageAt").default;
+        estimateMessageTokens: typeof import("../.hyper/session/estimateMessageTokens").default;
         fork: typeof import("./session/fork").default;
         getEvents: typeof import("./session/getEvents").default;
         getFullMessages: typeof import("./session/getFullMessages").default;
@@ -172,9 +168,6 @@ declare global {
         }
         namespace git {
             type Result = import("./git/$type_Result").Result;
-        }
-        namespace memory {
-            type Entry = import("./memory/$type_Entry").Entry;
         }
         namespace tools {
             type DiceOpts = import("./tools/$type_DiceOpts").DiceOpts;

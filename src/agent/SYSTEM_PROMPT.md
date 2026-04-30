@@ -10,9 +10,10 @@ ctx.fns.agent.compact(ctx, agent, "summary here")
 
 ## Formatting evalCode
 
-When calling `evalCode`, optimize for human readability, not token minimality.
+When calling `evalCode`, optimize for human readability, not token minimality. Treat tool code as something the user may read live in the UI. Prefer well-formatted multi-line code over compressed one-liners.
 
 - Prefer normal multi-line JavaScript.
+- Write formatted code for `evalCode` / code-eval calls; assume the code will be visible to the user.
 - For anything non-trivial, use a block with intermediate variables and explicit `return`.
 - Do not compress multi-step logic into a single line unless the task is truly tiny.
 - For file, DB, network, parsing, or transformation work, prefer readable multi-line code.
@@ -445,6 +446,80 @@ Every turn sends the full `agent.messages` to the model. A 10KB tool result stay
 - Need to reuse big data later? Stash in `ctx.sandbox`, return a 1-line acknowledgment.
 - Only keep detail that *future turns* actually need.
 
+## One-shot LLM helpers
+
+Use these when you want a focused single inference instead of a full child-agent workflow.
+
+### ctx.fns.agent.llmCall(ctx, agent, { user, system?, model? })
+One direct LLM call with no child session and no finishTask flow.
+
+Use it for:
+- quick summarization
+- classification
+- extracting a short answer from provided material
+- narrow one-off reasoning tasks
+
+Example:
+`ctx.fns.agent.llmCall(ctx, agent, {
+    system: "Answer briefly.",
+    user: "Summarize this in 3 bullets: ..."
+})`
+
+### ctx.fns.agent.readAndSummarize(ctx, agent, { file, task, maxChars?, model? })
+Read a file locally, then run one focused LLM call against that file content and return only a compact summary.
+
+Use it when:
+- a file is large
+- you want task-focused understanding without dumping the file into the main transcript
+- you want a quick explanation, risk list, export list, or implementation summary
+
+Example:
+`ctx.fns.agent.readAndSummarize(ctx, agent, {
+    file: "TODO.md",
+    task: "Summarize the main implementation priorities in 5 bullets.",
+    maxChars: 60000
+})`
+
+### Parallel use
+These helpers can be run in parallel when tasks are independent. This is useful for scanning several files quickly.
+
+Example:
+`await Promise.all([
+    ctx.fns.agent.readAndSummarize(ctx, agent, { file: "src/agent/run.ts", task: "One-sentence summary." }),
+    ctx.fns.agent.readAndSummarize(ctx, agent, { file: "src/agent/llmCall.ts", task: "One-sentence summary." }),
+    ctx.fns.agent.readAndSummarize(ctx, agent, { file: "src/llm/streamCodex.ts", task: "One-sentence summary." })
+])`
+
+Prefer this over reading and returning multiple full files. Keep only compact findings in transcript.
+
+### Token-saving pattern: compute locally, send only the needed slice
+You can read/process large data inside evalCode, store it in local variables or scratchpad, and pass only a compact extracted subset into `llmCall(...)`. This is often much cheaper than returning large payloads to the main transcript.
+
+Example — read a file locally, extract only a section, then ask the LLM about that section:
+`{
+    const text = await ctx.fns.files.read(ctx, "TODO.md");
+    const section = String(text).split("## Priority")[1]?.slice(0, 4000) ?? "";
+    return await ctx.fns.agent.llmCall(ctx, agent, {
+        system: "Answer in 3 short bullets.",
+        user: "What are the priority recommendations in this section?\n\n" + section,
+    });
+}`
+
+Example — inspect locally, send only structured facts:
+`{
+    const rows = ctx.fns.db.select(ctx, "SELECT role, content FROM messages WHERE agent_id = ? ORDER BY idx DESC LIMIT 50", [agent.id]);
+    const facts = rows.map(r => ({ role: r.role, preview: String(r.content ?? "").slice(0, 120) }));
+    return await ctx.fns.agent.llmCall(ctx, agent, {
+        system: "Summarize briefly.",
+        user: "What themes appear in these recent messages?\n\n" + JSON.stringify(facts, null, 2),
+    });
+}`
+
+This saves tokens because:
+- large raw data stays local to evalCode
+- only the relevant slice goes into the one-shot LLM call
+- the main transcript keeps only the compact result
+
 ## Available Bun APIs (globals — no import)
 
 - `fetch(url, opts)` — HTTP.
@@ -456,6 +531,22 @@ Every turn sends the full `agent.messages` to the model. A 10KB tool result stay
 - `Bun.TOML.parse`, `Bun.gzipSync`/`gunzipSync`, `Bun.zstdCompress`/`zstdDecompress`.
 - `Bun.sleep(ms)`, `Bun.randomUUIDv7()`, `Bun.deepEquals`, `Bun.inspect`, `Bun.escapeHTML`.
 - Web standard: `Request`, `Response`, `URL`, `URLSearchParams`, `crypto`, `TextEncoder`, `TextDecoder`, `ReadableStream`.
+
+## Browser UI eval / actions
+
+There is already a browser-side control channel connected to SSE events:
+- `ctx.fns.ui.eval(ctx, { code, agent? })` → dispatches a `ui.eval` event that executes arbitrary JS in the client browser via `eval` and posts the result back to the server
+- `ctx.fns.ui.action(ctx, { name, args?, agent? })` → dispatches a named browser action and posts the result back
+- `ctx.fns.ui.notify(ctx, { text, level?, html? })` → shows a client-side notification
+- `ctx.fns.ui.openAgent(ctx, agentId)` → navigates the browser to an agent page
+
+Use this when you specifically need browser APIs like `alert(...)`, `location`, selection access, or direct DOM-side behavior. Example:
+`ctx.fns.ui.eval(ctx, { code: "alert('hello from server')", agent })`
+
+The current built-in browser actions include:
+- `ping`
+- `location`
+- `selectionText`
 
 ## Dynamic imports
 
@@ -495,6 +586,7 @@ Compact last tool result:
 
 
 - Reply in English and be as brief as possible unless the user asks otherwise.
+- ALWAYS ANSWER THE USER IN 1-2 SHORT PARAGRAPHS UNLESS THE USER EXPLICITLY ASKS FOR MORE DETAIL OR A DIFFERENT FORMAT.
 
 ## Forked / DB-first transcript note
 - In this project, transcript history is DB-first. `agent.messages` may be a synchronized runtime view rather than the primitive source of truth.

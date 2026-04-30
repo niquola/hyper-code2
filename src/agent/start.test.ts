@@ -1,7 +1,18 @@
-import { test, expect, describe } from "bun:test";
+import { test, expect, describe, mock } from "bun:test";
 import start from "./start";
 
-const mkCtx = () => ({ state: {}, env: process.env } as unknown as Context);
+const mkCtx = () => {
+    const save = mock(() => {});
+    const emitAgentsChanged = mock(() => {});
+    return {
+        state: {},
+        env: process.env,
+        fns: {
+            session: { save },
+            events: { emitAgentsChanged },
+        },
+    } as unknown as Context;
+};
 
 describe("agent.start", () => {
     test("creates agent with default shape", () => {
@@ -29,5 +40,14 @@ describe("agent.start", () => {
         const b = start(ctx, { model: "y" });
         expect(a.id).not.toBe(b.id);
         expect(Object.keys((ctx.state as any).agent)).toHaveLength(2);
+    });
+
+    test("persists and emits create event", () => {
+        const ctx = mkCtx() as any;
+        const agent = start(ctx, { model: "codex:gpt-5.4" });
+        expect(ctx.fns.session.save).toHaveBeenCalledTimes(1);
+        expect(ctx.fns.session.save).toHaveBeenCalledWith(ctx, agent);
+        expect(ctx.fns.events.emitAgentsChanged).toHaveBeenCalledTimes(1);
+        expect(ctx.fns.events.emitAgentsChanged).toHaveBeenCalledWith(ctx, { agentId: agent.id, reason: "create" });
     });
 });

@@ -30,16 +30,7 @@ export default async function (_ctx: Context, ev: any): Promise<string> {
 
     if (ev.type === "assistant") {
         const idx = ev.messageIdx ?? ev.idx ?? 0;
-        const usage = ev.usage
-            ? (() => {
-                const input = ev.usage.prompt_tokens ?? ev.usage.input_tokens ?? ev.usage.promptTokens ?? ev.usage.inputTokens;
-                const total = ev.usage.total_tokens ?? ev.usage.totalTokens;
-                if (input != null && total != null) return '<div class="mt-2 text-[11px] text-gray-400 font-mono">ctx: ' + fmtTok(input) + ' · total: ' + fmtTok(total) + '</div>';
-                if (input != null) return '<div class="mt-2 text-[11px] text-gray-400 font-mono">ctx: ' + fmtTok(input) + '</div>';
-                if (total != null) return '<div class="mt-2 text-[11px] text-gray-400 font-mono">ctx total: ' + fmtTok(total) + '</div>';
-                return '';
-            })()
-            : '';
+        const usage = ''; 
         return '<div class="group relative flex justify-start">'
             + deleteControls(idx, true, true)
             + '<div class="assistant max-w-[90%] rounded-2xl bg-gray-50 px-4 py-3 shadow-sm border border-gray-200">'

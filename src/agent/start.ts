@@ -21,5 +21,7 @@ export default function (
     };
     (ctx.state as any).agent ??= {};
     (ctx.state as any).agent[id] = agent;
+    ctx.fns.session?.save?.(ctx, agent);
+    ctx.fns.events?.emitAgentsChanged?.(ctx, { agentId: agent.id, reason: "create" });
     return agent;
 }

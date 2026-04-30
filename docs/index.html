@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>hyper-code2 — REPL is all you need</title>
+  <style>
+    :root { --fg:#1a1a1a; --muted:#666; --bg:#fafafa; --line:#e5e5e5; --hl:#fffbe6; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--fg); background: var(--bg); }
+    main { max-width: 760px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+    section { padding: 2.5rem 0; border-bottom: 1px solid var(--line); }
+    section:last-child { border-bottom: 0; }
+    .num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); font-size: .8rem; letter-spacing: .1em; }
+    h1 { font-size: 2.2rem; line-height: 1.2; margin: .2em 0 .4em; letter-spacing: -.02em; }
+    h2 { font-size: 1.5rem; line-height: 1.25; margin: .2em 0 .6em; letter-spacing: -.01em; }
+    h3 { font-size: 1.05rem; margin: 1.2em 0 .3em; color: #444; }
+    p.lead { font-size: 1.15rem; color: #333; margin: .4em 0 1em; }
+    ul, ol { padding-left: 1.2em; }
+    li { margin: .25em 0; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; background: #f0f0f0; padding: .05em .35em; border-radius: 3px; }
+    pre { background: #1a1a1a; color: #f0f0f0; padding: 1em 1.2em; border-radius: 6px; overflow-x: auto; font-size: .78rem; line-height: 1.5; }
+    pre code { background: transparent; padding: 0; color: inherit; font-size: 1em; }
+    table { border-collapse: collapse; width: 100%; font-size: .9em; margin: .8em 0; }
+    th, td { padding: .4em .8em; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: .85em; }
+    .muted { color: var(--muted); }
+    a { color: #1d4ed8; }
+    blockquote { margin: 1em 0; padding: .4em 1em; border-left: 3px solid #ccc; color: #444; background: var(--hl); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6rem; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+    nav { position: fixed; top: 1rem; right: 1rem; font-size: .75rem; color: var(--muted); background: rgba(250,250,250,.85); padding: .3em .5em; border-radius: 4px; }
+    nav a { color: var(--muted); text-decoration: none; margin-left: .6em; }
+    nav a:hover { color: var(--fg); }
+    .hero { padding-top: 1rem; }
+    .hero h1 { font-size: 3rem; margin-bottom: .3em; }
+    .hero p { font-size: 1.3rem; color: #444; }
+    .footnote { font-size: .85em; color: var(--muted); margin-top: 1.2em; }
+  </style>
+</head>
+<body>
+<nav>
+  <a href="#1">1</a><a href="#2">2</a><a href="#3">3</a><a href="#4">4</a><a href="#5">5</a>
+  <a href="#6">6</a><a href="#7">7</a><a href="#8">8</a><a href="#9">9</a><a href="#10">10</a>
+</nav>
+<main>
+
+<!-- 1. TITLE -->
+<section id="1" class="hero">
+  <div class="num">01 / TITLE</div>
+  <h1>REPL is all you need</h1>
+  <p><strong>Let the agent think and act in code.</strong></p>
+  <p>Give it the full runtime and one tool — it writes the rest, shaped to you and your project.</p>
+  <p class="muted">github.com/niquola/hyper-code2 · Nikolai Ryzhikov · Health Samurai</p>
+</section>
+
+<!-- 2. THE REALIZATION -->
+<section id="2">
+  <div class="num">02 / THE REALIZATION</div>
+  <h2>Agents need less than we ship them</h2>
+  <p>A year in, a simple loop with tools is enough for programming work.</p>
+  <p>Mario Zechner's <a href="https://github.com/badlogic/pi-mono">pi-mono</a> made it concrete: one <code>bash</code> tool, ~1000 lines of harness, on par with Claude Code and Codex. A tenth of the size — and the gap isn't where you'd expect.</p>
+  <p>Why it works: agents already <strong>compose shell into pipelines</strong> and <strong>write code</strong>. So why ship a pre-baked toolbox when the agent can write the tools when it needs them, shaped to the user, the project, the task at hand?</p>
+</section>
+
+<!-- 3. EMACS ANALOGY -->
+<section id="3">
+  <div class="num">03 / EMACS, AGAIN</div>
+  <h2>Emacs was never an editor with plugins</h2>
+  <p class="lead">It's a Lisp runtime that happens to edit text and rewrites itself on the fly.</p>
+  <p>That's why people are still building whole workflows inside it forty years later.</p>
+  <p>The same trick fits a coding agent: <strong>give it a runtime + a REPL, one ability — write and run code — and stop there.</strong> The rest (<code>read</code>, <code>write</code>, <code>edit</code>, <code>grep</code>, <code>subagent</code>, whatever comes next) the agent will write itself.</p>
+</section>
+
+<!-- 4. CODE COMPOSES -->
+<section id="4">
+  <div class="num">04 / WHY CODE</div>
+  <h2>Let the agent think <em>and</em> act in code</h2>
+  <p class="lead">Code is both — variables and control flow are <strong>thought</strong>; <code>fetch</code>, <code>git</code>, <code>db</code> calls are <strong>action</strong>. One medium for both.</p>
+  <p>MCP and <code>bash</code> give a flat menu of pre-shaped buttons; the agent has to verbalize plans in prose, then translate each step into a tool call. Code skips the translation. One <code>evalCode</code> can do the work of six MCP servers, with composition (loops, parallelism, libraries) for free.</p>
+  <p>Take a real fan-out: <em>"triage every open issue in this repo and label it bug / feature / question."</em></p>
+<pre><code>const repo = "niquola/hyper-code2";
+const issues = await (await fetch(
+  `https://api.github.com/repos/${repo}/issues?state=open`,
+  { headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }})).json();
+
+// fan out — one fork per issue, in parallel
+const results = await Promise.all(issues.map(async (issue) => {
+  const child = ctx.fns.session.fork(ctx, agent.id, agent.messages.length);
+  await ctx.fns.agent.run(ctx, child,
+    `Triage #${issue.number} "${issue.title}":\n${issue.body}\n` +
+    `Reply with JSON: { label: "bug"|"feature"|"question", reason }.`);
+  return { n: issue.number, ...JSON.parse(child.scratchpad.last) };
+}));
+
+agent.scratchpad.triage = results;
+return { triaged: results.length, by_label: Map.groupBy(results, r =&gt; r.label) };</code></pre>
+  <p class="footnote"><strong>Related work:</strong> <a href="https://arxiv.org/html/2512.24601v2">Recursive Language Models</a> (Zhang/Kraska/Khattab, 2025) make the same architectural bet — long inputs are <strong>data inside a REPL environment</strong>, not text in the LLM context; the model writes code that peeks, slices, and recursively calls sub-LLMs over pieces. Our <code>agent.scratchpad</code> + <code>ctx.fns.repl.eval</code> + <code>ctx.fns.session.fork</code> give the agent the same shape today.</p>
+</section>
+
+<!-- 5. HYPERMEDIA > TUI -->
+<section id="5">
+  <div class="num">05 / WHY HYPERMEDIA</div>
+  <h2>HTTP &amp; HTML beat TUI and IDE plugins</h2>
+  <p class="lead">The browser is a universal client we already have. The agent extends the UI the same way it writes any other code.</p>
+  <ul>
+    <li><strong>Add a screen instantly</strong> — drop a <code>$route_*.ts</code> file, it's live on the next request. No recompile, no extension reload, no manifest.</li>
+    <li><strong>Push to the user</strong> — SSE channel, one <code>ctx.fns.events.emit</code> call → the browser reacts. No poll loop, no proprietary event API.</li>
+    <li><strong>Real styling</strong> — Tailwind, shiki, CodeMirror, the entire web stack. Not ANSI escapes or an IDE theme API.</li>
+    <li><strong>Renders before JS</strong> — server-side HTML is usable instantly. No cell-based redraw, no flicker, no first-paint dance.</li>
+    <li><strong>Sharable</strong> — every state has a URL. Copy, paste, link, bookmark.</li>
+    <li><strong>Multiplayer</strong> — many tabs, many users, same SSE channel. Free.</li>
+    <li><strong>Inspectable</strong> — DevTools, view-source, network tab. Debugging is just web debugging.</li>
+    <li><strong>Cross-platform</strong> — desktop, mobile, ssh-tunneled, embedded — anywhere with a browser.</li>
+    <li><strong>Composable with the rest of the web</strong> — <code>fetch</code>, <code>iframe</code>, OAuth, file upload, drag-and-drop — all standard.</li>
+  </ul>
+  <p>The mechanic in hyper-code2: agent writes <code>.hyper/&lt;mod&gt;/$route_X_GET.ts</code>, calls <code>ctx.fns.http.loadRoutes(ctx)</code>, the route is live. Same trick for <code>$script_*</code> client JS, <code>$type_*</code> shared types, even Bun-bundled <code>.entry.ts</code>.</p>
+</section>
+
+<!-- 6. SELF-AWARE -->
+<section id="6">
+  <div class="num">06 / SELF-AWARENESS</div>
+  <h2>An agent that understands itself</h2>
+  <p class="lead">Self-extension only works if the agent can <em>see</em> itself first.</p>
+  <p>In hyper-code2 the agent's whole world is a few obvious objects. It can read each one with the same <code>evalCode</code> it uses for anything else:</p>
+<pre><code>// What functions do I have?
+Object.keys(ctx.fns)
+// → ['agent', 'db', 'events', 'files', 'http', 'llm', 'markdown',
+//    'repl', 'session', 'settings', 'ui', ...]
+
+// What routes do I serve?
+Object.fromEntries(Object.entries(ctx.routes).map(([p, m]) =&gt; [p, Object.keys(m)]))
+// → { '/': ['GET'], '/agent/:id': ['GET','POST','DELETE'], ... }
+
+// What is my own loop?
+await Bun.file("src/agent/run.ts").text()
+
+// What did I do an hour ago?
+ctx.fns.db.select(ctx,
+  "SELECT type, payload FROM events WHERE agent_id=? ORDER BY ts DESC LIMIT 20",
+  [agent.id])
+
+// Who am I?  →  agent.id, agent.model, agent.systemPrompt, agent.scratchpad</code></pre>
+  <p>The system prompt teaches it the <strong>three places that matter</strong>: <code>ctx.fns</code> (what it can do), <code>ctx.routes</code> (what it exposes), <code>SQLite</code> (what it remembers). Once those are visible, "extending myself" becomes a concrete loop: <em>see the gap → write the file → hot-load → use it</em>. No reflection, no plugin API — the source code <em>is</em> the introspection surface.</p>
+</section>
+
+<!-- 7. HYPER-CODE2 + ARCH -->
+<section id="7">
+  <div class="num">07 / HYPER-CODE2</div>
+  <h2>A runtime where the agent can live and extend itself</h2>
+  <p class="lead">Small enough that the agent holds the architecture in context. Simple enough that it can extend it without breaking anything.</p>
+  <ul>
+    <li><strong>Bun</strong> — fast runtime, batteries-included (<code>Bun.serve</code>, <code>Bun.file</code>, <code>Bun.$</code>, <code>bun:sqlite</code>, <code>Bun.build</code>), ~zero deps.</li>
+    <li><strong>SQLite</strong> for sessions — agents, messages, events, all queryable by the agent itself.</li>
+    <li><strong>Web UI</strong> — SSR chat, files explorer (shiki + CodeMirror+vim), settings page (device-flow logins for Kimi-coding / Codex subscriptions, JWT auto-refresh).</li>
+    <li>About <strong>1000 lines</strong>. Works with OpenAI, Anthropic, Groq, OpenRouter, LM Studio.</li>
+  </ul>
+<pre><code>Browser (chat UI) ──POST /agent──▶ run loop ──▶ LLM /v1/chat/completions
+     ▲                               │
+     │                               ▼  tool_calls → evalCode
+     │                          ┌────────────┐
+     └─SSE /events──────────────┤ agent.events    (UI trace)
+                                │ agent.messages  (LLM transcript)
+                                │ agent.scratchpad (off-context state)
+                                │ SQLite sessions  (agents, messages, events)
+                                └────────────┘</code></pre>
+</section>
+
+<!-- 8. REPL + PROCEDURAL DESIGN -->
+<section id="8">
+  <div class="num">08 / REPL · PROCEDURAL DESIGN</div>
+  <h2>Designed for REPL</h2>
+  <p class="lead">Three rules that make hot-swap trivial.</p>
+  <ol>
+    <li><strong>Functions take everything as parameters.</strong> No <code>this</code>, no closures over module state, no DI container. First arg is always <code>ctx</code> — anything the function needs comes through it.</li>
+    <li><strong>All state lives in one place: <code>ctx</code>.</strong> <code>ctx.state.*</code> in memory; SQLite for persistence; <code>agent.scratchpad</code> for off-LLM working memory. State never hides inside a module.</li>
+    <li><strong>Any function can be hot-swapped at runtime.</strong> Edit the file → <code>ctx.fns.repl.load(ctx, "agent.run")</code> → next call uses the new version. No restart, no re-init, no stale closures because there were no closures to begin with.</li>
+  </ol>
+<pre><code>// All the data this function will ever touch comes through ctx + args:
+export default async function (ctx: Context, path: string): Promise&lt;string&gt; {
+    const abs = ctx.fns.files.resolveSafe(ctx, path);
+    return Bun.file(abs).text();
+}
+//   →  loaded as ctx.fns.files.read   ·  hot-swap with one repl.load call</code></pre>
+  <p>The agent uses the same REPL we do: <code>bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent.run")'</code> — and edits its own functions the same way.</p>
+  <p class="muted">No DI, no framework, no build step, no module-level state. In the spirit of <a href="https://curtclifton.net/papers/MoseleyMarks06a.pdf">Out of the Tar Pit</a>.</p>
+</section>
+
+<!-- 9. EXTEND TO YOUR PROJECT / STYLE -->
+<section id="9">
+  <div class="num">09 / EXTEND IT TO YOUR PROJECT</div>
+  <h2>The codebase grows a library shaped to <em>you</em></h2>
+  <p class="lead">Once. Twice. The third time the agent pins the pattern as a project procedure — and uses it as a built-in forever after.</p>
+
+  <h3>Turn 1 — ad-hoc <code>evalCode</code> (one call replaces six MCP tools)</h3>
+<pre><code>// "Pull release notes since the last tag — commits, authors, linked PRs."
+const tag = (await Bun.$`git describe --tags --abbrev=0`.text()).trim();
+const raw = await Bun.$`git log ${tag}..HEAD --pretty=format:%H|%s|%an`.text();
+const cached = await ctx.fns.db.select(ctx,
+  "SELECT body FROM release_notes WHERE tag = ? AND head = ?", [tag, head]);
+if (cached.length) return { since: tag, cached: true };
+
+const prs = await Promise.all(prNums.map(n =&gt;
+  fetch(`https://api.github.com/repos/${repo}/pulls/${n}`).then(r =&gt; r.json())));
+
+agent.scratchpad.release = { tag, commits, prs, body };  // off-context
+return { since: tag, commits: commits.length, contributors, prs_linked };</code></pre>
+
+  <h3>Turn N — pin the pattern as a project procedure</h3>
+<pre><code>// Save under .hyper/ (gitignored, runtime-writable, agent-owned)
+await Bun.write(".hyper/release/notes.ts", `
+  export default async function (ctx: Context, repo: string) {
+    // ... same logic — now a reusable function
+    return { tag, commits, prs, body };
+  }
+`);
+
+// Hot-load into the live runtime + regenerate types — no restart
+await ctx.fns.repl.load(ctx, "release");
+await ctx.genTypes(ctx);
+
+// Turn N+1: call it like a built-in
+await ctx.fns.release.notes(ctx, "niquola/hyper-code2");</code></pre>
+
+  <p>Over weeks the project quietly grows a library of procedures shaped to <strong>this repo</strong>, <strong>this author</strong>, <strong>this team's habits</strong>. The agent learns your codebase, your conventions, your favourite shortcuts — and bakes them in. No fixed harness gives you that, because no fixed harness knows you.</p>
+</section>
+
+<!-- 10. TRY IT -->
+<section id="10">
+  <div class="num">10 / TRY IT</div>
+  <h2>Five minutes</h2>
+  <ol>
+    <li><code>bun install &amp;&amp; cp .env.test .env</code> — drop in your provider key.</li>
+    <li><code>bun src/$main.ts</code> → open <code>http://localhost:3000</code>.</li>
+    <li>Ask: <em>"read your own codebase and explain how it works."</em></li>
+    <li>Ask: <em>"what tools are you missing to work on …?"</em></li>
+    <li>Ask: <em>"write it and call it!"</em></li>
+  </ol>
+  <blockquote>Give the model the full runtime and a single tool, then let it write the rest — shaped to you and your project.</blockquote>
+  <p style="text-align:center; margin-top:2em">★ <a href="https://github.com/niquola/hyper-code2">github.com/niquola/hyper-code2</a></p>
+  <p class="muted" style="text-align:center">A green baby. Join the fun.</p>
+</section>
+
+</main>
+</body>
+</html>

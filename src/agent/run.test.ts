@@ -49,7 +49,9 @@ function mkCtx() {
     ctx.fns.llm.stream = stream;
     ctx.fns.llm.streamMock = streamMock;
     ctx.fns.llm.resolveEndpoint = resolveEndpoint;
-    ctx.fns.markdown.highlight = async (_c: any, s: string) => s;
+    ctx.fns.markdown.highlight = async (_c: any, s: any) => {
+        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    };
     ctx.fns.markdown.render = async (_c: any, s: string) => s;
     ctx.fns.repl.eval = async (_c: any, code: string) => { if (code === '2+2') return 4; return 'ok'; };
     ctx.fns.events.emitAgentsChanged = () => {};
@@ -76,6 +78,7 @@ describe("agent.run with mock llm", () => {
             { type: 'agent.thinking.done', agentId: agent.id },
         ]);
     });
+
     test("echoes a user message through mock provider", async () => {
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');
@@ -110,5 +113,30 @@ describe("agent.run with mock llm", () => {
         save(ctx, child);
         const full = getFullMessages(ctx, child.id);
         expect(full[0].content).toBe('parent says hi');
+    });
+
+    test("fails before tool messages are appended when one of multiple tool calls has missing code", async () => {
+        const ctx = mkCtx();
+        ctx.fns.db.connect(ctx, ':memory:');
+        await ctx.fns.db.migrate(ctx);
+        const agent = start(ctx, { model: 'mock:tool', systemPrompt: '', tools: [evalCodeTool] });
+        save(ctx, agent);
+
+        ctx.fns.llm.stream = async () => ({
+            text: '',
+            thinking: '',
+            toolCalls: [
+                { id: 'call_ok', name: 'evalCode', arguments: JSON.stringify({ code: '2+2' }) },
+                { id: 'call_bad', name: 'evalCode', arguments: JSON.stringify({}) },
+            ],
+            usage: {},
+        });
+
+        await expect(run(ctx, agent, 'probe')).rejects.toThrow('Cannot read properties of undefined');
+
+        const msgs = getMessages(ctx, agent.id);
+        expect(msgs.at(-1)?.role).toBe('assistant');
+        expect(msgs.at(-1)?.tool_calls?.map((tc: any) => tc.id)).toEqual(['call_ok', 'call_bad']);
+        expect(msgs.filter((m: any) => m.role === 'tool')).toHaveLength(0);
     });
 });
