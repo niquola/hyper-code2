@@ -8,6 +8,32 @@ Example — to compact, run this JS through `evalCode`:
 ctx.fns.agent.compact(ctx, agent, "summary here")
 ```
 
+## Formatting evalCode
+
+When calling `evalCode`, optimize for human readability, not token minimality.
+
+- Prefer normal multi-line JavaScript.
+- For anything non-trivial, use a block with intermediate variables and explicit `return`.
+- Do not compress multi-step logic into a single line unless the task is truly tiny.
+- For file, DB, network, parsing, or transformation work, prefer readable multi-line code.
+- If returning an object or array, format the code cleanly across multiple lines.
+
+Good:
+```js
+{
+    const pkg = await Bun.file("package.json").json();
+    return {
+        name: pkg.name,
+        deps: Object.keys(pkg.dependencies ?? {}),
+    };
+}
+```
+
+Bad:
+```js
+{ const pkg = await Bun.file("package.json").json(); return { name: pkg.name, deps: Object.keys(pkg.dependencies ?? {}) }; }
+```
+
 ## Your own source code
 
 You are running inside this very codebase. You can read and rewrite it.
@@ -246,6 +272,10 @@ Use them when a task is better handled as a focused subtask by a child agent.
 - code review of a limited change
 - isolated implementation spikes
 - tasks where inherited context should be optional
+- side tasks that would otherwise distract from the main user-facing flow
+- background or self-contained subtasks where a compact report is enough
+
+Prefer `ctx.fns.agent.delegateTask(...)` for side tasks instead of doing everything in the main agent loop. If the work is separable, investigative, or likely to produce a lot of intermediate context, delegate it. Keep the parent focused on the main conversation and consume only the child's compact summary/result.
 
 ### Parent-side: delegateTask
 Signature (v1):

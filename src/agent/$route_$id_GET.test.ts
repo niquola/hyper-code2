@@ -7,7 +7,14 @@ import renderEventHtml from "./renderEventHtml";
 const mkCtx = (agents: Record<string, any> = {}) => ({
     state: { agent: agents },
     env: {},
-    fns: { ui: { script }, agent: { renderEventHtml } },
+    fns: {
+        ui: { script },
+        agent: { renderEventHtml },
+        session: {
+            syncAgentState: (_ctx: Context, agent: any) => agent,
+            getFullMessages: (_ctx: Context, _id: string) => [],
+        },
+    },
     layout,
 } as unknown as Context);
 
@@ -44,6 +51,27 @@ describe("GET /agent/:id", () => {
         expect(html).toContain("/agent/agent_abc/delete");
         expect(html).toContain('src="/agent/chat.js"');
         expect(html).toContain("window.__init");
+    });
+
+    test("syncs agent state before SSR so persisted events appear after reload", async () => {
+        const agent = {
+            id: "agent_sync",
+            model: "m",
+            messages: [],
+            events: [],
+            isStreaming: true,
+        };
+        const ctx = mkCtx({ agent_sync: agent });
+        let synced = false;
+        (ctx.fns as any).session.syncAgentState = (_ctx: Context, a: any) => {
+            synced = true;
+            a.events = [{ type: "user", text: "persisted hi", messageIdx: 0 }];
+            a.isStreaming = true;
+            return a;
+        };
+        const html = await render(ctx, "agent_sync");
+        expect(synced).toBe(true);
+        expect(html).toContain("persisted hi");
     });
 
     test("server-renders initial events into #messages (SSR)", async () => {

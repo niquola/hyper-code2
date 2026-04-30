@@ -3,6 +3,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     const agent = (ctx.state as any).agent?.[id];
     if (!agent) return new Response("Not Found", { status: 404 });
 
+    ctx.fns.session.syncAgentState(ctx, agent);
     const inheritedCount = agent.parentId ? ctx.fns.session.getFullMessages(ctx, id).length - agent.messages.length : 0;
     const init = {
         agentId: id,
