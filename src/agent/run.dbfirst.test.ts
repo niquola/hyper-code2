@@ -12,7 +12,7 @@ import getEvents from '../session/getEvents';
 import start from './start';
 
 function mkCtx() {
-  const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {}, agent: {}, llm: {}, markdown: {}, repl: {} } };
+  const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {}, agent: {}, llm: {}, markdown: {}, repl: {}, events: {} } };
   ctx.fns.db.connect = connect;
   ctx.fns.db.migrate = migrate;
   ctx.fns.db.exec = (c: any, sql: string, params: any) => { const q = c.state.db.query(sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
@@ -27,6 +27,7 @@ function mkCtx() {
     if (last?.role === 'user') return { text: '', thinking: '', toolCalls: [{ id: 'c1', name: 'evalCode', arguments: JSON.stringify({ code: '2+2' }) }], usage: { prompt_tokens: 10 } };
     return { text: '4', thinking: '', toolCalls: [], usage: { prompt_tokens: 12 } };
   };
+  ctx.fns.events.emit = () => {};
   return ctx;
 }
 
@@ -57,3 +58,4 @@ describe('agent.run db-first groundwork', () => {
     expect(getFullMessages(ctx, child.id).map((m: any) => m.content)).toEqual(['parent hello']);
   });
 });
+

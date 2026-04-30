@@ -15,11 +15,12 @@ import getMessages from "./getMessages";
 import getEvents from "./getEvents";
 
 function mkCtx() {
-  const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {} } };
+  const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {}, agent: {} } };
   ctx.fns.db.connect = connect;
   ctx.fns.db.migrate = migrate;
   ctx.fns.db.exec = (c: any, sql: string, params: any) => { const q = c.state.db.query(sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
   ctx.fns.db.select = (c: any, sql: string, params: any = []) => { const q = c.state.db.query(sql); return Array.isArray(params) ? q.all(...params) : q.all(params); };
+  ctx.fns.agent.renderEventHtml = async () => '';
   Object.assign(ctx.fns.session, { save, appendMessage, appendEvent, appendUserMessage, appendAssistantMessage, appendToolMessage, appendErrorEvent, appendThinkingEvent, appendAssistantEvent, appendToolCallEvent, getMessages, getEvents });
   return ctx;
 }
@@ -34,14 +35,14 @@ describe('session append helpers', () => {
     ctx.fns.db.connect(ctx, ':memory:');
     await ctx.fns.db.migrate(ctx);
     save(ctx, seedAgent());
-    appendUserMessage(ctx, 'a1', 'u');
+    await appendUserMessage(ctx, 'a1', 'u');
     appendAssistantMessage(ctx, 'a1', { content: 'a' });
     appendToolMessage(ctx, 'a1', 'c1', 't');
-    appendThinkingEvent(ctx, 'a1', '...');
-    appendToolCallEvent(ctx, 'a1', { name: 'evalCode', args: {}, result: '1', argsHtml: '', resultHtml: '', isError: false });
-    appendAssistantEvent(ctx, 'a1', { text: 'done', html: '<p>done</p>' });
-    appendErrorEvent(ctx, 'a1', 'boom');
+    await appendThinkingEvent(ctx, 'a1', '...');
+    await appendToolCallEvent(ctx, 'a1', { name: 'evalCode', args: {}, result: '1', argsHtml: '', resultHtml: '', isError: false });
+    await appendAssistantEvent(ctx, 'a1', { text: 'done', html: '<p>done</p>' });
+    await appendErrorEvent(ctx, 'a1', 'boom');
     expect(getMessages(ctx, 'a1').map((m: any) => m.role)).toEqual(['user', 'assistant', 'tool']);
-    expect(getEvents(ctx, 'a1').map((e: any) => e.type)).toEqual(['thinking', 'tool_call', 'assistant', 'error']);
+    expect(getEvents(ctx, 'a1').map((e: any) => e.type)).toEqual(['user', 'thinking', 'tool_call', 'assistant', 'error']);
   });
 });

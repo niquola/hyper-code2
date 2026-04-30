@@ -6,6 +6,9 @@ const form = document.getElementById("form");
 const input = document.getElementById("input");
 const send = document.getElementById("send");
 const usageEl = document.getElementById("context-usage");
+let thinkingOverlayEl = null;
+let thinkingHideTimer = null;
+let liveThinkingText = '';
 
 function bubble(cls, text) {
     const d = document.createElement("div");
@@ -33,6 +36,43 @@ function updateUsage(usage) {
     if (inTok != null && total != null) usageEl.textContent = "ctx: " + fmtTok(inTok) + " · total: " + fmtTok(total);
     else if (inTok != null) usageEl.textContent = "ctx: " + fmtTok(inTok);
     else if (total != null) usageEl.textContent = "ctx total: " + fmtTok(total);
+}
+
+function ensureThinkingOverlay() {
+    if (thinkingOverlayEl) return thinkingOverlayEl;
+    const el = document.createElement('div');
+    el.id = 'thinking-overlay';
+    el.className = 'fixed right-4 top-4 z-50 max-w-[min(42rem,calc(100vw-2rem))] rounded-2xl border border-blue-200 bg-white/75 backdrop-blur shadow-lg px-4 py-3 text-sm text-gray-700 opacity-0 pointer-events-none transition-opacity duration-300';
+    el.innerHTML = '<div class="text-[11px] font-semibold uppercase tracking-wide text-blue-700 mb-1">thinking</div><pre class="whitespace-pre-wrap break-words font-mono text-[11px] leading-snug max-h-[40vh] overflow-auto"></pre>';
+    document.body.appendChild(el);
+    thinkingOverlayEl = el;
+    return el;
+}
+
+function showThinking(text) {
+    if (!text) return;
+    const el = ensureThinkingOverlay();
+    const pre = el.querySelector('pre');
+    if (pre) pre.textContent = text;
+    if (thinkingHideTimer) {
+        clearTimeout(thinkingHideTimer);
+        thinkingHideTimer = null;
+    }
+    el.classList.remove('opacity-0');
+    el.classList.add('opacity-100');
+}
+
+function hideThinkingSoon() {
+    if (!thinkingOverlayEl) return;
+    if (thinkingHideTimer) clearTimeout(thinkingHideTimer);
+    thinkingHideTimer = setTimeout(() => {
+        if (!thinkingOverlayEl) return;
+        thinkingOverlayEl.classList.remove('opacity-100');
+        thinkingOverlayEl.classList.add('opacity-0');
+        liveThinkingText = '';
+        const pre = thinkingOverlayEl.querySelector('pre');
+        if (pre) pre.textContent = '';
+    }, 5000);
 }
 
 function armDeleteButton(btn, label) {
@@ -93,16 +133,24 @@ function addError(t) { bubble("bg-gray-100 text-red-700 border border-red-200 ro
 
 function renderEvents(list) {
     for (const ev of list) {
-        // assistant stores `html` (inner markdown) AND `eventHtml` (full SSR bubble);
-        // other event types store the full bubble in `html`. Prefer the wrapped one.
+        if (ev.type === 'thinking' && ev.text) continue;
         const html = ev.eventHtml || ev.html;
         if (html) addHtml(html, ev.usage);
         else if (ev.type === "error") addError(ev.error);
+        if (ev.type === 'assistant' || ev.type === 'error' || ev.type === 'tool_call') hideThinkingSoon();
     }
 }
 
-// Initial events are SSR'd straight into #messages by $route_$id_GET.ts —
-// only wire delete controls + start polling here. New events come in via poll.
+document.addEventListener('hyper-events', (e) => {
+    const ev = e.detail;
+    if (!ev || ev.agentId !== agentId) return;
+    if (ev.type === 'agent.thinking.delta') {
+        liveThinkingText = ev.text || (liveThinkingText + (ev.delta || ''));
+        showThinking(liveThinkingText);
+    }
+    if (ev.type === 'agent.thinking.done') hideThinkingSoon();
+});
+
 wireDeleteControls(messagesEl);
 if (inheritedCount > 0) addPending('inherited context: ' + inheritedCount + ' msgs');
 requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
@@ -116,7 +164,10 @@ async function poll() {
         renderEvents(data.events);
         offset = data.nextOffset;
         updateUsage(data.usage);
-        if (!data.isStreaming) return;
+        if (!data.isStreaming) {
+            hideThinkingSoon();
+            return;
+        }
     }
 }
 
@@ -141,10 +192,13 @@ form.addEventListener("submit", async (e) => {
             const p = addPending("thinking...");
             await poll();
             p.remove();
+        } else {
+            hideThinkingSoon();
         }
     } catch (err) {
         pending.remove();
         addError(err.message);
+        hideThinkingSoon();
     } finally {
         if (send) send.disabled = false;
         input.focus();

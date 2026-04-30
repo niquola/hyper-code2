@@ -28,12 +28,12 @@ describe("session.save", () => {
         expect(JSON.parse(row.scratchpad)).toEqual({ x: 42 });
     });
 
-    test("does not overwrite appended messages/events", async () => {
+    test("save persists current in-memory messages/events", async () => {
         const ctx = await mkCtx();
         const agent = start(ctx, { model: "m" });
         save(ctx, agent);
-        appendMessage(ctx, agent.id, { role: "user", content: "hello" });
-        appendEvent(ctx, agent.id, { type: "user", text: "hello" });
+        agent.messages.push({ role: "user", content: "hello" } as any);
+        agent.events.push({ type: "user", text: "hello" } as any);
         agent.scratchpad.note = "x";
         save(ctx, agent);
         const msgs = ctx.fns.db.select<any>(ctx, "SELECT * FROM messages WHERE agent_id = ? ORDER BY idx", [agent.id]);
