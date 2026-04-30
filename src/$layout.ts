@@ -1,4 +1,4 @@
-export default function (ctx: Context, opts: { currentId?: string; title?: string; main: string; headExtra?: string }) {
+export default function (ctx: Context, opts: { currentId?: string; title?: string; main: string; headExtra?: string }, req?: Request) {
     // Prefer db listing (authoritative), fall back to in-memory in tests without db.
     let agents: any[];
     try {
@@ -19,6 +19,7 @@ export default function (ctx: Context, opts: { currentId?: string; title?: strin
     const openFiles = ctx.fns.files?.listOpen ? ctx.fns.files.listOpen(ctx) : [];
     const currentPath = extractCurrentPath(opts.title);
     const sidebar = renderSidebar(agents, openFiles, opts.currentId, currentPath);
+    if (req && req.headers.get("x-hyper-fragment") === "sidebar") return sidebar;
     const pageTitle = opts.title ? `${opts.title} · hyper-code2` : "hyper-code2";
     return `<!doctype html>
 <html>
@@ -41,6 +42,20 @@ ${opts.headExtra ?? ""}
   ${sidebar}
   <main class="flex-1 flex flex-col overflow-hidden">${opts.main}</main>
 </div>
+<script>
+window.__hyperRefreshSidebar = async function () {
+  try {
+    const res = await fetch(location.href, { headers: { 'x-hyper-fragment': 'sidebar' } });
+    if (!res.ok) return;
+    const html = await res.text();
+    const wrap = document.createElement('div');
+    wrap.innerHTML = html;
+    const next = wrap.querySelector('aside');
+    const cur = document.querySelector('aside');
+    if (next && cur) cur.replaceWith(next);
+  } catch {}
+};
+</script>
 </body>
 </html>`;
 }

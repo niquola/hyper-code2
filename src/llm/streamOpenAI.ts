@@ -12,7 +12,8 @@ export default async function (
     const messages: any[] = [];
     const sys = await ctx.fns.agent.fullSystemPrompt(ctx, agent);
     if (sys) messages.push({ role: "system", content: sys });
-    messages.push(...agent.messages);
+    const base = agent.parentId ? ctx.fns.session.getFullMessages(ctx, agent.id) : agent.messages;
+    messages.push(...base);
 
     const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
 

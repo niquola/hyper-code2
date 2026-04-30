@@ -4,9 +4,13 @@ declare global {
 
     interface FnsRegistry {
         agent: {
+        buildDelegatedTaskPrompt: typeof import("./agent/buildDelegatedTaskPrompt").default;
         clear: typeof import("./agent/clear").default;
         compact: typeof import("./agent/compact").default;
+        delegateTask: typeof import("./agent/delegateTask").default;
+        finishTask: typeof import("./agent/finishTask").default;
         fullSystemPrompt: typeof import("./agent/fullSystemPrompt").default;
+        renderEventHtml: typeof import("./agent/renderEventHtml").default;
         run: typeof import("./agent/run").default;
         start: typeof import("./agent/start").default;
         stop: typeof import("./agent/stop").default;
@@ -20,13 +24,14 @@ declare global {
         select: typeof import("./db/select").default;
         };
         dev: {
-        readLog: typeof import("../.hyper/dev/readLog").default;
-        test: typeof import("../.hyper/dev/test").default;
-        testSummary: typeof import("../.hyper/dev/testSummary").default;
-        typecheck: typeof import("../.hyper/dev/typecheck").default;
+        readLog: typeof import("./dev/readLog").default;
+        test: typeof import("./dev/test").default;
+        testSummary: typeof import("./dev/testSummary").default;
+        typecheck: typeof import("./dev/typecheck").default;
         };
         events: {
         emit: typeof import("./events/emit").default;
+        emitAgentsChanged: typeof import("./events/emitAgentsChanged").default;
         subscribe: typeof import("./events/subscribe").default;
         };
         files: {
@@ -43,6 +48,14 @@ declare global {
         stat: typeof import("./files/stat").default;
         write: typeof import("./files/write").default;
         };
+        git: {
+        commit: typeof import("./git/commit").default;
+        push: typeof import("./git/push").default;
+        run: typeof import("./git/run").default;
+        stage: typeof import("./git/stage").default;
+        stageCommitPush: typeof import("./git/stageCommitPush").default;
+        status: typeof import("./git/status").default;
+        };
         http: {
         loadRoutes: typeof import("./http/loadRoutes").default;
         match: typeof import("./http/match").default;
@@ -56,6 +69,7 @@ declare global {
         stream: typeof import("./llm/stream").default;
         streamAnthropic: typeof import("./llm/streamAnthropic").default;
         streamCodex: typeof import("./llm/streamCodex").default;
+        streamMock: typeof import("./llm/streamMock").default;
         streamOpenAI: typeof import("./llm/streamOpenAI").default;
         toAnthropicMessages: typeof import("./llm/toAnthropicMessages").default;
         toCodexInput: typeof import("./llm/toCodexInput").default;
@@ -65,11 +79,11 @@ declare global {
         render: typeof import("./markdown/render").default;
         };
         memory: {
-        delete: typeof import("../.hyper/memory/delete").default;
-        init: typeof import("../.hyper/memory/init").default;
-        read: typeof import("../.hyper/memory/read").default;
-        search: typeof import("../.hyper/memory/search").default;
-        store: typeof import("../.hyper/memory/store").default;
+        delete: typeof import("./memory/delete").default;
+        init: typeof import("./memory/init").default;
+        read: typeof import("./memory/read").default;
+        search: typeof import("./memory/search").default;
+        store: typeof import("./memory/store").default;
         };
         project: {
         classify: typeof import("./project/classify").default;
@@ -82,12 +96,32 @@ declare global {
         start: typeof import("./repl/$start").default;
         };
         session: {
+        appendAssistantEvent: typeof import("./session/appendAssistantEvent").default;
+        appendAssistantMessage: typeof import("./session/appendAssistantMessage").default;
+        appendErrorEvent: typeof import("./session/appendErrorEvent").default;
+        appendEvent: typeof import("./session/appendEvent").default;
+        appendMessage: typeof import("./session/appendMessage").default;
+        appendThinkingEvent: typeof import("./session/appendThinkingEvent").default;
+        appendToolCallEvent: typeof import("./session/appendToolCallEvent").default;
+        appendToolMessage: typeof import("./session/appendToolMessage").default;
+        appendUserMessage: typeof import("./session/appendUserMessage").default;
+        archive: typeof import("./session/archive").default;
         delete: typeof import("./session/delete").default;
+        deleteMessageAt: typeof import("./session/deleteMessageAt").default;
+        fork: typeof import("./session/fork").default;
+        getEvents: typeof import("./session/getEvents").default;
+        getFullMessages: typeof import("./session/getFullMessages").default;
+        getMessages: typeof import("./session/getMessages").default;
         list: typeof import("./session/list").default;
         load: typeof import("./session/load").default;
         loadAll: typeof import("./session/loadAll").default;
+        replaceEvents: typeof import("./session/replaceEvents").default;
+        replaceMessages: typeof import("./session/replaceMessages").default;
         save: typeof import("./session/save").default;
         search: typeof import("./session/search").default;
+        syncAgentState: typeof import("./session/syncAgentState").default;
+        truncateMessagesFrom: typeof import("./session/truncateMessagesFrom").default;
+        updateScratchpad: typeof import("./session/updateScratchpad").default;
         };
         settings: {
         logoutCodex: typeof import("./settings/logoutCodex").default;
@@ -98,25 +132,25 @@ declare global {
         status: typeof import("./settings/status").default;
         };
         skill: {
-        hello: typeof import("../.hyper/skill/hello").default;
-        inspect: typeof import("../.hyper/skill/inspect").default;
-        wordCount: typeof import("../.hyper/skill/wordCount").default;
+        hello: typeof import("./skill/hello").default;
+        inspect: typeof import("./skill/inspect").default;
+        wordCount: typeof import("./skill/wordCount").default;
         };
         tools: {
-        dice: typeof import("../.hyper/tools/dice").default;
-        password: typeof import("../.hyper/tools/password").default;
+        dice: typeof import("./tools/dice").default;
+        password: typeof import("./tools/password").default;
         };
         ui: {
-        action: typeof import("../.hyper/ui/action").default;
-        controlScript: typeof import("../.hyper/ui/controlScript").default;
-        createAgent: typeof import("../.hyper/ui/createAgent").default;
-        eval: typeof import("../.hyper/ui/eval").default;
-        notify: typeof import("../.hyper/ui/notify").default;
-        openAgent: typeof import("../.hyper/ui/openAgent").default;
-        openFile: typeof import("../.hyper/ui/openFile").default;
-        pending: typeof import("../.hyper/ui/pending").default;
+        action: typeof import("./ui/action").default;
+        controlScript: typeof import("./ui/controlScript").default;
+        createAgent: typeof import("./ui/createAgent").default;
+        eval: typeof import("./ui/eval").default;
+        notify: typeof import("./ui/notify").default;
+        openAgent: typeof import("./ui/openAgent").default;
+        openFile: typeof import("./ui/openFile").default;
+        pending: typeof import("./ui/pending").default;
         script: typeof import("./ui/script").default;
-        sendToAgent: typeof import("../.hyper/ui/sendToAgent").default;
+        sendToAgent: typeof import("./ui/sendToAgent").default;
         };
     }
 
@@ -131,17 +165,23 @@ declare global {
             type Agent = import("./agent/$type_Agent").Agent;
         }
         namespace dev {
-            type TestRun = import("../.hyper/dev/$type_TestRun").TestRun;
+            type TestRun = import("./dev/$type_TestRun").TestRun;
+        }
+        namespace events {
+            type Event = import("./events/$type_Event").Event;
+        }
+        namespace git {
+            type Result = import("./git/$type_Result").Result;
         }
         namespace memory {
-            type Entry = import("../.hyper/memory/$type_Entry").Entry;
+            type Entry = import("./memory/$type_Entry").Entry;
         }
         namespace tools {
-            type DiceOpts = import("../.hyper/tools/$type_DiceOpts").DiceOpts;
-            type PasswordOpts = import("../.hyper/tools/$type_PasswordOpts").PasswordOpts;
+            type DiceOpts = import("./tools/$type_DiceOpts").DiceOpts;
+            type PasswordOpts = import("./tools/$type_PasswordOpts").PasswordOpts;
         }
         namespace ui {
-            type AgentLaunch = import("../.hyper/ui/$type_AgentLaunch").AgentLaunch;
+            type AgentLaunch = import("./ui/$type_AgentLaunch").AgentLaunch;
         }
     }
 }

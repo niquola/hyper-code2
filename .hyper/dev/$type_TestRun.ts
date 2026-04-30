@@ -1,1 +1,0 @@
-export type TestRun = { ok: boolean; code: number; pass: number; fail: number; summaryLine: string; failures: Array<{ file: string; test: string; message: string }>; logPath: string; stdout?: string; stderr?: string };

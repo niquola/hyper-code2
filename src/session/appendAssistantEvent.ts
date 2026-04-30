@@ -1,3 +1,5 @@
-export default function (ctx: Context, id: string, payload: { text: string; html: string; usage?: any }, ts = Date.now()) {
-    return ctx.fns.session.appendEvent(ctx, id, { type: "assistant", ...payload }, ts);
+export default async function (ctx: Context, id: string, payload: { text: string; html: string; usage?: any; messageIdx?: number }, ts = Date.now()) {
+    const event = { type: "assistant", ...payload } as any;
+    event.eventHtml = await ctx.fns.agent.renderEventHtml(ctx, event);
+    return ctx.fns.session.appendEvent(ctx, id, event, ts);
 }

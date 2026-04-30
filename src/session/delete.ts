@@ -4,6 +4,7 @@ export default function (ctx: Context, id: string): { ok: boolean } {
     if (removed) {
         ctx.fns.db.exec(ctx, "DELETE FROM messages WHERE agent_id = ?", [id]);
         ctx.fns.db.exec(ctx, "DELETE FROM events WHERE agent_id = ?", [id]);
+        ctx.fns.events.emitAgentsChanged(ctx, { agentId: id, reason: "delete" });
     }
     return { ok: removed };
 }

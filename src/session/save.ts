@@ -21,4 +21,22 @@ export default function (ctx: Context, agent: types.agent.Agent): void {
         $forkOffset: agent.forkOffset ?? null,
         $ts: now,
     });
+
+    ctx.fns.db.exec(ctx, 'DELETE FROM messages WHERE agent_id = ?', [agent.id]);
+    (agent.messages ?? []).forEach((message: any, idx: number) => {
+        ctx.fns.db.exec(ctx, 'INSERT INTO messages (agent_id, idx, role, content, tool_calls, tool_call_id, ts) VALUES (?, ?, ?, ?, ?, ?, ?)', [
+            agent.id,
+            idx,
+            message.role,
+            typeof message.content === 'string' ? message.content : (message.content == null ? null : JSON.stringify(message.content)),
+            message.tool_calls ? JSON.stringify(message.tool_calls) : null,
+            message.tool_call_id ?? null,
+            now + idx,
+        ]);
+    });
+
+    ctx.fns.db.exec(ctx, 'DELETE FROM events WHERE agent_id = ?', [agent.id]);
+    (agent.events ?? []).forEach((event: any, idx: number) => {
+        ctx.fns.db.exec(ctx, 'INSERT INTO events (agent_id, idx, type, payload, ts) VALUES (?, ?, ?, ?, ?)', [agent.id, idx, event.type, JSON.stringify(event), now + idx]);
+    });
 }
