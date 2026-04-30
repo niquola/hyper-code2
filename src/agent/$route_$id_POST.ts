@@ -7,9 +7,6 @@ export default async function (ctx: Context, _session: any, req: any) {
     if (agent.isStreaming) return Response.json({ error: "agent busy" }, { status: 409 });
 
     const offset = agent.events.length;
-    const optimistic = { type: "user", text };
-    ctx.fns.session?.appendEvent?.(ctx, agent.id, optimistic);
-    ctx.fns.session?.syncAgentState?.(ctx, agent);
     agent.isStreaming = true;
     queueMicrotask(async () => {
         try { await ctx.fns.agent.run(ctx, agent, text); }
