@@ -233,6 +233,74 @@ Shape (reference, not a copy — mutating it mutates future LLM calls):
 - `agent.scratchpad` — **your personal scratchpad** (plain object). Persists across turns, NOT sent to the model. Stash literally anything you might reuse: fetched data, DB handles, caches, plans, notes, work-in-progress structures. Keys are free-form: `agent.scratchpad.plan`, `agent.scratchpad.tasks`, `agent.scratchpad.cache`, whatever. Read them in later turns. Clean up with `delete agent.scratchpad.x` when truly done.
 - `agent.isStreaming`, `agent.abortController`.
 
+## Delegating work to a child agent
+
+You have two orchestration helpers available via evalCode:
+- `ctx.fns.agent.delegateTask(ctx, agent, opts)`
+- `ctx.fns.agent.finishTask(ctx, agent, payload)`
+
+Use them when a task is better handled as a focused subtask by a child agent.
+
+### When to delegate
+- long focused investigations
+- code review of a limited change
+- isolated implementation spikes
+- tasks where inherited context should be optional
+
+### Parent-side: delegateTask
+Signature (v1):
+
+`ctx.fns.agent.delegateTask(ctx, agent, {
+  task: string,
+  forkContext?: boolean,
+  instructions?: string,
+  mode?: "await" | "async",
+  responseFormat?: "text" | "json" | "report" | { kind: "report" | "json", fields?: string[] }
+})`
+
+Behavior:
+- default `mode` is `"await"`
+- `forkContext: true` → child inherits your full transcript context through fork semantics
+- `forkContext: false` → child starts fresh, but still reports back to you logically
+- return value in await mode is compact:
+  `{ childId, summary, result }`
+
+Example:
+`ctx.fns.agent.delegateTask(ctx, agent, {
+  task: "Review the new delegation implementation for correctness and edge cases.",
+  forkContext: false,
+  instructions: "Be skeptical. Keep the report short.",
+  responseFormat: "report"
+})`
+
+Use the returned `summary` and `result`, not the child transcript. Keep parent context compact.
+
+### Child-side: finishTask
+A delegated child should explicitly finish by calling:
+
+`ctx.fns.agent.finishTask(ctx, agent, {
+  summary: "short parent-facing summary",
+  result: { ...optional structured result... }
+})`
+
+Rules for a child agent:
+- do the assigned work
+- keep outputs compact
+- when done, call `finishTask`
+- `summary` is required
+- in await mode, the parent resumes from the `finishTask` result
+
+Child example:
+`ctx.fns.agent.finishTask(ctx, agent, {
+  summary: "Found 2 issues in delegation flow",
+  result: { issues: ["missing timeout", "no parent-visible completion note"] }
+})`
+
+### Important
+- If you delegate, the child must eventually call `finishTask`.
+- Do not dump the child's full transcript back into the parent. Return a compact summary/result only.
+- Prefer `forkContext: false` unless the child truly needs inherited conversation context.
+
 ## Self-modification — you CAN rewrite your own state
 
 Because `agent` is a live reference, you can mutate your configuration, transcript, and tools on the fly:
@@ -401,3 +469,53 @@ Compact last tool result:
 ## Forked / DB-first transcript note
 - In this project, transcript history is DB-first. `agent.messages` may be a synchronized runtime view rather than the primitive source of truth.
 - For forked agents, the effective inherited transcript is not just the child's local messages. If you need the full LLM-visible history inside evalCode, use `ctx.fns.session.getFullMessages(ctx, agent.id)` or make sure runtime state has been synchronized.
+
+
+## Token economy examples
+
+Prefer compact returns. Read/process locally inside `evalCode`, but return only what future turns actually need.
+
+### File read
+BAD:
+`await Bun.file("package.json").text()`
+
+GOOD:
+`const pkg = await Bun.file("package.json").json(); return { name: pkg.name, deps: Object.keys(pkg.dependencies ?? {}) }`
+
+### Test output
+BAD:
+`await Bun.$\`bun test\`.text()`
+
+GOOD:
+`const r = await ctx.fns.dev.test(ctx, { files: ["src"] }); return { ok: r.ok, pass: r.pass, fail: r.fail, summaryLine: r.summaryLine, failures: r.failures }`
+
+### File write
+BAD:
+`await Bun.write("src/x.ts", bigText); return bigText`
+
+GOOD:
+`await Bun.write("src/x.ts", bigText); return { ok: true, path: "src/x.ts", bytes: bigText.length, lines: bigText.split(\"\n\").length }`
+
+### DB query
+BAD:
+`ctx.fns.db.select(ctx, "SELECT * FROM messages ORDER BY ts DESC")`
+
+GOOD:
+`const rows = ctx.fns.db.select(ctx, "SELECT role, content, ts FROM messages WHERE agent_id = ? ORDER BY ts DESC LIMIT 5", [agent.id]); return { count: rows.length, sample: rows.map(r => ({ role: r.role, ts: r.ts, preview: String(r.content ?? "").slice(0, 120) })) }`
+
+### Large JSON / API response
+BAD:
+`await (await fetch(url)).json()`
+
+GOOD:
+`const data = await (await fetch(url)).json(); return { keys: Object.keys(data).slice(0, 20), items: Array.isArray(data) ? data.length : undefined }`
+
+### Large arrays
+BAD:
+`bigArray`
+
+GOOD:
+`return { len: bigArray.length, first: bigArray[0], last: bigArray.at(-1) }`
+
+### Rule of thumb
+Before returning from `evalCode`, ask: does the next model call need this exact payload verbatim? If not, return a smaller representation.
