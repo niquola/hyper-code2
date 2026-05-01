@@ -1,49 +1,60 @@
 # TODO
 
-## Simplify agent message processing
+## Problem
 
-Replace per-message `agent_jobs` queueing with a simpler DB-first worker model based on `messages` + agent progress state.
+- Tool-call failures are recurring when the model tries to embed large code blobs inside `evalCode`.
+- The main failure mode is escaping/embedding breakage inside JavaScript strings or template literals:
+  - backticks inside generated code
+  - `${...}` interpolation sequences
+  - backslashes / invalid escapes
+  - raw source accidentally leaking out of the intended string container
+- This produces errors like:
+  - `Unexpected identifier ...`
+  - `Invalid escape in identifier ...`
+- Secondary issues also happen, but less often:
+  - operating on unknown shapes without inspection (`list.filter is not a function`)
+  - reading paths that were not verified first (`ENOENT`)
 
-### Idea
+## Why current design encourages this
 
-- Treat `messages` as the only append-only input log.
-- Let a worker scan for agents with new `role = 'user'` messages.
-- Store progress on the `agents` row instead of creating one `agent_jobs` row per message.
+- We expose only one tool schema to the model: `evalCode`.
+- File writing is technically possible via JS inside `evalCode`, but ergonomically unsafe for large content.
+- So the model is pushed toward a fragile pattern: generate a large multiline string inside JS and write it from there.
+- The system prompt currently reinforces the “one tool only” model and does not provide a safer dedicated write path.
 
-### Proposed state in `agents`
+## Proposed solution
 
-Add fields along these lines:
-- `processed_idx` or `last_handled_user_idx`
-- `is_running`
-- `run_started_at`
-- `last_error`
-- optional debounce marker such as `debounce_until` or derive debounce from latest message `ts`
+- Add a second tool dedicated to writing files, e.g. `writeCode` or `writeFile`.
+- Recommended schema:
+  - `path: string`
+  - `content: string`
+  - optional `mkdirParents?: boolean`
+  - optional `open?: boolean`
+- Runtime behavior:
+  - write via `ctx.fns.files.write(ctx, path, content)`
+  - optionally `ctx.fns.files.open(ctx, path)`
+  - return compact metadata only: `{ ok, path, bytes, lines }`
 
-### Worker model
+## Required code changes
 
-- Worker periodically or reactively scans `messages` for user messages with `idx > processed_idx`.
-- Use `messages.ts` / latest user-message timestamp to implement debounce.
-- When debounce passes and the agent is idle, run the agent once.
-- After a successful pass, advance `processed_idx` on `agents`.
-- If new messages arrive during a run, leave them pending for the next pass.
+- Tool schema definition: currently in `src/agent/$route_new_POST.ts`.
+- Tool execution dispatch: currently in `src/agent/run.ts`.
+- Tool instructions to the model: currently in `src/agent/SYSTEM_PROMPT.md`.
+- Suggested refactor: move default tool schemas into a helper like `src/agent/defaultTools.ts`.
 
-### Why this may be better
+## Prompt update
 
-- One write path: write user input to `messages`.
-- Less overhead than one `agent_jobs` row per message.
-- Simpler mental model for chat-only processing.
-- Keeps transcript as the real source of incoming work.
+- Replace “exactly ONE tool: evalCode” with explicit two-tool guidance.
+- New rule:
+  - use `evalCode` for computation, inspection, reading, tests, shell, DB, transformations
+  - use `writeCode` for creating or replacing non-trivial file contents
+- Also keep the inspection discipline:
+  - inspect shape before transforming
+  - verify path before reading when uncertain
 
-### Tradeoffs
+## Expected benefit
 
-- Less suitable if we want a general-purpose background job system.
-- Harder to represent rich execution history per run unless we add separate run/event tracking.
-- Need clear semantics for debounce and for messages arriving during an active run.
-
-### Migration direction
-
-1. Review all current uses of `agent_jobs`.
-2. Decide the minimal processing fields to store on `agents`.
-3. Prototype worker logic that derives pending work from `messages`.
-4. Preserve stop/error/status behavior.
-5. Remove `agent_jobs` only if no other non-chat workloads need it.
+- Fewer escaping-related tool-call failures.
+- Cleaner tool calls.
+- Less context wasted on retrying broken inline code-generation attempts.
+- Clearer division between “compute” and “write file” actions.
