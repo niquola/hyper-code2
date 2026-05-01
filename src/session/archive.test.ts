@@ -13,9 +13,8 @@ import nextId from "../agent/nextId";
 
 describe('session.archive', () => {
     test('archived session disappears from list and cannot be loaded', async () => {
-        const dbPath = '.hyper/_runtime/test-archive-' + Date.now() + '.sqlite';
         const ctx: any = { state: {}, env: {}, fns: { db: { connect, migrate, select: (await import('../db/select')).default, exec: (await import('../db/exec')).default }, session: { save, list, archive, load, appendUserMessage, appendMessage, appendEvent }, agent: { start, nextId, renderEventHtml: async () => '' }, events: { emitAgentsChanged: () => {} } } };
-        ctx.fns.db.connect(ctx, dbPath);
+        ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
         const agent = ctx.fns.agent.start(ctx, { model: 'test:model', systemPrompt: '', tools: [] });
         save(ctx, agent);
