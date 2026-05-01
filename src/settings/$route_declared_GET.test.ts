@@ -85,6 +85,6 @@ describe('GET/POST /settings/declared', () => {
         await postRoute(ctx, null, req);
 
         expect(ctx.fns.settings.get(ctx, { module: 'agent', scopeType: 'global', key: 'debounceMs' }))
-            .toBe(5000);
+            .toBe(30);
     });
 });

@@ -62,11 +62,48 @@ describe('agent.parseMarkers', () => {
         });
     });
 
-    test('marker not at start of line is ignored', () => {
+    test('marker mid-line without trailing newline is content (not flagged)', () => {
+        // "see ///eval somewhere" — looks like a casual mention, no \n right
+        // after `///eval`, so no candidate. Whole text stays as prose.
         const text = 'see ///eval somewhere mid-line\nmore prose';
         const r = parseMarkers(text);
         expect(r.calls).toEqual([]);
+        expect(r.errors).toEqual([]);
         expect(r.prose).toBe(text);
+    });
+
+    test('almost-marker (missing \\n before ///eval) is reported as misplaced error', () => {
+        // The exact bug pattern observed live: model writes `prose.///eval\nbody`.
+        // Strict parser silently misses; permissive scanner flags it for self-correct.
+        const text = 'считаю.///eval\nlet n = 10; console.log(n);';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toHaveLength(1);
+        expect(r.errors[0]!.kind).toBe('misplaced');
+        expect(r.errors[0]!.marker).toBe('eval');
+        expect(r.errors[0]!.hint).toContain("'///eval'");
+        expect(r.errors[0]!.hint).toContain("preceding character");
+    });
+
+    test('almost-marker for ///write also flagged', () => {
+        const text = 'lemme write a file.///write:foo.ts\nexport default 1;';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toHaveLength(1);
+        expect(r.errors[0]!.marker).toBe('write');
+        expect(r.errors[0]!.hint).toContain("'///write:foo.ts'");
+    });
+
+    test('mixed: one valid eval and one misplaced — valid runs, misplaced flagged', () => {
+        const text = 'first one is good:\n///eval\nconsole.log(1);\nthen.///eval\nconsole.log(2);';
+        const r = parseMarkers(text);
+        expect(r.calls).toHaveLength(1);
+        expect(r.calls[0]).toMatchObject({ kind: 'eval' });
+        // First eval body extends until the misplaced marker (which is content
+        // from the strict parser's perspective).
+        expect(r.calls[0]!.content).toContain('console.log(1);');
+        expect(r.errors).toHaveLength(1);
+        expect(r.errors[0]!.marker).toBe('eval');
     });
 
     test('last marker content extends to end of message (no trailing newline required)', () => {

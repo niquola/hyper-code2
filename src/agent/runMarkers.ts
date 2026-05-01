@@ -48,7 +48,7 @@ export default async function (
             agent.tools = savedTools;
         }
 
-        const { prose, calls } = ctx.fns.agent.parseMarkers(String(text ?? ''));
+        const { prose, calls, errors } = ctx.fns.agent.parseMarkers(String(text ?? ''));
 
         // Always persist the assistant turn verbatim (markers + prose). The model
         // sees its own emitted content on subsequent turns, same as function-calling
@@ -56,7 +56,7 @@ export default async function (
         const assistantAppend = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: text });
         ctx.fns.session.syncAgentState(ctx, agent);
 
-        if (calls.length === 0) {
+        if (calls.length === 0 && errors.length === 0) {
             const html = await ctx.fns.markdown.render(ctx, prose || text || '');
             await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
                 text: prose || text || '',
@@ -114,6 +114,16 @@ export default async function (
 
             resultBlocks.push(ctx.fns.agent.formatMarkerResult(call, output, isError));
         }
+
+        // Append parser errors (misplaced markers etc.) AFTER any successful
+        // results, so the model sees both what worked and what to retry. Also
+        // surface them as UI error events so they don't vanish silently.
+        for (const err of errors) {
+            const block = ctx.fns.agent.formatMarkerError(err);
+            resultBlocks.push(block);
+            await ctx.fns.session.appendErrorEvent(ctx, agent.id, err.hint);
+        }
+        ctx.fns.session.syncAgentState(ctx, agent);
 
         // Feed all results back as a single user message so the model continues
         // on the next turn. Use raw appendMessage (writes only to messages table) —

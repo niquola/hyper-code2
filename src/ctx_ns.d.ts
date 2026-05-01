@@ -9,6 +9,7 @@ declare global {
         compact: typeof import("./agent/compact").default;
         delegateTask: typeof import("./agent/delegateTask").default;
         finishTask: typeof import("./agent/finishTask").default;
+        formatMarkerError: typeof import("./agent/formatMarkerError").default;
         formatMarkerResult: typeof import("./agent/formatMarkerResult").default;
         fullSystemPrompt: typeof import("./agent/fullSystemPrompt").default;
         llmCall: typeof import("./agent/llmCall").default;
@@ -183,6 +184,7 @@ declare global {
         namespace agent {
             type Agent = import("./agent/$type_Agent").Agent;
             type MarkerCall = import("./agent/$type_MarkerCall").MarkerCall;
+            type MarkerParseError = import("./agent/$type_MarkerParseError").MarkerParseError;
         }
         namespace dev {
             type TestRun = import("./dev/$type_TestRun").TestRun;

@@ -8,7 +8,7 @@
 // Protocol selection mirrors run.ts: agent.scratchpad.protocol → settings(agent.protocol) → 'tool-calls'.
 import { resolve } from "node:path";
 
-const CORE_PATH     = resolve(import.meta.dir, "SYSTEM_PROMPT_CORE.md");
+const CORE_PATH      = resolve(import.meta.dir, "SYSTEM_PROMPT_CORE.md");
 const TOOLCALLS_PATH = resolve(import.meta.dir, "SYSTEM_PROMPT.md");
 const MARKERS_PATH   = resolve(import.meta.dir, "SYSTEM_PROMPT_MARKERS.md");
 
@@ -43,7 +43,7 @@ export default async function (ctx: Context, agent: types.agent.Agent): Promise<
         "## Runtime context (auto-injected, fresh each turn)",
         `- cwd: ${process.cwd()}`,
         `- your agent id: ${agent.id}`,
-        `- db path: ${ctx.env?.DB_PATH ?? ".hyper/sessions"}`,
+        `- db path: ${ctx.env?.DB_PATH ?? ".hyper/_runtime/sessions"}`,
         `- protocol: ${protocol}`,
         "",
     ].join("\n");

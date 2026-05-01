@@ -3,11 +3,13 @@ import { mkTestCtx } from '../_testCtx.entry';
 import runMarkers from './runMarkers';
 import parseMarkers from './parseMarkers';
 import formatMarkerResult from './formatMarkerResult';
+import formatMarkerError from './formatMarkerError';
 
 async function setup() {
     const ctx = await mkTestCtx();
     ctx.fns.agent.parseMarkers = parseMarkers;
     ctx.fns.agent.formatMarkerResult = formatMarkerResult;
+    ctx.fns.agent.formatMarkerError = formatMarkerError;
     // Real eval — uses ctx.fns.repl.eval which mkTestCtx wires to a default fn.
     // Override per-test for richer behaviours.
     ctx.fns.files = ctx.fns.files ?? {};
@@ -119,6 +121,40 @@ describe('agent.runMarkers', () => {
         expect(resultMsg).toContain('///result:eval');
         expect(resultMsg).toContain('///result:write:a.ts');
         expect(ctx.state.__written['a.ts']).toBe('export const a = 1;');
+    });
+
+    test('misplaced marker (no \\n before ///) is fed back as error and retried', async () => {
+        const ctx = await setup();
+        let turn = 0;
+        ctx.fns.llm.stream = async () => {
+            turn++;
+            if (turn === 1) {
+                // Live-bug pattern: prose glued to marker without \n.
+                return { text: 'считаю.///eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
+            }
+            if (turn === 2) {
+                // Self-correct on second try.
+                return { text: '///eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
+            }
+            return { text: 'computed: 4', toolCalls: [], thinking: '', usage: {} };
+        };
+        ctx.fns.repl.eval = async (_c: any, code: string) => code.includes('console.log(2 + 2)') ? '4' : '';
+
+        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        ctx.fns.session.save(ctx, a);
+
+        await runMarkers(ctx, a, 'compute');
+
+        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        // user → assistant(misplaced) → user(error feedback) → assistant(///eval) → user(result) → assistant(prose)
+        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant', 'user', 'assistant']);
+        // The first feedback message is just an error block (no result blocks since calls=[]).
+        expect(msgs[2]!.content).toContain('///error:marker-misplaced');
+        expect(msgs[2]!.content).toContain("'///eval'");
+        expect(msgs[2]!.content).not.toContain('///result:');
+        // After self-correction, normal result feedback.
+        expect(msgs[4]!.content).toContain('///result:eval');
+        expect(msgs[4]!.content).toContain('4');
     });
 
     test('eval errors are tagged :error in the result block', async () => {
