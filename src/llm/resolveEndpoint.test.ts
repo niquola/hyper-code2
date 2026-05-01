@@ -62,4 +62,13 @@ describe("ai.resolveEndpoint", () => {
         const r = resolve(mkCtx(), "kimi:some/model:with:colons");
         expect(r.modelId).toBe("some/model:with:colons");
     });
+
+    test("claude-code: prefix → anthropic /v1/messages, apiKey null (refreshed lazily)", () => {
+        const r = resolve(mkCtx(), "claude-code:claude-opus-4-7");
+        expect(r.provider).toBe("claude-code");
+        expect(r.api).toBe("anthropic");
+        expect(r.modelId).toBe("claude-opus-4-7");
+        expect(r.url).toBe("https://api.anthropic.com/v1/messages");
+        expect(r.apiKey).toBeNull();
+    });
 });

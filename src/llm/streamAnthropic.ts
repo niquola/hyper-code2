@@ -13,7 +13,14 @@ export default async function (
 }> {
     const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
 
-    const system = await ctx.fns.agent.fullSystemPrompt(ctx, agent);
+    let system = await ctx.fns.agent.fullSystemPrompt(ctx, agent);
+    // Anthropic OAuth subscription tokens require the first line of the system
+    // prompt to identify the client as Claude Code; otherwise the server can
+    // reject or downgrade the request. Prepend it idempotently.
+    if (ep.provider === "claude-code") {
+        const claudeHeader = "You are Claude Code, Anthropic's official CLI for Claude.";
+        if (!system.startsWith(claudeHeader)) system = claudeHeader + "\n\n" + system;
+    }
 
     const body: any = {
         model: ep.modelId,
@@ -30,17 +37,19 @@ export default async function (
         }));
     }
 
-    // Default Anthropic SDK behavior: x-api-key + anthropic-version.
-    // Real Anthropic OAuth tokens ("sk-ant-oat*") would need Claude-Code identity headers —
-    // add later. kimi-coding uses its own JWT via Bearer, not sk-ant-oat.
     const headers: Record<string, string> = {
         "content-type": "application/json",
         "anthropic-version": "2023-06-01",
     };
-    // kimi-coding JWT has ~15min TTL — auto-refresh via refresh_token if near expiry.
+    // Subscription tokens are refreshed lazily (each has ~15min–1h TTL):
+    //   kimi-coding   → ~/.kimi/credentials/kimi-code.json
+    //   claude-code   → macOS keychain "Claude Code-credentials"
     let apiKey = ep.apiKey;
     if (ep.provider === "kimi-coding") {
         const fresh = await ctx.fns.llm.refreshKimiCode(ctx);
+        if (fresh) apiKey = fresh;
+    } else if (ep.provider === "claude-code") {
+        const fresh = await ctx.fns.llm.refreshClaudeCode(ctx);
         if (fresh) apiKey = fresh;
     }
     if (apiKey) {
@@ -49,6 +58,15 @@ export default async function (
         } else {
             headers["x-api-key"] = apiKey;
         }
+    }
+    // Claude Code subscription requires identity headers, otherwise the
+    // OAuth token is rejected. anthropic-beta value is what the official CLI
+    // currently sends (subject to change — patch via env if Anthropic rotates).
+    if (ep.provider === "claude-code") {
+        headers["anthropic-beta"] = ctx.env.CLAUDE_CODE_ANTHROPIC_BETA
+            ?? "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14";
+        headers["user-agent"] = ctx.env.CLAUDE_CODE_USER_AGENT ?? "claude-cli/2.0.0 (external, cli)";
+        headers["x-app"] = "cli";
     }
 
     const res = await fetch(ep.url, {

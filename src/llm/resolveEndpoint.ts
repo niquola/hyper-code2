@@ -91,6 +91,15 @@ const PROVIDERS: Record<string, ProviderConfig> = {
         resolveBaseUrl: () => "https://api.anthropic.com",
         resolveApiKey: declaredString('anthropicApiKey'),
     },
+    "claude-code": {
+        // Anthropic subscription via the Claude Code CLI's keychain entry.
+        // Token is fetched/refreshed in streamAnthropic at request time (mirrors
+        // kimi-coding flow). resolveApiKey returns null here so callers know
+        // the apiKey populates lazily — streamAnthropic dispatches by provider.
+        api: "anthropic",
+        resolveBaseUrl: () => "https://api.anthropic.com",
+        resolveApiKey: () => null,
+    },
     openai: {
         api: "openai",
         resolveBaseUrl: () => "https://api.openai.com/v1",

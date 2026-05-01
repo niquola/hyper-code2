@@ -75,6 +75,7 @@ declare global {
         };
         llm: {
         listModels: typeof import("./llm/listModels").default;
+        refreshClaudeCode: typeof import("./llm/refreshClaudeCode").default;
         refreshCodex: typeof import("./llm/refreshCodex").default;
         refreshKimiCode: typeof import("./llm/refreshKimiCode").default;
         resolveEndpoint: typeof import("./llm/resolveEndpoint").default;
