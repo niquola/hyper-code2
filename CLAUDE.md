@@ -207,8 +207,15 @@ Authoritative agent behaviour lives in `src/agent/SYSTEM_PROMPT.md`. Edit that f
 
 - Run: `bun test` (all) or `bun test ./src/agent/run.test.ts` (one file).
 - Type-check: `bunx tsc --noEmit` — must be clean.
-- Integration tests hit real LM Studio when `process.env.LMSTUDIO_URL` is set (via `.env.test`).
+- **All tests MUST use the mock LLM (`model: 'mock:*'` → `ctx.fns.llm.streamMock`).** Never hit real LM Studio / OpenAI / Anthropic from the test suite — it's slow, flaky, and a hard dependency on a local server. If a test needs LLM behaviour, drive it through `agent.scratchpad.mockLLM` (see `src/llm/streamMock.ts` and `src/agent/run.test.ts`).
+- Don't read `process.env.LMSTUDIO_URL` / `MODEL` / similar in tests as a reason to call out — gate behaviour on `model.startsWith('mock:')` instead.
 - Don't invent frameworks — `describe` / `test` / `expect` from `bun:test` only.
+
+## Core code placement
+
+- Any core runtime feature, migration, route, queueing logic, persistence schema, or agent behavior that is part of the product must live under `src/`.
+- Use `.hyper/` only for runtime-generated extensions, experiments, temporary overlays, or user/agent-added non-core customizations.
+- Do not place permanent core migrations or core app logic in `.hyper/`. If a feature is meant to ship with the app, move it to `src/`.
 
 ## What NOT to do
 

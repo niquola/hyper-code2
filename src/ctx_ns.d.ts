@@ -8,15 +8,21 @@ declare global {
         clear: typeof import("./agent/clear").default;
         compact: typeof import("./agent/compact").default;
         delegateTask: typeof import("./agent/delegateTask").default;
+        enqueue: typeof import("./agent/enqueue").default;
         finishTask: typeof import("./agent/finishTask").default;
         fullSystemPrompt: typeof import("./agent/fullSystemPrompt").default;
         llmCall: typeof import("./agent/llmCall").default;
         readAndSummarize: typeof import("./agent/readAndSummarize").default;
         renderEventHtml: typeof import("./agent/renderEventHtml").default;
+        renderStatusBar: typeof import("./agent/renderStatusBar").default;
         run: typeof import("./agent/run").default;
         start: typeof import("./agent/start").default;
         stop: typeof import("./agent/stop").default;
         systemPrompt: typeof import("./agent/systemPrompt").default;
+        waitForEvent: typeof import("./agent/waitForEvent").default;
+        wakeWaiters: typeof import("./agent/wakeWaiters").default;
+        wakeWorker: typeof import("./agent/wakeWorker").default;
+        workerLoop: typeof import("./agent/workerLoop").default;
         };
         db: {
         connect: typeof import("./db/connect").default;
@@ -107,6 +113,7 @@ declare global {
         fork: typeof import("./session/fork").default;
         getEvents: typeof import("./session/getEvents").default;
         getFullMessages: typeof import("./session/getFullMessages").default;
+        getMaxEventIdx: typeof import("./session/getMaxEventIdx").default;
         getMessages: typeof import("./session/getMessages").default;
         list: typeof import("./session/list").default;
         load: typeof import("./session/load").default;

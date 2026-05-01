@@ -641,3 +641,11 @@ GOOD:
 
 ### Rule of thumb
 Before returning from `evalCode`, ask: does the next model call need this exact payload verbatim? If not, return a smaller representation.
+
+
+## Core code placement
+
+- Any core runtime feature, migration, route, queueing logic, persistence schema, or agent behavior that is part of the product must live under `src/`.
+- Use `.hyper/` only for runtime-generated extensions, experiments, temporary overlays, or user/agent-added non-core customizations.
+- Do not place permanent core migrations or core app logic in `.hyper/`. If a feature is meant to ship with the app, move it to `src/`.
+

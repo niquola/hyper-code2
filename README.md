@@ -24,15 +24,36 @@ The philosophy: give the model a full programming language + the running process
 ## Architecture in one picture
 
 ```
-Browser (chat UI)  ──POST /agent──▶  run loop  ──▶  LM Studio /v1/chat/completions
-     ▲                                  │
-     │                                  ▼  tool_calls → evalCode
-     │                             ┌────────────┐
-     └──GET /agent?offset=N────────┤ agent.events│
-                                   │ agent.messages
-                                   │ agent.scratchpad
-                                   └────────────┘
+Browser (htmx)  ──POST /agent/:id────────▶ append user msg + enqueue job
+       ▲                                              │
+       │                                              ▼
+       │                                  one workerLoop in process
+       │                                              │ atomic SQL claim
+       │                                              ▼
+       │                                       run loop ──▶ LM Studio
+       │                                              │
+       │                                              ▼
+       │                                  appendEvent → DB → wakeWaiters
+       │                                              │
+       │  long-poll (htmx, hx-trigger="load")         │
+       └─GET /agent/:id/events.html?offset=N◀─────────┘
+              ▲                                       │
+              │ HTML fragment + new <#msg-tail>       │
+              │                                       │
+              ▼                                       │
+        #messages renders inline                      │
+              ▲                                       │
+              │ status-bar polls /statusbar every 1s  │
+              │ sidebar polls self every 10s          │
+                                                      ▼
+                                              SQLite (.hyper/_runtime/sessions)
+                                              ├─ agents
+                                              ├─ messages
+                                              ├─ events            ← source of truth
+                                              └─ agent_jobs        ← single queue
 ```
+
+**Architecture is DB-first**: see `docs/architecture.md`. The DB is the source of truth for messages, events, and queue state. Browser drives long-poll and statusbar/sidebar polls — no JSON polling, no SSE for chat data. Client JS is ~30 lines (just an Enter-key handler + scroll-on-swap).
 
 - **Single file per function.** Folder = namespace. `src/<mod>/<fn>.ts` → `ctx.fns.<mod>.<fn>`. Inspired by [proc-ts](https://github.com/niquola/proc-ts).
 - **Global types** auto-generated from the filesystem into `src/ctx_ns.d.ts`. No imports of `Context`, `types.agent.Agent` needed anywhere.
@@ -53,9 +74,20 @@ src/
 
   agent/                ctx.fns.agent.*
     SYSTEM_PROMPT.md    agent behavior, editable in place
-    start / stream / run / compact / clear / stop / systemPrompt
+    start / run / compact / clear / stop / systemPrompt
+    enqueue / workerLoop / wakeWorker
+    waitForEvent / wakeWaiters             ← long-poll wake mechanism
+    renderEventHtml / renderStatusBar
     $type_Agent.ts      types.agent.Agent
-    $route_*.ts         POST/GET/DELETE /agent, POST /agent/stop
+    $route_*.ts         /agent/:id (POST/GET), /events.html (GET, long-poll),
+                        /statusbar (GET), /events (GET, JSON poll), /stop, /fork, /archive ...
+
+  session/              ctx.fns.session.*  ← DB-first persistence
+    appendMessage / appendEvent + per-type helpers
+    getMessages / getEvents / getMaxEventIdx / getFullMessages
+    save / load / loadAll / list / search / archive / delete / fork / replaceMessages
+
+  $migrate_*.up.sql     applied at startup; events.idx and messages.idx are per-agent monotonic cursors
 
   markdown/             ctx.fns.markdown.*
     render.ts           Bun.markdown.html + shiki post-processing

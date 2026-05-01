@@ -1,35 +1,51 @@
 export default async function (ctx: Context, _session: any, req: any) {
     const id = req.params.id;
-    const agent = (ctx.state as any).agent?.[id];
-    if (!agent) return new Response("Not Found", { status: 404 });
+    let agent = (ctx.state as any).agent?.[id];
+    if (!agent) {
+        agent = ctx.fns.session?.load?.(ctx, id) ?? null;
+        if (agent) {
+            (ctx.state as any).agent ??= {};
+            (ctx.state as any).agent[id] = agent;
+        }
+    }
+    if (!agent) return new Response('Not Found', { status: 404 });
 
-    ctx.fns.session.syncAgentState(ctx, agent);
-    const inheritedCount = agent.parentId ? ctx.fns.session.getFullMessages(ctx, id).length - agent.messages.length : 0;
+    const events = ctx.fns.session.getEvents(ctx, id);
+    const maxIdx = ctx.fns.session.getMaxEventIdx(ctx, id);
+    const inheritedCount = agent.parentId
+        ? ctx.fns.session.getFullMessages(ctx, id).length - ctx.fns.session.getMessages(ctx, id).length
+        : 0;
+    const running = ctx.fns.db.select<any>(ctx,
+        'SELECT COUNT(*) AS n FROM agent_jobs WHERE agent_id = ? AND status = ?',
+        [id, 'running'],
+    )[0];
+    const queued = ctx.fns.db.select<any>(ctx,
+        'SELECT COUNT(*) AS n FROM agent_jobs WHERE agent_id = ? AND status = ?',
+        [id, 'queued'],
+    )[0];
     const init = {
         agentId: id,
         inheritedCount,
-        offset: agent.events.length,
-        isStreaming: agent.isStreaming,
+        offset: maxIdx + 1,
+        isStreaming: Number(running?.n ?? 0) > 0 || Number(queued?.n ?? 0) > 0,
     };
-    const initJson = JSON.stringify(init).replace(/</g, "\\u003c");
+    const initJson = JSON.stringify(init).replace(/</g, '\u003c');
 
-    // Server-side render every existing event into #messages so the page is
-    // usable before any JS runs. Old events that were stored before the
-    // SSR refactor won't have html/eventHtml — render on the fly.
-    // assistant.html is only the markdown-rendered inner — not the bubble.
-    // assistant.eventHtml IS the cached bubble. For other event types,
-    // .html holds the full bubble. Pick accordingly; render fresh otherwise.
-    const eventsHtml = (await Promise.all(agent.events.map(async (ev: any) => {
-        const cached = ev.eventHtml ?? (ev.type !== "assistant" ? ev.html : undefined);
-        return cached ?? await ctx.fns.agent.renderEventHtml(ctx, ev);
-    }))).join("\n");
+    const eventsHtml = (await Promise.all(events.map(async (ev: any) => {
+        const cached = ev.eventHtml ?? (ev.type !== 'assistant' ? ev.html : undefined);
+        return cached ?? await ctx.fns.agent.renderEventHtml(ctx, ev, { agentId: id });
+    }))).join('\n');
+
+    const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
+    const initialUsageText = formatUsage(lastAssistant?.usage ?? null);
 
     const main = `
 <header class="px-6 py-3 border-b border-gray-200 flex items-center gap-3 text-sm">
   <span class="font-semibold text-gray-700">${esc(id)}</span>
-  ${agent.parentId ? `<span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">fork · inherited ${inheritedCount} msgs</span>` : ""}
+  ${agent.parentId ? `<span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">fork · inherited ${inheritedCount} msgs</span>` : ''}
   <span class="text-xs text-gray-400 font-mono">${esc(agent.model)}</span>
-  <span id="context-usage" class="text-xs text-gray-500 font-mono">ctx: —</span>
+  <span id="context-usage" class="text-xs text-gray-500 font-mono">${esc(initialUsageText)}</span>
+  ${ctx.fns.agent.renderStatusBar(ctx, id)}
   <div class="ml-auto flex gap-2">
     <form method="POST" action="/agent/${encodeURIComponent(id)}/stop" class="inline">
       <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">stop</button>
@@ -45,17 +61,41 @@ export default async function (ctx: Context, _session: any, req: any) {
     </form>
   </div>
 </header>
-<div id="messages" class="flex-1 overflow-y-auto px-6 py-4 space-y-2">${eventsHtml}</div>
-<form id="form" class="flex gap-2 p-4 border-t border-gray-200">
-  <textarea id="input" rows="2" placeholder="type — ⌘/Ctrl-Enter to send"
+<div id="messages" class="flex-1 overflow-y-auto px-6 py-4 space-y-2">${eventsHtml}
+<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}" hx-trigger="load" hx-swap="outerHTML"></div>
+</div>
+<form id="form"
+      class="flex gap-2 p-4 border-t border-gray-200"
+      hx-post="/agent/${encodeURIComponent(id)}?debounceSeconds=5"
+      hx-trigger="submit"
+      hx-swap="none"
+      hx-on::after-request="this.elements.input.value=''; this.elements.input.focus();">
+  <textarea id="input" name="text" rows="2" placeholder="type — Enter to send"
     class="flex-1 px-3 py-2 border border-gray-300 rounded font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
 </form>
 <script>window.__init = ${initJson};</script>
-${ctx.fns.ui.script(ctx, "agent.chat")}`;
+${ctx.fns.ui.script(ctx, 'agent.chat')}`;
 
     return { currentId: id, title: id, main };
 }
 
 function esc(s: any): string {
-    return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]!));
+    return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
+}
+
+function fmtTok(n: any): string {
+    if (n == null) return '—';
+    const num = Number(n);
+    if (num < 1000) return String(num);
+    return (Math.round(num / 100) / 10).toString().replace(/\.0$/, '') + 'k';
+}
+
+function formatUsage(usage: any): string {
+    if (!usage) return 'ctx: —';
+    const inTok = usage.prompt_tokens ?? usage.input_tokens ?? usage.promptTokens ?? usage.inputTokens;
+    const total = usage.total_tokens ?? usage.totalTokens;
+    if (inTok != null && total != null) return 'ctx: ' + fmtTok(inTok) + ' · total: ' + fmtTok(total);
+    if (inTok != null) return 'ctx: ' + fmtTok(inTok);
+    if (total != null) return 'ctx total: ' + fmtTok(total);
+    return 'ctx: —';
 }

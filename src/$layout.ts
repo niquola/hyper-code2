@@ -18,7 +18,8 @@ export default function (ctx: Context, opts: { currentId?: string; title?: strin
     }
     const openFiles = ctx.fns.files?.listOpen ? ctx.fns.files.listOpen(ctx) : [];
     const currentPath = extractCurrentPath(opts.title);
-    const sidebar = renderSidebar(agents, openFiles, opts.currentId, currentPath);
+    const selfUrl = req ? new URL(req.url).pathname + new URL(req.url).search : '';
+    const sidebar = renderSidebar(agents, openFiles, opts.currentId, currentPath, selfUrl);
     if (req && req.headers.get("x-hyper-fragment") === "sidebar") return sidebar;
     const pageTitle = opts.title ? `${opts.title} · hyper-code2` : "hyper-code2";
     return `<!doctype html>
@@ -27,6 +28,7 @@ export default function (ctx: Context, opts: { currentId?: string; title?: strin
 <meta charset="utf-8">
 <title>${esc(pageTitle)}</title>
 <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+<script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
 <style>
   body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
   .shiki { background: transparent !important; }
@@ -60,7 +62,7 @@ window.__hyperRefreshSidebar = async function () {
 </html>`;
 }
 
-function renderSidebar(agents: any[], openFiles: string[], currentId?: string, currentPath?: string): string {
+function renderSidebar(agents: any[], openFiles: string[], currentId?: string, currentPath?: string, selfUrl?: string): string {
     const agentRows = agents.length === 0
         ? `<div class="px-4 py-3 text-xs text-gray-400">no agents yet</div>`
         : agents.map(a => {
@@ -92,7 +94,12 @@ ${dir ? `<div class="text-gray-400 font-mono mt-0.5 truncate">${esc(dir)}</div>`
 </form>
 </div>`;
     }).join("");
-    return `<aside class="w-64 shrink-0 border-r border-gray-200 flex flex-col bg-gray-50">
+    const refreshUrl = selfUrl || '/';
+    return `<aside class="w-64 shrink-0 border-r border-gray-200 flex flex-col bg-gray-50"
+       hx-get="${refreshUrl}"
+       hx-trigger="every 10s"
+       hx-swap="outerHTML"
+       hx-headers='{"x-hyper-fragment":"sidebar"}'>
 <div class="px-4 py-3 flex items-center gap-3 border-b border-gray-200">
   <a href="/" class="font-semibold text-gray-700 hover:text-gray-900">agents</a>
   <a href="/files" title="files" class="text-gray-500 hover:text-gray-900 text-base leading-none">📁</a>

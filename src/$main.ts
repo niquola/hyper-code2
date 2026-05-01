@@ -15,6 +15,13 @@ export default async function () {
     console.log(`[session] rehydrated ${rehydrated.loaded} agent(s)`);
     await ctx.fns.http.loadRoutes(ctx);
     await ctx.fns.http.start(ctx);
+
+    // Single process-wide worker drains agent_jobs for all agents.
+    queueMicrotask(() => {
+        ctx.fns.agent.workerLoop(ctx).catch((e: any) => console.error('[workerLoop] crashed:', e?.message ?? e));
+    });
+    console.log('[worker] started');
+
     return ctx;
 }
 

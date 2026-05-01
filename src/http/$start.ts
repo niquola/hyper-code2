@@ -6,6 +6,8 @@ export default async function (ctx: Context) {
     const server = Bun.serve({
         port,
         hostname: "0.0.0.0",
+        // Default idleTimeout (10s) is fine for normal requests. Long-poll routes
+        // override per-request via ctx.state.server.server.timeout(req, ...).
         async fetch(req) {
             const t0 = performance.now();
             const url = new URL(req.url);
@@ -17,7 +19,7 @@ export default async function (ctx: Context) {
             (req as any).params = m.params;
             try {
                 const raw = await m.handler(ctx, null, req);
-                const res = toResponse(ctx, raw);
+                const res = toResponse(ctx, raw, req);
                 log(logFile, req.method, url.pathname + url.search, res.status, performance.now() - t0);
                 return res;
             } catch (e: any) {
@@ -36,15 +38,15 @@ export default async function (ctx: Context) {
 //   string                → HTML, wrapped with ctx.layout({ main: string })
 //   { main, title?, ... } → HTML, wrapped with ctx.layout(opts)
 //   other                 → JSON
-function toResponse(ctx: Context, v: any): Response {
+function toResponse(ctx: Context, v: any, req?: Request): Response {
     if (v instanceof Response) return v;
     const layout = (ctx as any).layout;
     if (typeof v === "string" && layout) {
-        return new Response(layout(ctx, { main: v }), { headers: htmlHeaders() });
+        return new Response(layout(ctx, { main: v }, req), { headers: htmlHeaders() });
     }
     if (v && typeof v === "object" && typeof v.main === "string" && layout) {
         const { status, ...opts } = v;
-        return new Response(layout(ctx, opts), { status: status ?? 200, headers: htmlHeaders() });
+        return new Response(layout(ctx, opts, req), { status: status ?? 200, headers: htmlHeaders() });
     }
     return new Response(JSON.stringify(v ?? null), {
         status: 200,

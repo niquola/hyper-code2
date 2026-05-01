@@ -18,6 +18,8 @@ export default function (
         scratchpad: {},
         parentId: opts.parentId ?? null,
         forkOffset: opts.forkOffset ?? null,
+        currentJobId: null,
+        drainPromise: null,
     };
     (ctx.state as any).agent ??= {};
     (ctx.state as any).agent[id] = agent;

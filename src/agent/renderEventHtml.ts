@@ -9,20 +9,30 @@ function fmtTok(n: any): string {
     return String(v).replace(/\.0$/, "") + "k";
 }
 
-function deleteControls(idx: any, allowOne = true, allowFrom = true): string {
+function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = true): string {
+    if (!agentId) return '';
+    const url = '/agent/' + encodeURIComponent(agentId) + '/messages/delete';
+    const btn = (mode: 'one' | 'from', label: string, confirm: string) =>
+        '<button type="button"'
+        + ' hx-post="' + url + '"'
+        + ' hx-vals=\'{"idx":"' + String(idx) + '","mode":"' + mode + '"}\''
+        + ' hx-confirm="' + confirm + '"'
+        + ' hx-on::after-request="if (event.detail.successful) location.reload();"'
+        + ' class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-600 shadow-sm hover:bg-gray-50">' + label + '</button>';
     return '<div class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">'
-        + (allowOne ? '<button type="button" data-delete-idx="' + String(idx) + '" data-delete-mode="one" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-600 shadow-sm hover:bg-gray-50">delete</button>' : '')
-        + (allowFrom ? '<button type="button" data-delete-idx="' + String(idx) + '" data-delete-mode="from" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-600 shadow-sm hover:bg-gray-50">from here</button>' : '')
+        + (allowOne ? btn('one', 'delete', 'delete this message?') : '')
+        + (allowFrom ? btn('from', 'from here', 'delete this and everything after?') : '')
         + '</div>';
 }
 
-export default async function (_ctx: Context, ev: any): Promise<string> {
+export default async function (_ctx: Context, ev: any, opts: { agentId?: string } = {}): Promise<string> {
+    const agentId = String(opts.agentId ?? ev.agentId ?? '');
     if (!ev || typeof ev !== "object") return "";
 
     if (ev.type === "user") {
         const idx = ev.messageIdx ?? ev.idx ?? 0;
         return '<div class="group relative flex justify-end">'
-            + deleteControls(idx, true, true)
+            + deleteControls(idx, agentId, true, true)
             + '<div class="ml-auto max-w-[80%] rounded-2xl bg-gray-900 px-4 py-3 text-white whitespace-pre-wrap break-words shadow-sm">'
             + esc(ev.text)
             + '</div></div>';
@@ -32,7 +42,7 @@ export default async function (_ctx: Context, ev: any): Promise<string> {
         const idx = ev.messageIdx ?? ev.idx ?? 0;
         const usage = ''; 
         return '<div class="group relative flex justify-start">'
-            + deleteControls(idx, true, true)
+            + deleteControls(idx, agentId, true, true)
             + '<div class="assistant max-w-[90%] rounded-2xl bg-gray-50 px-4 py-3 shadow-sm border border-gray-200">'
             + '<div class="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
             + (ev.html || '<p>' + esc(ev.text || '') + '</p>')
@@ -56,5 +66,9 @@ export default async function (_ctx: Context, ev: any): Promise<string> {
         return '<div class="bg-gray-100 text-red-700 border border-red-200 rounded-lg px-4 py-3 whitespace-pre-wrap break-words">' + esc(ev.error) + '</div>';
     }
 
-    return '<pre>' + esc(JSON.stringify(ev, null, 2)) + '</pre>';
+    if (ev.type === "job") {
+        return '';
+    }
+
+    return '';
 }

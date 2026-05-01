@@ -13,4 +13,6 @@ export type Agent = {
     scratchpad: Record<string, any>;
     parentId?: string | null;
     forkOffset?: number | null;
+    currentJobId?: string | null;
+    drainPromise?: Promise<any> | null;
 };

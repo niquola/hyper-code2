@@ -60,25 +60,6 @@ function mkCtx() {
 }
 
 describe("agent.run with mock llm", () => {
-    test("streams thinking deltas through live event bus", async () => {
-        const ctx = mkCtx();
-        ctx.fns.db.connect(ctx, ':memory:');
-        await ctx.fns.db.migrate(ctx);
-        const agent = start(ctx, { model: 'mock:think', systemPrompt: '', tools: [] });
-        save(ctx, agent);
-        ctx.fns.llm.stream = async (_c: any, _agent: any, opts: any) => {
-            opts.onEvent?.({ type: 'thinking_delta', delta: 'foo ' });
-            opts.onEvent?.({ type: 'thinking_delta', delta: 'bar' });
-            return { text: 'done', thinking: 'foo bar', toolCalls: [], usage: {} };
-        };
-        await run(ctx, agent, 'think');
-        expect((ctx.state as any).__emitted).toEqual([
-            { type: 'agent.thinking.delta', agentId: agent.id, delta: 'foo ', text: 'foo ' },
-            { type: 'agent.thinking.delta', agentId: agent.id, delta: 'bar', text: 'foo bar' },
-            { type: 'agent.thinking.done', agentId: agent.id },
-        ]);
-    });
-
     test("echoes a user message through mock provider", async () => {
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');

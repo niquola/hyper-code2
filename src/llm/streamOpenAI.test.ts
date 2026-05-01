@@ -11,7 +11,10 @@ const mkCtx = () => ({
     fns: { llm: { resolveEndpoint }, agent: { fullSystemPrompt } },
 } as unknown as Context);
 
-describe("agent.stream — stateless /v1/chat/completions (LM Studio)", () => {
+// Live integration with LM Studio at process.env.LMSTUDIO_URL.
+// Skipped by default — opt in with LIVE_LLM=1 bun test ./src/llm/streamOpenAI.test.ts.
+// Per CLAUDE.md, the regular test suite must use mock:* models via streamMock.
+describe.skipIf(!process.env.LIVE_LLM)("agent.stream — stateless /v1/chat/completions (LM Studio)", () => {
     test("env loaded from .env.test", () => {
         expect(process.env.LMSTUDIO_URL).toBe("http://localhost:1234");
         expect(process.env.MODEL).toBeDefined();
