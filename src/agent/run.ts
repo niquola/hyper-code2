@@ -94,6 +94,15 @@ async function safeRenderToolEvent(
 }
 
 export default async function (ctx: Context, agent: types.agent.Agent, userText: string, opts: { userMessageAlreadyAppended?: boolean } = {}) {
+    // Protocol switch: native function-calling (default) vs marker protocol (experimental).
+    // Per-agent override via agent.scratchpad.protocol; otherwise the declared agent.protocol setting.
+    const protocol = (agent.scratchpad?.protocol as string)
+        ?? ctx.fns.settings?.getString?.(ctx, { module: 'agent', scopeType: 'global', key: 'protocol' })
+        ?? 'tool-calls';
+    if (protocol === 'markers') {
+        return ctx.fns.agent.runMarkers(ctx, agent, userText, opts);
+    }
+
     const ac = new AbortController();
     agent.abortController = ac;
 

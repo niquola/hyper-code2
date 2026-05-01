@@ -1,6 +1,6 @@
 export default {
     type: 'number',
-    default: 5000,
+    default: 30,
     min: 0,
     max: 60000,
     title: 'POST debounce (ms)',

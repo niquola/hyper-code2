@@ -6,10 +6,10 @@ const mkCtx = () => ({ fns: { repl: { eval: evalFn } } }) as unknown as Context;
 
 describe("POST /repl", () => {
     test("returns { success, result } on valid code", async () => {
-        const req = new Request("http://x/repl", { method: "POST", body: "1 + 1" });
+        const req = new Request("http://x/repl", { method: "POST", body: "console.log(1 + 1)" });
         const res = await route(mkCtx(), null, req);
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ success: true, result: 2 });
+        expect(await res.json()).toEqual({ success: true, result: "2" });
     });
 
     test("returns 500 + error/stack on throw", async () => {
