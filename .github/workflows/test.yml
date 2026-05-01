@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  # Opt-in to Node 24 for JS actions (cache, checkout) ahead of the June 2026 default.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 # Cancel a running CI on the same ref when a new push lands.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
