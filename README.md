@@ -25,37 +25,48 @@ The philosophy: give the model a full programming language + the running process
 
 ## Architecture in one picture
 
-```
-Browser (htmx)  ──POST /agent/:id────────▶ append user msg + enqueue job
-       ▲                                              │
-       │                                              ▼
-       │                                  one workerLoop in process
-       │                                              │ atomic SQL claim
-       │                                              ▼
-       │                                       run loop ──▶ LM Studio
-       │                                              │
-       │                                              ▼
-       │                                  appendEvent → DB → wakeWaiters
-       │                                              │
-       │  long-poll (htmx, hx-trigger="load")         │
-       └─GET /agent/:id/events.html?offset=N◀─────────┘
-              ▲                                       │
-              │ HTML fragment + new <#msg-tail>       │
-              │                                       │
-              ▼                                       │
-        #messages renders inline                      │
-              ▲                                       │
-              │ status-bar polls /statusbar every 1s  │
-              │ sidebar polls self every 10s          │
-                                                      ▼
-                                              SQLite (.hyper/_runtime/sessions)
-                                              ├─ agents
-                                              ├─ messages
-                                              ├─ events            ← source of truth
-                                              └─ agent_jobs        ← single queue
+```mermaid
+flowchart LR
+    subgraph Browser
+        F[form hx-post]
+        M["#messages + #msg-tail<br/>(long-poll, hx-trigger=load)"]
+        S["#status-bar<br/>(every 1s)"]
+        SB["#sidebar<br/>(every 10s)"]
+    end
+
+    subgraph Server["Bun process"]
+        POST["POST /agent/:id"]
+        EH["GET /agent/:id/events.html<br/>(long-poll, holds 25s)"]
+        STAT["GET /agent/:id/statusbar"]
+        WORKER["workerLoop<br/>(single, in-process)"]
+        RUN["run<br/>→ LLM"]
+    end
+
+    subgraph DB[SQLite]
+        AGENTS[(agents<br/>+ next_run_at<br/>+ run_state<br/>+ last_processed_msg_idx)]
+        MSGS[(messages<br/>append-only log)]
+        EVENTS[(events<br/>append-only)]
+    end
+
+    F      -- "appendUserMessage<br/>+ next_run_at = now+5s" --> POST
+    POST   --> MSGS
+    POST   --> AGENTS
+    POST   -- "wakeWorker" --> WORKER
+    WORKER -- "atomic claim<br/>UPDATE … RETURNING id" --> AGENTS
+    WORKER --> RUN
+    RUN    -- "appendEvent<br/>(per token-batch)" --> EVENTS
+    RUN    --> MSGS
+    EVENTS -- "wakeWaiters" --> EH
+    M      -- "/events.html?offset=N" --> EH
+    EH     --> M
+    S      -- "/statusbar" --> STAT
+    STAT   --> AGENTS
+    SB     -- "x-hyper-fragment: sidebar" --> Server
 ```
 
-**Architecture is DB-first**: see `docs/architecture.md`. The DB is the source of truth for messages, events, and queue state. Browser drives long-poll and statusbar/sidebar polls — no JSON polling, no SSE for chat data. Client JS is ~30 lines (just an Enter-key handler + scroll-on-swap).
+**DB-first** — see `docs/architecture.md`. The DB is the source of truth for messages, events, and run state. Browser drives long-poll + status/sidebar polls — no JSON polling for chat, no SSE for data. Client JS is ~30 lines (Enter-key + scroll-on-swap).
+
+**No queue table.** "When should this agent run next?" lives on `agents.next_run_at`; "is it running right now?" on `agents.run_state`. POST writes one message + bumps `next_run_at`; the worker atomically claims via `UPDATE agents … RETURNING id` and processes everything since `last_processed_msg_idx` in one pass. New messages arriving during a run schedule another pass automatically.
 
 - **Single file per function.** Folder = namespace. `src/<mod>/<fn>.ts` → `ctx.fns.<mod>.<fn>`. Inspired by [proc-ts](https://github.com/niquola/proc-ts).
 - **Global types** auto-generated from the filesystem into `src/ctx_ns.d.ts`. No imports of `Context`, `types.agent.Agent` needed anywhere.
@@ -76,8 +87,8 @@ src/
 
   agent/                ctx.fns.agent.*
     SYSTEM_PROMPT.md    agent behavior, editable in place
-    start / run / compact / clear / stop / systemPrompt
-    enqueue / workerLoop / wakeWorker
+    start / run / compact / clear / stop / systemPrompt / nextId
+    workerLoop / wakeWorker                ← single in-process drainer
     waitForEvent / wakeWaiters             ← long-poll wake mechanism
     renderEventHtml / renderStatusBar
     $type_Agent.ts      types.agent.Agent
