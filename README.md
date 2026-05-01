@@ -1,5 +1,7 @@
 # hyper-code2
 
+[![test](https://github.com/niquola/hyper-code2/actions/workflows/test.yml/badge.svg)](https://github.com/niquola/hyper-code2/actions/workflows/test.yml)
+
 A self-extending AI agent server on Bun. ~1000 LOC, one tool (`evalCode`), procedural TypeScript.
 
 **State is separated from functions.** Behaviour lives in files under `src/` / `.hyper/` and is loaded into `ctx.fns.<module>.<fn>`; runtime state lives on `ctx.state` (in-memory) and a SQLite DB (`agents`, `messages`, `events`, any table the agent chooses to add). Replacing a file + `ctx.fns.repl.load(ctx, "<module>")` swaps the function everywhere without touching state or restarting the process — routes, procedures, types, even the agent loop itself can be extended live.
