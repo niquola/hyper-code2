@@ -59,14 +59,24 @@ export default async function (
             headers["x-api-key"] = apiKey;
         }
     }
-    // Claude Code subscription requires identity headers, otherwise the
-    // OAuth token is rejected. anthropic-beta value is what the official CLI
-    // currently sends (subject to change — patch via env if Anthropic rotates).
+    // Claude Code subscription requires identity headers that match what the
+    // official `claude` CLI sends; otherwise the OAuth token is rejected or
+    // the request gets flagged. Headers below mirror opencode-claude-auth /
+    // griffinmartin reverse-engineering of CLI 2.1.x. Subject to change —
+    // every value is env-overridable so you can patch without rebuild.
+    //
+    // `claude-code-20250219` MUST be conditional on tools[] being present
+    // (the official CLI only sends it then). `oauth-2025-04-20` is the
+    // OAuth-mode marker and is always sent for Anthropic OAuth.
     if (ep.provider === "claude-code") {
-        headers["anthropic-beta"] = ctx.env.CLAUDE_CODE_ANTHROPIC_BETA
-            ?? "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14";
-        headers["user-agent"] = ctx.env.CLAUDE_CODE_USER_AGENT ?? "claude-cli/2.0.0 (external, cli)";
+        const cliVersion = ctx.env.CLAUDE_CODE_CLI_VERSION ?? "2.1.126";
+        const baseBeta = ["oauth-2025-04-20", "interleaved-thinking-2025-05-14", "prompt-caching-scope-2026-01-05"];
+        if (agent.tools?.length) baseBeta.unshift("claude-code-20250219");
+        headers["anthropic-beta"] = ctx.env.CLAUDE_CODE_ANTHROPIC_BETA ?? baseBeta.join(",");
+        headers["user-agent"] = ctx.env.CLAUDE_CODE_USER_AGENT ?? `claude-cli/${cliVersion} (external, sdk-cli)`;
         headers["x-app"] = "cli";
+        headers["anthropic-dangerous-direct-browser-access"] = "true";
+        headers["x-client-request-id"] = (globalThis as any).crypto?.randomUUID?.() ?? Bun.randomUUIDv7();
     }
 
     const res = await fetch(ep.url, {

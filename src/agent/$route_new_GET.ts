@@ -1,5 +1,5 @@
 export default async function (ctx: Context) {
-    const defaultModel = ctx.env.MODEL ?? "";
+    const defaultModel = ctx.fns.settings?.modelDefault?.(ctx) ?? ctx.env.MODEL ?? "";
     const groups = await ctx.fns.llm.listModels(ctx);
     const optgroups = Object.entries(groups).map(([provider, ids]) => {
         const opts = (ids as string[]).map(id =>
