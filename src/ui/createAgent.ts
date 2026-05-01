@@ -9,11 +9,12 @@ const EVAL_CODE_TOOL = {
 };
 
 export default async function (ctx: Context, opts: { model?: string; systemPrompt?: string; tools?: any[]; open?: boolean; startText?: string } = {}) {
-    // Priority: explicit opts.model > settings(global, llm.defaultModel) > env.MODEL > built-in default.
+    // Priority: explicit opts.model > declared setting (DB → env → default).
+    // The declaration in src/llm/$setting_defaultModel.ts handles env + default.
     const fromSettings = ctx.fns?.settings?.getString?.(ctx, {
-        module: 'llm', scopeType: 'global', key: 'defaultModel', fallback: '',
+        module: 'llm', scopeType: 'global', key: 'defaultModel',
     });
-    const model = (opts.model ?? (fromSettings || ctx.env.MODEL) ?? 'minimax/minimax-m2.7').trim();
+    const model = (opts.model ?? fromSettings ?? 'minimax/minimax-m2.7').trim();
     const systemPrompt = opts.systemPrompt ?? await ctx.fns.agent.systemPrompt(ctx);
     const tools = opts.tools ?? [EVAL_CODE_TOOL];
     const agent = ctx.fns.agent.start(ctx, { model, systemPrompt, tools });

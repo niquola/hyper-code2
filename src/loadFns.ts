@@ -5,7 +5,25 @@
 export default async function (ctx: Context): Promise<void> {
     const { default: scan } = await import("./project/scan?t=" + Date.now());
     const entries = await scan(ctx);
+
+    // Settings registry — populated alongside fns so it's ready by the time
+    // anything calls ctx.fns.settings.get(...).
+    const registry: Map<string, any> = ((ctx.state as any).settingsRegistry ??= new Map());
+
     for (const entry of entries) {
+        if (entry.kind === 'setting') {
+            const mod = await import(entry.abs + `?t=${Date.now()}`);
+            const descriptor = mod.default;
+            if (!descriptor || typeof descriptor !== 'object') {
+                console.warn(`[settings] skip (no default-export descriptor): ${entry.root}/${entry.rel}`);
+                continue;
+            }
+            const regKey = `${entry.settingModule}.${entry.settingKey}`;
+            registry.set(regKey, descriptor);
+            console.log(`[settings] declare ${regKey}  ←  ${entry.root}/${entry.rel}`);
+            continue;
+        }
+
         if (entry.kind !== 'fn') continue;
         const mod = await import(entry.abs + `?t=${Date.now()}`);
         const fn = mod.default;

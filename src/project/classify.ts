@@ -7,6 +7,7 @@ export type ProjectEntry =
     | { kind: "type"; rel: string; moduleDir: string; fileName: string; typeName: string }
     | { kind: "route"; rel: string; moduleDir: string; fileName: string; routePath: string; method: string }
     | { kind: "script"; rel: string; moduleDir: string; fileName: string; routePath: string }
+    | { kind: "setting"; rel: string; moduleDir: string; fileName: string; settingModule: string; settingKey: string }
     | { kind: "skip"; rel: string; moduleDir: string; fileName: string; reason: string };
 
 export default function (rel: string): ProjectEntry {
@@ -32,6 +33,15 @@ export default function (rel: string): ProjectEntry {
         const typeName = stem.slice('$type_'.length);
         if (!typeName) return { kind: 'skip', rel, moduleDir, fileName, reason: 'bad-type-name' };
         return { kind: 'type', rel, moduleDir, fileName, typeName };
+    }
+
+    if (stem.startsWith('$setting_')) {
+        const settingKey = stem.slice('$setting_'.length);
+        if (!settingKey) return { kind: 'skip', rel, moduleDir, fileName, reason: 'bad-setting-name' };
+        // Module = top-level folder (settings can't live at root, by convention).
+        const settingModule = moduleDir === '.' ? '' : moduleDir.split('/')[0]!;
+        if (!settingModule) return { kind: 'skip', rel, moduleDir, fileName, reason: 'setting-needs-module-folder' };
+        return { kind: 'setting', rel, moduleDir, fileName, settingModule, settingKey };
     }
 
     if (stem.startsWith('$route_')) {

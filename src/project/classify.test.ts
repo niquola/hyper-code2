@@ -24,4 +24,21 @@ describe("project.classify", () => {
         expect(classify('db/connect.test.ts')).toMatchObject({ kind: 'skip', reason: 'test' });
         expect(classify('ctx_ns.d.ts')).toMatchObject({ kind: 'skip', reason: 'dts' });
     });
+
+    test("classifies declared settings", () => {
+        expect(classify('llm/$setting_defaultModel.ts')).toMatchObject({
+            kind: 'setting', moduleDir: 'llm', settingModule: 'llm', settingKey: 'defaultModel',
+        });
+        expect(classify('agent/$setting_debounceMs.ts')).toMatchObject({
+            kind: 'setting', settingModule: 'agent', settingKey: 'debounceMs',
+        });
+    });
+
+    test("rejects setting at root (no module folder)", () => {
+        expect(classify('$setting_foo.ts')).toMatchObject({ kind: 'skip', reason: 'setting-needs-module-folder' });
+    });
+
+    test("rejects setting with empty key", () => {
+        expect(classify('llm/$setting_.ts')).toMatchObject({ kind: 'skip' });
+    });
 });

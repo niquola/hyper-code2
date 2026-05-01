@@ -13,18 +13,10 @@ export default function (ctx: Context, model: string): {
     const p = PROVIDERS[provider];
     if (!p) throw new Error(`unknown provider: ${provider}`);
 
-    // Settings table overrides env / hardcoded defaults when present.
-    const settingsBase = ctx.fns?.settings?.get?.(ctx, {
-        module: 'provider', scopeType: 'provider', scopeId: provider, key: 'baseUrl',
-    });
-    const baseUrl = (typeof settingsBase === 'string' && settingsBase) ? settingsBase : p.resolveBaseUrl(ctx);
-
-    const settingsKey = ctx.fns?.settings?.get?.(ctx, {
-        module: 'provider', scopeType: 'provider', scopeId: provider, key: 'apiKey',
-    });
-    const apiKey = (typeof settingsKey === 'string' && settingsKey)
-        ? settingsKey
-        : (p.resolveApiKey ? p.resolveApiKey(ctx) : null);
+    // baseUrl + apiKey come from the provider's resolveBaseUrl/resolveApiKey,
+    // which themselves consult declared settings (src/llm/$setting_*.ts).
+    const baseUrl = p.resolveBaseUrl(ctx);
+    const apiKey = p.resolveApiKey ? p.resolveApiKey(ctx) : null;
     const url = p.api === "anthropic" ? `${baseUrl}/v1/messages`
         : p.api === "responses" ? `${baseUrl}/responses`
             : `${baseUrl}/chat/completions`;
@@ -37,7 +29,12 @@ type ProviderConfig = {
     resolveApiKey?: (ctx: Context) => string | null;
 };
 
-const envKey = (name: string) => (ctx: Context) => ctx.env[name] ?? null;
+// Read a string-typed declared setting (module=llm, scope=global). Returns undefined
+// when no declaration / no DB row / no env var / no default.
+const declaredString = (key: string) => (ctx: Context): string | null => {
+    const v = ctx.fns?.settings?.getString?.(ctx, { module: 'llm', scopeType: 'global', key });
+    return (typeof v === 'string' && v) ? v : null;
+};
 
 function decodeJwtExp(token: string): number | null {
     try {
@@ -51,13 +48,14 @@ function decodeJwtExp(token: string): number | null {
 const PROVIDERS: Record<string, ProviderConfig> = {
     lmstudio: {
         api: "openai",
-        resolveBaseUrl: (ctx) => (ctx.env.LMSTUDIO_URL ?? "http://localhost:1234") + "/v1",
+        // src/llm/$setting_lmstudioBaseUrl.ts handles env LMSTUDIO_URL → default.
+        resolveBaseUrl: (ctx) => (declaredString('lmstudioBaseUrl')(ctx) ?? 'http://localhost:1234') + '/v1',
     },
     kimi: {
         // Moonshot-AI OpenAI-compat (NOT the kimi.com/coding subscription — use kimi-coding: for that)
         api: "openai",
         resolveBaseUrl: () => "https://api.moonshot.ai/v1",
-        resolveApiKey: envKey("KIMI_API_KEY"),
+        resolveApiKey: declaredString('kimiApiKey'),
     },
     "kimi-coding": {
         // Kimi coding subscription — Anthropic-messages protocol.
@@ -91,22 +89,22 @@ const PROVIDERS: Record<string, ProviderConfig> = {
     anthropic: {
         api: "anthropic",
         resolveBaseUrl: () => "https://api.anthropic.com",
-        resolveApiKey: envKey("ANTHROPIC_API_KEY"),
+        resolveApiKey: declaredString('anthropicApiKey'),
     },
     openai: {
         api: "openai",
         resolveBaseUrl: () => "https://api.openai.com/v1",
-        resolveApiKey: envKey("OPENAI_API_KEY"),
+        resolveApiKey: declaredString('openaiApiKey'),
     },
     groq: {
         api: "openai",
         resolveBaseUrl: () => "https://api.groq.com/openai/v1",
-        resolveApiKey: envKey("GROQ_API_KEY"),
+        resolveApiKey: declaredString('groqApiKey'),
     },
     openrouter: {
         api: "openai",
         resolveBaseUrl: () => "https://openrouter.ai/api/v1",
-        resolveApiKey: envKey("OPENROUTER_API_KEY"),
+        resolveApiKey: declaredString('openrouterApiKey'),
     },
     mock: {
         api: "mock",

@@ -58,12 +58,43 @@ import streamMock from './llm/streamMock';
 import resolveEndpoint from './llm/resolveEndpoint';
 import streamDispatch from './llm/stream';
 
+// Declared settings — keep in sync with src/**/$setting_*.ts.
+// Imported here so tests with mkTestCtx see the same defaults as production.
+import settingDefaultModel from './llm/$setting_defaultModel';
+import settingLmstudioBaseUrl from './llm/$setting_lmstudioBaseUrl';
+import settingOpenaiApiKey from './llm/$setting_openaiApiKey';
+import settingKimiApiKey from './llm/$setting_kimiApiKey';
+import settingGroqApiKey from './llm/$setting_groqApiKey';
+import settingAnthropicApiKey from './llm/$setting_anthropicApiKey';
+import settingOpenrouterApiKey from './llm/$setting_openrouterApiKey';
+import settingAgentDebounceMs from './agent/$setting_debounceMs';
+
+import settingsGet from './settings/get';
+import settingsSet from './settings/set';
+import settingsRemove from './settings/remove';
+import settingsList from './settings/list';
+import settingsGetNumber from './settings/getNumber';
+import settingsGetString from './settings/getString';
+import settingsDeclared from './settings/declared';
+import settingsAgentDebounceMs from './settings/agentDebounceMs';
+import settingsRenderDeclaredForm from './settings/renderDeclaredForm';
+
 const fastHighlight = async (_c: any, s: any) =>
     String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } = {}): Promise<any> {
+    const settingsRegistry = new Map<string, any>([
+        ['llm.defaultModel',      settingDefaultModel],
+        ['llm.lmstudioBaseUrl',   settingLmstudioBaseUrl],
+        ['llm.openaiApiKey',      settingOpenaiApiKey],
+        ['llm.kimiApiKey',        settingKimiApiKey],
+        ['llm.groqApiKey',        settingGroqApiKey],
+        ['llm.anthropicApiKey',   settingAnthropicApiKey],
+        ['llm.openrouterApiKey',  settingOpenrouterApiKey],
+        ['agent.debounceMs',      settingAgentDebounceMs],
+    ]);
     const ctx: any = {
-        state: {},
+        state: { settingsRegistry },
         env: {},
         routes: {},
         fns: {
@@ -102,6 +133,17 @@ export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } =
                 // Default eval: echoes 'ok' for any code, returns 4 for "2+2".
                 // Override per-test for richer behaviours.
                 eval: async (_c: any, code: string) => (code === '2+2' ? 4 : 'ok'),
+            },
+            settings: {
+                get: settingsGet,
+                set: settingsSet,
+                remove: settingsRemove,
+                list: settingsList,
+                getNumber: settingsGetNumber,
+                getString: settingsGetString,
+                declared: settingsDeclared,
+                renderDeclaredForm: settingsRenderDeclaredForm,
+                agentDebounceMs: settingsAgentDebounceMs,
             },
         },
     };

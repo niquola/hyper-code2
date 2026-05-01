@@ -14,6 +14,16 @@ export default async function (ctx: Context, target: string) {
     const entries = await ctx.fns.project.scan(ctx);
     const loaded: string[] = [];
     for (const entry of entries) {
+        if (entry.kind === 'setting' && entry.settingModule === target) {
+            const m = await import((entry as any).abs + `?t=${Date.now()}`);
+            const desc = m.default;
+            if (desc && typeof desc === 'object') {
+                const regKey = `${entry.settingModule}.${entry.settingKey}`;
+                ((ctx.state as any).settingsRegistry ??= new Map()).set(regKey, desc);
+                loaded.push(`$setting_${entry.settingKey}`);
+            }
+            continue;
+        }
         if (entry.kind !== 'fn') continue;
         if (entry.moduleDir !== target) continue;
         await loadFile(ctx, target, entry.runtimeName);

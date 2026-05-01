@@ -81,15 +81,14 @@ describe("settings store", () => {
 });
 
 describe("settings integration", () => {
-    test("resolveEndpoint prefers provider settings before env for lmstudio base url", async () => {
+    test("resolveEndpoint prefers declared lmstudioBaseUrl setting over env/default", async () => {
         const ctx = await mkTestCtx();
         installSettings(ctx);
         ctx.fns.settings.set(ctx, {
-            module: "provider",
-            scopeType: "provider",
-            scopeId: "lmstudio",
-            key: "baseUrl",
-            value: "http://from-settings:9999/v1",
+            module: "llm",
+            scopeType: "global",
+            key: "lmstudioBaseUrl",
+            value: "http://from-settings:9999",
         });
 
         const r = resolve(ctx, "some-model");

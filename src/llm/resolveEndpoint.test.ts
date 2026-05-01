@@ -1,7 +1,29 @@
 import { test, expect, describe } from "bun:test";
 import resolve from "./resolveEndpoint";
+import getString from "../settings/getString";
+import get from "../settings/get";
 
-const mkCtx = (env: Record<string, string> = {}) => ({ env } as unknown as Context);
+// Declarations from src/llm/$setting_*.ts. Tests don't go through loadFns,
+// so we seed ctx.state.settingsRegistry by hand. Keep in sync with the files.
+function makeRegistry() {
+    return new Map<string, any>([
+        ['llm.lmstudioBaseUrl', { type: 'string', env: 'LMSTUDIO_URL', default: 'http://localhost:1234' }],
+        ['llm.openaiApiKey',    { type: 'secret', env: 'OPENAI_API_KEY', default: null }],
+        ['llm.kimiApiKey',      { type: 'secret', env: 'KIMI_API_KEY',   default: null }],
+        ['llm.groqApiKey',      { type: 'secret', env: 'GROQ_API_KEY',   default: null }],
+        ['llm.anthropicApiKey', { type: 'secret', env: 'ANTHROPIC_API_KEY', default: null }],
+        ['llm.openrouterApiKey',{ type: 'secret', env: 'OPENROUTER_API_KEY', default: null }],
+    ]);
+}
+
+const mkCtx = (env: Record<string, string> = {}) => ({
+    env,
+    state: { db: null, settingsRegistry: makeRegistry() },
+    fns: {
+        db: { select: () => [] },          // no DB rows in unit-test
+        settings: { getString, get },
+    },
+} as unknown as Context);
 
 describe("ai.resolveEndpoint", () => {
     test("no prefix → lmstudio default", () => {

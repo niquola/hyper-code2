@@ -3,10 +3,11 @@ type GetNumberOpts = {
     scopeType: string;
     scopeId?: string | null;
     key: string;
-    fallback: number;
+    fallback?: number;
 };
 
-export default function (ctx: Context, opts: GetNumberOpts): number {
+export default function (ctx: Context, opts: GetNumberOpts): number | undefined {
     const value = ctx.fns.settings.get(ctx, opts);
-    return typeof value === 'number' && Number.isFinite(value) ? value : opts.fallback;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    return opts.fallback;
 }

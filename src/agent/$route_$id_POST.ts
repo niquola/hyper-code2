@@ -15,10 +15,16 @@ export default async function (ctx: Context, _session: any, req: any) {
 
     const url = new URL(req.url);
     const explicitSeconds = url.searchParams.get('debounceSeconds');
-    // Settings can override per-agent default; query param wins if given.
+    // Priority: ?debounceSeconds query > per-agent setting > declared agent.debounceMs > 5s.
+    const perAgent = ctx.fns.settings?.getNumber?.(ctx, {
+        module: 'ui', scopeType: 'agent', scopeId: agent.id, key: 'debounceMs',
+    });
+    const declared = ctx.fns.settings?.getNumber?.(ctx, {
+        module: 'agent', scopeType: 'global', key: 'debounceMs',
+    });
     const debounceMs = explicitSeconds != null
         ? Math.max(0, Number(explicitSeconds) * 1000)
-        : ctx.fns.settings?.agentDebounceMs?.(ctx, agent.id, 5000) ?? 5000;
+        : (perAgent ?? declared ?? 5000);
     const sendAt = Date.now() + debounceMs;
 
     const userAppend = await ctx.fns.session.appendUserMessage(ctx, agent.id, text);

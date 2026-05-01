@@ -5,8 +5,27 @@ function decode(s: string): string {
     return s.replace(/&(amp|lt|gt|quot|#39|#x27);/g, (m) => ENTITIES[m] ?? m);
 }
 
+async function preprocessMermaid(ctx: Context, text: string): Promise<string> {
+    const re = /```mermaid[^\n]*\n([\s\S]*?)```/g;
+    const matches = [...text.matchAll(re)];
+    if (matches.length === 0) return text;
+    let out = text;
+    for (const m of matches.reverse()) {
+        const code = m[1]?.trim() ?? "";
+        try {
+            const html = await ctx.fns.markdown.mermaid(ctx, code);
+            out = out.slice(0, m.index!) + html + out.slice(m.index! + m[0]!.length);
+        } catch {
+            continue;
+        }
+    }
+    return out;
+}
+
 export default async function (ctx: Context, text: string): Promise<string> {
-    let html = Bun.markdown.html(text);
+    let source = text;
+    if (source.includes("```mermaid")) source = await preprocessMermaid(ctx, source);
+    let html = Bun.markdown.html(source);
     const re = /<pre><code class="language-([^"]+)">([\s\S]*?)<\/code><\/pre>/g;
     const replacements: Array<{ full: string; pretty: string }> = [];
     for (const m of html.matchAll(re)) {

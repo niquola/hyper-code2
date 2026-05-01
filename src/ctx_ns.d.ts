@@ -84,6 +84,7 @@ declare global {
         };
         markdown: {
         highlight: typeof import("./markdown/highlight").default;
+        mermaid: typeof import("./markdown/mermaid").default;
         render: typeof import("./markdown/render").default;
         };
         project: {
@@ -128,6 +129,7 @@ declare global {
         };
         settings: {
         agentDebounceMs: typeof import("./settings/agentDebounceMs").default;
+        declared: typeof import("./settings/declared").default;
         get: typeof import("./settings/get").default;
         getNumber: typeof import("./settings/getNumber").default;
         getString: typeof import("./settings/getString").default;
@@ -138,6 +140,7 @@ declare global {
         providerApiKey: typeof import("./settings/providerApiKey").default;
         providerBaseUrl: typeof import("./settings/providerBaseUrl").default;
         remove: typeof import("./settings/remove").default;
+        renderDeclaredForm: typeof import("./settings/renderDeclaredForm").default;
         saveEnv: typeof import("./settings/saveEnv").default;
         set: typeof import("./settings/set").default;
         startCodexLogin: typeof import("./settings/startCodexLogin").default;
