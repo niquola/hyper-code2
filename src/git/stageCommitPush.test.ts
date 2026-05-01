@@ -40,6 +40,6 @@ describe("git helpers", () => {
         expect(res.committed.ok).toBe(true);
         expect(res.pushed).toBeNull();
         const st = await status(ctx, { dir });
-        expect(st.stdout.trim()).toBe("");
+        expect(st.clean).toBe(true);
     });
 });

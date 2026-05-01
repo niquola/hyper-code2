@@ -83,7 +83,7 @@ export default async function (
 
     if (!res.ok) throw new Error(ep.provider + ' ' + res.status + ': ' + await res.text());
 
-    const raw = await res.json();
+    const raw = await res.json() as any;
     const choice = raw?.choices?.[0] ?? {};
     const text = String(choice?.message?.content ?? '');
 

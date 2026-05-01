@@ -19,7 +19,7 @@ export default async function (ctx: Context, opts: { dir?: string; staged?: bool
         }
         let path = payload;
         if (payload.includes(" -> ")) {
-            const [from, to] = payload.split(" -> ");
+            const [from = '', to = ''] = payload.split(" -> ");
             renamed.push({ from, to });
             path = to;
         }

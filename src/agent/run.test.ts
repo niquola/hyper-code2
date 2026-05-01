@@ -96,28 +96,8 @@ describe("agent.run with mock llm", () => {
         expect(full[0].content).toBe('parent says hi');
     });
 
-    test("fails before tool messages are appended when one of multiple tool calls has missing code", async () => {
-        const ctx = mkCtx();
-        ctx.fns.db.connect(ctx, ':memory:');
-        await ctx.fns.db.migrate(ctx);
-        const agent = start(ctx, { model: 'mock:tool', systemPrompt: '', tools: [evalCodeTool] });
-        save(ctx, agent);
-
-        ctx.fns.llm.stream = async () => ({
-            text: '',
-            thinking: '',
-            toolCalls: [
-                { id: 'call_ok', name: 'evalCode', arguments: JSON.stringify({ code: '2+2' }) },
-                { id: 'call_bad', name: 'evalCode', arguments: JSON.stringify({}) },
-            ],
-            usage: {},
-        });
-
-        await expect(run(ctx, agent, 'probe')).rejects.toThrow('Cannot read properties of undefined');
-
-        const msgs = getMessages(ctx, agent.id);
-        expect(msgs.at(-1)?.role).toBe('assistant');
-        expect(msgs.at(-1)?.tool_calls?.map((tc: any) => tc.id)).toEqual(['call_ok', 'call_bad']);
-        expect(msgs.filter((m: any) => m.role === 'tool')).toHaveLength(0);
-    });
+    // Removed: "fails before tool messages are appended when one of multiple tool calls has missing code".
+    // Old behavior: run threw on missing args.code (uncaught NPE). Current run handles it gracefully —
+    // the bad tool gets an "Error: …" output appended like any other failed eval, and the loop continues.
+    // The infinite-stream mock used by the legacy test would loop forever under the new contract.
 });
