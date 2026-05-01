@@ -1,14 +1,11 @@
 import { test, expect, describe } from "bun:test";
-import start from "./start";
+import { mkTestCtx } from "../_testCtx.entry";
 import compact from "./compact";
-import nextId from "./nextId";
-
-const mkCtx = () => ({ state: {}, env: {}, fns: { agent: { nextId } } } as unknown as Context);
 
 describe("agent.compactLastToolResult", () => {
-    test("replaces last tool message content with summary", () => {
-        const ctx: any = mkCtx();
-        const agent = start(ctx, { model: "x" });
+    test("replaces last tool message content with summary", async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = ctx.fns.agent.start(ctx, { model: "x" });
         agent.messages.push(
             { role: "user", content: "do it" },
             { role: "assistant", tool_calls: [{ id: "c1", type: "function", function: { name: "evalCode", arguments: "{}" } }] },
@@ -22,17 +19,17 @@ describe("agent.compactLastToolResult", () => {
         expect(agent.messages.at(-1).content).toBe("[compacted] listed 42 files");
     });
 
-    test("returns replaced:false when no tool message exists", () => {
-        const ctx: any = mkCtx();
-        const agent = start(ctx, { model: "x" });
+    test("returns replaced:false when no tool message exists", async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = ctx.fns.agent.start(ctx, { model: "x" });
         agent.messages.push({ role: "user", content: "hi" });
         const res = compact(ctx, agent, "s");
         expect(res.replaced).toBe(false);
     });
 
-    test("targets the MOST RECENT tool message when several exist", () => {
-        const ctx: any = mkCtx();
-        const agent = start(ctx, { model: "x" });
+    test("targets the MOST RECENT tool message when several exist", async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = ctx.fns.agent.start(ctx, { model: "x" });
         agent.messages.push(
             { role: "tool", tool_call_id: "c1", content: "old" },
             { role: "assistant", content: "intermediate" },
@@ -45,9 +42,9 @@ describe("agent.compactLastToolResult", () => {
     });
 
     describe("with {message, summary} — compact from index onward", () => {
-        test("drops messages from index onward and inserts a synthetic user note", () => {
-            const ctx: any = mkCtx();
-            const agent = start(ctx, { model: "x" });
+        test("drops messages from index onward and inserts a synthetic user note", async () => {
+            const ctx: any = await mkTestCtx();
+            const agent = ctx.fns.agent.start(ctx, { model: "x" });
             agent.messages.push(
                 { role: "user", content: "hi" },
                 { role: "assistant", content: "step 1 done" },
@@ -64,9 +61,9 @@ describe("agent.compactLastToolResult", () => {
             expect(agent.messages[2].content).toContain("[compacted from #2");
         });
 
-        test("walks back if preceding message is assistant with unanswered tool_calls", () => {
-            const ctx: any = mkCtx();
-            const agent = start(ctx, { model: "x" });
+        test("walks back if preceding message is assistant with unanswered tool_calls", async () => {
+            const ctx: any = await mkTestCtx();
+            const agent = ctx.fns.agent.start(ctx, { model: "x" });
             agent.messages.push(
                 { role: "user", content: "hi" },
                 { role: "assistant", tool_calls: [{ id: "c1", type: "function", function: { name: "evalCode", arguments: "{}" } }] },
@@ -81,9 +78,9 @@ describe("agent.compactLastToolResult", () => {
             expect(agent.messages.at(-1).content).toContain("[compacted from #3");
         });
 
-        test("invalid index → replaced:false", () => {
-            const ctx: any = mkCtx();
-            const agent = start(ctx, { model: "x" });
+        test("invalid index → replaced:false", async () => {
+            const ctx: any = await mkTestCtx();
+            const agent = ctx.fns.agent.start(ctx, { model: "x" });
             agent.messages.push({ role: "user", content: "hi" });
             expect(compact(ctx, agent, { message: 99, summary: "x" }).replaced).toBe(false);
             expect(compact(ctx, agent, { message: -1, summary: "x" }).replaced).toBe(false);
