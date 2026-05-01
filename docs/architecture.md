@@ -85,14 +85,15 @@ sequenceDiagram
 
     Note over W: claim via<br/>UPDATE agents SET run_state='running'<br/>WHERE id IN (SELECT … WHERE next_run_at <= now LIMIT 1)<br/>RETURNING id
 
-    W->>DB: snapshot frontier = MAX(messages.idx)
+    W->>DB: snapshot userFrontier = MAX(messages.idx) WHERE role='user'
     W->>L: stream(transcript)
     L-->>W: tokens / tool_calls
     W->>DB: appendAssistantMessage / appendEvent / …
     DB-->>+S: wakeWaiters(agentId)  (events appended)
     Note over S: any pending #msg-tail<br/>long-poll resolves and<br/>re-reads getEvents(fromIdx=N)
 
-    W->>DB: UPDATE agents SET run_state='idle',<br/>last_processed_msg_idx=frontier,<br/>next_run_at = (more pending? now+5s : NULL)
+    W->>DB: UPDATE agents SET run_state='idle',<br/>last_processed_msg_idx=userFrontier (success only),<br/>next_run_at = (new user msgs? now+5s : NULL)
+    Note over W,DB: aborted/failed → cursor unchanged,<br/>next_run_at = NULL (no auto-retry)
 ```
 
 POST is **one message INSERT + one agent UPDATE**. No queue row. No payload duplicate of the message text — the message itself is the input.
@@ -122,7 +123,7 @@ After the swap, htmx auto-fires the next poll because the new `<div id="msg-tail
 
 ```sql
 agents.next_run_at            INTEGER       -- ms epoch when next run should fire (NULL = nothing scheduled)
-agents.last_processed_msg_idx INTEGER       -- cursor in messages log; advances only on successful run
+agents.last_processed_msg_idx INTEGER       -- cursor over USER messages; advances only on successful run
 agents.run_state              TEXT          -- 'idle' | 'running'
 agents.run_started_at         INTEGER       -- for status-bar elapsed counter
 agents.last_error             TEXT          -- last error text (audit-lite)
@@ -132,8 +133,9 @@ Rules:
 
 - `POST` does `UPDATE agents SET next_run_at = MAX(COALESCE(next_run_at, 0), now + N)`. The `MAX` prevents an earlier message from rolling back an already-pushed-out run.
 - The worker's atomic claim is `UPDATE agents SET run_state='running' WHERE id IN (SELECT id FROM agents WHERE run_state='idle' AND next_run_at <= now ORDER BY next_run_at ASC LIMIT 1) RETURNING id`. SQLite's `RETURNING` makes this one-statement-atomic — no two workers can claim the same agent.
-- `last_processed_msg_idx` only advances on **success**. Aborted or failed runs leave the cursor where it was, so the same set of messages is retried on the next pass.
-- If new messages land while a run is in progress, the worker's `finally` block detects `MAX(messages.idx) > cursor` and sets `next_run_at = now + 5s` again before returning to `idle` — auto-rescheduling.
+- **Cursor scope is `role='user'` only.** Both the pre-run frontier snapshot and the post-run "still pending" check use `WHERE role='user'`. Assistant + tool messages emitted by `run()` itself are not pending work — without this, every successful turn would look like fresh input and the worker would re-run on the same conversation forever.
+- `last_processed_msg_idx` only advances on **success**. Aborted or failed runs leave the cursor where it was. They also do **not** auto-reschedule (`next_run_at = NULL` on the failure path) — the user's next POST decides whether to retry. Otherwise a permanently broken LLM call would burn the worker in a tight loop.
+- If new **user** messages land while a run is in progress, the worker's `finally` block detects `MAX(idx) WHERE role='user' > cursor` and sets `next_run_at = now + 5s` again before returning to `idle`. Successful run → auto-rescheduling for the new input. Failed run → no rescheduling.
 
 ---
 
@@ -207,6 +209,46 @@ The server response contains the new events HTML followed by a fresh `#msg-tail`
 ## Sequential agent IDs
 
 `ctx.fns.agent.nextId` returns `a, b, …, z, aa, ab, …` (base-26). Counter persisted in `kv(key='agent:idCounter')`. `start.ts` calls `nextId(ctx)` — no UUIDs, no `agent_<hex>` prefix.
+
+---
+
+## Settings — DB-backed key-value with scope
+
+`src/settings/` is a generic key-value store keyed by `(module, scope_type, scope_id, key)`. Value is JSON-encoded; an `is_secret` flag is recorded but currently advisory only.
+
+```sql
+CREATE TABLE settings (
+    module      TEXT NOT NULL,
+    scope_type  TEXT NOT NULL,
+    scope_id    TEXT NOT NULL DEFAULT '',
+    key         TEXT NOT NULL,
+    value       TEXT NOT NULL,
+    is_secret   INTEGER NOT NULL DEFAULT 0,
+    updated_at  INTEGER NOT NULL,
+    PRIMARY KEY (module, scope_type, scope_id, key)
+);
+CREATE INDEX idx_settings_scope ON settings(scope_type, scope_id, module);
+```
+
+API: `ctx.fns.settings.{get, set, remove, list, getNumber, getString}`. `getNumber`/`getString` accept `fallback` — `getNumber` also rejects non-finite values (`NaN`, `Infinity`).
+
+### Scopes shipped
+
+| Module     | Scope          | Key         | Used by                                  |
+|------------|----------------|-------------|------------------------------------------|
+| `llm`      | `global`       | `defaultModel` | `ui/createAgent.ts` — default agent model when `opts.model` is absent |
+| `provider` | `provider:<name>` | `baseUrl`   | `llm/resolveEndpoint.ts` — overrides hardcoded base URL  |
+| `provider` | `provider:<name>` | `apiKey`    | `llm/resolveEndpoint.ts` — overrides env-var key         |
+| `ui`       | `agent:<id>`   | `debounceMs` | `agent/$route_$id_POST.ts` — per-agent default debounce |
+
+### Priority
+
+Each consumer follows the same order:
+1. **Explicit caller input** (e.g. POST `?debounceSeconds=...`, `opts.model`) — wins always.
+2. **Settings table** — for the relevant scope.
+3. **Env var / hard-coded default** — last resort.
+
+So `settings.set(ctx, { module: 'ui', scopeType: 'agent', scopeId: 'a', key: 'debounceMs', value: 1000 })` makes agent `a` debounce at 1s without redeploying.
 
 ---
 

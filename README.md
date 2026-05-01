@@ -66,7 +66,9 @@ flowchart LR
 
 **DB-first** — see `docs/architecture.md`. The DB is the source of truth for messages, events, and run state. Browser drives long-poll + status/sidebar polls — no JSON polling for chat, no SSE for data. Client JS is ~30 lines (Enter-key + scroll-on-swap).
 
-**No queue table.** "When should this agent run next?" lives on `agents.next_run_at`; "is it running right now?" on `agents.run_state`. POST writes one message + bumps `next_run_at`; the worker atomically claims via `UPDATE agents … RETURNING id` and processes everything since `last_processed_msg_idx` in one pass. New messages arriving during a run schedule another pass automatically.
+**No queue table.** "When should this agent run next?" lives on `agents.next_run_at`; "is it running right now?" on `agents.run_state`. POST writes one message + bumps `next_run_at`; the worker atomically claims via `UPDATE agents … RETURNING id` and processes everything since `last_processed_msg_idx` in one pass. The cursor and the "still pending" check are scoped to `role='user'` — assistant/tool messages produced by `run()` itself are not pending work. New **user** messages arriving during a run schedule another pass automatically; aborted/failed runs do **not** auto-retry.
+
+**Settings.** Generic key-value store keyed by `(module, scope_type, scope_id, key)` (`src/settings/`). Three scopes ship out of the box: `llm.defaultModel` (global), `provider.{baseUrl,apiKey}` (per-provider), `ui.debounceMs` (per-agent). `resolveEndpoint` / POST debounce / `createAgent` default model all consult settings before falling back to env / hard-coded defaults.
 
 - **Single file per function.** Folder = namespace. `src/<mod>/<fn>.ts` → `ctx.fns.<mod>.<fn>`. Inspired by [proc-ts](https://github.com/niquola/proc-ts).
 - **Global types** auto-generated from the filesystem into `src/ctx_ns.d.ts`. No imports of `Context`, `types.agent.Agent` needed anywhere.
@@ -99,6 +101,12 @@ src/
     appendMessage / appendEvent + per-type helpers
     getMessages / getEvents / getMaxEventIdx / getFullMessages
     save / load / loadAll / list / search / archive / delete / fork / replaceMessages
+
+  settings/             ctx.fns.settings.*  ← DB-backed key-value with scope
+    get / set / remove / list                ← generic CRUD, JSON-encoded value
+    getNumber / getString                    ← typed getters with fallback
+    agentDebounceMs                          ← narrow helpers used by hot paths
+    store.test.ts                            ← unit + integration coverage
 
   $migrate_*.up.sql     applied at startup; events.idx and messages.idx are per-agent monotonic cursors
 
