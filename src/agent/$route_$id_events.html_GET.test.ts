@@ -30,6 +30,11 @@ function mkCtx() {
     ctx.fns.agent.wakeWaiters = wakeWaiters;
     ctx.fns.agent.waitForEvent = waitForEvent;
     ctx.fns.agent.renderEventHtml = renderEventHtml;
+    ctx.fns.agent.nextId = (() => {
+        let i = 0;
+        const ids = ['a', 'b', 'c', 'd', 'e'];
+        return () => ids[i++] ?? 'z';
+    })();
     ctx.fns.markdown.highlight = async (_c: any, s: string) => String(s);
     return ctx;
 }
@@ -45,7 +50,7 @@ describe('GET /agent/:id/events.html', () => {
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
-        const res = await route(ctx, null, reqFor('agent_nope', 0));
+        const res = await route(ctx, null, reqFor('nope', 0));
         expect(res.status).toBe(404);
     });
 

@@ -12,6 +12,7 @@ declare global {
         finishTask: typeof import("./agent/finishTask").default;
         fullSystemPrompt: typeof import("./agent/fullSystemPrompt").default;
         llmCall: typeof import("./agent/llmCall").default;
+        nextId: typeof import("./agent/nextId").default;
         readAndSummarize: typeof import("./agent/readAndSummarize").default;
         renderEventHtml: typeof import("./agent/renderEventHtml").default;
         renderStatusBar: typeof import("./agent/renderStatusBar").default;

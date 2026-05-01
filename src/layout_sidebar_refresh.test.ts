@@ -4,7 +4,7 @@ import layout from "./$layout";
 describe("layout sidebar refresh", () => {
     test("returns sidebar fragment for arbitrary current route when x-hyper-fragment=sidebar", () => {
         const list = mock(() => [{
-            id: "agent_x",
+            id: "x",
             model: "codex:gpt-5.4",
             title: "(empty)",
             turns: 0,
@@ -13,7 +13,7 @@ describe("layout sidebar refresh", () => {
         }]);
 
         const ctx = {
-            state: { agent: { agent_x: { id: "agent_x", isStreaming: false } } },
+            state: { agent: { x: { id: "x", isStreaming: false } } },
             fns: {
                 session: { list },
                 files: { listOpen: () => [] },
@@ -30,6 +30,6 @@ describe("layout sidebar refresh", () => {
         }, req) as string;
 
         expect(html).toContain("<aside");
-        expect(html).toContain("agent_x");
+        expect(html).toContain("x");
     });
 });

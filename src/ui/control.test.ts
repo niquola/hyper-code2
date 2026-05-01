@@ -10,7 +10,7 @@ const mkCtx = () => ({
   fns: {
     agent: {
       start(ctx: any, opts: any) {
-        const agent = { id: 'agent_test', model: opts.model, systemPrompt: opts.systemPrompt, tools: opts.tools, events: [], messages: [], scratchpad: {}, isStreaming: false };
+        const agent = { id: 'test', model: opts.model, systemPrompt: opts.systemPrompt, tools: opts.tools, events: [], messages: [], scratchpad: {}, isStreaming: false };
         ctx.state.agent[agent.id] = agent;
         return agent;
       },
@@ -32,8 +32,8 @@ describe('ui control helpers', () => {
   test('createAgent creates and optionally opens agent', async () => {
     const ctx: any = mkCtx();
     const res = await createAgent(ctx, { model: 'x:test', open: true });
-    expect(res.id).toBe('agent_test');
-    expect(ctx.state.emitted[0]).toEqual({ type: 'ui.navigate', path: '/agent/agent_test' });
+    expect(res.id).toBe('test');
+    expect(ctx.state.emitted[0]).toEqual({ type: 'ui.navigate', path: '/agent/test' });
   });
 
   test('sendToAgent queues run and emits navigate when requested', async () => {
@@ -41,7 +41,7 @@ describe('ui control helpers', () => {
     const agent = ctx.fns.agent.start(ctx, { model: 'x:test', systemPrompt: '', tools: [] });
     const res = await sendToAgent(ctx, { agentId: agent.id, text: 'hello', open: true });
     expect(res.agentId).toBe(agent.id);
-    expect(ctx.state.emitted[0]).toEqual({ type: 'ui.navigate', path: '/agent/agent_test' });
+    expect(ctx.state.emitted[0]).toEqual({ type: 'ui.navigate', path: '/agent/test' });
   });
 
   test('notify emits ui.notify event', async () => {

@@ -4,10 +4,12 @@ import start from "./start";
 const mkCtx = () => {
     const save = mock(() => {});
     const emitAgentsChanged = mock(() => {});
+    const nextId = mock(() => 'a');
     return {
         state: {},
         env: process.env,
         fns: {
+            agent: { nextId },
             session: { save },
             events: { emitAgentsChanged },
         },
@@ -18,7 +20,7 @@ describe("agent.start", () => {
     test("creates agent with default shape", () => {
         const ctx = mkCtx();
         const agent = start(ctx, { model: "minimax/minimax-m2.7" });
-        expect(agent.id).toMatch(/^agent_/);
+        expect(agent.id).toBe('a');
         expect(agent.model).toBe("minimax/minimax-m2.7");
         expect(agent.systemPrompt).toBe("");
         expect(agent.messages).toEqual([]);
@@ -36,6 +38,9 @@ describe("agent.start", () => {
 
     test("multiple agents coexist", () => {
         const ctx = mkCtx();
+        (ctx as any).fns.agent.nextId
+            .mockReturnValueOnce('a')
+            .mockReturnValueOnce('b');
         const a = start(ctx, { model: "x" });
         const b = start(ctx, { model: "y" });
         expect(a.id).not.toBe(b.id);
@@ -45,6 +50,7 @@ describe("agent.start", () => {
     test("persists and emits create event", () => {
         const ctx = mkCtx() as any;
         const agent = start(ctx, { model: "codex:gpt-5.4" });
+        expect(ctx.fns.agent.nextId).toHaveBeenCalledTimes(1);
         expect(ctx.fns.session.save).toHaveBeenCalledTimes(1);
         expect(ctx.fns.session.save).toHaveBeenCalledWith(ctx, agent);
         expect(ctx.fns.events.emitAgentsChanged).toHaveBeenCalledTimes(1);

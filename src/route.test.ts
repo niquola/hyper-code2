@@ -21,11 +21,11 @@ describe("GET /", () => {
 
     test("agents exist — redirects 302 to /agent/<first-id>", async () => {
         const ctx = mkCtx({
-            agent_aaa: { id: "agent_aaa", model: "m", events: [], isStreaming: false },
+            aaa: { id: "aaa", model: "m", events: [], isStreaming: false },
         });
         const res = await route(ctx, null, new Request("http://x/"));
         expect(res instanceof Response).toBe(true);
         expect((res as Response).status).toBe(302);
-        expect((res as Response).headers.get("location")).toBe("/agent/agent_aaa");
+        expect((res as Response).headers.get("location")).toBe("/agent/aaa");
     });
 });

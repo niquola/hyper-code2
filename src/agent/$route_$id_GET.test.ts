@@ -38,24 +38,24 @@ async function render(ctx: Context, id: string): Promise<string> {
 
 describe('GET /agent/:id', () => {
     test('404 when agent does not exist', async () => {
-        const res = await route(mkCtx(), null, req('agent_nope'));
+        const res = await route(mkCtx(), null, req('nope'));
         expect(res instanceof Response).toBe(true);
         expect((res as Response).status).toBe(404);
     });
 
     test('loads agent from session storage when missing from runtime state', async () => {
-        const loaded = { id: 'agent_db', model: 'db-model', messages: [], events: [], isStreaming: false };
+        const loaded = { id: 'db', model: 'db-model', messages: [], events: [], isStreaming: false };
         const ctx = mkCtx();
         let requestedId = '';
         (ctx.fns as any).session.load = (_ctx: Context, id: string) => {
             requestedId = id;
-            return id === 'agent_db' ? loaded : null;
+            return id === 'db' ? loaded : null;
         };
 
-        const html = await render(ctx, 'agent_db');
-        expect(requestedId).toBe('agent_db');
-        expect((ctx.state as any).agent.agent_db).toBe(loaded);
-        expect(html).toContain('agent_db');
+        const html = await render(ctx, 'db');
+        expect(requestedId).toBe('db');
+        expect((ctx.state as any).agent.db).toBe(loaded);
+        expect(html).toContain('db');
         expect(html).toContain('db-model');
     });
 });

@@ -112,7 +112,7 @@ To swap your own model mid-session: just assign `agent.model = "kimi:..."` and p
 
 Each LLM call has a freshly-injected block at the END of the system prompt with:
 - `cwd` — current working directory (root of this repo on disk)
-- `your agent id` — string id like `agent_abc12345`; also available inside evalCode as `agent.id`
+- `your agent id` — string id like `a`, `z`, `aa`, `ab`, ...; also available inside evalCode as `agent.id`
 - `db path` — SQLite file (relative to cwd)
 
 So you can always refer to yourself and the filesystem without calling anything. Examples:
