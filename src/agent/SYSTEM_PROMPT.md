@@ -80,6 +80,7 @@ src/
 
   db/                      ctx.fns.db.*         — shared SQLite: connect, migrate, exec, select, insert
   session/                 ctx.fns.session.*    — per-agent persistence: save, load, loadAll, list, search, delete
+  settings/                ctx.fns.settings.*   — DB-backed key-value with scope: get, set, remove, list, getNumber, getString
 ```
 
 **Conventions (see the existing files — don't invent new patterns):**
@@ -215,6 +216,60 @@ ctx.fns.db.select(ctx,
 ```
 
 `ctx.fns.db.exec` lets you mutate — useful when you want to persist your own tables in the same db (run a migration once via `ctx.fns.db.migrate` after dropping a new `$migrate_*.up.sql`).
+
+## Settings — DB-backed key-value with scope
+
+`ctx.fns.settings.*` is a generic key-value store backed by the `settings` table. Use it whenever you need a configurable value to outlive a single run, be visible to other agents, or be tweakable from the UI/REPL without redeploys.
+
+Schema (already migrated):
+```
+settings(module, scope_type, scope_id, key, value, is_secret, updated_at)
+PRIMARY KEY (module, scope_type, scope_id, key)
+```
+Value is JSON-encoded — any serializable value works.
+
+API:
+- `ctx.fns.settings.set(ctx, { module, scopeType, scopeId?, key, value, isSecret? })` — upsert.
+- `ctx.fns.settings.get(ctx, { module, scopeType, scopeId?, key })` → decoded value or `undefined`.
+- `ctx.fns.settings.remove(ctx, { module, scopeType, scopeId?, key })` — delete one.
+- `ctx.fns.settings.list(ctx, { module?, scopeType?, scopeId? })` → rows; any filter is optional.
+- `ctx.fns.settings.getNumber(ctx, { ..., fallback })` / `getString(ctx, { ..., fallback })` — typed getters.
+
+Conventions in use today:
+| Module     | Scope type   | Scope id      | Key            | Read by                                  |
+|------------|--------------|---------------|----------------|------------------------------------------|
+| `llm`      | `global`     | (empty)       | `defaultModel` | `ui.createAgent` — default model         |
+| `provider` | `provider`   | `<provider>`  | `baseUrl`      | `llm.resolveEndpoint` — overrides URL    |
+| `provider` | `provider`   | `<provider>`  | `apiKey`       | `llm.resolveEndpoint` — overrides env key|
+| `ui`       | `agent`      | `<agentId>`   | `debounceMs`   | `POST /agent/:id` — per-agent debounce   |
+
+Priority for every consumer: explicit caller input → settings → env → built-in default.
+
+Examples:
+```js
+// Set the global default model (UI / new-agent will pick this up):
+ctx.fns.settings.set(ctx, {
+  module: "llm", scopeType: "global", key: "defaultModel",
+  value: "kimi:kimi-k2-turbo-preview",
+});
+
+// Override OpenAI base URL via settings (no redeploy):
+ctx.fns.settings.set(ctx, {
+  module: "provider", scopeType: "provider", scopeId: "openai", key: "baseUrl",
+  value: "https://my-proxy.example/v1",
+});
+
+// Per-agent debounce — make THIS agent reply in 1s:
+ctx.fns.settings.set(ctx, {
+  module: "ui", scopeType: "agent", scopeId: agent.id, key: "debounceMs",
+  value: 1000,
+});
+
+// Read everything in a scope (e.g. show the user their provider config):
+ctx.fns.settings.list(ctx, { module: "provider" });
+```
+
+When to introduce a new scope: instead of stashing config on `agent.scratchpad` (lost on archive/clear) or in env (requires restart), drop it under settings with a clear `(module, scopeType)` and read it from the relevant code path.
 
 ## Execution model
 
