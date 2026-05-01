@@ -127,9 +127,19 @@ declare global {
         updateScratchpad: typeof import("./session/updateScratchpad").default;
         };
         settings: {
+        agentDebounceMs: typeof import("./settings/agentDebounceMs").default;
+        get: typeof import("./settings/get").default;
+        getNumber: typeof import("./settings/getNumber").default;
+        getString: typeof import("./settings/getString").default;
+        list: typeof import("./settings/list").default;
         logoutCodex: typeof import("./settings/logoutCodex").default;
         logoutKimi: typeof import("./settings/logoutKimi").default;
+        modelDefault: typeof import("./settings/modelDefault").default;
+        providerApiKey: typeof import("./settings/providerApiKey").default;
+        providerBaseUrl: typeof import("./settings/providerBaseUrl").default;
+        remove: typeof import("./settings/remove").default;
         saveEnv: typeof import("./settings/saveEnv").default;
+        set: typeof import("./settings/set").default;
         startCodexLogin: typeof import("./settings/startCodexLogin").default;
         startKimiLogin: typeof import("./settings/startKimiLogin").default;
         status: typeof import("./settings/status").default;

@@ -12,8 +12,19 @@ export default function (ctx: Context, model: string): {
     const modelId = m ? m[2]! : model;
     const p = PROVIDERS[provider];
     if (!p) throw new Error(`unknown provider: ${provider}`);
-    const baseUrl = p.resolveBaseUrl(ctx);
-    const apiKey = p.resolveApiKey ? p.resolveApiKey(ctx) : null;
+
+    // Settings table overrides env / hardcoded defaults when present.
+    const settingsBase = ctx.fns?.settings?.get?.(ctx, {
+        module: 'provider', scopeType: 'provider', scopeId: provider, key: 'baseUrl',
+    });
+    const baseUrl = (typeof settingsBase === 'string' && settingsBase) ? settingsBase : p.resolveBaseUrl(ctx);
+
+    const settingsKey = ctx.fns?.settings?.get?.(ctx, {
+        module: 'provider', scopeType: 'provider', scopeId: provider, key: 'apiKey',
+    });
+    const apiKey = (typeof settingsKey === 'string' && settingsKey)
+        ? settingsKey
+        : (p.resolveApiKey ? p.resolveApiKey(ctx) : null);
     const url = p.api === "anthropic" ? `${baseUrl}/v1/messages`
         : p.api === "responses" ? `${baseUrl}/responses`
             : `${baseUrl}/chat/completions`;

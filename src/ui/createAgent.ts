@@ -9,7 +9,11 @@ const EVAL_CODE_TOOL = {
 };
 
 export default async function (ctx: Context, opts: { model?: string; systemPrompt?: string; tools?: any[]; open?: boolean; startText?: string } = {}) {
-    const model = (opts.model ?? ctx.env.MODEL ?? 'minimax/minimax-m2.7').trim();
+    // Priority: explicit opts.model > settings(global, llm.defaultModel) > env.MODEL > built-in default.
+    const fromSettings = ctx.fns?.settings?.getString?.(ctx, {
+        module: 'llm', scopeType: 'global', key: 'defaultModel', fallback: '',
+    });
+    const model = (opts.model ?? (fromSettings || ctx.env.MODEL) ?? 'minimax/minimax-m2.7').trim();
     const systemPrompt = opts.systemPrompt ?? await ctx.fns.agent.systemPrompt(ctx);
     const tools = opts.tools ?? [EVAL_CODE_TOOL];
     const agent = ctx.fns.agent.start(ctx, { model, systemPrompt, tools });

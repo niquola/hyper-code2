@@ -14,8 +14,11 @@ export default async function (ctx: Context, _session: any, req: any) {
     if (!text) return Response.json({ error: 'empty input' }, { status: 400 });
 
     const url = new URL(req.url);
-    const debounceSeconds = Number(url.searchParams.get('debounceSeconds') ?? '5');
-    const debounceMs = Math.max(0, debounceSeconds * 1000);
+    const explicitSeconds = url.searchParams.get('debounceSeconds');
+    // Settings can override per-agent default; query param wins if given.
+    const debounceMs = explicitSeconds != null
+        ? Math.max(0, Number(explicitSeconds) * 1000)
+        : ctx.fns.settings?.agentDebounceMs?.(ctx, agent.id, 5000) ?? 5000;
     const sendAt = Date.now() + debounceMs;
 
     const userAppend = await ctx.fns.session.appendUserMessage(ctx, agent.id, text);
