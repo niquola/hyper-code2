@@ -11,6 +11,7 @@ import fork from "./fork";
 import getFullMessages from "./getFullMessages";
 import getMessages from "./getMessages";
 import start from "../agent/start";
+import nextId from "../agent/nextId";
 
 function mkCtx() {
   const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {}, agent: {}, events: {} } };
@@ -28,6 +29,7 @@ function mkCtx() {
   ctx.fns.session.appendUserMessage = appendUserMessage;
   ctx.fns.session.appendAssistantMessage = appendAssistantMessage;
   ctx.fns.agent.start = start;
+  ctx.fns.agent.nextId = nextId;
   ctx.fns.agent.renderEventHtml = async () => '';
   ctx.fns.events.emitAgentsChanged = () => {};
   return ctx;

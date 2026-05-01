@@ -6,9 +6,10 @@ import appendEvent from './appendEvent';
 import getEvents from './getEvents';
 import getMaxEventIdx from './getMaxEventIdx';
 import start from '../agent/start';
+import nextId from '../agent/nextId';
 
 function mkCtx() {
-    const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {}, agent: {} } };
+    const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {}, agent: { nextId } } };
     ctx.fns.db.connect = connect;
     ctx.fns.db.migrate = migrate;
     ctx.fns.db.exec = (c: any, sql: string, params: any) => {

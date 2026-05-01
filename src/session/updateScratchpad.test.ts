@@ -8,9 +8,10 @@ import getEvents from "./getEvents";
 import syncAgentState from "./syncAgentState";
 import updateScratchpad from "./updateScratchpad";
 import start from "../agent/start";
+import nextId from "../agent/nextId";
 
 function mkCtx() {
-  const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {} } };
+  const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {}, agent: { nextId } } };
   ctx.fns.db.connect = connect;
   ctx.fns.db.migrate = migrate;
   ctx.fns.db.exec = (c: any, sql: string, params: any) => { const q = c.state.db.query(sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };

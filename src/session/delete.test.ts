@@ -7,6 +7,7 @@ import appendUserMessage from "./appendUserMessage";
 import appendEvent from "./appendEvent";
 import del from "./delete";
 import start from "../agent/start";
+import nextId from "../agent/nextId";
 
 const mkCtx = async () => {
     const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;

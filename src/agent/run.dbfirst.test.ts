@@ -10,6 +10,7 @@ import getMessages from '../session/getMessages';
 import getFullMessages from '../session/getFullMessages';
 import getEvents from '../session/getEvents';
 import start from './start';
+import nextId from './nextId';
 
 function mkCtx() {
   const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {}, agent: {}, llm: {}, markdown: {}, repl: {}, events: {} } };
@@ -21,6 +22,7 @@ function mkCtx() {
   ctx.fns.markdown.highlight = async (_c: any, s: string) => s;
   ctx.fns.markdown.render = async (_c: any, s: string) => s;
   ctx.fns.events.emit = () => {};
+  ctx.fns.agent.nextId = nextId;
   return ctx;
 }
 

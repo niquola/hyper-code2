@@ -7,6 +7,7 @@ import replaceMessages from "./replaceMessages";
 import replaceEvents from "./replaceEvents";
 import load from "./load";
 import start from "../agent/start";
+import nextId from "../agent/nextId";
 
 const mkCtx = async () => {
     const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;

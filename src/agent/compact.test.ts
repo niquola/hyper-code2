@@ -1,8 +1,9 @@
 import { test, expect, describe } from "bun:test";
 import start from "./start";
 import compact from "./compact";
+import nextId from "./nextId";
 
-const mkCtx = () => ({ state: {}, env: {}, fns: {} } as unknown as Context);
+const mkCtx = () => ({ state: {}, env: {}, fns: { agent: { nextId } } } as unknown as Context);
 
 describe("agent.compactLastToolResult", () => {
     test("replaces last tool message content with summary", () => {
