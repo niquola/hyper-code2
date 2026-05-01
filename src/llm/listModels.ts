@@ -55,5 +55,20 @@ export default async function (ctx: Context): Promise<Record<string, string[]>> 
         }
     } catch { /* not logged in or unreachable — omit */ }
 
+    // Claude Code (Anthropic subscription) — only if user has a valid token in
+    // the macOS keychain. Curated list — Anthropic's /v1/models endpoint isn't
+    // OAuth-friendly, so we ship a small static set of currently-available
+    // model IDs. Edit here when Anthropic rolls new ones.
+    try {
+        const tok = await ctx.fns.llm.refreshClaudeCode?.(ctx);
+        if (tok) {
+            out["claude-code"] = [
+                "claude-code:claude-opus-4-7",
+                "claude-code:claude-sonnet-4-6",
+                "claude-code:claude-haiku-4-5-20251001",
+            ];
+        }
+    } catch { /* no keychain access — omit */ }
+
     return out;
 }
