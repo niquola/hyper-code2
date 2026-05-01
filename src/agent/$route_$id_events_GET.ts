@@ -17,15 +17,11 @@ export default async function (ctx: Context, _session: any, req: any) {
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
     const usage = lastAssistant?.usage ?? null;
 
-    const running = ctx.fns.db.select<any>(ctx,
-        'SELECT COUNT(*) AS n FROM agent_jobs WHERE agent_id = ? AND status = ?',
-        [id, 'running'],
+    const row = ctx.fns.db.select<any>(ctx,
+        'SELECT run_state, next_run_at FROM agents WHERE id = ?',
+        [id],
     )[0];
-    const queued = ctx.fns.db.select<any>(ctx,
-        'SELECT COUNT(*) AS n FROM agent_jobs WHERE agent_id = ? AND status = ?',
-        [id, 'queued'],
-    )[0];
-    const isStreaming = Number(running?.n ?? 0) > 0 || Number(queued?.n ?? 0) > 0;
+    const isStreaming = row?.run_state === 'running' || !!row?.next_run_at;
 
     return Response.json({
         id: agent.id,

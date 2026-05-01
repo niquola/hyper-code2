@@ -43,7 +43,6 @@ import updateScratchpad from './session/updateScratchpad';
 
 import start from './agent/start';
 import nextId from './agent/nextId';
-import enqueue from './agent/enqueue';
 import workerLoop from './agent/workerLoop';
 import wakeWorker from './agent/wakeWorker';
 import wakeWaiters from './agent/wakeWaiters';
@@ -80,7 +79,7 @@ export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } =
             },
             agent: {
                 start, nextId,
-                enqueue, workerLoop, wakeWorker, wakeWaiters, waitForEvent,
+                workerLoop, wakeWorker, wakeWaiters, waitForEvent,
                 renderEventHtml, renderStatusBar,
                 compact, stop, clear,
                 llmCall: streamLLM,

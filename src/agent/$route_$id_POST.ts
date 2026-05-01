@@ -15,25 +15,29 @@ export default async function (ctx: Context, _session: any, req: any) {
 
     const url = new URL(req.url);
     const debounceSeconds = Number(url.searchParams.get('debounceSeconds') ?? '5');
+    const debounceMs = Math.max(0, debounceSeconds * 1000);
+    const sendAt = Date.now() + debounceMs;
 
     const userAppend = await ctx.fns.session.appendUserMessage(ctx, agent.id, text);
     ctx.fns.session.syncAgentState(ctx, agent);
 
-    const job = ctx.fns.agent.enqueue(ctx, agent, text, {
-        debounceSeconds,
-        messageIdx: userAppend.idx,
-    });
-    // workerLoop is woken by enqueue itself via wakeWorker; the single process-wide loop drains all agents.
+    // Schedule (or push back) the next run on the agent row itself.
+    // MAX(...) keeps the latest message bumping the debounce window forward.
+    ctx.fns.db.exec(ctx,
+        `UPDATE agents
+            SET next_run_at = MAX(COALESCE(next_run_at, 0), ?),
+                updated_at  = ?
+          WHERE id = ?`,
+        [sendAt, Date.now(), agent.id],
+    );
+    ctx.fns.agent.wakeWorker(ctx);
 
-    // htmx form submit: empty 204 — long-poll on #msg-tail picks up the new user event from DB.
-    // JSON clients still get the legacy shape.
     if ((req.headers?.get?.('hx-request') ?? '') === 'true') {
         return new Response(null, { status: 204 });
     }
     return Response.json({
         ok: true,
-        jobId: job.id,
-        sendAt: job.sendAt,
+        sendAt,
         messageIdx: userAppend.idx,
     });
 }

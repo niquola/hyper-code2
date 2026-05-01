@@ -1,24 +1,19 @@
 export default function (ctx: Context, agentId: string): string {
     const now = Date.now();
-    const running = ctx.fns.db.select<any>(ctx,
-        'SELECT id, started_at FROM agent_jobs WHERE agent_id = ? AND status = ? ORDER BY started_at DESC LIMIT 1',
-        [agentId, 'running'],
-    )[0];
-    const queued = ctx.fns.db.select<any>(ctx,
-        'SELECT id, debounce_until FROM agent_jobs WHERE agent_id = ? AND status = ? ORDER BY debounce_until ASC LIMIT 1',
-        [agentId, 'queued'],
+    const row = ctx.fns.db.select<any>(ctx,
+        'SELECT run_state, run_started_at, next_run_at FROM agents WHERE id = ?',
+        [agentId],
     )[0];
 
     let label: string;
     let cls: string;
 
-    if (running) {
-        const elapsed = ((now - Number(running.started_at)) / 1000).toFixed(1);
+    if (row?.run_state === 'running') {
+        const elapsed = ((now - Number(row.run_started_at ?? now)) / 1000).toFixed(1);
         label = `running · ${elapsed}s`;
         cls = 'text-blue-700 bg-blue-50 border-blue-300';
-    } else if (queued) {
-        const waitsMs = Math.max(0, Number(queued.debounce_until) - now);
-        const waits = (waitsMs / 1000).toFixed(1);
+    } else if (row?.next_run_at) {
+        const waits = Math.max(0, (Number(row.next_run_at) - now) / 1000).toFixed(1);
         label = `queued · ${waits}s`;
         cls = 'text-amber-700 bg-amber-50 border-amber-300';
     } else {

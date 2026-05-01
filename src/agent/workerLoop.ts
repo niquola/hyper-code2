@@ -1,6 +1,6 @@
-// One worker per process drains agent_jobs serially.
-// Atomic claim via SQL: UPDATE ... WHERE status='queued' AND debounce_until <= now.
-// When idle, sleeps until either wakeWorker fires or the soonest debounce_until elapses (capped 30s).
+// Single in-process worker. Drains agents whose debounce window has elapsed.
+// State lives on the agents row: next_run_at + run_state + last_processed_msg_idx.
+// One run can cover multiple new user messages — they merge naturally.
 const MAX_IDLE_MS = 30_000;
 
 function isAbortError(error: any) {
@@ -36,25 +36,30 @@ export default async function (ctx: Context): Promise<void> {
     while ((ctx.state as any).workerLoopRunning) {
         const now = Date.now();
 
-        // Atomic claim: pick the earliest queued job whose debounce has elapsed.
-        const runKey = 'run_' + crypto.randomUUID().slice(0, 8);
-        const claimed = ctx.fns.db.exec(ctx,
-            `UPDATE agent_jobs
-             SET status = ?, run_key = ?, started_at = ?, finished_at = NULL, updated_at = ?
-             WHERE id = (
-               SELECT id FROM agent_jobs
-               WHERE status = ? AND debounce_until <= ?
-               ORDER BY debounce_until ASC, created_at ASC
-               LIMIT 1
-             )`,
-            ['running', runKey, now, now, 'queued', now],
+        // Atomic claim: pick one idle agent whose debounce window is open.
+        const claimed = ctx.fns.db.select<any>(ctx,
+            `UPDATE agents
+                SET run_state      = 'running',
+                    run_started_at = ?,
+                    last_error     = NULL,
+                    updated_at     = ?
+              WHERE id IN (
+                  SELECT id FROM agents
+                   WHERE run_state = 'idle'
+                     AND next_run_at IS NOT NULL
+                     AND next_run_at <= ?
+                     AND archived_at IS NULL
+                   ORDER BY next_run_at ASC
+                   LIMIT 1
+              )
+              RETURNING id`,
+            [now, now, now],
         );
 
-        if (!Number(claimed?.changes ?? 0)) {
-            // Nothing claimable. Sleep until next debounce_until or until worker is woken.
+        if (claimed.length === 0) {
             const next = ctx.fns.db.select<any>(ctx,
-                'SELECT MIN(debounce_until) AS next FROM agent_jobs WHERE status = ?',
-                ['queued'],
+                'SELECT MIN(next_run_at) AS next FROM agents WHERE run_state = ? AND next_run_at IS NOT NULL AND archived_at IS NULL',
+                ['idle'],
             )[0];
             const nextMs = next?.next ? Number(next.next) - Date.now() : MAX_IDLE_MS;
             const wait = Math.max(50, Math.min(MAX_IDLE_MS, nextMs));
@@ -62,54 +67,71 @@ export default async function (ctx: Context): Promise<void> {
             continue;
         }
 
-        const job = ctx.fns.db.select<any>(ctx,
-            'SELECT id, agent_id, payload_json FROM agent_jobs WHERE run_key = ? LIMIT 1',
-            [runKey],
-        )[0];
-        if (!job) continue;
-
-        const agent = loadAgent(ctx, job.agent_id);
+        const agentId = claimed[0]!.id;
+        const agent = loadAgent(ctx, agentId);
         if (!agent) {
-            // Orphaned job — mark failed and keep going.
             const ts = Date.now();
             ctx.fns.db.exec(ctx,
-                'UPDATE agent_jobs SET status = ?, error = ?, finished_at = ?, updated_at = ? WHERE id = ?',
-                ['failed', 'agent not found', ts, ts, job.id],
+                `UPDATE agents SET run_state = 'idle', last_error = ?, updated_at = ? WHERE id = ?`,
+                ['agent not found at run-time', ts, agentId],
             );
             continue;
         }
 
-        const payload = JSON.parse(job.payload_json || '{}');
-        agent.currentJobId = job.id;
-        agent.isStreaming = true;
+        // Snapshot the message frontier before run() — so we know which messages were "in this batch"
+        // even if run() (or concurrent POSTs) appends more during execution.
+        const frontier = ctx.fns.db.select<any>(ctx,
+            'SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ?',
+            [agentId],
+        )[0];
+        const frontierIdx = Number(frontier?.max_idx ?? -1);
 
-        let finalStatus = 'done';
-        let abortReason: string | null = null;
+        agent.isStreaming = true;
         let errorText: string | null = null;
+        let aborted = false;
 
         try {
-            await ctx.fns.agent.run(ctx, agent, String(payload.text ?? ''), {
-                userMessageAlreadyAppended: true,
-            });
+            await ctx.fns.agent.run(ctx, agent, '', { userMessageAlreadyAppended: true });
         } catch (e: any) {
             if (isAbortError(e)) {
-                finalStatus = 'aborted';
-                abortReason = 'aborted';
+                aborted = true;
             } else {
-                finalStatus = 'failed';
                 errorText = e?.message ?? String(e);
-                try {
-                    await ctx.fns.session.appendErrorEvent(ctx, agent.id, errorText ?? 'unknown error', Date.now());
-                    ctx.fns.session.syncAgentState(ctx, agent);
-                } catch { /* swallow */ }
+                try { await ctx.fns.session.appendErrorEvent(ctx, agentId, errorText ?? 'unknown error', Date.now()); } catch {}
             }
         } finally {
             const ts = Date.now();
+            // Advance cursor only on success (not on abort/error) so retried runs see the same frontier.
+            const advanceCursor = !aborted && !errorText;
+
+            // If new messages arrived during the run, schedule another pass with the same debounce
+            // (so consecutive replies merge naturally). Otherwise clear next_run_at.
+            const after = ctx.fns.db.select<any>(ctx,
+                'SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ?',
+                [agentId],
+            )[0];
+            const afterIdx = Number(after?.max_idx ?? -1);
+            const cursorIdx = advanceCursor ? frontierIdx : Number(((ctx.state as any).agent?.[agentId]?.lastProcessedMsgIdx) ?? frontierIdx);
+            const stillPending = afterIdx > cursorIdx;
+
             ctx.fns.db.exec(ctx,
-                'UPDATE agent_jobs SET status = ?, abort_reason = COALESCE(abort_reason, ?), error = ?, finished_at = ?, updated_at = ? WHERE id = ?',
-                [finalStatus, abortReason, errorText, ts, ts, job.id],
+                `UPDATE agents
+                    SET run_state = 'idle',
+                        run_started_at = NULL,
+                        last_processed_msg_idx = ?,
+                        next_run_at = ?,
+                        last_error = ?,
+                        updated_at = ?
+                  WHERE id = ?`,
+                [
+                    cursorIdx,
+                    stillPending ? ts + 5_000 : null,
+                    errorText,
+                    ts,
+                    agentId,
+                ],
             );
-            agent.currentJobId = null;
+
             agent.abortController = null;
             agent.isStreaming = false;
             try { ctx.fns.session.syncAgentState(ctx, agent); } catch {}

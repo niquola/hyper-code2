@@ -2,17 +2,16 @@ import { describe, test, expect } from "bun:test";
 import stop from './stop';
 
 describe('agent.stop', () => {
-  test('aborts current job and can clear queue', () => {
+  test('aborts run and clears next_run_at when clearQueue=true', () => {
     const calls: any[] = [];
     const agent: any = {
       id: 'a1',
-      currentJobId: 'job1',
       abortController: { abort(reason: any) { calls.push(['abort', reason]); } },
       isStreaming: true,
     };
     const ctx: any = {
       fns: {
-        db: { exec: (_c: any, sql: string, params: any[]) => calls.push(['db.exec', sql, params]) },
+        db: { exec: (_c: any, sql: string, params: any[]) => { calls.push(['db.exec', sql.replace(/\s+/g, ' ').trim(), params]); return { changes: 1, lastInsertRowid: 0 }; } },
         session: {
           appendErrorEvent: (_c: any, id: string, error: string) => calls.push(['appendErrorEvent', id, error]),
           syncAgentState: () => {},
@@ -21,9 +20,26 @@ describe('agent.stop', () => {
     };
     const res = stop(ctx, agent, { clearQueue: true });
     expect(res.ok).toBe(true);
-    expect(calls[0][0]).toBe('db.exec');
+    expect(calls[0]).toEqual(['abort', 'stopped_by_user']);
     expect(calls[1][0]).toBe('db.exec');
-    expect(calls[2]).toEqual(['abort', 'stopped_by_user']);
-    expect(calls[3]).toEqual(['appendErrorEvent', 'a1', 'stopped by user; queue cleared']);
+    expect(calls[1][1]).toMatch(/UPDATE agents .*run_state = 'idle'.*next_run_at = NULL/);
+    expect(calls[2]).toEqual(['appendErrorEvent', 'a1', 'stopped by user; queue cleared']);
+  });
+
+  test('without clearQueue keeps next_run_at', () => {
+    const calls: any[] = [];
+    const agent: any = {
+      id: 'a1',
+      abortController: { abort() {} },
+      isStreaming: true,
+    };
+    const ctx: any = {
+      fns: {
+        db: { exec: (_c: any, sql: string, _p: any[]) => { calls.push(sql.replace(/\s+/g, ' ').trim()); return { changes: 1, lastInsertRowid: 0 }; } },
+        session: { appendErrorEvent: () => {}, syncAgentState: () => {} },
+      },
+    };
+    stop(ctx, agent, { clearQueue: false });
+    expect(calls[0]).toMatch(/next_run_at = next_run_at/);
   });
 });

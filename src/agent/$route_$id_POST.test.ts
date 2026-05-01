@@ -12,6 +12,12 @@ function mkCtx(calls: any[]) {
   return {
     state: { agent: { a1: agent } },
     fns: {
+      db: {
+        exec: (_c: any, sql: string, params: any) => {
+          calls.push(['db.exec', sql.replace(/\s+/g, ' ').trim(), params]);
+          return { changes: 1, lastInsertRowid: 0 };
+        },
+      },
       session: {
         appendUserMessage: async (_c: any, id: string, text: string) => {
           calls.push(['appendUserMessage', id, text]);
@@ -22,10 +28,6 @@ function mkCtx(calls: any[]) {
         load: () => null,
       },
       agent: {
-        enqueue: (_c: any, _a: any, text: string, opts: any) => {
-          calls.push(['enqueue', text, opts]);
-          return { id: 'job1', sendAt: 123 };
-        },
         wakeWorker: () => { calls.push(['wakeWorker']); },
       },
     },
@@ -33,18 +35,18 @@ function mkCtx(calls: any[]) {
 }
 
 describe('POST /agent/:id', () => {
-  test('plain JSON client gets simplified ack — long-poll delivers the event', async () => {
+  test('plain JSON client gets simplified ack', async () => {
     const calls: any[] = [];
     const ctx = mkCtx(calls);
     const res = await route(ctx, null, mkReq('a1', 'hi'));
     expect(res.status).toBe(200);
     const json: any = await res.json();
     expect(json.ok).toBe(true);
-    expect(json.jobId).toBe('job1');
+    expect(typeof json.sendAt).toBe('number');
     expect(json.messageIdx).toBe(0);
-    expect(calls[0]).toEqual(['appendUserMessage', 'a1', 'hi']);
-    expect(calls[1]).toEqual(['enqueue', 'hi', { debounceSeconds: 5, messageIdx: 0 }]);
-    // POST no longer drains directly — the single workerLoop handles it.
+    expect(calls.find(c => c[0] === 'appendUserMessage')).toEqual(['appendUserMessage', 'a1', 'hi']);
+    expect(calls.find(c => c[0] === 'wakeWorker')).toBeTruthy();
+    expect(calls.find(c => c[0] === 'db.exec')[1]).toMatch(/UPDATE agents.*next_run_at/i);
   });
 
   test('htmx submit gets 204 No Content', async () => {
@@ -58,7 +60,7 @@ describe('POST /agent/:id', () => {
     (req as any).params = { id: 'a1' };
     const res = await route(ctx, null, req);
     expect(res.status).toBe(204);
-    expect(calls[0]).toEqual(['appendUserMessage', 'a1', 'hello via htmx']);
+    expect(calls.find(c => c[0] === 'appendUserMessage')).toEqual(['appendUserMessage', 'a1', 'hello via htmx']);
   });
 
   test('rejects empty body with 400', async () => {

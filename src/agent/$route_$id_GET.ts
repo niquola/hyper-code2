@@ -15,19 +15,16 @@ export default async function (ctx: Context, _session: any, req: any) {
     const inheritedCount = agent.parentId
         ? ctx.fns.session.getFullMessages(ctx, id).length - ctx.fns.session.getMessages(ctx, id).length
         : 0;
-    const running = ctx.fns.db.select<any>(ctx,
-        'SELECT COUNT(*) AS n FROM agent_jobs WHERE agent_id = ? AND status = ?',
-        [id, 'running'],
+    const stateRow = ctx.fns.db.select<any>(ctx,
+        'SELECT run_state, next_run_at FROM agents WHERE id = ?',
+        [id],
     )[0];
-    const queued = ctx.fns.db.select<any>(ctx,
-        'SELECT COUNT(*) AS n FROM agent_jobs WHERE agent_id = ? AND status = ?',
-        [id, 'queued'],
-    )[0];
+    const isStreaming = stateRow?.run_state === 'running' || !!stateRow?.next_run_at;
     const init = {
         agentId: id,
         inheritedCount,
         offset: maxIdx + 1,
-        isStreaming: Number(running?.n ?? 0) > 0 || Number(queued?.n ?? 0) > 0,
+        isStreaming,
     };
     const initJson = JSON.stringify(init).replace(/</g, '\u003c');
 

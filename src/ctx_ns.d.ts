@@ -8,7 +8,6 @@ declare global {
         clear: typeof import("./agent/clear").default;
         compact: typeof import("./agent/compact").default;
         delegateTask: typeof import("./agent/delegateTask").default;
-        enqueue: typeof import("./agent/enqueue").default;
         finishTask: typeof import("./agent/finishTask").default;
         fullSystemPrompt: typeof import("./agent/fullSystemPrompt").default;
         llmCall: typeof import("./agent/llmCall").default;

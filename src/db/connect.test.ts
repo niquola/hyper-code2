@@ -23,7 +23,7 @@ describe("session.connect", () => {
         expect(tables).toContain("events");
         expect(tables).toContain("_migrations");
         const cols = (name: string) => (db.query(`PRAGMA table_info(${name})`).all() as any[]).map((c: any) => c.name);
-        expect(cols("agents")).toEqual(["id", "model", "system_prompt", "tools", "scratchpad", "created_at", "updated_at", "archived_at", "parent_id", "fork_offset"]);
+        expect(cols("agents")).toEqual(["id", "model", "system_prompt", "tools", "scratchpad", "created_at", "updated_at", "archived_at", "parent_id", "fork_offset", "next_run_at", "last_processed_msg_idx", "run_state", "run_started_at", "last_error"]);
         expect(cols("messages")).toEqual(["agent_id", "idx", "role", "content", "tool_calls", "tool_call_id", "ts", "excluded_from_llm"]);
         expect(cols("events")).toEqual(["agent_id", "idx", "type", "payload", "ts"]);
     });
