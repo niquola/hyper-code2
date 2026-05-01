@@ -19,10 +19,12 @@ export async function getHL(): Promise<Highlighter> {
 }
 
 export default async function (_ctx: Context, code: string, lang: string): Promise<string> {
+    const safeCode = String(code ?? "");
+    const safeLang = String(lang ?? "text");
     const hl = await getHL();
-    const normalized = ALIASES[lang.toLowerCase()] ?? lang.toLowerCase();
+    const normalized = ALIASES[safeLang.toLowerCase()] ?? safeLang.toLowerCase();
     if (hl.getLoadedLanguages().includes(normalized as any)) {
-        try { return hl.codeToHtml(code, { lang: normalized, theme: "github-light" }); } catch { /* fall through */ }
+        try { return hl.codeToHtml(safeCode, { lang: normalized, theme: "github-light" }); } catch { /* fall through */ }
     }
-    return `<pre><code>${code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
+    return "<pre><code>" + safeCode.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</code></pre>";
 }

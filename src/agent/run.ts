@@ -1,12 +1,13 @@
 async function highlightResult(ctx: Context, output: string): Promise<string> {
-    const trimmed = output.trim();
+    const safeOutput = String(output ?? "");
+    const trimmed = safeOutput.trim();
     if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
         try {
             const pretty = JSON.stringify(JSON.parse(trimmed), null, 2);
             return await ctx.fns.markdown.highlight(ctx, pretty, "json");
         } catch {}
     }
-    return await ctx.fns.markdown.highlight(ctx, output, "javascript");
+    return await ctx.fns.markdown.highlight(ctx, safeOutput, "javascript");
 }
 
 function findFailedEvalSpan(messages: any[]): null | { assistantIdx: number; toolIdx: number } {
@@ -44,6 +45,54 @@ function excludeFailedEvalAttempts(ctx: Context, agentId: string) {
     return { changed };
 }
 
+async function safeRenderToolEvent(
+    ctx: Context,
+    agentId: string,
+    payload: { name: string; args: any; result: string; isError: boolean },
+) {
+    const safeArgs = payload?.args ?? {};
+    const code = typeof safeArgs?.code === "string" ? safeArgs.code : undefined;
+    const safeResult = String(payload?.result ?? "");
+
+    try {
+        const argsHtml = code != null
+            ? await ctx.fns.markdown.highlight(ctx, code, "ts")
+            : await ctx.fns.markdown.highlight(ctx, JSON.stringify(safeArgs, null, 2), "json");
+        const resultHtml = await highlightResult(ctx, safeResult);
+
+        await ctx.fns.session.appendToolCallEvent(ctx, agentId, {
+            name: payload.name,
+            args: safeArgs,
+            result: safeResult,
+            argsHtml,
+            resultHtml,
+            isError: !!payload.isError,
+        });
+        return;
+    } catch (e: any) {
+        try {
+            const argsHtml = "<pre><code>" + Bun.escapeHTML(JSON.stringify(safeArgs, null, 2)) + "</code></pre>";
+            const resultHtml = "<pre><code>" + Bun.escapeHTML(safeResult) + "</code></pre>";
+            await ctx.fns.session.appendToolCallEvent(ctx, agentId, {
+                name: payload.name,
+                args: safeArgs,
+                result: safeResult,
+                argsHtml,
+                resultHtml,
+                isError: !!payload.isError,
+            });
+            return;
+        } catch {}
+
+        try {
+            await ctx.fns.session.appendEvent(ctx, agentId, {
+                type: "error",
+                text: "tool event render failed: " + String(e?.message ?? e),
+            });
+        } catch {}
+    }
+}
+
 export default async function (ctx: Context, agent: types.agent.Agent, userText: string, opts: { userMessageAlreadyAppended?: boolean } = {}) {
     const ac = new AbortController();
     agent.abortController = ac;
@@ -78,9 +127,9 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
         }
 
         for (const tc of toolCalls) {
-            let output;
+            let output = "";
             let isError = false;
-            let args;
+            let args: any = {};
             try {
                 args = JSON.parse(tc.arguments || "{}");
                 if (tc.name === "evalCode") {
@@ -88,24 +137,27 @@ export default async function (ctx: Context, agent: types.agent.Agent, userText:
                     const result = await ctx.fns.repl.eval(ctx, args.code, { agent });
                     output = typeof result === "string" ? result : Bun.inspect(result);
                 } else {
-                    output = 'Unknown tool: ' + tc.name;
+                    output = "Unknown tool: " + tc.name;
                     isError = true;
                 }
             } catch (e: any) {
-                output = 'Error: ' + e.message;
+                output = "Error: " + String(e?.message ?? e);
                 isError = true;
             }
-            const argsHtml = tc.name === "evalCode" && typeof args?.code === "string"
-                ? await ctx.fns.markdown.highlight(ctx, args.code, "ts")
-                : await ctx.fns.markdown.highlight(ctx, JSON.stringify(args, null, 2), "json");
-            const resultHtml = await highlightResult(ctx, output);
-            await ctx.fns.session.appendToolCallEvent(ctx, agent.id, { name: tc.name, args, result: output, argsHtml, resultHtml, isError });
+
             ctx.fns.session.appendToolMessage(ctx, agent.id, tc.id, output);
+            ctx.fns.session.syncAgentState(ctx, agent);
 
             if (tc.name === "evalCode" && !isError) {
                 excludeFailedEvalAttempts(ctx, agent.id);
             }
 
+            await safeRenderToolEvent(ctx, agent.id, {
+                name: tc.name,
+                args,
+                result: output,
+                isError,
+            });
             ctx.fns.session.syncAgentState(ctx, agent);
         }
     }

@@ -111,8 +111,17 @@ export default async function (ctx: Context): Promise<void> {
                 [agentId],
             )[0];
             const afterIdx = Number(after?.max_idx ?? -1);
-            const cursorIdx = advanceCursor ? frontierIdx : Number(((ctx.state as any).agent?.[agentId]?.lastProcessedMsgIdx) ?? frontierIdx);
-            const stillPending = afterIdx > cursorIdx;
+
+            // Advance cursor only on success. On abort/error keep the cursor where it was
+            // so the same messages get retried on the next pass — but only when the user
+            // explicitly schedules another run (POST). We do NOT auto-reschedule a failing
+            // run, otherwise a permanently-broken LLM call would burn the worker in a loop.
+            const cursorIdx = advanceCursor
+                ? frontierIdx
+                : Number(ctx.fns.db.select<any>(ctx,
+                    'SELECT last_processed_msg_idx FROM agents WHERE id = ?',
+                    [agentId])[0]?.last_processed_msg_idx ?? -1);
+            const stillPending = advanceCursor && afterIdx > cursorIdx;
 
             ctx.fns.db.exec(ctx,
                 `UPDATE agents

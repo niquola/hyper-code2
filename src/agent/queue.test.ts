@@ -82,4 +82,74 @@ describe('agent queue (state on agents row)', () => {
 
         expect(seen.sort()).toEqual([a1.id, a2.id].sort());
     });
+
+    test('cursor does NOT advance when run errors out', async () => {
+        const ctx = await mkTestCtx();
+        ctx.fns.agent.run = async () => { throw new Error('boom'); };
+
+        const a = ctx.fns.agent.start(ctx, { model: 'm' });
+        ctx.fns.session.save(ctx, a);
+
+        await ctx.fns.session.appendUserMessage(ctx, a.id, 'one');
+        await ctx.fns.session.appendUserMessage(ctx, a.id, 'two');
+        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id = ?', [Date.now(), a.id]);
+
+        await drainUntilIdle(ctx);
+
+        const row = ctx.fns.db.select(ctx,
+            'SELECT run_state, last_processed_msg_idx, last_error FROM agents WHERE id = ?',
+            [a.id])[0];
+        expect(row.run_state).toBe('idle');
+        expect(row.last_error).toContain('boom');
+        // Critical: cursor must stay at -1 (initial), NOT jump to 1 (max idx).
+        // Otherwise the next successful run would skip messages "one" and "two".
+        expect(row.last_processed_msg_idx).toBe(-1);
+    });
+
+    test('cursor does NOT advance when run is aborted', async () => {
+        const ctx = await mkTestCtx();
+        ctx.fns.agent.run = async () => {
+            const err: any = new Error('AbortError: aborted');
+            err.name = 'AbortError';
+            throw err;
+        };
+
+        const a = ctx.fns.agent.start(ctx, { model: 'm' });
+        ctx.fns.session.save(ctx, a);
+
+        await ctx.fns.session.appendUserMessage(ctx, a.id, 'one');
+        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id = ?', [Date.now(), a.id]);
+
+        await drainUntilIdle(ctx);
+
+        const row = ctx.fns.db.select(ctx,
+            'SELECT run_state, last_processed_msg_idx FROM agents WHERE id = ?',
+            [a.id])[0];
+        expect(row.run_state).toBe('idle');
+        // Aborted run: cursor stays at -1 so the message is retried on the next pass.
+        expect(row.last_processed_msg_idx).toBe(-1);
+    });
+
+    test('cursor advances past pre-existing messages on success (regression: backfill seeded cursor)', async () => {
+        const ctx = await mkTestCtx();
+        ctx.fns.agent.run = async () => { /* success */ };
+
+        const a = ctx.fns.agent.start(ctx, { model: 'm' });
+        ctx.fns.session.save(ctx, a);
+
+        // Pre-existing: 2 messages already processed (e.g. a server restart).
+        await ctx.fns.session.appendUserMessage(ctx, a.id, 'old1');
+        await ctx.fns.session.appendUserMessage(ctx, a.id, 'old2');
+        ctx.fns.db.exec(ctx, 'UPDATE agents SET last_processed_msg_idx = ? WHERE id = ?', [1, a.id]);
+
+        // New message arrives.
+        await ctx.fns.session.appendUserMessage(ctx, a.id, 'new');
+        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id = ?', [Date.now(), a.id]);
+
+        await drainUntilIdle(ctx);
+
+        const row = ctx.fns.db.select(ctx,
+            'SELECT last_processed_msg_idx FROM agents WHERE id = ?', [a.id])[0];
+        expect(row.last_processed_msg_idx).toBe(2);
+    });
 });
