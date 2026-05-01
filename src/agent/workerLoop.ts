@@ -78,10 +78,12 @@ export default async function (ctx: Context): Promise<void> {
             continue;
         }
 
-        // Snapshot the message frontier before run() — so we know which messages were "in this batch"
-        // even if run() (or concurrent POSTs) appends more during execution.
+        // Snapshot the USER-message frontier before run(). Cursor only advances on success,
+        // and "did new messages arrive during the run" must mean new USER messages — assistant
+        // and tool messages emitted by run() itself would otherwise look like fresh work and
+        // trigger an infinite reschedule loop.
         const frontier = ctx.fns.db.select<any>(ctx,
-            'SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ?',
+            "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user'",
             [agentId],
         )[0];
         const frontierIdx = Number(frontier?.max_idx ?? -1);
@@ -104,10 +106,10 @@ export default async function (ctx: Context): Promise<void> {
             // Advance cursor only on success (not on abort/error) so retried runs see the same frontier.
             const advanceCursor = !aborted && !errorText;
 
-            // If new messages arrived during the run, schedule another pass with the same debounce
-            // (so consecutive replies merge naturally). Otherwise clear next_run_at.
+            // If new USER messages arrived during the run, schedule another pass.
+            // (Assistant + tool messages produced by run() itself are NOT pending work.)
             const after = ctx.fns.db.select<any>(ctx,
-                'SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ?',
+                "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user'",
                 [agentId],
             )[0];
             const afterIdx = Number(after?.max_idx ?? -1);

@@ -130,6 +130,34 @@ describe('agent queue (state on agents row)', () => {
         expect(row.last_processed_msg_idx).toBe(-1);
     });
 
+    test('successful run does NOT reschedule itself just because run() appended assistant/tool messages', async () => {
+        // Regression: worker used to count assistant + tool messages as "new pending work"
+        // and reschedule on every successful turn → infinite loop replying to the same user msg.
+        const ctx = await mkTestCtx();
+        const seenUserTexts: string[] = [];
+        ctx.fns.agent.run = async (c: any, agent: any) => {
+            // Realistic: read full transcript, then append our assistant reply.
+            const msgs = c.fns.session.getMessages(c, agent.id);
+            for (const m of msgs) if (m.role === 'user') seenUserTexts.push(m.content);
+            c.fns.session.appendMessage(c, agent.id, { role: 'assistant', content: 'reply' });
+        };
+
+        const a = ctx.fns.agent.start(ctx, { model: 'm' });
+        ctx.fns.session.save(ctx, a);
+        await ctx.fns.session.appendUserMessage(ctx, a.id, 'hello');
+        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id = ?', [Date.now(), a.id]);
+
+        await drainUntilIdle(ctx, 2000);
+
+        // Run was called exactly ONCE — no infinite reschedule loop.
+        expect(seenUserTexts).toEqual(['hello']);
+
+        const row = ctx.fns.db.select(ctx,
+            'SELECT run_state, next_run_at FROM agents WHERE id = ?', [a.id])[0];
+        expect(row.run_state).toBe('idle');
+        expect(row.next_run_at).toBeNull();
+    });
+
     test('cursor advances past pre-existing messages on success (regression: backfill seeded cursor)', async () => {
         const ctx = await mkTestCtx();
         ctx.fns.agent.run = async () => { /* success */ };
