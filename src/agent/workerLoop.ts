@@ -83,7 +83,7 @@ export default async function (ctx: Context): Promise<void> {
         // and tool messages emitted by run() itself would otherwise look like fresh work and
         // trigger an infinite reschedule loop.
         const frontier = ctx.fns.db.select<any>(ctx,
-            "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user'",
+            "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
             [agentId],
         )[0];
         const frontierIdx = Number(frontier?.max_idx ?? -1);
@@ -109,7 +109,7 @@ export default async function (ctx: Context): Promise<void> {
             // If new USER messages arrived during the run, schedule another pass.
             // (Assistant + tool messages produced by run() itself are NOT pending work.)
             const after = ctx.fns.db.select<any>(ctx,
-                "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user'",
+                "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
                 [agentId],
             )[0];
             const afterIdx = Number(after?.max_idx ?? -1);

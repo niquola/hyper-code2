@@ -53,6 +53,11 @@ export default async function (
         // No markers and no parser errors — close the turn cleanly. Persist
         // the full assistant content verbatim (it's natural-language reply).
         if (calls.length === 0 && errors.length === 0) {
+            // Skip empty completions entirely — they produce phantom bubbles
+            // and have no informational value to either UI or LLM.
+            if (!text || !String(text).trim()) {
+                return { text: text ?? '', usage };
+            }
             const append = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: text });
             ctx.fns.session.syncAgentState(ctx, agent);
             const html = await ctx.fns.markdown.render(ctx, prose || text || '');
@@ -114,7 +119,12 @@ export default async function (
             });
 
             const resultText = ctx.fns.agent.formatMarkerResult(call, output, isError);
-            ctx.fns.session.appendMessage(ctx, agent.id, { role: 'user', content: resultText });
+            // Flag as tool-feedback so workerLoop's user-frontier ignores it —
+            // otherwise every synthetic ///result row looks like a fresh user
+            // input and retriggers another run (producing phantom bubbles).
+            ctx.fns.session.appendMessage(ctx, agent.id, {
+                role: 'user', content: resultText, excluded_from_cursor: true,
+            });
             ctx.fns.session.syncAgentState(ctx, agent);
         }
 
@@ -125,7 +135,9 @@ export default async function (
                 await ctx.fns.session.appendErrorEvent(ctx, agent.id, e.hint);
             }
             const errText = errors.map(e => ctx.fns.agent.formatMarkerError(e)).join('\n\n');
-            ctx.fns.session.appendMessage(ctx, agent.id, { role: 'user', content: errText });
+            ctx.fns.session.appendMessage(ctx, agent.id, {
+                role: 'user', content: errText, excluded_from_cursor: true,
+            });
             ctx.fns.session.syncAgentState(ctx, agent);
         }
     }

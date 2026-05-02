@@ -165,6 +165,57 @@ describe('agent.runMarkers', () => {
         expect(msgs[4]!.content).toContain('4');
     });
 
+    test('synthetic ///result user-message is flagged excluded_from_cursor', async () => {
+        const ctx = await setup();
+        let turn = 0;
+        ctx.fns.llm.stream = async () => {
+            turn++;
+            if (turn === 1) return { text: '///eval\nconsole.log(1);', toolCalls: [], thinking: '', usage: {} };
+            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
+        };
+        ctx.fns.repl.eval = async () => '1';
+
+        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        ctx.fns.session.save(ctx, a);
+
+        await runMarkers(ctx, a, 'go');
+
+        const rows = ctx.fns.db.select(ctx,
+            'SELECT idx, role, excluded_from_cursor, substr(content, 1, 30) as preview FROM messages WHERE agent_id = ? ORDER BY idx',
+            [a.id]);
+        // user(real) → assistant(///eval) → user(synthetic ///result) → assistant(done)
+        expect(rows).toEqual([
+            { idx: 0, role: 'user',      excluded_from_cursor: 0, preview: 'go' },
+            { idx: 1, role: 'assistant', excluded_from_cursor: 0, preview: '///eval\nconsole.log(1);' },
+            { idx: 2, role: 'user',      excluded_from_cursor: 1, preview: '///result:eval\n1' },
+            { idx: 3, role: 'assistant', excluded_from_cursor: 0, preview: 'done' },
+        ]);
+    });
+
+    test('parser-error feedback user-message is also flagged excluded_from_cursor', async () => {
+        const ctx = await setup();
+        let turn = 0;
+        ctx.fns.llm.stream = async () => {
+            turn++;
+            if (turn === 1) return { text: 'считаю.///eval\nconsole.log(1);', toolCalls: [], thinking: '', usage: {} };
+            return { text: 'fixed', toolCalls: [], thinking: '', usage: {} };
+        };
+        ctx.fns.repl.eval = async () => '1';
+
+        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        ctx.fns.session.save(ctx, a);
+
+        await runMarkers(ctx, a, 'compute');
+
+        const rows = ctx.fns.db.select(ctx,
+            'SELECT idx, role, excluded_from_cursor FROM messages WHERE agent_id = ? AND role = ? ORDER BY idx',
+            [a.id, 'user']);
+        // Expected: idx 0 = real input (excluded=0), idx 2 = error feedback (excluded=1).
+        expect(rows[0]).toEqual({ idx: 0, role: 'user', excluded_from_cursor: 0 });
+        const errFeedback = rows.find((r: any) => r.idx === 2);
+        expect(errFeedback?.excluded_from_cursor).toBe(1);
+    });
+
     test('eval errors are tagged :error in the result block', async () => {
         const ctx = await setup();
         let turn = 0;
