@@ -1,7 +1,6 @@
 // Drop messages[from..] (inclusive). Walks back if `from` lands inside
 // a marker pair so we never leave half a pair in the transcript:
 // assistant ///eval / ///write:<path> / ///html → user ///result:* / ///error:*.
-//
 // Returns {ok, from} with `from` = effective truncation index post-walkback.
 function isAssistantInvocation(m: any): boolean {
     if (m?.role !== "assistant") return false;

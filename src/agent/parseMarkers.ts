@@ -3,22 +3,18 @@
 //   ///write:<path>    → kind='write' (write file, <path> after `:` to EOL)
 //   ///html            → kind='html'  (raw HTML rendered straight to the chat
 //                                      bubble; no execution, no result feedback)
-//
 // FORMAT (strict):
 //   - marker starts at column 1 (preceded by \n or start-of-input)
 //   - marker is immediately followed by \n (or end-of-input)
 //   - body starts on the next line, runs until next marker or end-of-input
 //   - the single trailing newline before the next marker is dropped
-//
 // PERMISSIVE DETECTION: if a candidate marker is followed by a newline but is
 // NOT at column 1 (e.g. `текст.///eval\n...`), it's recorded as a `misplaced`
 // error so run.ts can feed it back to the model. A bare `///eval` mid-line
 // without a trailing newline (like the words "see ///eval somewhere") is just
 // content and is not flagged.
-//
 // Lines starting with `///` that are NOT exactly `///eval` or `///write:<path>`
 // followed by `\n` are content (e.g. Rust `/// doc` comments inside a write body).
-//
 // ESCAPE: to put a literal `///eval` or `///write:` line in prose or code, write
 // FOUR slashes (`////eval`, `////write:foo`). The regex below requires exactly
 // three slashes followed by `eval`/`write:`, so a fourth slash breaks the match

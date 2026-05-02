@@ -2,7 +2,6 @@
 // long prompts hit the "lost in the middle" attention failure on every frontier
 // model. Detail docs (CLAUDE.md, docs/architecture.md, the source itself) are
 // referenced from CORE and read on demand via ctx.fns.files.read.
-//
 // Layers:
 //   1. SYSTEM_PROMPT_CORE.txt — invariants + map of ctx.fns + doc pointers
 //   2. SYSTEM_PROMPT.txt      — markers wire-format

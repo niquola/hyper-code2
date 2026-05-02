@@ -1,7 +1,6 @@
 // OpenAI Responses API streamer for the ChatGPT subscription via Codex backend
 // (`https://chatgpt.com/backend-api/codex/responses`). Auth is the JWT from
 // ~/.codex/auth.json — refreshCodex() is called first to ensure freshness.
-//
 // Same return shape as streamOpenAI / streamAnthropic so the dispatcher in
 // stream.ts can swap providers transparently.
 export default async function (

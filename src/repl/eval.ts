@@ -1,5 +1,4 @@
 // Run TypeScript / JavaScript inside the agent process.
-//
 // Contract — predictable, Jupyter-style:
 //   - Code is the body of `async () => { CODE }`.
 //   - TypeScript with type annotations is supported (transpiled before exec).

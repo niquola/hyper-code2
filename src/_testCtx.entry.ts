@@ -1,12 +1,10 @@
 // Centralised test context. Avoids hand-rewriting mkCtx in every test.
 // `.entry.ts` suffix is skipped by the project scanner (see project/classify.ts),
 // so this file is NOT auto-registered as a ctx.fns.testCtx.<x> function.
-//
 // Usage:
 //   import { mkTestCtx } from '../_testCtx.entry';
 //   const ctx = await mkTestCtx();         // :memory: db, migrations applied
 //   const agent = ctx.fns.agent.start(ctx, { model: 'mock:echo' });
-//
 // Override or add fns by mutating ctx.fns after construction.
 import connect from './db/connect';
 import migrate from './db/migrate';

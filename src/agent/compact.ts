@@ -1,10 +1,8 @@
 // Two operations available to the agent for shrinking transcript context:
-//
 // 1. compact(ctx, agent, "summary string")
 //    Find the most recent ///result:* / ///error:* synthetic user-message
 //    and replace its content with a "[compacted] <summary>" note. Loses the
 //    verbose tool output but keeps the call→result chain intact for the LLM.
-//
 // 2. compact(ctx, agent, { message: <idx>, summary: "..." })
 //    Drop messages[<idx>..] and replace with one synthetic user note. If
 //    <idx> lands inside a marker pair, walks back over the pair so we never

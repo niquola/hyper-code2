@@ -1,15 +1,12 @@
 // Returns a currently-valid Claude Code subscription access_token.
-//
 // Reads the OAuth pair from the macOS keychain item `Claude Code-credentials`
 // (the same one the official `claude` CLI uses), refreshes via Anthropic's
 // OAuth token endpoint when within 60s of expiry, and writes the refreshed
 // pair back so the CLI keeps working too.
-//
 // Token endpoint + client_id are settable via env so that if Anthropic
 // changes them we can patch without a rebuild:
 //   CLAUDE_CODE_OAUTH_TOKEN_URL  (default: https://console.anthropic.com/v1/oauth/token)
 //   CLAUDE_CODE_CLIENT_ID        (default: 9d1c250a-e61b-44d9-88ed-5944d1962f5e)
-//
 // On non-macOS or when keychain access fails, returns null. Caller should
 // surface a clear error rather than silently 401.
 const DEFAULT_TOKEN_URL = "https://console.anthropic.com/v1/oauth/token";
