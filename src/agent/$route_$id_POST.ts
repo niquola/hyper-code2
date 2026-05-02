@@ -44,6 +44,15 @@ export default async function (ctx: Context, _session: any, req: any) {
     if ((req.headers?.get?.('hx-request') ?? '') === 'true') {
         return new Response(null, { status: 204 });
     }
+    // Plain browser HTML form submit (e.g. a <form method="POST"> emitted from
+    // an ///html marker) — bounce back to the agent page so the user lands on
+    // the chat with their submission already in flight. Detect by Accept header
+    // preferring text/html and the absence of an XHR/Fetch JSON intent.
+    const accept = String(req.headers?.get?.('accept') ?? '');
+    const wantsHtml = accept.includes('text/html');
+    if (wantsHtml) {
+        return new Response(null, { status: 303, headers: { location: `/agent/${encodeURIComponent(agent.id)}` } });
+    }
     return Response.json({
         ok: true,
         sendAt,
@@ -51,12 +60,24 @@ export default async function (ctx: Context, _session: any, req: any) {
     });
 }
 
+// Read the user's submitted text. Three input shapes are accepted:
+// 1. form `text=...` (the default chat-input single-field form) → use as-is.
+// 2. multi-field form (no `text` field present) → serialize every name/value
+//    pair into a "key: value" block so an ///html-emitted form can collect
+//    structured data without the agent having to invent a custom protocol.
+// 3. plain text body (non-form Content-Type) → trimmed body.
 async function readSubmittedText(req: any): Promise<string> {
     const ct = String(req.headers?.get?.('content-type') ?? '');
     if (ct.startsWith('application/x-www-form-urlencoded') || ct.startsWith('multipart/form-data')) {
         const fd = await req.formData();
-        const v = fd.get('text');
-        return typeof v === 'string' ? v.trim() : '';
+        const direct = fd.get('text');
+        if (typeof direct === 'string' && direct.trim()) return direct.trim();
+        const lines: string[] = [];
+        for (const [name, value] of (fd as any).entries()) {
+            if (typeof value !== 'string') continue;
+            lines.push(`${name}: ${value}`);
+        }
+        return lines.join('\n').trim();
     }
     return (await req.text()).trim();
 }

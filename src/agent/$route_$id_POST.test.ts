@@ -69,4 +69,58 @@ describe('POST /agent/:id', () => {
     const res = await route(ctx, null, mkReq('a1', '   '));
     expect(res.status).toBe(400);
   });
+
+  test('plain browser HTML form submit redirects 303 back to /agent/:id', async () => {
+    const calls: any[] = [];
+    const ctx = mkCtx(calls);
+    const req = new Request('http://x/agent/a1', {
+      method: 'POST',
+      body: 'text=' + encodeURIComponent('from a form'),
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        'accept': 'text/html,application/xhtml+xml',
+      },
+    });
+    (req as any).params = { id: 'a1' };
+    const res = await route(ctx, null, req);
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toBe('/agent/a1');
+    expect(calls.find(c => c[0] === 'appendUserMessage')).toEqual(['appendUserMessage', 'a1', 'from a form']);
+  });
+
+  test('multi-field form (no `text`) is serialized to "name: value" lines', async () => {
+    const calls: any[] = [];
+    const ctx = mkCtx(calls);
+    const body = 'name=' + encodeURIComponent('Иван')
+              + '&age=' + encodeURIComponent('30')
+              + '&note=' + encodeURIComponent('hello');
+    const req = new Request('http://x/agent/a1', {
+      method: 'POST',
+      body,
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        'accept': 'text/html',
+      },
+    });
+    (req as any).params = { id: 'a1' };
+    const res = await route(ctx, null, req);
+    expect(res.status).toBe(303);
+    const submitted = calls.find(c => c[0] === 'appendUserMessage');
+    expect(submitted).toEqual(['appendUserMessage', 'a1', 'name: Иван\nage: 30\nnote: hello']);
+  });
+
+  test('text field wins over other fields when both present', async () => {
+    const calls: any[] = [];
+    const ctx = mkCtx(calls);
+    const body = 'text=' + encodeURIComponent('explicit')
+              + '&extra=' + encodeURIComponent('ignored');
+    const req = new Request('http://x/agent/a1', {
+      method: 'POST',
+      body,
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    (req as any).params = { id: 'a1' };
+    await route(ctx, null, req);
+    expect(calls.find(c => c[0] === 'appendUserMessage')).toEqual(['appendUserMessage', 'a1', 'explicit']);
+  });
 });

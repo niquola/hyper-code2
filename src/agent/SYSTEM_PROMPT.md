@@ -75,6 +75,45 @@ Use this when you need to:
 - No result is fed back to you. This marker is a final answer, not a tool call.
 - Combine with `///eval` first when you need to compute the data: gather data with `///eval`, then on the next turn render it with `///html`.
 
+### Styling with Tailwind
+
+The chat page already loads Tailwind CSS (CDN) and uses it everywhere. Use Tailwind utility classes directly in your `///html` body — no `<style>` block, no `<link>` to external CSS needed:
+
+```
+<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+  <h3 class="text-base font-semibold text-gray-800">Card title</h3>
+  <p class="mt-1 text-sm text-gray-600">Body text...</p>
+  <button class="mt-3 rounded bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700">OK</button>
+</div>
+```
+
+Match the rest of the UI's tone: rounded corners, subtle borders (`border-gray-200`), light backgrounds, gray text scale, small padding. Avoid loud colors unless the content really needs them.
+
+### Interactive forms (continue the dialog from the chat bubble)
+
+You can include a `<form method="POST">` inside `///html`. With no `action` attribute the browser submits to the **current URL**, which is your agent page (`/agent/<your-id>`). The server treats the submission like any chat input and triggers your next turn.
+
+- Single-field form: name the input `text` and the value flows in directly:
+    ```
+    <form method="POST">
+      <select name="text">
+        <option>да</option>
+        <option>нет</option>
+      </select>
+      <button>OK</button>
+    </form>
+    ```
+- Multi-field form: any number of inputs, no `text` field. The server serializes them as `name: value` lines and feeds the whole block as one user message:
+    ```
+    <form method="POST">
+      <input name="имя" placeholder="имя" />
+      <input name="возраст" type="number" />
+      <button>отправить</button>
+    </form>
+    ```
+    You will see a user message like `имя: Иван\nвозраст: 30` on your next turn.
+- After submit the page redirects back to the agent and the chat resumes — same as if the user typed in the chat input.
+
 ## Result messages
 
 - Successful eval returns in an eval result message.
