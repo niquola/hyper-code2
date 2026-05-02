@@ -2,7 +2,7 @@
 
 ## Direction
 
-**Simplicity first. DB-first. htmx long-poll. Single in-process worker.**
+**Simplicity first. DB-first. htmx long-poll. One in-process worker, runs in parallel.**
 
 Everything durable lives in SQLite. Everything visible to the user comes from a normal HTTP fetch. There is no queue table — debounce and run-state are columns on `agents`. Realtime is one in-process condvar; it carries no data, only "go look in the DB".
 
@@ -47,7 +47,7 @@ graph TB
 1. **The DB is the source of truth.** Messages, events, run-state, scheduling — all in SQLite. Memory is only an execution cache.
 2. **HTTP is the data plane.** Browser fetches all visible state through normal HTTP requests. Long-polling is just `GET` that holds the connection.
 3. **Wakeups are signals, not data.** `wakeWaiters` carries no payload — handlers re-read the DB after they wake. A lost or duplicate wake at worst delays a long-poll until its 25 s timeout, after which it re-fetches anyway.
-4. **One worker. No queue table.** Run scheduling is two columns on `agents`: `next_run_at` (when to fire) and `run_state` (`'idle' | 'running'`). The single in-process `workerLoop` drains them.
+4. **One worker. No queue table. Parallel drain.** Run scheduling is two columns on `agents`: `next_run_at` (when to fire) and `run_state` (`'idle' | 'running'`). One in-process `workerLoop` claims every currently-eligible agent in a tight `claimOne()` loop and spawns each as its own promise — different agents run concurrently. Per-agent serialisation is enforced by SQLite's `UPDATE … RETURNING` (two concurrent claims can't both win the same `idle` row), not by an in-memory lock.
 5. **Minimal client JS.** ~30 lines: Enter-key handler + scroll-on-swap. Everything else is htmx attributes.
 
 ---
@@ -132,10 +132,32 @@ agents.last_error             TEXT          -- last error text (audit-lite)
 Rules:
 
 - `POST` does `UPDATE agents SET next_run_at = MAX(COALESCE(next_run_at, 0), now + N)`. The `MAX` prevents an earlier message from rolling back an already-pushed-out run.
-- The worker's atomic claim is `UPDATE agents SET run_state='running' WHERE id IN (SELECT id FROM agents WHERE run_state='idle' AND next_run_at <= now ORDER BY next_run_at ASC LIMIT 1) RETURNING id`. SQLite's `RETURNING` makes this one-statement-atomic — no two workers can claim the same agent.
-- **Cursor scope is `role='user'` only.** Both the pre-run frontier snapshot and the post-run "still pending" check use `WHERE role='user'`. Assistant + tool messages emitted by `run()` itself are not pending work — without this, every successful turn would look like fresh input and the worker would re-run on the same conversation forever.
+- The worker's atomic claim is `UPDATE agents SET run_state='running' WHERE id IN (SELECT id FROM agents WHERE run_state='idle' AND next_run_at <= now ORDER BY next_run_at ASC LIMIT 1) RETURNING id`. SQLite's `RETURNING` makes this one-statement-atomic — two concurrent statements **cannot** both win the same row, so two parallel runners trying to grab the same agent will see exactly one `claimed.length === 1` and one `claimed.length === 0`.
+- **Cursor scope is `role='user'` AND `excluded_from_cursor=0`.** Both the pre-run frontier snapshot and the post-run "still pending" check filter out synthetic `///result:*` / `///error:*` user-rows. Assistant emissions are not `role='user'` to begin with. Without this, every successful turn would look like fresh input and the worker would re-run on the same conversation forever.
 - `last_processed_msg_idx` only advances on **success**. Aborted or failed runs leave the cursor where it was. They also do **not** auto-reschedule (`next_run_at = NULL` on the failure path) — the user's next POST decides whether to retry. Otherwise a permanently broken LLM call would burn the worker in a tight loop.
-- If new **user** messages land while a run is in progress, the worker's `finally` block detects `MAX(idx) WHERE role='user' > cursor` and sets `next_run_at = now + 5s` again before returning to `idle`. Successful run → auto-rescheduling for the new input. Failed run → no rescheduling.
+- If new **real user** messages land while a run is in progress, the worker's `finally` block detects `MAX(idx) WHERE role='user' AND excluded_from_cursor=0 > cursor` and sets `next_run_at = now + 5s` again before returning to `idle`. Successful run → auto-rescheduling for the new input. Failed run → no rescheduling.
+
+### Concurrent drain
+
+`workerLoop` is one promise but it spawns N concurrent `runOne` promises:
+
+```ts
+while (workerLoopRunning) {
+    let drained = 0;
+    while (true) {
+        const id = claimOne(ctx, Date.now());
+        if (!id) break;
+        drained++;
+        const p = runOne(ctx, id).finally(() => inflight.delete(p));
+        inflight.add(p);
+    }
+    if (inflight.size === 0)      await waitForWork(ctx, untilNextRunAt);
+    else if (drained === 0)       await waitForWork(ctx, MAX_IDLE_MS);
+    // else: keep draining until claimOne returns null
+}
+```
+
+No artificial concurrency cap — backpressure comes from the LLM provider (429s, connection errors, retried in `streamCodex` / `streamAnthropic`) and SQLite serialising writes at microsecond scale. `runOne`'s `finally` calls `wakeWorker` so a finishing run unblocks the loop without waiting for the 30 s safety poll. Verified by `src/agent/workerLoop.test.ts` — three mock runs of 100 ms each land in ~150 ms wall-clock with overlapping intervals; serial would be ~300 ms with none.
 
 ---
 
@@ -174,11 +196,11 @@ The wake carries **zero payload**. It's a hint: "something changed, re-read the 
 
 ### Worker uses the same pattern
 
-`wakeWorker` + `workerLoop`'s `waitForWork` use a process-wide `Set<() => void>` at `ctx.state.workerWakeWaiters`. POST calls `wakeWorker` after bumping `next_run_at`. Worker's `waitForWork` is the same condvar pattern but unkeyed (single waiter loop).
+`wakeWorker` + `workerLoop`'s `waitForWork` use a process-wide `Set<() => void>` at `ctx.state.workerWakeWaiters`. POST calls `wakeWorker` after bumping `next_run_at`. `runOne`'s `finally` also calls `wakeWorker` — so when one of the parallel runs finishes, the loop notices straight away and tries another claim. The waiter is process-wide because there's only one driver promise; the parallelism happens inside it via `inflight` Set.
 
 So the system has exactly **two condvars**:
 - `eventWaiters` (per-agent) — wakes long-poll handlers.
-- `workerWakeWaiters` (process-wide) — wakes the single worker loop.
+- `workerWakeWaiters` (process-wide) — wakes the worker driver loop, which then drains every claimable agent in parallel.
 
 ### Bun.serve idleTimeout caveat
 
@@ -326,9 +348,14 @@ A chat agent has exactly one input — the user's messages. A separate `agent_jo
 
 Every fetch is an authorized HTTP request. Reconnect is just another `fetch`, not a stateful WS handshake. Replay is `?offset=N`. A timeout falls back to another request — no special handling. WebSocket buys lower latency at the cost of every above invariant.
 
-### Why a single worker, not per-agent goroutines
+### Why a single driver loop with parallel runs, not multiple worker loops
 
-SQLite serializes writes anyway. Multiple workers means more coordination (exclusive UPDATE claims, run-key checks) for no throughput gain on one SQLite file. One worker keeps the mental model and stack traces simple; we can grow to N if a different DB engine arrives.
+We **do** run agents in parallel — that's the whole point of the parallel-drain shape in `workerLoop`. What we don't do is spin up multiple competing driver loops. Two reasons:
+
+- The bottleneck for actual parallelism is the LLM stream (`fetch` + SSE), and Bun event-loop already overlaps those across N concurrent `runOne` promises in one driver. A second driver loop would buy nothing the first one doesn't already cover.
+- One driver = one place to track wake signals (`workerWakeWaiters`) and one mental model. Two drivers would race for claims, and we'd need extra coordination just so they don't claim the same row twice — exactly the problem we already solved with `UPDATE … RETURNING`, just twice over.
+
+If a different DB engine ever lifts the SQLite single-writer limit and writes become the bottleneck, we'd then partition the agent space across multiple driver loops keyed on `agent_id % N`. Until then it's premature.
 
 ### Why htmx and not React/Datastar/etc
 

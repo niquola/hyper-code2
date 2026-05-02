@@ -31,6 +31,13 @@ function loadAgent(ctx: Context, id: string): any {
 }
 
 function waitForWork(ctx: Context, timeoutMs: number): Promise<void> {
+    // Edge-triggered: if a wake fired between the loop's "decided to sleep"
+    // and this call, workerWakePending is set — return immediately, don't
+    // park on the condvar. Clears the flag.
+    if ((ctx.state as any).workerWakePending) {
+        (ctx.state as any).workerWakePending = false;
+        return Promise.resolve();
+    }
     return new Promise((resolve) => {
         const set: Set<() => void> = ((ctx.state as any).workerWakeWaiters ??= new Set());
         let done = false;
