@@ -85,7 +85,7 @@ describe('settings declared registry + resolution', () => {
     test('getNumber uses declared default when present, no fallback needed', async () => {
         const ctx = await mkTestCtx();
         const ms = ctx.fns.settings.getNumber(ctx, { module: 'agent', scopeType: 'global', key: 'debounceMs' });
-        expect(ms).toBe(30);
+        expect(ms).toBe(1000);
     });
 
     test('getString fallback param still works for un-declared keys', async () => {
