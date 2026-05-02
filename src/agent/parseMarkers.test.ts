@@ -72,36 +72,41 @@ describe('agent.parseMarkers', () => {
         expect(r.prose).toBe(text);
     });
 
-    test('almost-marker (missing \\n before ///eval) is reported as misplaced error', () => {
-        // The exact bug pattern observed live: model writes `prose.///eval\nbody`.
-        // Strict parser silently misses; permissive scanner flags it for self-correct.
+    test('almost-marker (missing \\n before ///eval) is executed and a warning is attached', () => {
+        // Live bug pattern: model writes `prose.///eval\nbody`. We execute it
+        // anyway (so the turn isn't wasted) but emit a warning so it fixes the
+        // format on the next turn.
         const text = 'считаю.///eval\nlet n = 10; console.log(n);';
-        const r = parseMarkers(text);
-        expect(r.calls).toEqual([]);
-        expect(r.errors).toHaveLength(1);
-        expect(r.errors[0]!.kind).toBe('misplaced');
-        expect(r.errors[0]!.marker).toBe('eval');
-        expect(r.errors[0]!.hint).toContain("'///eval'");
-        expect(r.errors[0]!.hint).toContain("preceding character");
-    });
-
-    test('almost-marker for ///write also flagged', () => {
-        const text = 'lemme write a file.///write:foo.ts\nexport default 1;';
-        const r = parseMarkers(text);
-        expect(r.calls).toEqual([]);
-        expect(r.errors).toHaveLength(1);
-        expect(r.errors[0]!.marker).toBe('write');
-        expect(r.errors[0]!.hint).toContain("'///write:foo.ts'");
-    });
-
-    test('mixed: one valid eval and one misplaced — valid runs, misplaced flagged', () => {
-        const text = 'first one is good:\n///eval\nconsole.log(1);\nthen.///eval\nconsole.log(2);';
         const r = parseMarkers(text);
         expect(r.calls).toHaveLength(1);
         expect(r.calls[0]).toMatchObject({ kind: 'eval' });
-        // First eval body extends until the misplaced marker (which is content
-        // from the strict parser's perspective).
+        expect(r.calls[0]!.content).toBe('let n = 10; console.log(n);');
+        expect(r.errors).toHaveLength(1);
+        expect(r.errors[0]!.kind).toBe('misplaced');
+        expect(r.errors[0]!.marker).toBe('eval');
+        expect(r.errors[0]!.hint).toContain('Warning');
+        expect(r.errors[0]!.hint).toContain('executed anyway');
+    });
+
+    test('almost-marker for ///write is also executed with a warning', () => {
+        const text = 'lemme write a file.///write:foo.ts\nexport default 1;';
+        const r = parseMarkers(text);
+        expect(r.calls).toHaveLength(1);
+        expect(r.calls[0]).toMatchObject({ kind: 'write', path: 'foo.ts' });
+        expect(r.calls[0]!.content).toBe('export default 1;');
+        expect(r.errors).toHaveLength(1);
+        expect(r.errors[0]!.marker).toBe('write');
+    });
+
+    test('mixed: one valid eval and one misplaced — both run, only the misplaced one warns', () => {
+        const text = 'first one is good:\n///eval\nconsole.log(1);\nthen.///eval\nconsole.log(2);';
+        const r = parseMarkers(text);
+        expect(r.calls).toHaveLength(2);
+        // First eval body extends until the second marker's start byte. With
+        // the misplaced `then.` glued in, that prose lands inside the body.
+        // (The model gets a warning anyway, so it'll fix this on the next turn.)
         expect(r.calls[0]!.content).toContain('console.log(1);');
+        expect(r.calls[1]!.content).toBe('console.log(2);');
         expect(r.errors).toHaveLength(1);
         expect(r.errors[0]!.marker).toBe('eval');
     });
@@ -198,10 +203,11 @@ describe('agent.parseMarkers', () => {
         expect(r.calls[0]).toEqual({ kind: 'html', content: body });
     });
 
-    test('html mid-line missing-newline is reported as misplaced', () => {
+    test('html mid-line missing-newline is executed with a warning', () => {
         const text = 'смотри.///html\n<b>x</b>';
         const r = parseMarkers(text);
-        expect(r.calls).toEqual([]);
+        expect(r.calls).toHaveLength(1);
+        expect(r.calls[0]).toMatchObject({ kind: 'html' });
         expect(r.errors).toHaveLength(1);
         expect(r.errors[0]!.marker).toBe('html');
     });

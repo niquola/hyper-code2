@@ -131,7 +131,7 @@ describe('agent.run', () => {
         expect(ctx.state.__written['a.ts']).toBe('export const a = 1;');
     });
 
-    test('misplaced marker (no \\n before ///) is fed back as error and retried', async () => {
+    test('misplaced marker (no \\n before ///) is executed AND warned about', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
@@ -139,10 +139,6 @@ describe('agent.run', () => {
             if (turn === 1) {
                 // Live-bug pattern: prose glued to marker without \n.
                 return { text: 'считаю.///eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
-            }
-            if (turn === 2) {
-                // Self-correct on second try.
-                return { text: '///eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
             }
             return { text: 'computed: 4', toolCalls: [], thinking: '', usage: {} };
         };
@@ -154,15 +150,18 @@ describe('agent.run', () => {
         await run(ctx, a, 'compute');
 
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        // user → assistant(misplaced) → user(error feedback) → assistant(///eval) → user(result) → assistant(prose)
-        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant', 'user', 'assistant']);
-        // The first feedback message is just an error block (no result blocks since calls=[]).
-        expect(msgs[2]!.content).toContain('///error:marker-misplaced');
-        expect(msgs[2]!.content).toContain("'///eval'");
-        expect(msgs[2]!.content).not.toContain('///result:');
-        // After self-correction, normal result feedback.
-        expect(msgs[4]!.content).toContain('///result:eval');
-        expect(msgs[4]!.content).toContain('4');
+        // The eval is executed (result gets fed back) AND a warning user-message
+        // is appended after it. Then the model produces its closing prose.
+        const result = msgs.find((m: any) => String(m.content ?? '').startsWith('///result:eval'));
+        expect(result).toBeDefined();
+        expect(result.content).toContain('4');
+        const warn = msgs.find((m: any) => String(m.content ?? '').includes('///error:marker-misplaced'));
+        expect(warn).toBeDefined();
+        expect(warn.content).toContain('Warning');
+        expect(warn.content).toContain('executed anyway');
+        // Closing prose lands as the last assistant message.
+        const lastAssistant = [...msgs].reverse().find((m: any) => m.role === 'assistant');
+        expect(lastAssistant.content).toBe('computed: 4');
     });
 
     test('synthetic ///result user-message is flagged excluded_from_cursor', async () => {
@@ -192,7 +191,7 @@ describe('agent.run', () => {
         ]);
     });
 
-    test('parser-error feedback user-message is also flagged excluded_from_cursor', async () => {
+    test('parser-warning feedback user-message is flagged excluded_from_cursor', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
@@ -208,12 +207,13 @@ describe('agent.run', () => {
         await run(ctx, a, 'compute');
 
         const rows = ctx.fns.db.select(ctx,
-            'SELECT idx, role, excluded_from_cursor FROM messages WHERE agent_id = ? AND role = ? ORDER BY idx',
+            'SELECT idx, role, content, excluded_from_cursor FROM messages WHERE agent_id = ? AND role = ? ORDER BY idx',
             [a.id, 'user']);
-        // Expected: idx 0 = real input (excluded=0), idx 2 = error feedback (excluded=1).
-        expect(rows[0]).toEqual({ idx: 0, role: 'user', excluded_from_cursor: 0 });
-        const errFeedback = rows.find((r: any) => r.idx === 2);
-        expect(errFeedback?.excluded_from_cursor).toBe(1);
+        // Real input: idx 0, excluded=0. Tool result + warning are synthetic.
+        expect(rows[0].excluded_from_cursor).toBe(0);
+        const warn = rows.find((r: any) => String(r.content ?? '').includes('///error:marker-misplaced'));
+        expect(warn).toBeDefined();
+        expect(warn.excluded_from_cursor).toBe(1);
     });
 
     test('///html marker renders an assistant bubble with raw HTML and no synthetic result', async () => {

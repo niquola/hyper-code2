@@ -72,19 +72,18 @@ export default function (text: string): {
 
         const atCol1 = c.index === 0 || text[c.index - 1] === '\n';
 
-        if (atCol1) {
-            // Valid marker. Consume marker + the trailing \n (if not at EOF) so
-            // the body slice starts on the body's own line.
-            const consumeLen = after < text.length ? c.len + 1 : c.len;
-            const call: types.agent.MarkerCall = c.kind === 'write'
-                ? { kind: 'write', path: c.path!, content: '' }
-                : c.kind === 'html'
-                    ? { kind: 'html', content: '' }
-                    : { kind: 'eval', content: '' };
-            hits.push({ index: c.index, consumeLen, call });
-        } else {
-            // Almost-marker: looks like a marker (followed by \n) but glued to
-            // preceding text. Almost certainly the model forgot the leading \n.
+        const consumeLen = after < text.length ? c.len + 1 : c.len;
+        const call: types.agent.MarkerCall = c.kind === 'write'
+            ? { kind: 'write', path: c.path!, content: '' }
+            : c.kind === 'html'
+                ? { kind: 'html', content: '' }
+                : { kind: 'eval', content: '' };
+        hits.push({ index: c.index, consumeLen, call });
+
+        if (!atCol1) {
+            // Almost-marker: glued to preceding text without a leading \n.
+            // We still execute it (otherwise the agent's turn is wasted), but
+            // we attach a warning so the model fixes the format next time.
             const prevChar = text[c.index - 1]!;
             const markerStr = c.kind === 'write' ? `///write:${c.path}`
                 : c.kind === 'html' ? '///html'
@@ -93,7 +92,7 @@ export default function (text: string): {
                 kind: 'misplaced',
                 marker: c.kind,
                 position: c.index,
-                hint: `Found '${markerStr}' at byte ${c.index} but the preceding character is ${JSON.stringify(prevChar)}, not '\\n'. Markers must start at column 1 — put a newline directly before '///'. Re-emit the failed call with the marker on its own line.`,
+                hint: `Warning: '${markerStr}' at byte ${c.index} was preceded by ${JSON.stringify(prevChar)} instead of '\\n'. The call was executed anyway, but next time put a newline directly before '///' so the marker starts at column 1 — strict parsing depends on it.`,
             });
         }
     }
