@@ -70,14 +70,50 @@ Use this when you need to:
 
 ## HTML behavior
 
-- Body is treated as raw HTML and rendered into a chat bubble for the user.
-- No sandboxing — the HTML runs in the browser context, so prefer self-contained markup. Avoid loading external resources you can't trust.
+The body is **inserted as an HTML fragment** into an existing chat bubble on a page that's already loaded. Treat it like the inside of a `<div>`, never like a standalone webpage.
+
+**Forbidden** (server strips all of them — they break the host page's layout or run scripts in the wrong context):
+
+- `<!DOCTYPE>`
+- `<html>`, `<head>`, `<body>`
+- `<title>`, `<meta>`, `<link>`
+- `<style>` blocks
+- `<script>` blocks
+
+Start directly with the visible markup. No wrapping.
+
+### WRONG (full document — wrappers leak global CSS)
+
+```
+<!DOCTYPE html>
+<html>
+<head>
+  <title>...</title>
+  <style>body { margin: 40px auto; padding: 20px; }</style>
+</head>
+<body>
+  <div class="card">Hi</div>
+</body>
+</html>
+```
+
+### RIGHT (fragment — starts with the actual content)
+
+```
+<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+  <h3 class="text-base font-semibold text-gray-800">Привет</h3>
+  <p class="mt-1 text-sm text-gray-600">Body text…</p>
+</div>
+```
+
+Other notes:
+
 - No result is fed back to you. This marker is a final answer, not a tool call.
 - Combine with `///eval` first when you need to compute the data: gather data with `///eval`, then on the next turn render it with `///html`.
 
 ### Styling with Tailwind
 
-The chat page already loads Tailwind CSS (CDN) and uses it everywhere. Use Tailwind utility classes directly in your `///html` body — no `<style>` block, no `<link>` to external CSS needed:
+The chat page already loads Tailwind CSS (CDN, with the `typography` plugin) and uses it everywhere. **Use Tailwind utility classes inline as the only styling mechanism.** Don't write `<style>` blocks (the server strips them) and don't link external CSS:
 
 ```
 <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">

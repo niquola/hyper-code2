@@ -245,6 +245,46 @@ describe('agent.run', () => {
         expect(htmlEvent.type).toBe('assistant');
     });
 
+    test('///html body is sanitized: full document wrappers + <style>/<script> stripped', async () => {
+        const ctx = await setup();
+        const dirty = [
+            '<!DOCTYPE html>',
+            '<html><head>',
+            '<title>oops</title>',
+            '<style>body { margin: 40px auto; padding: 20px; }</style>',
+            '<script>alert("xss")</script>',
+            '</head>',
+            '<body>',
+            '<div class="card">visible content</div>',
+            '</body></html>',
+        ].join('\n');
+        let turn = 0;
+        ctx.fns.llm.stream = async () => {
+            turn++;
+            if (turn === 1) return { text: `///html\n${dirty}`, toolCalls: [], thinking: '', usage: {} };
+            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
+        };
+
+        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        ctx.fns.session.save(ctx, a);
+
+        await run(ctx, a, 'render');
+
+        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const htmlEvent = events.find((e: any) => e.type === 'assistant' && typeof e.html === 'string' && e.html.includes('visible content'));
+        expect(htmlEvent).toBeDefined();
+        // Wrappers and dangerous tags must be gone from what hits the DOM.
+        expect(htmlEvent.html).not.toMatch(/<!doctype/i);
+        expect(htmlEvent.html).not.toMatch(/<html/i);
+        expect(htmlEvent.html).not.toMatch(/<head/i);
+        expect(htmlEvent.html).not.toMatch(/<body/i);
+        expect(htmlEvent.html).not.toMatch(/<style/i);
+        expect(htmlEvent.html).not.toMatch(/<script/i);
+        expect(htmlEvent.html).not.toMatch(/<title/i);
+        // The actual visible markup survives.
+        expect(htmlEvent.html).toContain('<div class="card">visible content</div>');
+    });
+
     test('eval errors are tagged :error in the result block', async () => {
         const ctx = await setup();
         let turn = 0;
