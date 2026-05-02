@@ -157,6 +157,112 @@ You can also call `ctx.fns.*` directly inside `{expr}` for one-off lookups:
 
 Prefer the two-step pattern when the data needs work or might be reused — keeps the template clean.
 
+### More render-from-ctx examples
+
+**Recent messages of this agent (read directly from DB inline):**
+
+```
+///html
+<div class="rounded-xl border p-4">
+  <h3 class="text-sm font-semibold text-gray-700">Recent turns</h3>
+  <ol class="text-xs space-y-1">
+    {ctx.fns.db.select(ctx,
+      "SELECT role, substr(content, 1, 80) AS preview FROM messages WHERE agent_id = ? ORDER BY idx DESC LIMIT 5",
+      [agent.id]
+    ).map(r => (
+      <li class="flex gap-2">
+        <span class="font-mono w-16 text-gray-500">{r.role}</span>
+        <span class="text-gray-700 truncate">{r.preview}</span>
+      </li>
+    ))}
+  </ol>
+</div>
+```
+
+**Show all settings in a module:**
+
+```
+///html
+<table class="text-xs">
+  <tbody>
+    {ctx.fns.settings.list(ctx, { module: "llm" }).map(s => (
+      <tr class="border-t border-gray-100">
+        <td class="py-1 font-mono text-gray-500">{s.key}</td>
+        <td class="py-1">{s.value}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+```
+
+**Live runtime info (process + agent state):**
+
+```
+///html
+<dl class="text-xs grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+  <dt class="text-gray-500">cwd</dt><dd class="font-mono">{process.cwd()}</dd>
+  <dt class="text-gray-500">agent</dt><dd class="font-mono">{agent.id}</dd>
+  <dt class="text-gray-500">model</dt><dd class="font-mono">{agent.model}</dd>
+  <dt class="text-gray-500">turns</dt><dd>{agent.messages.length}</dd>
+  <dt class="text-gray-500">scratch keys</dt><dd>{Object.keys(agent.scratchpad).join(", ") || "—"}</dd>
+</dl>
+```
+
+**Search results from session.search across all agents:**
+
+```
+///eval
+agent.scratchpad.hits = ctx.fns.session.search(ctx, "telescope");
+console.log(agent.scratchpad.hits.length);
+```
+
+```
+///html
+<div class="rounded-xl border p-4 space-y-2">
+  <h3 class="text-sm font-semibold">{agent.scratchpad.hits.length} matches for "telescope"</h3>
+  {agent.scratchpad.hits.length === 0
+    ? <p class="text-gray-500 text-xs">no hits</p>
+    : <ul class="text-xs space-y-1">
+        {agent.scratchpad.hits.slice(0, 10).map(h => (
+          <li class="border-t border-gray-100 pt-1">
+            <a href={`/agent/${h.agentId}`} class="font-mono text-blue-700">{h.agentId}#{h.idx}</a>
+            <span class="ml-2 text-gray-600">{h.content.slice(0, 100)}</span>
+          </li>
+        ))}
+      </ul>
+  }
+</div>
+```
+
+**Preview a file (read inline):**
+
+```
+///html
+<pre class="text-xs bg-gray-50 border rounded p-3 overflow-x-auto">
+  {ctx.fns.files.read(ctx, "package.json")}
+</pre>
+```
+
+(For longer files prefer the two-step pattern: read with `///eval`, slice/parse, stash, then render. Keeps the template fast.)
+
+**Async data — fetch first, render later.** TSX `{expr}` is sync; promises serialize to `[object Promise]`. So `await` happens in `///eval`:
+
+```
+///eval
+const r = await fetch("https://api.github.com/repos/oven-sh/bun");
+agent.scratchpad.repo = await r.json();
+console.log("ok");
+```
+
+```
+///html
+<div class="rounded-xl border p-4">
+  <h3 class="font-semibold">{agent.scratchpad.repo.full_name}</h3>
+  <p class="text-xs text-gray-600">⭐ {agent.scratchpad.repo.stargazers_count.toLocaleString()}</p>
+  <p class="text-xs">{agent.scratchpad.repo.description}</p>
+</div>
+```
+
 Reusable components: define them once with `///eval` (write to a file or stash on `agent.scratchpad`) and call them inside `///html`. Components are just functions returning JSX — `({props}) => <div>…</div>`. Define inline:
 
 ```
