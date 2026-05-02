@@ -212,6 +212,37 @@ The server response contains the new events HTML followed by a fresh `#msg-tail`
 
 ---
 
+## Markers protocol (only wire format)
+
+The agent never sees a JSON tool schema. It emits **markers** in the assistant content; the runtime parses, executes, and feeds results back as `role='user'` messages with `///result:*` content. Four markers, hardcoded in `src/agent/parseMarkers.ts`:
+
+| marker            | regex                          | body                | result fed back as                          |
+|-------------------|--------------------------------|---------------------|---------------------------------------------|
+| `///eval`         | `(?<!/)\/\/\/eval(?=\n\|$)`    | JS/TS               | `///result:eval` + captured `console.log`   |
+| `///write:<path>` | `(?<!/)\/\/\/write:([^\n]+)`   | file body           | `///result:write:<path>` + "wrote N bytes"  |
+| `///bash`         | `(?<!/)\/\/\/bash(?=\n\|$)`    | shell script        | `///result:bash` + stdout, or `:error` + `[exit N]` + stderr |
+| `///html`         | `(?<!/)\/\/\/html(?=\n\|$)`    | TSX fragment        | nothing — final answer rendered into a chat bubble |
+
+Body of each marker spans from the line after the marker to the start of the next marker (or end of message). The negative lookbehind `(?<!/)` makes `////eval` and friends a recognised escape — runtime collapses `^////` back to `///` in `prose` and `///html` output. Splitting the slashes with any non-slash character (`/./eval`) is also "not a marker" because the regex requires three consecutive slashes.
+
+### Permissive parsing
+
+If a marker is followed by `\n` but isn't at column 1 (`текст.///eval\n…`), `parseMarkers` records a `misplaced` error AND still adds the call to `hits[]`. `run.ts` executes it normally, then appends a `///error:marker-misplaced` warning user-message after the `///result:*` block so the model self-corrects on the next turn — no wasted turn. Configurable in [`src/agent/parseMarkers.ts`](../src/agent/parseMarkers.ts) and [`src/agent/$type_MarkerParseError.ts`](../src/agent/$type_MarkerParseError.ts).
+
+### Marker-pair invariant
+
+Every assistant `///eval` / `///write:` / `///bash` / `///html` is followed by exactly one user message. `///eval`/`///write`/`///bash` get a `///result:*` (with `excluded_from_cursor=1`); `///html` doesn't get a result row but the assistant's marker message is still persisted. `truncateMessagesFrom` / `deleteMessageAt` / `compact` walk this pair when the user asks to "delete from here" so we never leave half a pair stranded.
+
+### `excluded_from_cursor` column on `messages`
+
+Synthetic `///result:*` and `///error:*` user-messages are tagged `excluded_from_cursor=1`. `workerLoop`'s frontier query is `MAX(idx) WHERE role='user' AND excluded_from_cursor=0` — without this flag, every tool result would look like fresh user input and trigger a re-run, producing phantom turns.
+
+### `///html` is TSX, not raw HTML
+
+`run.ts` transpiles the body via `Bun.Transpiler({ loader: 'tsx', jsxFactory: 'h', jsxFragmentFactory: 'Fragment' })`, evaluates it inside a `new Function('h', 'Fragment', 'render', 'ctx', 'agent', js)` with a 30-line h/render runtime, and renders the resulting node tree to HTML with auto-escape on text and attributes. The body is wrapped in `<>…</>` before transpiling so trailing prose ("done" after a card) lands as a Fragment text-child instead of breaking parse. Sanitiser strips `<style>` / `<script>` / document-level wrappers (`<!DOCTYPE>`, `<html>`, `<head>`, `<body>`) so a stray full-document emission can't leak global CSS into the chat layout. Errors come back as `///error:html` user-messages with the `Bun.Transpiler` `BuildMessage.position` (line/col/lineText) plus the first 800 chars of the body, so the model sees the actual parse failure context.
+
+---
+
 ## Settings — DB-backed key-value with scope
 
 `src/settings/` is a generic key-value store keyed by `(module, scope_type, scope_id, key)`. Value is JSON-encoded; an `is_secret` flag is recorded but currently advisory only.
@@ -232,23 +263,27 @@ CREATE INDEX idx_settings_scope ON settings(scope_type, scope_id, module);
 
 API: `ctx.fns.settings.{get, set, remove, list, getNumber, getString}`. `getNumber`/`getString` accept `fallback` — `getNumber` also rejects non-finite values (`NaN`, `Infinity`).
 
-### Scopes shipped
+### Declared settings
 
-| Module     | Scope          | Key         | Used by                                  |
-|------------|----------------|-------------|------------------------------------------|
-| `llm`      | `global`       | `defaultModel` | `ui/createAgent.ts` — default agent model when `opts.model` is absent |
-| `provider` | `provider:<name>` | `baseUrl`   | `llm/resolveEndpoint.ts` — overrides hardcoded base URL  |
-| `provider` | `provider:<name>` | `apiKey`    | `llm/resolveEndpoint.ts` — overrides env-var key         |
-| `ui`       | `agent:<id>`   | `debounceMs` | `agent/$route_$id_POST.ts` — per-agent default debounce |
+Settings are *declared* with a typed descriptor in `$setting_<key>.ts` files (`{ type, default, env, options, min, max, title, description }`). Resolution per consumer:
 
-### Priority
+1. **Explicit caller input** (e.g. POST `?debounceSeconds=…`, `opts.model`) — wins.
+2. **DB row** for the requested `(module, scopeType, scopeId, key)`.
+3. **`descriptor.env`** — env var bound in the declaration, parsed by type.
+4. **`descriptor.default`** — hardcoded fallback in the declaration file.
+5. **Caller `fallback`** — last resort, only when the descriptor doesn't supply one.
 
-Each consumer follows the same order:
-1. **Explicit caller input** (e.g. POST `?debounceSeconds=...`, `opts.model`) — wins always.
-2. **Settings table** — for the relevant scope.
-3. **Env var / hard-coded default** — last resort.
+Shipping declarations:
 
-So `settings.set(ctx, { module: 'ui', scopeType: 'agent', scopeId: 'a', key: 'debounceMs', value: 1000 })` makes agent `a` debounce at 1s without redeploying.
+| Declaration                            | Module · scope · key             | Used by                                                    |
+|----------------------------------------|----------------------------------|------------------------------------------------------------|
+| `src/llm/$setting_defaultModel.ts`     | `llm.global.defaultModel`        | `ui/createAgent.ts` and `$route_new_GET.ts` form pre-fill  |
+| `src/llm/$setting_lmstudioBaseUrl.ts`  | `llm.global.lmstudioBaseUrl`     | `resolveEndpoint` for the `lmstudio:` provider             |
+| `src/llm/$setting_<provider>ApiKey.ts` | `llm.global.<provider>ApiKey`    | `resolveEndpoint` per-provider auth                        |
+| `src/agent/$setting_debounceMs.ts`     | `agent.global.debounceMs`        | `POST /agent/:id` default debounce (default `1000`)        |
+|                                        | `ui.agent.<id>.debounceMs`       | per-agent override (no declaration; set via UI/REPL)       |
+
+Forms at `GET /settings/declared` render every declaration with title/description/options for the user to tweak live.
 
 ---
 
