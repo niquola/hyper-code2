@@ -92,6 +92,14 @@ export default function (text: string): {
         const end = next ? next.index : text.length;
         let content = text.slice(start, end);
         if (content.endsWith('\n')) content = content.slice(0, -1);
+        // Models (notably Haiku) sometimes emit a closing `///` fence at the
+        // end of a body, mimicking ``` style. Strip it.
+        content = content.replace(/\n\/\/\/\s*$/, '');
+        // Drop empty/whitespace-only bodies. Haiku frequently fabricates a
+        // trailing `///eval` with empty body before tool results have arrived
+        // (model hallucinating that work is already done). Treating these as
+        // real calls produces phantom tool bubbles in the UI.
+        if (content.trim() === '') continue;
         cur.call.content = content;
         calls.push(cur.call);
     }

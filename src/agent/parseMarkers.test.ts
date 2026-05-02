@@ -123,6 +123,31 @@ describe('agent.parseMarkers', () => {
         expect(r.prose).toBe('///write:\nbody');
     });
 
+    test('Haiku quirk: trailing closing fence `\\n///` is stripped from body', () => {
+        // Haiku adds a `///` closing fence at the end of eval bodies, mimicking
+        // ``` style. Without normalization this becomes garbage inside the body.
+        const text = '///eval\nconsole.log(2 + 2)\n///\n';
+        const r = parseMarkers(text);
+        expect(r.calls).toHaveLength(1);
+        expect(r.calls[0]!.content).toBe('console.log(2 + 2)');
+    });
+
+    test('Haiku quirk: trailing empty marker (hallucinated next call) is dropped', () => {
+        // Haiku sometimes emits a second `///eval` with empty body on the same
+        // turn, before tool results have come back. Treat these as fabricated.
+        const text = '///eval\nconsole.log(1);\n///eval\n';
+        const r = parseMarkers(text);
+        expect(r.calls).toHaveLength(1);
+        expect(r.calls[0]!.content).toBe('console.log(1);');
+    });
+
+    test('Haiku quirk: empty trailing write marker is dropped', () => {
+        const text = '///write:a.ts\nexport const a = 1;\n///write:b.ts\n';
+        const r = parseMarkers(text);
+        expect(r.calls).toHaveLength(1);
+        expect(r.calls[0]).toEqual({ kind: 'write', path: 'a.ts', content: 'export const a = 1;' });
+    });
+
     test('eval after write — both parsed', () => {
         const r = parseMarkers('///write:a\nA\n///eval\nreturn 1\n');
         expect(r.calls).toEqual([
