@@ -51,10 +51,26 @@ const TSX_TRANSPILER = new Bun.Transpiler({
     }),
 });
 function renderTsxBody(body: string, ctx: Context, agent: any): string {
-    const js = TSX_TRANSPILER.transformSync(`return (${body});`);
+    // Wrap in a Fragment so the body can be: a single element, multiple
+    // siblings, or even an element followed by trailing prose. That last
+    // shape happens often in practice — Haiku writes a card then adds a
+    // comment after, and a bare TSX `return (<div/> text);` would refuse.
+    const js = TSX_TRANSPILER.transformSync(`return (<>${body}</>);`);
     const fn = new Function('h', 'Fragment', 'render', 'ctx', 'agent', js);
     const tree = fn(h, Fragment, jsxRender, ctx, agent);
     return jsxRender(tree);
+}
+
+function describeTsxError(e: any, body: string): string {
+    const msg = (e?.message ?? String(e)) || 'unknown error';
+    const pos = e?.position;
+    const detail = pos
+        ? `${msg}\nat line ${pos.line}, col ${pos.column}: ${String(pos.lineText ?? '').trim()}`
+        : msg;
+    const preview = body.length > 800
+        ? body.slice(0, 800) + `\n…(+${body.length - 800} chars)`
+        : body;
+    return `${detail}\n\nbody:\n${preview}`;
 }
 
 async function highlightResult(ctx: Context, output: string): Promise<string> {
@@ -144,11 +160,11 @@ export default async function (
             // user-message so the model can self-correct on the next turn.
             if (call.kind === 'html') {
                 let html = '';
-                let renderError: string | null = null;
+                let renderError: any = null;
                 try {
                     html = sanitizeHtmlBody(renderTsxBody(call.content, ctx, agent));
                 } catch (e: any) {
-                    renderError = e?.message ?? String(e);
+                    renderError = e;
                 }
                 if (renderError === null) {
                     await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
@@ -156,8 +172,9 @@ export default async function (
                     });
                     ctx.fns.session.syncAgentState(ctx, agent);
                 } else {
-                    await ctx.fns.session.appendErrorEvent(ctx, agent.id, `///html render error: ${renderError}`);
-                    const hint = `///error:html\n${renderError}\n\nThe ///html body must be a valid TSX expression. Self-close void tags (\`<br/>\`, \`<img/>\`, \`<input/>\`), match every opening tag, and escape \`<\` / \`>\` in text content with \`&lt;\` / \`&gt;\`. {expr} blocks must be valid JS.`;
+                    const detail = describeTsxError(renderError, call.content);
+                    await ctx.fns.session.appendErrorEvent(ctx, agent.id, `///html render error:\n${detail}`);
+                    const hint = `///error:html\n${detail}\n\nThe ///html body must be a valid TSX expression. Self-close void tags (\`<br/>\`, \`<img/>\`, \`<input/>\`), match every opening tag, and escape \`<\` / \`>\` in text content with \`&lt;\` / \`&gt;\`. {expr} blocks must be valid JS expressions.`;
                     ctx.fns.session.appendMessage(ctx, agent.id, {
                         role: 'user', content: hint, excluded_from_cursor: true,
                     });
