@@ -22,6 +22,7 @@
 // (in prose and call.content) is collapsed back to `///` for display.
 const EVAL_RE  = /(?<!\/)\/\/\/eval(?=\n|$)/g;
 const WRITE_RE = /(?<!\/)\/\/\/write:([^\n]+)/g;
+const BASH_RE  = /(?<!\/)\/\/\/bash(?=\n|$)/g;
 const HTML_RE  = /(?<!\/)\/\/\/html(?=\n|$)/g;
 
 // Reverse the escape: `^////` → `^///` line-by-line (multiline mode).
@@ -32,7 +33,7 @@ function unescape(s: string): string {
 type Candidate = {
     index: number;
     len: number;
-    kind: 'eval' | 'write' | 'html';
+    kind: 'eval' | 'write' | 'html' | 'bash';
     path?: string;
 };
 
@@ -54,6 +55,9 @@ export default function (text: string): {
     for (const m of text.matchAll(HTML_RE)) {
         candidates.push({ index: m.index!, len: m[0].length, kind: 'html' });
     }
+    for (const m of text.matchAll(BASH_RE)) {
+        candidates.push({ index: m.index!, len: m[0].length, kind: 'bash' });
+    }
     candidates.sort((a, b) => a.index - b.index);
 
     type Hit = { index: number; consumeLen: number; call: types.agent.MarkerCall };
@@ -71,9 +75,9 @@ export default function (text: string): {
         const consumeLen = after < text.length ? c.len + 1 : c.len;
         const call: types.agent.MarkerCall = c.kind === 'write'
             ? { kind: 'write', path: c.path!, content: '' }
-            : c.kind === 'html'
-                ? { kind: 'html', content: '' }
-                : { kind: 'eval', content: '' };
+            : c.kind === 'html' ? { kind: 'html', content: '' }
+            : c.kind === 'bash' ? { kind: 'bash', content: '' }
+            : { kind: 'eval', content: '' };
         hits.push({ index: c.index, consumeLen, call });
 
         if (!atCol1) {
@@ -83,6 +87,7 @@ export default function (text: string): {
             const prevChar = text[c.index - 1]!;
             const markerStr = c.kind === 'write' ? `///write:${c.path}`
                 : c.kind === 'html' ? '///html'
+                : c.kind === 'bash' ? '///bash'
                 : '///eval';
             errors.push({
                 kind: 'misplaced',

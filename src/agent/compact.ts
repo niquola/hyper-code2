@@ -12,6 +12,7 @@ function isAssistantInvocation(m: any): boolean {
     const c = String(m.content ?? "");
     return c.startsWith("///eval\n") || c === "///eval"
         || c.startsWith("///write:")
+        || c.startsWith("///bash\n") || c === "///bash"
         || c.startsWith("///html\n") || c === "///html";
 }
 function isToolResult(m: any): boolean {

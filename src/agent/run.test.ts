@@ -346,6 +346,46 @@ describe('agent.run', () => {
         expect(errMsg.role).toBe('user');
     });
 
+    test('///bash marker runs `bash -c` and feeds back ///result:bash with stdout', async () => {
+        const ctx = await setup();
+        let turn = 0;
+        ctx.fns.llm.stream = async () => {
+            turn++;
+            if (turn === 1) return { text: '///bash\necho hello-bash', toolCalls: [], thinking: '', usage: {} };
+            return { text: 'ok', toolCalls: [], thinking: '', usage: {} };
+        };
+
+        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        ctx.fns.session.save(ctx, a);
+
+        await run(ctx, a, 'run a shell');
+
+        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
+        expect(msgs[1]!.content).toBe('///bash\necho hello-bash');
+        expect(msgs[2]!.content).toContain('///result:bash');
+        expect(msgs[2]!.content).toContain('hello-bash');
+        expect(msgs[3]!.content).toBe('ok');
+    });
+
+    test('///bash non-zero exit is tagged :error and includes [exit N]', async () => {
+        const ctx = await setup();
+        let turn = 0;
+        ctx.fns.llm.stream = async () => {
+            turn++;
+            if (turn === 1) return { text: '///bash\nexit 7', toolCalls: [], thinking: '', usage: {} };
+            return { text: 'caught', toolCalls: [], thinking: '', usage: {} };
+        };
+
+        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        ctx.fns.session.save(ctx, a);
+
+        await run(ctx, a, 'fail bash');
+        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        expect(msgs[2]!.content).toContain('///result:bash:error');
+        expect(msgs[2]!.content).toContain('[exit 7]');
+    });
+
     test('eval errors are tagged :error in the result block', async () => {
         const ctx = await setup();
         let turn = 0;

@@ -4,7 +4,7 @@
 // Fed back to the model in a result message so it can self-correct.
 export type MarkerParseError = {
     kind: 'misplaced';
-    marker: 'eval' | 'write' | 'html';
+    marker: 'eval' | 'write' | 'html' | 'bash';
     position: number;
     hint: string;
 };

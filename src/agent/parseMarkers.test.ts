@@ -220,6 +220,31 @@ describe('agent.parseMarkers', () => {
         expect(r.prose).toContain('///html');
     });
 
+    test('///bash captures shell body', () => {
+        const r = parseMarkers('///bash\nls -la\ngit status\n');
+        expect(r.calls).toEqual([{ kind: 'bash', content: 'ls -la\ngit status' }]);
+    });
+
+    test('escape: ////bash is content not a marker', () => {
+        const r = parseMarkers('запусти ////bash для команд.');
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toEqual([]);
+        expect(r.prose).toContain('///bash');
+    });
+
+    test('mixed eval + bash + write in one turn', () => {
+        const r = parseMarkers([
+            '///eval',
+            'console.log(1);',
+            '///bash',
+            'ls',
+            '///write:foo.ts',
+            'export default 1;',
+        ].join('\n'));
+        expect(r.calls.map((c: any) => c.kind)).toEqual(['eval', 'bash', 'write']);
+        expect(r.calls[1]).toEqual({ kind: 'bash', content: 'ls' });
+    });
+
     test('eval after write — both parsed', () => {
         const r = parseMarkers('///write:a\nA\n///eval\nreturn 1\n');
         expect(r.calls).toEqual([

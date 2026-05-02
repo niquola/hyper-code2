@@ -141,11 +141,10 @@ export default async function (
         for (const call of calls) {
             // Persist THIS marker as its own assistant message — paired with
             // its own result message immediately after.
-            const markerText = call.kind === 'write'
-                ? `///write:${call.path}\n${call.content}`
-                : call.kind === 'html'
-                    ? `///html\n${call.content}`
-                    : `///eval\n${call.content}`;
+            const markerText = call.kind === 'write' ? `///write:${call.path}\n${call.content}`
+                : call.kind === 'html' ? `///html\n${call.content}`
+                : call.kind === 'bash' ? `///bash\n${call.content}`
+                : `///eval\n${call.content}`;
             const append = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: markerText });
             ctx.fns.session.syncAgentState(ctx, agent);
 
@@ -189,13 +188,31 @@ export default async function (
                     await ctx.fns.files.write(ctx, call.path, call.content);
                     const lines = call.content.split('\n').length;
                     output = `wrote ${call.path} (${call.content.length} bytes, ${lines} lines)`;
+                } else if (call.kind === 'bash') {
+                    const proc = Bun.spawnSync({
+                        cmd: ['bash', '-c', call.content],
+                        stdout: 'pipe',
+                        stderr: 'pipe',
+                    });
+                    const stdout = new TextDecoder().decode(proc.stdout).trimEnd();
+                    const stderr = new TextDecoder().decode(proc.stderr).trimEnd();
+                    if (proc.exitCode !== 0) {
+                        const parts = [`[exit ${proc.exitCode}]`];
+                        if (stderr) parts.push(stderr);
+                        if (stdout) parts.push('stdout:\n' + stdout);
+                        output = parts.join('\n');
+                        isError = true;
+                    } else {
+                        output = stdout || (stderr ? '(stderr)\n' + stderr : '(no output)');
+                    }
                 }
             } catch (e: any) {
                 output = 'Error: ' + (e?.message ?? String(e));
                 isError = true;
             }
 
-            const argsHtml = await ctx.fns.markdown.highlight(ctx, call.content, 'ts');
+            const codeLang = call.kind === 'bash' ? 'bash' : 'ts';
+            const argsHtml = await ctx.fns.markdown.highlight(ctx, call.content, codeLang);
             const resultHtml = await highlightResult(ctx, output);
             await ctx.fns.session.appendToolCallEvent(ctx, agent.id, {
                 name: call.kind,
