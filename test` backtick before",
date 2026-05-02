@@ -1,0 +1,5 @@
+];
+
+tests.forEach(t => console.log(t));
+agent.scratchpad.testResults = { tested: true };
+console.log("\nScratchpad set, check next turn");

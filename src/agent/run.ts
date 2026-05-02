@@ -189,15 +189,24 @@ export default async function (
                     const lines = call.content.split('\n').length;
                     output = `wrote ${call.path} (${call.content.length} bytes, ${lines} lines)`;
                 } else if (call.kind === 'bash') {
-                    const proc = Bun.spawnSync({
+                    // Async spawn — Bun.spawnSync blocks the event loop and
+                    // would freeze every other concurrent agent's LLM stream
+                    // for the duration of the shell command. Bun.spawn returns
+                    // immediately, we await stdout/stderr/exit independently.
+                    const proc = Bun.spawn({
                         cmd: ['bash', '-c', call.content],
                         stdout: 'pipe',
                         stderr: 'pipe',
                     });
-                    const stdout = new TextDecoder().decode(proc.stdout).trimEnd();
-                    const stderr = new TextDecoder().decode(proc.stderr).trimEnd();
-                    if (proc.exitCode !== 0) {
-                        const parts = [`[exit ${proc.exitCode}]`];
+                    const [stdoutText, stderrText, exitCode] = await Promise.all([
+                        new Response(proc.stdout).text(),
+                        new Response(proc.stderr).text(),
+                        proc.exited,
+                    ]);
+                    const stdout = stdoutText.trimEnd();
+                    const stderr = stderrText.trimEnd();
+                    if (exitCode !== 0) {
+                        const parts = [`[exit ${exitCode}]`];
                         if (stderr) parts.push(stderr);
                         if (stdout) parts.push('stdout:\n' + stdout);
                         output = parts.join('\n');

@@ -1,7 +1,13 @@
 // Long-poll HTML stream of events for an agent.
 // Returns rendered events at offset N + a self-replacing tail div that re-fires on `load`.
-// Holds the connection up to ~25s if no new events; on wake or timeout, returns delta.
-const LONG_POLL_MS = 25_000;
+// Holds the connection up to ~10s if no new events; on wake or timeout, returns delta.
+//
+// Why 10s and not 25s: browsers cap concurrent HTTP/1.1 connections per origin
+// at ~6. With multiple agents open (sidebar + statusbar polls + long-polls per
+// page) the cap was burning out — clicks to a new agent had to wait for an old
+// long-poll to release. 10s keeps perceived latency invisible while halving
+// the average time a connection is parked.
+const LONG_POLL_MS = 10_000;
 
 export default async function (ctx: Context, _session: any, req: any) {
     const id = req.params.id;

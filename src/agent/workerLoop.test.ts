@@ -103,6 +103,67 @@ describe('agent.workerLoop', () => {
         expect(runCount).toBe(1);
     }, 5_000);
 
+    test('drains 20 agents under 250ms wall-clock (parallelism scales)', async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.fns.agent.workerLoop = workerLoop;
+        ctx.fns.agent.wakeWorker = wakeWorker;
+
+        const past = Date.now() - 100;
+        const ids = Array.from({ length: 20 }, (_, i) => `m${i}`);
+        for (const id of ids) seedReadyAgent(ctx, id, past);
+
+        const intervals: { id: string; start: number; end: number }[] = [];
+        ctx.fns.agent.run = async (_c: any, agent: any) => {
+            const start = Date.now();
+            await Bun.sleep(100);
+            intervals.push({ id: agent.id, start, end: Date.now() });
+        };
+
+        const t0 = Date.now();
+        const loopPromise = workerLoop(ctx);
+
+        const deadline = Date.now() + 5_000;
+        while (intervals.length < ids.length && Date.now() < deadline) await Bun.sleep(10);
+
+        (ctx.state as any).workerLoopRunning = false;
+        wakeWorker(ctx);
+        await loopPromise;
+        const wall = Date.now() - t0;
+
+        expect(intervals).toHaveLength(ids.length);
+        // Serial would be ≥ 20 × 100ms = 2s. Parallel should land ≤ 250ms
+        // (drain claim overhead + ~100ms run + a couple of awaits).
+        expect(wall).toBeLessThan(250);
+    }, 10_000);
+
+    test('wakeWorker fired before waitForWork is observed (no slept-through race)', async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.fns.agent.workerLoop = workerLoop;
+        ctx.fns.agent.wakeWorker = wakeWorker;
+
+        // Set the wake flag BEFORE anyone is waiting. Old behaviour:
+        // wakeWorker walks an empty Set, drops the wake on the floor, and
+        // the next waitForWork sleeps until the safety poll fires.
+        wakeWorker(ctx);
+
+        // Run a run-less workerLoop turn: no claimable agents, so it would
+        // immediately fall into waitForWork. With edge-triggered wake the
+        // flag short-circuits the wait and the loop exits when we flip
+        // workerLoopRunning=false right after.
+        const t0 = Date.now();
+        const loopPromise = workerLoop(ctx);
+        // give the loop a chance to enter waitForWork once
+        await Bun.sleep(20);
+        (ctx.state as any).workerLoopRunning = false;
+        wakeWorker(ctx);
+        await loopPromise;
+        const wall = Date.now() - t0;
+
+        // Must finish well under any safety timeout (MAX_IDLE_MS = 30s).
+        // If the pre-wait wake had been lost we'd see ~30 s here.
+        expect(wall).toBeLessThan(500);
+    }, 5_000);
+
     test('aborted run leaves cursor untouched and does not auto-reschedule', async () => {
         const ctx: any = await mkTestCtx();
         ctx.fns.agent.workerLoop = workerLoop;
