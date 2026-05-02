@@ -26,7 +26,6 @@ import appendMessage from './session/appendMessage';
 import appendEvent from './session/appendEvent';
 import appendUserMessage from './session/appendUserMessage';
 import appendAssistantMessage from './session/appendAssistantMessage';
-import appendToolMessage from './session/appendToolMessage';
 import appendThinkingEvent from './session/appendThinkingEvent';
 import appendAssistantEvent from './session/appendAssistantEvent';
 import appendToolCallEvent from './session/appendToolCallEvent';
@@ -103,7 +102,7 @@ export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } =
                 save, load, list, fork, loadAll, search,
                 archive: archiveSession, delete: deleteSession,
                 appendMessage, appendEvent,
-                appendUserMessage, appendAssistantMessage, appendToolMessage,
+                appendUserMessage, appendAssistantMessage,
                 appendThinkingEvent, appendAssistantEvent, appendToolCallEvent, appendErrorEvent,
                 getMessages, getEvents, getMaxEventIdx, getFullMessages,
                 syncAgentState, replaceMessages, truncateMessagesFrom, deleteMessageAt, updateScratchpad,

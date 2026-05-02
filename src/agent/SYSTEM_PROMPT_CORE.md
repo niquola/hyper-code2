@@ -176,7 +176,8 @@ Baseline tables include:
 ```text
 agents     (id, model, system_prompt, tools JSON, scratchpad JSON, parent_id, fork_offset,
             run_state, next_run_at, last_processed_msg_idx, created_at, updated_at, ...)
-messages   (agent_id, idx, role, content, tool_calls JSON, tool_call_id,
+messages   (agent_id, idx, role, content, tool_calls JSON, tool_call_id,    -- tool_calls/tool_call_id are legacy columns kept for old rows
+
             excluded_from_llm, ts, PRIMARY KEY (agent_id, idx))
 events     (agent_id, idx, type, payload JSON, ts, PRIMARY KEY (agent_id, idx))
 settings   (module, scope_type, scope_id, key, value JSON, is_secret, updated_at,
@@ -226,7 +227,7 @@ For transcript/event changes, use session helpers:
 - `ctx.fns.agent.compact(...)`
 - then `ctx.fns.session.syncAgentState(ctx, agent)`
 
-Be careful not to break `user → assistant(tool_calls) → tool(matching id)` chains.
+Be careful not to break the marker pair chain: every `assistant: ///eval`/`///write:`/`///html` must be followed by its `user: ///result:*` (or `///error:*`). `truncateMessagesFrom`/`deleteMessageAt`/`compact` walk that boundary for you — bypassing them with raw `replaceMessages` is what breaks invariants.
 
 ## Delegation: parent ↔ child agents
 

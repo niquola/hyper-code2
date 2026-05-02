@@ -14,7 +14,7 @@ describe("agent.compactLastToolResult", () => {
         ctx.fns.session = { replaceMessages: (_c: any, _id: string, next: any[]) => { agent.messages = next; }, syncAgentState: () => agent };
         const res = compact(ctx, agent, "listed 42 files");
         expect(res.replaced).toBe(true);
-        expect(res.toolCallId).toBe("c1");
+        expect(res.resultIdx).toBe(2); // the role='tool' (legacy) row at idx 2
         expect(res.before).toBe(2000);
         expect(agent.messages.at(-1).content).toBe("[compacted] listed 42 files");
     });

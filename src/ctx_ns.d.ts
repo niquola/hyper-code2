@@ -21,7 +21,6 @@ declare global {
         run: typeof import("./agent/run").default;
         start: typeof import("./agent/start").default;
         stop: typeof import("./agent/stop").default;
-        systemPrompt: typeof import("./agent/systemPrompt").default;
         waitForEvent: typeof import("./agent/waitForEvent").default;
         wakeWaiters: typeof import("./agent/wakeWaiters").default;
         wakeWorker: typeof import("./agent/wakeWorker").default;
@@ -109,7 +108,6 @@ declare global {
         appendMessage: typeof import("./session/appendMessage").default;
         appendThinkingEvent: typeof import("./session/appendThinkingEvent").default;
         appendToolCallEvent: typeof import("./session/appendToolCallEvent").default;
-        appendToolMessage: typeof import("./session/appendToolMessage").default;
         appendUserMessage: typeof import("./session/appendUserMessage").default;
         archive: typeof import("./session/archive").default;
         delete: typeof import("./session/delete").default;

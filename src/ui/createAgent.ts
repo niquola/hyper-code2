@@ -1,23 +1,20 @@
-const EVAL_CODE_TOOL = {
-    name: 'evalCode',
-    description: 'Execute a JavaScript expression or statements. Returns the serialized result.',
-    parameters: {
-        type: 'object',
-        properties: { code: { type: 'string', description: 'JS code to evaluate' } },
-        required: ['code'],
-    },
-};
-
-export default async function (ctx: Context, opts: { model?: string; systemPrompt?: string; tools?: any[]; open?: boolean; startText?: string } = {}) {
+export default async function (
+    ctx: Context,
+    opts: { model?: string; systemPrompt?: string; tools?: any[]; open?: boolean; startText?: string } = {},
+) {
     // Priority: explicit opts.model > declared setting (DB → env → default).
-    // The declaration in src/llm/$setting_defaultModel.ts handles env + default.
     const fromSettings = ctx.fns?.settings?.getString?.(ctx, {
         module: 'llm', scopeType: 'global', key: 'defaultModel',
     });
     const model = (opts.model ?? fromSettings ?? 'minimax/minimax-m2.7').trim();
-    const systemPrompt = opts.systemPrompt ?? await ctx.fns.agent.systemPrompt(ctx);
-    const tools = opts.tools ?? [EVAL_CODE_TOOL];
-    const agent = ctx.fns.agent.start(ctx, { model, systemPrompt, tools });
+    // tools is empty under the markers protocol — no native function-calling.
+    // systemPrompt is per-agent additive override; the markers wire layer +
+    // CORE come from fullSystemPrompt at every turn.
+    const agent = ctx.fns.agent.start(ctx, {
+        model,
+        systemPrompt: opts.systemPrompt ?? '',
+        tools: opts.tools ?? [],
+    });
     try { ctx.fns.session?.save?.(ctx, agent); } catch (e: any) { console.error('[session.save]', e?.message); }
     if (opts.open !== false) ctx.fns.events.emit(ctx, { type: 'ui.navigate', path: '/agent/' + encodeURIComponent(agent.id) });
     if (opts.startText?.trim()) {

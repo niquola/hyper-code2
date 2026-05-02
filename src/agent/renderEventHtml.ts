@@ -59,7 +59,19 @@ export default async function (_ctx: Context, ev: any, opts: { agentId?: string 
         const argsLen = String(ev.args?.code ?? JSON.stringify(ev.args ?? {})).length;
         const resultLen = String(ev.result ?? '').length;
         const status = ev.isError ? '<span class="text-red-600">error</span>' : '<span class="text-green-700">ok</span>';
-        return '<details class="tool border border-gray-200 rounded-xl overflow-hidden text-xs leading-snug bg-white shadow-sm ' + (ev.isError ? 'ring-1 ring-red-200' : '') + '"><summary class="cursor-pointer select-none flex items-center justify-between gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-200"><span class="font-semibold">tool: ' + esc(ev.name || '') + '</span><span class="text-gray-500 font-mono">args ' + argsLen + 'c · result ' + resultLen + 'c · ' + status + '</span></summary><div class="bg-white px-4 py-3 tool-code">' + (ev.argsHtml || '') + '</div><div class="bg-gray-50 border-t border-gray-200 px-4 py-3 text-gray-700 tool-result">' + (ev.resultHtml || '') + '</div></details>';
+        // Marker label: ///eval, ///write:<path>, ///html — visually mirrors what
+        // the agent actually emitted. Falls back to the raw event name for any
+        // legacy/non-marker tool events still in the DB.
+        const label = ev.name === 'write' && ev.args?.path
+            ? `///write:${esc(ev.args.path)}`
+            : ev.name === 'eval' ? '///eval'
+            : ev.name === 'html' ? '///html'
+            : esc(ev.name || 'tool');
+        // Open by default for write (the path is the interesting bit) and on
+        // error — both cases the user usually wants to see the body without an
+        // extra click. Eval stays collapsed since outputs can be long.
+        const openAttr = (ev.isError || ev.name === 'write') ? ' open' : '';
+        return '<details' + openAttr + ' class="tool border border-gray-200 rounded-xl overflow-hidden text-xs leading-snug bg-white shadow-sm ' + (ev.isError ? 'ring-1 ring-red-200' : '') + '"><summary class="cursor-pointer select-none flex items-center justify-between gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-200"><span class="font-mono font-semibold text-gray-800">' + label + '</span><span class="text-gray-500 font-mono">args ' + argsLen + 'c · result ' + resultLen + 'c · ' + status + '</span></summary><div class="bg-white px-4 py-3 tool-code">' + (ev.argsHtml || '') + '</div><div class="bg-gray-50 border-t border-gray-200 px-4 py-3 text-gray-700 tool-result">' + (ev.resultHtml || '') + '</div></details>';
     }
 
     if (ev.type === "error") {
