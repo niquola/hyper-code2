@@ -1,0 +1,3 @@
+ALTER TABLE messages ADD COLUMN tool_calls TEXT;
+ALTER TABLE messages ADD COLUMN tool_call_id TEXT;
+ALTER TABLE agents ADD COLUMN tools TEXT NOT NULL DEFAULT '[]';

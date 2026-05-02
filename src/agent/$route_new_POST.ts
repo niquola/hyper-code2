@@ -5,8 +5,6 @@ export default async function (ctx: Context, _session: any, req: Request) {
         || ctx.env.MODEL
         || "minimax/minimax-m2.7";
     const systemPromptRaw = (form.get("systemPrompt") as string)?.trim();
-    // Tools array stays empty — markers protocol uses plain content, no native
-    // function-calling schemas. Per-agent override, if any, lives in systemPrompt.
-    const agent = ctx.fns.agent.start(ctx, { model, systemPrompt: systemPromptRaw || "", tools: [] });
+    const agent = ctx.fns.agent.start(ctx, { model, systemPrompt: systemPromptRaw || "" });
     return new Response(null, { status: 303, headers: { location: `/agent/${encodeURIComponent(agent.id)}` } });
 }

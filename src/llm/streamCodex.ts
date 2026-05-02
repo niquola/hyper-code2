@@ -11,7 +11,6 @@ export default async function (
 ): Promise<{
     text: string;
     thinking: string;
-    toolCalls: { id: string; name: string; arguments: string }[];
     finishReason: string | null;
     usage: { prompt_tokens: number; completion_tokens: number };
 }> {
@@ -30,19 +29,8 @@ export default async function (
         instructions,
         input,
         text: { verbosity: "medium" },
-        tool_choice: "auto",
-        parallel_tool_calls: true,
         prompt_cache_key: agent.id,
     };
-    if (agent.tools?.length) {
-        body.tools = agent.tools.map((t: any) => ({
-            type: "function",
-            name: t.name,
-            description: t.description,
-            parameters: t.parameters ?? { type: "object", properties: {} },
-            strict: false,
-        }));
-    }
 
     // ChatGPT backend occasionally returns 5xx / "upstream connect error"
     // before any bytes ship. Retry pre-stream with exponential backoff.
@@ -82,29 +70,17 @@ export default async function (
 
     let text = "";
     let thinking = "";
-    const toolCalls: Record<string, { id: string; name: string; arguments: string }> = {};
     let finishReason: string | null = null;
     const usage = { prompt_tokens: 0, completion_tokens: 0 };
 
     for await (const ev of parseSSE(res.body)) {
         const t = ev.type;
-        if (t === "response.output_item.added") {
-            const item = ev.item;
-            if (item?.type === "function_call") {
-                toolCalls[item.id] = { id: item.call_id, name: item.name, arguments: item.arguments ?? "" };
-            }
-        } else if (t === "response.output_text.delta" && typeof ev.delta === "string") {
+        if (t === "response.output_text.delta" && typeof ev.delta === "string") {
             text += ev.delta;
             opts.onEvent?.({ type: "text_delta", delta: ev.delta });
         } else if (t === "response.reasoning_summary_text.delta" && typeof ev.delta === "string") {
             thinking += ev.delta;
             opts.onEvent?.({ type: "thinking_delta", delta: ev.delta });
-        } else if (t === "response.function_call_arguments.delta") {
-            const tc = toolCalls[ev.item_id];
-            if (tc && typeof ev.delta === "string") tc.arguments += ev.delta;
-        } else if (t === "response.function_call_arguments.done") {
-            const tc = toolCalls[ev.item_id];
-            if (tc && typeof ev.arguments === "string") tc.arguments = ev.arguments;
         } else if (t === "response.completed" || t === "response.incomplete") {
             const u = ev.response?.usage;
             if (u) {
@@ -125,10 +101,7 @@ export default async function (
         }
     }
 
-    const calls = Object.values(toolCalls);
-    if (calls.length > 0) finishReason = "tool_calls";
-
-    return { text, thinking, toolCalls: calls, finishReason, usage };
+    return { text, thinking, finishReason, usage };
 }
 
 function isRetryable(status: number, body: string): boolean {

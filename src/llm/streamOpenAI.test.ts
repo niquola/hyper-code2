@@ -20,7 +20,7 @@ describe.skipIf(!process.env.LIVE_LLM)("agent.stream — stateless /v1/chat/comp
         expect(process.env.MODEL).toBeDefined();
     });
 
-    test("plain text reply — no tool calls", async () => {
+    test("plain text reply", async () => {
         const ctx = mkCtx();
         const agent = start(ctx, {
             model: process.env.MODEL!,
@@ -29,7 +29,6 @@ describe.skipIf(!process.env.LIVE_LLM)("agent.stream — stateless /v1/chat/comp
         agent.messages.push({ role: "user", content: "say hi" });
         const result = await stream(ctx, agent);
         expect(result.text.length).toBeGreaterThan(0);
-        expect(result.toolCalls).toEqual([]);
         expect(result.usage?.prompt_tokens ?? result.usage?.input_tokens).toBeGreaterThan(0);
     }, 60_000);
 
@@ -48,28 +47,4 @@ describe.skipIf(!process.env.LIVE_LLM)("agent.stream — stateless /v1/chat/comp
         expect(deltas.join("")).toBe(result.text);
     }, 60_000);
 
-    test("invokes tool — returns toolCalls with parsed name/args", async () => {
-        const ctx = mkCtx();
-        const agent = start(ctx, {
-            model: process.env.MODEL!,
-            systemPrompt: "You have ONE tool: `evalCode`. Use it for any math. Never compute manually.",
-            tools: [{
-                name: "evalCode",
-                description: "Execute JS; returns serialized result.",
-                parameters: {
-                    type: "object",
-                    properties: { code: { type: "string" } },
-                    required: ["code"],
-                },
-            }],
-        });
-        agent.messages.push({ role: "user", content: "compute 3+4*5" });
-        const result = await stream(ctx, agent);
-        expect(result.toolCalls.length).toBeGreaterThan(0);
-        const tc = result.toolCalls[0]!;
-        expect(tc.name).toBe("evalCode");
-        const args = JSON.parse(tc.arguments);
-        expect(args.code).toMatch(/3.*4.*5/);
-        expect(result.finishReason).toBe("tool_calls");
-    }, 60_000);
 });

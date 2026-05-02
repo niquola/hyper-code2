@@ -58,7 +58,7 @@ describe('GET /agent/:id/events.html', () => {
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
-        const a = start(ctx, { model: 'm', systemPrompt: '', tools: [] });
+        const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
         appendEvent(ctx, a.id, { type: 'user', text: 'hi', html: '<div data-ev="user">hi</div>' });
         appendEvent(ctx, a.id, { type: 'user', text: 'two', html: '<div data-ev="user">two</div>' });
@@ -75,7 +75,7 @@ describe('GET /agent/:id/events.html', () => {
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
-        const a = start(ctx, { model: 'm', systemPrompt: '', tools: [] });
+        const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
         appendEvent(ctx, a.id, { type: 'user', text: 'a', html: '<div>a</div>' });
         appendEvent(ctx, a.id, { type: 'user', text: 'b', html: '<div>b</div>' });
@@ -93,7 +93,7 @@ describe('GET /agent/:id/events.html', () => {
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
-        const a = start(ctx, { model: 'm', systemPrompt: '', tools: [] });
+        const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
 
         // Start long-poll at "tail" offset. No events yet, so it should wait.
@@ -114,7 +114,7 @@ describe('GET /agent/:id/events.html', () => {
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
-        const a = start(ctx, { model: 'm', systemPrompt: '', tools: [] });
+        const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
         const ac = new AbortController();
         const r = new Request('http://x/agent/' + a.id + '/events.html?offset=0', { signal: ac.signal });

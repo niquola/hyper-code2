@@ -99,9 +99,6 @@ export default async function (
     }
 
     while (true) {
-        // No native tool schemas — markers protocol uses plain content.
-        agent.tools = [];
-
         const { text, usage } = await ctx.fns.llm.stream(ctx, agent, { signal: ac.signal });
 
         const { prose, calls, errors } = ctx.fns.agent.parseMarkers(String(text ?? ''));

@@ -1,6 +1,6 @@
 export default function (
     ctx: Context,
-    opts: { model: string; systemPrompt?: string; tools?: any[]; parentId?: string | null; forkOffset?: number | null },
+    opts: { model: string; systemPrompt?: string; parentId?: string | null; forkOffset?: number | null },
 ): types.agent.Agent {
     const id = ctx.fns.agent.nextId(ctx);
     const agent: types.agent.Agent = {
@@ -14,7 +14,6 @@ export default function (
         waiters: [],
         isStreaming: false,
         abortController: null,
-        tools: opts.tools ?? [],
         scratchpad: {},
         parentId: opts.parentId ?? null,
         forkOffset: opts.forkOffset ?? null,

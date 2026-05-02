@@ -40,7 +40,7 @@ describe("session.fork", () => {
     const ctx: any = mkCtx();
     ctx.fns.db.connect(ctx, ":memory:");
     await ctx.fns.db.migrate(ctx);
-    const parent = start(ctx, { model: "openai/gpt-4o", systemPrompt: "sp", tools: [{ name: "x" }] });
+    const parent = start(ctx, { model: "openai/gpt-4o", systemPrompt: "sp" });
     save(ctx, parent);
     await appendUserMessage(ctx, parent.id, 'Hello');
     appendAssistantMessage(ctx, parent.id, { content: 'Hi!' });
@@ -54,7 +54,7 @@ describe("session.fork", () => {
     const ctx: any = mkCtx();
     ctx.fns.db.connect(ctx, ":memory:");
     await ctx.fns.db.migrate(ctx);
-    const gp = start(ctx, { model: "m", systemPrompt: "", tools: [] });
+    const gp = start(ctx, { model: "m", systemPrompt: "" });
     save(ctx, gp);
     await appendUserMessage(ctx, gp.id, 'gp msg');
     const parent = fork(ctx, gp.id);

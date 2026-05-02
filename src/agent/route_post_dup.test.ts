@@ -5,7 +5,7 @@ import routePost from "./$route_$id_POST";
 describe('agent POST route', () => {
     test('does not duplicate user message even if called twice', async () => {
         const ctx = await mkTestCtx();
-        const agent = ctx.fns.agent.start(ctx, { model: 'mock:test', systemPrompt: '', tools: [] });
+        const agent = ctx.fns.agent.start(ctx, { model: 'mock:test', systemPrompt: '' });
         ctx.fns.session.save(ctx, agent);
         (ctx.state as any).agent = { [agent.id]: agent };
 

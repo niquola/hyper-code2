@@ -26,7 +26,7 @@ function mkCtx() {
 }
 
 function baseAgent(id: string, extra: any = {}) {
-  return { id, model: 'm', systemPrompt: '', tools: [], scratchpad: {}, messages: [], events: [], cursors: {}, subscribers: new Set<(ev: any, signal?: AbortSignal) => void>(), waiters: [], isStreaming: false, abortController: null, parentId: extra.parentId ?? null, forkOffset: extra.forkOffset ?? null };
+  return { id, model: 'm', systemPrompt: '', scratchpad: {}, messages: [], events: [], cursors: {}, subscribers: new Set<(ev: any, signal?: AbortSignal) => void>(), waiters: [], isStreaming: false, abortController: null, parentId: extra.parentId ?? null, forkOffset: extra.forkOffset ?? null };
 }
 
 describe('session.syncAgentState', () => {

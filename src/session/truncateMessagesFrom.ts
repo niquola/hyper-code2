@@ -1,21 +1,17 @@
 // Drop messages[from..] (inclusive). Walks back if `from` lands inside
-// a tool-call/result pair so we never leave half a pair in the transcript:
-//
-// - legacy function-calling: assistant.tool_calls → role='tool' result.
-// - markers protocol:        assistant.content starts with `///eval` or
-//                            `///write:` → user.content starts with
-//                            `///result:` or `///error:`.
+// a marker pair so we never leave half a pair in the transcript:
+// assistant ///eval / ///write:<path> / ///html → user ///result:* / ///error:*.
 //
 // Returns {ok, from} with `from` = effective truncation index post-walkback.
 function isAssistantInvocation(m: any): boolean {
     if (m?.role !== "assistant") return false;
-    if (Array.isArray(m.tool_calls) && m.tool_calls.length > 0) return true;
     const c = String(m.content ?? "");
-    return c.startsWith("///eval\n") || c === "///eval" || c.startsWith("///write:");
+    return c.startsWith("///eval\n") || c === "///eval"
+        || c.startsWith("///write:")
+        || c.startsWith("///html\n") || c === "///html";
 }
 
 function isToolResult(m: any): boolean {
-    if (m?.role === "tool") return true; // legacy
     if (m?.role !== "user") return false;
     const c = String(m.content ?? "");
     return c.startsWith("///result:") || c.startsWith("///error:");

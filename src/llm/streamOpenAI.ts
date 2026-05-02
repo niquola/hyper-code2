@@ -5,7 +5,6 @@ export default async function (
 ): Promise<{
     text: string;
     thinking: string;
-    toolCalls: Array<{ id: string; name: string; arguments: string }>;
     finishReason: string | null;
     usage: any;
 }> {
@@ -24,7 +23,6 @@ export default async function (
         stream_options: { include_usage: true },
         prompt_cache_key: agent.id,
     };
-    if (agent.tools?.length) body.tools = agent.tools.map(t => ({ type: "function", function: t }));
 
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (ep.apiKey) headers["authorization"] = `Bearer ${ep.apiKey}`;
@@ -40,7 +38,6 @@ export default async function (
 
     let text = "";
     let thinking = "";
-    const toolCalls: Record<number, { id: string; name: string; arguments: string }> = {};
     let finishReason: string | null = null;
     let usage: any = undefined;
 
@@ -59,25 +56,10 @@ export default async function (
             thinking += delta.reasoning_content;
             opts.onEvent?.({ type: "thinking_delta", delta: delta.reasoning_content });
         }
-        if (Array.isArray(delta.tool_calls)) {
-            for (const tc of delta.tool_calls) {
-                const idx = tc.index ?? 0;
-                const slot = toolCalls[idx] ??= { id: "", name: "", arguments: "" };
-                if (tc.id) slot.id = tc.id;
-                if (tc.function?.name) slot.name += tc.function.name;
-                if (tc.function?.arguments) slot.arguments += tc.function.arguments;
-            }
-        }
         if (choice.finish_reason) finishReason = choice.finish_reason;
     }
 
-    return {
-        text,
-        thinking,
-        toolCalls: Object.keys(toolCalls).sort((a, b) => +a - +b).map(k => toolCalls[+k]!),
-        finishReason,
-        usage,
-    };
+    return { text, thinking, finishReason, usage };
 }
 
 async function* parseSSE(body: ReadableStream<Uint8Array>) {

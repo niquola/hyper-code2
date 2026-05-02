@@ -29,7 +29,7 @@ describe('session.getMaxEventIdx & getEvents(opts)', () => {
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
-        const a = start(ctx, { model: 'm', systemPrompt: '', tools: [] });
+        const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
         expect(getMaxEventIdx(ctx, a.id)).toBe(-1);
     });
@@ -38,7 +38,7 @@ describe('session.getMaxEventIdx & getEvents(opts)', () => {
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
-        const a = start(ctx, { model: 'm', systemPrompt: '', tools: [] });
+        const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
         const r1 = appendEvent(ctx, a.id, { type: 'user', text: 'hi' });
         const r2 = appendEvent(ctx, a.id, { type: 'thinking', text: '...' });
@@ -53,7 +53,7 @@ describe('session.getMaxEventIdx & getEvents(opts)', () => {
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
-        const a = start(ctx, { model: 'm', systemPrompt: '', tools: [] });
+        const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
         appendEvent(ctx, a.id, { type: 'user', text: 'one' });
         appendEvent(ctx, a.id, { type: 'user', text: 'two' });

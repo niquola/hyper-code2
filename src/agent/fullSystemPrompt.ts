@@ -13,15 +13,11 @@ export default async function (ctx: Context, agent: types.agent.Agent): Promise<
     const core = await Bun.file(CORE_PATH).text();
     const wire = await Bun.file(WIRE_PATH).text();
 
-    // Skip legacy/default per-agent prompts that previous versions cached
-    // verbatim (heuristic: first line of any of the prior wire-format layers).
+    // Per-agent additive override. Empty by default — the markers wire layer
+    // and CORE come from the prepended files. Only non-empty when the user
+    // typed something into the new-agent form.
     const perAgent = (agent.systemPrompt ?? "").trim();
-    const isLegacy = perAgent.startsWith("You are an agent with exactly ONE tool: `evalCode`")
-                  || perAgent.startsWith("# Wire format: tool-calls protocol")
-                  || perAgent.startsWith("# Wire format: markers protocol");
-    const perAgentBlock = (perAgent && !isLegacy)
-        ? `\n\n## Per-agent instructions\n\n${perAgent}`
-        : "";
+    const perAgentBlock = perAgent ? `\n\n## Per-agent instructions\n\n${perAgent}` : "";
 
     const projectFile = await Bun.file("CLAUDE.md").exists()
         ? "CLAUDE.md"

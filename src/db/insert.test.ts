@@ -15,7 +15,7 @@ const mkCtx = async () => {
 describe("db.insert", () => {
     test("inserts a row from an object", async () => {
         const ctx = await mkCtx();
-        const r = insert(ctx, "agents", { id: "a1", model: "m", system_prompt: "", tools: "[]", scratchpad: "{}", created_at: 1, updated_at: 1 });
+        const r = insert(ctx, "agents", { id: "a1", model: "m", system_prompt: "", scratchpad: "{}", created_at: 1, updated_at: 1 });
         expect(r.changes).toBe(1);
         const rows = select(ctx, "SELECT id, model FROM agents");
         expect(rows).toEqual([{ id: "a1", model: "m" }]);

@@ -21,7 +21,6 @@ export default async function (
         : ctx.fns.agent.start(ctx, {
             model: parentAgent.model,
             systemPrompt: parentAgent.systemPrompt,
-            tools: parentAgent.tools,
         });
 
     child.scratchpad ??= {};

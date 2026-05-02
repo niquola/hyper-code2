@@ -2,23 +2,21 @@
 //
 // 1. compact(ctx, agent, "summary string")
 //    Find the most recent ///result:* / ///error:* synthetic user-message
-//    (the markers-protocol equivalent of role='tool') and replace its content
-//    with a "[compacted] <summary>" note. Loses the verbose tool output but
-//    keeps the call→result chain intact for the LLM.
+//    and replace its content with a "[compacted] <summary>" note. Loses the
+//    verbose tool output but keeps the call→result chain intact for the LLM.
 //
 // 2. compact(ctx, agent, { message: <idx>, summary: "..." })
-//    Drop messages[<idx>..] and replace with one synthetic note. If <idx>
-//    lands inside a marker pair (assistant `///eval` ↔ user `///result:*`),
-//    walks back over the pair so we never leave half a pair stranded —
-//    same invariant as truncateMessagesFrom.
+//    Drop messages[<idx>..] and replace with one synthetic user note. If
+//    <idx> lands inside a marker pair, walks back over the pair so we never
+//    leave half a pair stranded — same invariant as truncateMessagesFrom.
 function isAssistantInvocation(m: any): boolean {
     if (m?.role !== "assistant") return false;
-    if (Array.isArray(m.tool_calls) && m.tool_calls.length > 0) return true; // legacy
     const c = String(m.content ?? "");
-    return c.startsWith("///eval\n") || c === "///eval" || c.startsWith("///write:") || c.startsWith("///html\n") || c === "///html";
+    return c.startsWith("///eval\n") || c === "///eval"
+        || c.startsWith("///write:")
+        || c.startsWith("///html\n") || c === "///html";
 }
 function isToolResult(m: any): boolean {
-    if (m?.role === "tool") return true; // legacy
     if (m?.role !== "user") return false;
     const c = String(m.content ?? "");
     return c.startsWith("///result:") || c.startsWith("///error:");

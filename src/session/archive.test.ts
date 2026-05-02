@@ -16,7 +16,7 @@ describe('session.archive', () => {
         const ctx: any = { state: {}, env: {}, fns: { db: { connect, migrate, select: (await import('../db/select')).default, exec: (await import('../db/exec')).default }, session: { save, list, archive, load, appendUserMessage, appendMessage, appendEvent }, agent: { start, nextId, renderEventHtml: async () => '' }, events: { emitAgentsChanged: () => {} } } };
         ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
-        const agent = ctx.fns.agent.start(ctx, { model: 'test:model', systemPrompt: '', tools: [] });
+        const agent = ctx.fns.agent.start(ctx, { model: 'test:model', systemPrompt: '' });
         save(ctx, agent);
         await appendUserMessage(ctx, agent.id, 'hello archive');
         expect(list(ctx).some((a: any) => a.id === agent.id)).toBe(true);

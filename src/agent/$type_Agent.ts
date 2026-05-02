@@ -9,7 +9,6 @@ export type Agent = {
     waiters: Array<() => void>;
     isStreaming: boolean;
     abortController: AbortController | null;
-    tools: any[];
     scratchpad: Record<string, any>;
     parentId?: string | null;
     forkOffset?: number | null;

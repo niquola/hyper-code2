@@ -1,5 +1,4 @@
 // Stream from an Anthropic Messages API endpoint (anthropic.com, kimi.com/coding, etc).
-// Same return shape as streamOpenAI: {text, thinking, toolCalls, finishReason, usage}.
 export default async function (
     ctx: Context,
     agent: types.agent.Agent,
@@ -7,7 +6,6 @@ export default async function (
 ): Promise<{
     text: string;
     thinking: string;
-    toolCalls: Array<{ id: string; name: string; arguments: string }>;
     finishReason: string | null;
     usage: any;
 }> {
@@ -29,13 +27,6 @@ export default async function (
         stream: true,
         max_tokens: 8192,
     };
-    if (agent.tools?.length) {
-        body.tools = agent.tools.map((t: any) => ({
-            name: t.name,
-            description: t.description,
-            input_schema: t.parameters ?? { type: "object", properties: {} },
-        }));
-    }
 
     const headers: Record<string, string> = {
         "content-type": "application/json",
@@ -61,17 +52,11 @@ export default async function (
     }
     // Claude Code subscription requires identity headers that match what the
     // official `claude` CLI sends; otherwise the OAuth token is rejected or
-    // the request gets flagged. Headers below mirror opencode-claude-auth /
-    // griffinmartin reverse-engineering of CLI 2.1.x. Subject to change —
-    // every value is env-overridable so you can patch without rebuild.
-    //
-    // `claude-code-20250219` MUST be conditional on tools[] being present
-    // (the official CLI only sends it then). `oauth-2025-04-20` is the
-    // OAuth-mode marker and is always sent for Anthropic OAuth.
+    // the request gets flagged. Headers below mirror the CLI 2.1.x reverse-
+    // engineering. Subject to change — every value is env-overridable.
     if (ep.provider === "claude-code") {
         const cliVersion = ctx.env.CLAUDE_CODE_CLI_VERSION ?? "2.1.126";
         const baseBeta = ["oauth-2025-04-20", "interleaved-thinking-2025-05-14", "prompt-caching-scope-2026-01-05"];
-        if (agent.tools?.length) baseBeta.unshift("claude-code-20250219");
         headers["anthropic-beta"] = ctx.env.CLAUDE_CODE_ANTHROPIC_BETA ?? baseBeta.join(",");
         headers["user-agent"] = ctx.env.CLAUDE_CODE_USER_AGENT ?? `claude-cli/${cliVersion} (external, sdk-cli)`;
         headers["x-app"] = "cli";
@@ -90,8 +75,6 @@ export default async function (
 
     let text = "";
     let thinking = "";
-    const blocks: Record<number, { id?: string; name?: string; type?: string; argsRaw?: string }> = {};
-    const toolCalls: Record<number, { id: string; name: string; arguments: string }> = {};
     let finishReason: string | null = null;
     let usage: any = { prompt_tokens: 0, completion_tokens: 0 };
 
@@ -99,15 +82,7 @@ export default async function (
         if (ev.type === "message_start") {
             const u = ev.data.message?.usage;
             if (u) usage.prompt_tokens = u.input_tokens ?? 0;
-        } else if (ev.type === "content_block_start") {
-            blocks[ev.data.index] = {
-                id: ev.data.content_block?.id,
-                name: ev.data.content_block?.name,
-                type: ev.data.content_block?.type,
-                argsRaw: "",
-            };
         } else if (ev.type === "content_block_delta") {
-            const b = blocks[ev.data.index];
             const d = ev.data.delta ?? {};
             if (d.type === "text_delta" && typeof d.text === "string") {
                 text += d.text;
@@ -115,13 +90,6 @@ export default async function (
             } else if (d.type === "thinking_delta" && typeof d.thinking === "string") {
                 thinking += d.thinking;
                 opts.onEvent?.({ type: "thinking_delta", delta: d.thinking });
-            } else if (d.type === "input_json_delta" && typeof d.partial_json === "string" && b) {
-                b.argsRaw = (b.argsRaw ?? "") + d.partial_json;
-            }
-        } else if (ev.type === "content_block_stop") {
-            const b = blocks[ev.data.index];
-            if (b && b.type === "tool_use" && b.id && b.name) {
-                toolCalls[ev.data.index] = { id: b.id, name: b.name, arguments: b.argsRaw ?? "{}" };
             }
         } else if (ev.type === "message_delta") {
             if (ev.data.delta?.stop_reason) finishReason = ev.data.delta.stop_reason;
@@ -129,19 +97,12 @@ export default async function (
         }
     }
 
-    return {
-        text,
-        thinking,
-        toolCalls: Object.keys(toolCalls).sort((a, b) => +a - +b).map(k => toolCalls[+k]!),
-        finishReason: mapStop(finishReason),
-        usage,
-    };
+    return { text, thinking, finishReason: mapStop(finishReason), usage };
 }
 
 function mapStop(r: string | null): string | null {
     if (!r) return null;
     if (r === "end_turn" || r === "stop_sequence") return "stop";
-    if (r === "tool_use") return "tool_calls";
     if (r === "max_tokens") return "length";
     return r;
 }

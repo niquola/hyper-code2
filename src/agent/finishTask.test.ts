@@ -11,7 +11,7 @@ async function setup() {
 describe("agent.finishTask", () => {
     test("child with task metadata can finish successfully", async () => {
         const ctx = await setup();
-        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "", tools: [] });
+        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "" });
         agent.scratchpad.delegateTask = { parentId: "parent1", mode: "await", status: "running" };
         ctx.fns.session.save(ctx, agent);
         const res = finishTask(ctx, agent, { summary: "done", result: { value: 1 } });
@@ -20,7 +20,7 @@ describe("agent.finishTask", () => {
 
     test("result saved into scratchpad metadata", async () => {
         const ctx = await setup();
-        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "", tools: [] });
+        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "" });
         agent.scratchpad.delegateTask = { parentId: "parent1", mode: "await", status: "running" };
         ctx.fns.session.save(ctx, agent);
         finishTask(ctx, agent, { summary: "done", result: { value: 2 } });
@@ -32,7 +32,7 @@ describe("agent.finishTask", () => {
 
     test("waiter resolves in await mode", async () => {
         const ctx = await setup();
-        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "", tools: [] });
+        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "" });
         agent.scratchpad.delegateTask = { parentId: "parent1", mode: "await", status: "running" };
         ctx.fns.session.save(ctx, agent);
         let resolved: any = null;
@@ -44,14 +44,14 @@ describe("agent.finishTask", () => {
 
     test("missing delegateTask metadata throws", async () => {
         const ctx = await setup();
-        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "", tools: [] });
+        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "" });
         ctx.fns.session.save(ctx, agent);
         expect(() => finishTask(ctx, agent, { summary: "done" })).toThrow("finishTask: missing delegateTask metadata");
     });
 
     test("async mode does not resolve waiter", async () => {
         const ctx = await setup();
-        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "", tools: [] });
+        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "" });
         agent.scratchpad.delegateTask = { parentId: "parent1", mode: "async", status: "running" };
         ctx.fns.session.save(ctx, agent);
         let resolved: any = null;
@@ -63,7 +63,7 @@ describe("agent.finishTask", () => {
 
     test("summary required", async () => {
         const ctx = await setup();
-        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "", tools: [] });
+        const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "" });
         agent.scratchpad.delegateTask = { parentId: "parent1", mode: "await", status: "running" };
         ctx.fns.session.save(ctx, agent);
         expect(() => finishTask(ctx, agent, { summary: "   " })).toThrow("finishTask: summary is required");

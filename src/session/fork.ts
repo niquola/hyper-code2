@@ -5,7 +5,6 @@ export default function (ctx: Context, id: string, opts: { title?: string; offse
     const agent = ctx.fns.agent.start(ctx, {
         model: parent.model,
         systemPrompt: parent.systemPrompt,
-        tools: parent.tools,
         parentId: parent.id,
         forkOffset: opts.offset ?? fullCount,
     });

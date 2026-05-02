@@ -7,7 +7,6 @@ export default function (ctx: Context, id: string): types.agent.Agent | null {
         id: row.id,
         model: row.model,
         systemPrompt: row.system_prompt,
-        tools: JSON.parse(row.tools),
         scratchpad: JSON.parse(row.scratchpad),
         messages: [],
         events: [],

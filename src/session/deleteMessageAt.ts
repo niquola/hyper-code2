@@ -1,15 +1,15 @@
-// Delete a single message by idx. Refuses to delete one half of a tool/marker
+// Delete a single message by idx. Refuses to delete one half of a marker
 // pair (would leave the other half stranded). For those cases the caller
 // should use truncateMessagesFrom, which walks the pair boundary.
 function isAssistantInvocation(m: any): boolean {
     if (m?.role !== "assistant") return false;
-    if (Array.isArray(m.tool_calls) && m.tool_calls.length > 0) return true;
     const c = String(m.content ?? "");
-    return c.startsWith("///eval\n") || c === "///eval" || c.startsWith("///write:");
+    return c.startsWith("///eval\n") || c === "///eval"
+        || c.startsWith("///write:")
+        || c.startsWith("///html\n") || c === "///html";
 }
 
 function isToolResult(m: any): boolean {
-    if (m?.role === "tool") return true; // legacy
     if (m?.role !== "user") return false;
     const c = String(m.content ?? "");
     return c.startsWith("///result:") || c.startsWith("///error:");
@@ -21,7 +21,7 @@ export default function (ctx: Context, id: string, idx: number): { ok: boolean; 
     const target = messages[idx];
     if (!target) return { ok: false, reason: "not found" };
     if (isAssistantInvocation(target)) {
-        return { ok: false, reason: "cannot delete assistant tool/marker message alone; use delete from here" };
+        return { ok: false, reason: "cannot delete assistant marker message alone; use delete from here" };
     }
     if (isToolResult(target)) {
         return { ok: false, reason: "cannot delete tool-result message alone; use delete from here" };

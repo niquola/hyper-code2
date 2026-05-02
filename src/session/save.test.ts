@@ -19,13 +19,12 @@ const mkCtx = async () => {
 describe("session.save", () => {
     test("upserts agent row with typed fields", async () => {
         const ctx = await mkCtx();
-        const agent = start(ctx, { model: "m1", systemPrompt: "sp", tools: [{ name: "t" } as any] });
+        const agent = start(ctx, { model: "m1", systemPrompt: "sp" });
         agent.scratchpad.x = 42;
         save(ctx, agent);
         const [row] = ctx.fns.db.select<any>(ctx, "SELECT * FROM agents WHERE id = ?", [agent.id]);
         expect(row.model).toBe("m1");
         expect(row.system_prompt).toBe("sp");
-        expect(JSON.parse(row.tools)).toEqual([{ name: "t" }]);
         expect(JSON.parse(row.scratchpad)).toEqual({ x: 42 });
     });
 

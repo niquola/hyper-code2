@@ -30,7 +30,7 @@ describe("session.updateScratchpad", () => {
     const ctx = mkCtx();
     ctx.fns.db.connect(ctx, ":memory:");
     await ctx.fns.db.migrate(ctx);
-    const agent = start(ctx as any, { model: "m", systemPrompt: "", tools: [] });
+    const agent = start(ctx as any, { model: "m", systemPrompt: "" });
     agent.messages = [{ role: "user", content: "hello" }];
     agent.events = [{ type: "user", text: "hello" }];
     save(ctx as any, agent);
