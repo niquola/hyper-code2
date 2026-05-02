@@ -89,25 +89,26 @@ describe('GET /agent/:id/events.html', () => {
         expect(body).toContain('offset=3');
     });
 
-    test('long-polls until wake fires, then returns new event', async () => {
+    test('returns instantly with empty delta + tail (no long-poll)', async () => {
+        // After the SSE refactor: handler is short-fetch, never blocks on
+        // waitForEvent. The browser triggers the next fetch via
+        // hyper-tick (dispatched by events/client.js on
+        // agent.event_appended SSE) or the 10s safety poll.
         const ctx = mkCtx();
         ctx.fns.db.connect(ctx, ':memory:');
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
 
-        // Start long-poll at "tail" offset. No events yet, so it should wait.
-        const pending = route(ctx, null, reqFor(a.id, 0));
+        const t0 = Date.now();
+        const res = await route(ctx, null, reqFor(a.id, 0));
+        const wall = Date.now() - t0;
+        expect(wall).toBeLessThan(50);
 
-        // After 30ms, append an event. appendEvent calls wakeWaiters internally.
-        setTimeout(() => {
-            appendEvent(ctx, a.id, { type: 'user', text: 'late', html: '<div>late</div>' });
-        }, 30);
-
-        const res = await pending;
         const body = await res.text();
-        expect(body).toContain('<div>late</div>');
-        expect(body).toContain('offset=1');
+        expect(body).toContain('id="msg-tail"');
+        expect(body).toContain('hyper-tick from:body, every 10s');
+        expect(body).toContain('offset=0');
     });
 
     test('long-poll responds with empty delta on abort', async () => {

@@ -14,6 +14,14 @@
     if (data?.type === 'agents.changed') {
       if (window.__hyperRefreshSidebar) window.__hyperRefreshSidebar(data);
     }
+    // Per-agent live update: server-pushed agent.event_appended replaces
+    // the long-poll on /events.html. Dispatch hyper-tick on <body> so the
+    // <div id="msg-tail"> with hx-trigger="hyper-tick from:body" fires its
+    // short fetch — only when the event actually targets the open page.
+    if (data?.type === 'agent.event_appended' && data.agentId
+        && document.body?.dataset?.agentId === data.agentId) {
+      document.body.dispatchEvent(new CustomEvent('hyper-tick'));
+    }
   }
 
   function connect() {

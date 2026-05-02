@@ -39,7 +39,7 @@ ${opts.headExtra ?? ""}
 <script src="/ui/control.js" defer></script>
 <script src="/events/client.js" defer></script>
 </head>
-<body class="bg-white text-gray-900 text-sm h-screen">
+<body class="bg-white text-gray-900 text-sm h-screen"${opts.currentId ? ` data-agent-id="${esc(opts.currentId)}"` : ''}>
 <div class="flex h-screen">
   ${sidebar}
   <main class="flex-1 flex flex-col overflow-hidden">${opts.main}</main>
