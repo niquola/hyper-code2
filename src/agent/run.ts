@@ -19,6 +19,44 @@ function sanitizeHtmlBody(html: string): string {
     return s.trim();
 }
 
+// --- Minimal JSX/TSX runtime for ///html bodies. -----------------------
+// Body is treated as a TSX expression. Bun.Transpiler turns it into calls
+// to h(...) / Fragment, then we evaluate that with `ctx` and `agent` in
+// scope and render the resulting node tree to a string. Auto-escapes
+// text and attribute values. Plain HTML fragments parse identically (no
+// {expr} → no Transpiler complaints), so static markup just works.
+const Fragment = Symbol('Fragment');
+function h(tag: any, props: any, ...children: any[]): any {
+    return { tag, props: props ?? {}, children: children.flat(Infinity) };
+}
+const VOID_TAGS = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+function jsxRender(node: any): string {
+    if (node == null || node === false || node === true) return '';
+    if (typeof node === 'string' || typeof node === 'number') return Bun.escapeHTML(String(node));
+    if (Array.isArray(node)) return node.map(jsxRender).join('');
+    const { tag, props, children } = node;
+    if (tag === Fragment) return (children ?? []).map(jsxRender).join('');
+    if (typeof tag === 'function') return jsxRender(tag({ ...(props ?? {}), children: children ?? [] }));
+    const attrs = Object.entries(props ?? {})
+        .filter(([_, v]) => v != null && v !== false)
+        .map(([k, v]) => v === true ? ` ${k}` : ` ${Bun.escapeHTML(k)}="${Bun.escapeHTML(String(v))}"`)
+        .join('');
+    if (VOID_TAGS.has(tag as string)) return `<${tag}${attrs}/>`;
+    return `<${tag}${attrs}>${(children ?? []).map(jsxRender).join('')}</${tag}>`;
+}
+const TSX_TRANSPILER = new Bun.Transpiler({
+    loader: 'tsx',
+    tsconfig: JSON.stringify({
+        compilerOptions: { jsx: 'react', jsxFactory: 'h', jsxFragmentFactory: 'Fragment' },
+    }),
+});
+function renderTsxBody(body: string, ctx: Context, agent: any): string {
+    const js = TSX_TRANSPILER.transformSync(`return (${body});`);
+    const fn = new Function('h', 'Fragment', 'render', 'ctx', 'agent', js);
+    const tree = fn(h, Fragment, jsxRender, ctx, agent);
+    return jsxRender(tree);
+}
+
 async function highlightResult(ctx: Context, output: string): Promise<string> {
     const trimmed = output.trim();
     if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
@@ -98,16 +136,33 @@ export default async function (
             const append = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: markerText });
             ctx.fns.session.syncAgentState(ctx, agent);
 
-            // ///html: render the body straight to a chat bubble. No tool
-            // execution, no synthetic result-feedback — it IS the reply.
-            // Sanitize first so a stray <style>/<script>/<body> doesn't leak
-            // global CSS and break the chat layout.
+            // ///html: body is a TSX expression. Transpile + evaluate (with
+            // `ctx`, `agent`, and `h`/`Fragment`/`render` in scope), render
+            // the resulting node tree to a string, then sanitize. Plain HTML
+            // fragments without {expr} parse identically, so static markup
+            // still works. Errors come back as a synthetic ///error:html
+            // user-message so the model can self-correct on the next turn.
             if (call.kind === 'html') {
-                const safe = sanitizeHtmlBody(call.content);
-                await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
-                    text: '', html: safe, usage, messageIdx: append.idx,
-                });
-                ctx.fns.session.syncAgentState(ctx, agent);
+                let html = '';
+                let renderError: string | null = null;
+                try {
+                    html = sanitizeHtmlBody(renderTsxBody(call.content, ctx, agent));
+                } catch (e: any) {
+                    renderError = e?.message ?? String(e);
+                }
+                if (renderError === null) {
+                    await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
+                        text: '', html, usage, messageIdx: append.idx,
+                    });
+                    ctx.fns.session.syncAgentState(ctx, agent);
+                } else {
+                    await ctx.fns.session.appendErrorEvent(ctx, agent.id, `///html render error: ${renderError}`);
+                    const hint = `///error:html\n${renderError}\n\nThe ///html body must be a valid TSX expression. Self-close void tags (\`<br/>\`, \`<img/>\`, \`<input/>\`), match every opening tag, and escape \`<\` / \`>\` in text content with \`&lt;\` / \`&gt;\`. {expr} blocks must be valid JS.`;
+                    ctx.fns.session.appendMessage(ctx, agent.id, {
+                        role: 'user', content: hint, excluded_from_cursor: true,
+                    });
+                    ctx.fns.session.syncAgentState(ctx, agent);
+                }
                 continue;
             }
 

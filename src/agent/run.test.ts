@@ -245,44 +245,105 @@ describe('agent.run', () => {
         expect(htmlEvent.type).toBe('assistant');
     });
 
-    test('///html body is sanitized: full document wrappers + <style>/<script> stripped', async () => {
+    test('///html body with TSX {expr} renders interpolated values from agent.scratchpad', async () => {
+        const ctx = await setup();
+        let turn = 0;
+        ctx.fns.llm.stream = async () => {
+            turn++;
+            if (turn === 1) {
+                return {
+                    text: '///html\n<div class="card"><h3>{agent.scratchpad.user.name}</h3><ul>{[1,2,3].map(n => <li>item {n}</li>)}</ul></div>',
+                    toolCalls: [], thinking: '', usage: {},
+                };
+            }
+            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
+        };
+
+        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        a.scratchpad.user = { name: 'Иван' };
+        ctx.fns.session.save(ctx, a);
+
+        await run(ctx, a, 'render');
+
+        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const htmlEvent = events.find((e: any) => e.type === 'assistant' && e.html?.includes('Иван'));
+        expect(htmlEvent).toBeDefined();
+        expect(htmlEvent.html).toBe('<div class="card"><h3>Иван</h3><ul><li>item 1</li><li>item 2</li><li>item 3</li></ul></div>');
+    });
+
+    test('///html TSX auto-escapes interpolated text (no XSS via scratchpad)', async () => {
+        const ctx = await setup();
+        let turn = 0;
+        ctx.fns.llm.stream = async () => {
+            turn++;
+            if (turn === 1) return { text: '///html\n<div>{agent.scratchpad.danger}</div>', toolCalls: [], thinking: '', usage: {} };
+            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
+        };
+        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        a.scratchpad.danger = '<script>alert(1)</script>';
+        ctx.fns.session.save(ctx, a);
+
+        await run(ctx, a, 'render');
+
+        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const htmlEvent = events.find((e: any) => e.type === 'assistant' && typeof e.html === 'string' && e.html.startsWith('<div>'));
+        expect(htmlEvent).toBeDefined();
+        // Auto-escaped — no live <script> tag, the angle brackets are entities.
+        expect(htmlEvent.html).not.toContain('<script>');
+        expect(htmlEvent.html).toContain('&lt;script&gt;');
+    });
+
+    test('///html TSX parse error is fed back as ///error:html user message', async () => {
+        const ctx = await setup();
+        let turn = 0;
+        ctx.fns.llm.stream = async () => {
+            turn++;
+            // Unmatched closing tag — invalid TSX.
+            if (turn === 1) return { text: '///html\n<div><span>oops</div>', toolCalls: [], thinking: '', usage: {} };
+            return { text: 'fixed', toolCalls: [], thinking: '', usage: {} };
+        };
+        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        ctx.fns.session.save(ctx, a);
+
+        await run(ctx, a, 'render broken');
+
+        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        // user(input) → assistant(///html bad) → user(///error:html) → assistant(fixed)
+        const errMsg = msgs.find((m: any) => String(m.content ?? '').startsWith('///error:html'));
+        expect(errMsg).toBeDefined();
+        expect(errMsg.role).toBe('user');
+    });
+
+    test('///html body that is a full HTML document fails TSX parse and feeds error back', async () => {
+        // Full <!DOCTYPE>/<html>/<body> markup is not a valid single TSX
+        // expression — the parser rejects it. We expect an error-feedback
+        // user-message (the agent can re-emit a clean fragment), and no
+        // assistant html event at all.
         const ctx = await setup();
         const dirty = [
             '<!DOCTYPE html>',
             '<html><head>',
             '<title>oops</title>',
-            '<style>body { margin: 40px auto; padding: 20px; }</style>',
-            '<script>alert("xss")</script>',
-            '</head>',
-            '<body>',
-            '<div class="card">visible content</div>',
+            '<style>body { margin: 40px }</style>',
+            '</head><body>',
+            '<div>x</div>',
             '</body></html>',
         ].join('\n');
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
             if (turn === 1) return { text: `///html\n${dirty}`, toolCalls: [], thinking: '', usage: {} };
-            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
+            return { text: 'fixed', toolCalls: [], thinking: '', usage: {} };
         };
-
         const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
         ctx.fns.session.save(ctx, a);
 
-        await run(ctx, a, 'render');
+        await run(ctx, a, 'render bad');
 
-        const events = ctx.fns.session.getEvents(ctx, a.id);
-        const htmlEvent = events.find((e: any) => e.type === 'assistant' && typeof e.html === 'string' && e.html.includes('visible content'));
-        expect(htmlEvent).toBeDefined();
-        // Wrappers and dangerous tags must be gone from what hits the DOM.
-        expect(htmlEvent.html).not.toMatch(/<!doctype/i);
-        expect(htmlEvent.html).not.toMatch(/<html/i);
-        expect(htmlEvent.html).not.toMatch(/<head/i);
-        expect(htmlEvent.html).not.toMatch(/<body/i);
-        expect(htmlEvent.html).not.toMatch(/<style/i);
-        expect(htmlEvent.html).not.toMatch(/<script/i);
-        expect(htmlEvent.html).not.toMatch(/<title/i);
-        // The actual visible markup survives.
-        expect(htmlEvent.html).toContain('<div class="card">visible content</div>');
+        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        const errMsg = msgs.find((m: any) => String(m.content ?? '').startsWith('///error:html'));
+        expect(errMsg).toBeDefined();
+        expect(errMsg.role).toBe('user');
     });
 
     test('eval errors are tagged :error in the result block', async () => {

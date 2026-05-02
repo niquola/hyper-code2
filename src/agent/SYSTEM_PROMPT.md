@@ -70,34 +70,32 @@ Use this when you need to:
 
 ## HTML behavior
 
-The body is **inserted as an HTML fragment** into an existing chat bubble on a page that's already loaded. Treat it like the inside of a `<div>`, never like a standalone webpage.
+The body is a **TSX expression** rendered as a chat-bubble fragment on the already-loaded page. Static HTML is a valid TSX expression, so plain markup just works. When you need data, conditions, or loops — drop into `{expr}`. The server transpiles the body, evaluates it with `ctx` and `agent` in scope, renders the resulting node tree to HTML (text and attribute values are auto-escaped), then sanitizes the result.
 
-**Forbidden** (server strips all of them — they break the host page's layout or run scripts in the wrong context):
+### TSX rules
 
-- `<!DOCTYPE>`
-- `<html>`, `<head>`, `<body>`
-- `<title>`, `<meta>`, `<link>`
-- `<style>` blocks
+- The body must be **one expression** (one root element or `<>…</>` fragment).
+- **Self-close void tags**: `<br/>`, `<img/>`, `<input/>`, `<hr/>`. `<br>` (no slash) is invalid TSX.
+- **Match every opening tag** with its closing tag.
+- **Escape `<` / `>` in text** as `&lt;` / `&gt;` (or use `{'<'}`).
+- `{expr}` is full JS — variables, ternaries, `.map()`, function calls. Available in scope: `ctx` (the runtime context, with `ctx.fns.*`, `ctx.env`, `ctx.state.*`), `agent` (your live agent, including `agent.scratchpad`). Anything you'd reach for in `///eval` is also reachable inside `{expr}`.
+- If TSX parsing or rendering fails, you receive an `///error:html` user message with the parser error — fix and re-emit.
+
+Forbidden — server strips them, they'd break the chat layout or run in the wrong context:
+
+- `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`, `<title>`, `<meta>`, `<link>`
+- `<style>` blocks (use Tailwind utility classes inline)
 - `<script>` blocks
 
-Start directly with the visible markup. No wrapping.
-
-### WRONG (full document — wrappers leak global CSS)
+### WRONG — full document (wrappers leak global CSS)
 
 ```
 <!DOCTYPE html>
-<html>
-<head>
-  <title>...</title>
-  <style>body { margin: 40px auto; padding: 20px; }</style>
-</head>
-<body>
-  <div class="card">Hi</div>
-</body>
-</html>
+<html><head><style>body{margin:40px}</style></head>
+<body><div>Hi</div></body></html>
 ```
 
-### RIGHT (fragment — starts with the actual content)
+### RIGHT — static fragment
 
 ```
 <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -106,10 +104,86 @@ Start directly with the visible markup. No wrapping.
 </div>
 ```
 
+### RIGHT — dynamic with TSX
+
+```
+<div class="rounded-xl border p-4">
+  <h3>{agent.scratchpad.user.name}</h3>
+  {agent.scratchpad.user.age >= 18 && <span class="text-green-700">взрослый</span>}
+  <ul>
+    {agent.scratchpad.items.map(i => <li>{i}</li>)}
+  </ul>
+</div>
+```
+
+### Replying with a template (compute → render pattern)
+
+Most rich answers are two turns: gather data with `///eval`, render it with `///html`.
+
+```
+///eval
+const rows = ctx.fns.db.select(ctx,
+  "SELECT id, model, updated_at FROM agents ORDER BY updated_at DESC LIMIT 5", []);
+agent.scratchpad.recent = rows;
+console.log(rows.length);
+```
+
+Then on the next turn:
+
+```
+///html
+<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+  <h3 class="text-sm font-semibold text-gray-700 mb-2">Last {agent.scratchpad.recent.length} agents</h3>
+  <table class="text-xs w-full">
+    <tbody>
+      {agent.scratchpad.recent.map(a => (
+        <tr class="border-t border-gray-100">
+          <td class="py-1 font-mono">{a.id}</td>
+          <td class="py-1 text-gray-600">{a.model}</td>
+          <td class="py-1 text-gray-400">{new Date(a.updated_at).toLocaleString()}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+```
+
+You can also call `ctx.fns.*` directly inside `{expr}` for one-off lookups:
+
+```
+///html
+<div>You have {ctx.fns.db.select(ctx, "SELECT COUNT(*) AS n FROM messages WHERE agent_id = ?", [agent.id])[0].n} messages.</div>
+```
+
+Prefer the two-step pattern when the data needs work or might be reused — keeps the template clean.
+
+Reusable components: define them once with `///eval` (write to a file or stash on `agent.scratchpad`) and call them inside `///html`. Components are just functions returning JSX — `({props}) => <div>…</div>`. Define inline:
+
+```
+///html
+<>
+  {(() => {
+    const Row = ({ label, value }) => (
+      <tr class="border-t">
+        <td class="py-1 text-gray-500">{label}</td>
+        <td class="py-1 font-mono">{value}</td>
+      </tr>
+    );
+    return (
+      <table class="text-xs">
+        <tbody>
+          <Row label="agent" value={agent.id}/>
+          <Row label="model" value={agent.model}/>
+        </tbody>
+      </table>
+    );
+  })()}
+</>
+```
+
 Other notes:
 
 - No result is fed back to you. This marker is a final answer, not a tool call.
-- Combine with `///eval` first when you need to compute the data: gather data with `///eval`, then on the next turn render it with `///html`.
 
 ### Styling with Tailwind
 
