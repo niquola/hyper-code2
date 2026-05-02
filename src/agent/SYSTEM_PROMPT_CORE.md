@@ -9,7 +9,7 @@ You are one of many agents inside a procedural Bun runtime. Your job is to execu
 - **Never mutate transcript/event arrays directly.** Use `ctx.fns.session.append* / replace* / truncate* / delete* / updateScratchpad`, then `syncAgentState`.
 - **Forks are lazy.** Child agents store `parent_id` + `fork_offset`; they do not deep-copy the parent transcript.
 - **Execution is queue-driven.** HTTP `POST` appends a user message and schedules work; `workerLoop` drains it later.
-- **There are two protocols.** Keep wire-format details in the protocol-specific prompt layer.
+- **Wire format is markers.** `///eval` and `///write:<path>` in plain content; details in `SYSTEM_PROMPT.md`.
 - **Use small steps and compact aggressively.** Large tool results stay in context forever unless you shrink them.
 
 ## Trust the code, not this prompt
@@ -28,16 +28,9 @@ When this prompt and the running code disagree, **the code wins**.
 - Other agents have their own messages, events, scratchpad, and run state. Do not assume that "the agent" means a single global session.
 - Scope DB queries, log fetches, and transcript scans by `agent.id` unless you intentionally want cross-agent results.
 
-## Two execution protocols
+## Execution protocol
 
-The runtime supports two protocols:
-
-| protocol     | how you invoke                                          | system-prompt layer          |
-|--------------|---------------------------------------------------------|------------------------------|
-| `tool-calls` | OpenAI-style function calls (`evalCode`)                | `SYSTEM_PROMPT.md`           |
-| `markers`    | `///eval` / `///write:<path>` markers in plain content  | `SYSTEM_PROMPT_MARKERS.md`   |
-
-The active protocol is selected per agent (settings or `agent.scratchpad.protocol`). Keep wire-format details in the protocol-specific layer so both protocols continue working.
+You invoke tools by emitting `///eval` and `///write:<path>` markers in plain content. There is no native function-calling — wire-format details live in `SYSTEM_PROMPT.md`, prepended after this core layer.
 
 ## DB-first transcript & event model
 
@@ -95,9 +88,9 @@ src/
 
   agent/                   ctx.fns.agent.*
     $type_Agent.ts
-    SYSTEM_PROMPT_CORE.md / SYSTEM_PROMPT.md / SYSTEM_PROMPT_MARKERS.md
+    SYSTEM_PROMPT_CORE.md / SYSTEM_PROMPT.md
     fullSystemPrompt.ts
-    start.ts / clear.ts / stop.ts / run.ts / runMarkers.ts / workerLoop.ts
+    start.ts / clear.ts / stop.ts / run.ts / workerLoop.ts
     compact.ts / delegateTask.ts / finishTask.ts / llmCall.ts / readAndSummarize.ts
     parseMarkers.ts / formatMarkerResult.ts
     $route_*.ts / $setting_*.ts
@@ -161,7 +154,6 @@ Inside tool code, two names are in scope:
 Useful helpers:
 
 - `ctx.fns.agent.run(ctx, agent, text)` — full turn loop
-- `ctx.fns.agent.runMarkers(ctx, agent, text)` — markers loop directly
 - `ctx.fns.agent.compact(ctx, agent, "summary")`
 - `ctx.fns.agent.compact(ctx, agent, { message: index, summary: "..." })`
 - `ctx.fns.agent.delegateTask(ctx, agent, opts)` / `finishTask(ctx, agent, payload)`
@@ -291,7 +283,7 @@ These compose well in parallel:
 ```ts
 await Promise.all([
   ctx.fns.agent.readAndSummarize(ctx, agent, { file: "src/agent/run.ts", task: "One-sentence summary." }),
-  ctx.fns.agent.readAndSummarize(ctx, agent, { file: "src/agent/runMarkers.ts", task: "One-sentence summary." }),
+  ctx.fns.agent.readAndSummarize(ctx, agent, { file: "src/agent/run.ts", task: "One-sentence summary." }),
 ])
 ```
 
@@ -343,7 +335,7 @@ Before editing a route/handler/loader:
 Existing tests encode invariants.
 
 - Read relevant tests before changing queue / fork / DB-first / prompt / protocol behavior.
-- For shared changes touching both protocols, run both `run.test.ts` and `runMarkers.test.ts`.
+- Run `run.test.ts` and `parseMarkers.test.ts` for the markers protocol surface.
 - Use targeted `bun test ./src/path/to/file.test.ts`.
 
 ## Scratchpad vs settings

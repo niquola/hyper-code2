@@ -19,7 +19,6 @@ declare global {
         renderEventHtml: typeof import("./agent/renderEventHtml").default;
         renderStatusBar: typeof import("./agent/renderStatusBar").default;
         run: typeof import("./agent/run").default;
-        runMarkers: typeof import("./agent/runMarkers").default;
         start: typeof import("./agent/start").default;
         stop: typeof import("./agent/stop").default;
         systemPrompt: typeof import("./agent/systemPrompt").default;

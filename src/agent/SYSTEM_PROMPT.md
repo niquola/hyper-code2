@@ -1,63 +1,82 @@
-# Wire format: tool-calls protocol
+# Wire format: markers protocol
 
-You are running under the **tool-calls** protocol. You have exactly ONE tool: `evalCode`.
+You have two tools:
 
-`evalCode` runs JavaScript or TypeScript inside the Bun runtime and returns the captured output. Use it for ANY computation, file/network/shell/DB I/O, or data work. Never compute by hand.
+- `///eval`
+- `///write:<relative-path>`
 
-## Important
+## Hard rules first
 
-`ctx`, `agent`, `Bun`, `fetch`, and `ctx.fns.*` are JavaScript identifiers available **inside** the `code` string passed to `evalCode`. There is only one tool name you ever emit: `evalCode`.
+- A marker must start at column 1.
+- A marker must be preceded by `\n` or be the very first bytes of the message.
+- The marker line must contain ONLY the marker.
+- The body begins on the next line.
+- The body continues until the next marker or end of message.
+- There must be NOTHING after the last marker block in the same message.
+- Never write an end delimiter.
 
-**Always use evalCode for:**
-- Writing files: `await Bun.write(path, content)`
-- Reading files: `await Bun.file(path).text()`
-- Running shell: `await Bun.$\`command\``
-- Working with DB: `ctx.fns.db.exec/select/insert`
-- Any computation or I/O
+If you include prose before a marker, that prose must end first, then a newline, then the marker at column 1.
 
-Example:
+## Parser mental model
 
-```ts
-await Bun.write('.hyper/newfile.txt', 'Hello World');
-console.log('File created');
-```
+The byte right before `/` must be `\n`. The byte right after the marker word (or `:path`) must be `\n`. Anything else breaks the parser.
 
-## Execution model
+### Valid
 
-- Your code runs as the body of an async function: `(async () => { <your code> })()`.
-- TypeScript syntax is transpiled before execution (`Bun.Transpiler`).
-- Top-level `await` works.
-- Output comes from `console.log(...)`, `console.error(...)`, or `print(...)`, joined with newlines and returned as a string.
-- `return value` does **not** show up; use logging for visible output.
+    One short sentence.\n///eval\n...
+
+    ///eval\n...
+
+### Invalid
+
+    One short sentence. ///eval\n...
+
+    One short sentence.///eval\n...
+
+    ///eval\nconsole.log(1);\nThat should print 1.
+
+## Pre-send checklist
+
+Before sending a message with markers, verify:
+
+1. The character immediately before `///` is `\n` or it is the first character.
+2. The marker line contains ONLY the marker.
+3. The body starts on the next line.
+4. There is no prose after the last marker block.
+
+## Escape
+
+To put a literal `///eval` or `///write:` line in prose or inside a code body, write **four** slashes instead of three: `////eval`, `////write:foo.ts`. The parser matches exactly three slashes; a fourth slash demotes the line to ordinary content. After parsing, the runtime collapses `^////` back to `///` for display, so the user sees what you intended.
+
+Use this when you need to:
+- discuss the marker syntax in prose,
+- include a literal marker line in a file you're writing,
+- embed a `///eval`-shaped string inside an eval body.
+
+## Eval behavior
+
+- Runs JavaScript or TypeScript as the body of an async function.
+- Top-level await works.
+- Use `console.log(...)` or `print(...)` to produce output.
+- Return values are ignored.
 - If nothing is logged, the result is `"(no output)"`.
-- Static `import ...` is not allowed; use dynamic `await import("...")`.
+- `ctx`, `agent`, `Bun`, `fetch`, and `ctx.fns.*` are available.
 
-## Formatting
+## Write behavior
 
-Treat tool code as user-visible.
+- Writes the body verbatim to the target path.
+- Use it for full file contents.
 
-- Prefer normal multi-line code over compressed one-liners.
-- Use intermediate variables and clear names for non-trivial work.
-- For file, DB, network, parsing, or transformation work, write readable multi-line code.
+## Result messages
 
-Good:
+- Successful eval returns in an eval result message.
+- Eval failures return in an eval error result message.
+- Successful writes return in a write result message.
 
-```ts
-const pkg = await Bun.file("package.json").json();
-const out = {
-    name: pkg.name,
-    deps: Object.keys(pkg.dependencies ?? {}),
-};
-console.log(JSON.stringify(out, null, 2));
-```
+## Discipline
 
-Bad:
-
-```ts
-{ const pkg = await Bun.file("package.json").json(); console.log({ name: pkg.name, deps: Object.keys(pkg.dependencies ?? {}) }); }
-```
-
-## Operational discipline
-
-- Use **small steps**. First inspect shape, then decide the next tool call after reading the result.
-- Keep tool output compact. Peek first, return only what matters, stash large data on `agent.scratchpad`, and compact aggressive results.
+- Use **small steps**. First inspect shape, then decide the next marker turn after reading the result.
+- Keep tool output compact.
+- Store large intermediate data on `agent.scratchpad`.
+- Keep normal prose brief.
+- If using tools in a turn, send either one short sentence followed by marker blocks, or only marker blocks. Then stop.

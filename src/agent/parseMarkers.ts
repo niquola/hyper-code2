@@ -10,14 +10,25 @@
 //
 // PERMISSIVE DETECTION: if a candidate marker is followed by a newline but is
 // NOT at column 1 (e.g. `текст.///eval\n...`), it's recorded as a `misplaced`
-// error so runMarkers can feed it back to the model. A bare `///eval` mid-line
+// error so run.ts can feed it back to the model. A bare `///eval` mid-line
 // without a trailing newline (like the words "see ///eval somewhere") is just
 // content and is not flagged.
 //
 // Lines starting with `///` that are NOT exactly `///eval` or `///write:<path>`
 // followed by `\n` are content (e.g. Rust `/// doc` comments inside a write body).
-const EVAL_RE  = /\/\/\/eval(?=\n|$)/g;
-const WRITE_RE = /\/\/\/write:([^\n]+)/g;
+//
+// ESCAPE: to put a literal `///eval` or `///write:` line in prose or code, write
+// FOUR slashes (`////eval`, `////write:foo`). The regex below requires exactly
+// three slashes followed by `eval`/`write:`, so a fourth slash breaks the match
+// and the line becomes content. After parsing, `////` at the start of any line
+// (in prose and call.content) is collapsed back to `///` for display.
+const EVAL_RE  = /(?<!\/)\/\/\/eval(?=\n|$)/g;
+const WRITE_RE = /(?<!\/)\/\/\/write:([^\n]+)/g;
+
+// Reverse the escape: `^////` → `^///` line-by-line (multiline mode).
+function unescape(s: string): string {
+    return s.replace(/^\/\/\/\//gm, '///');
+}
 
 type Candidate = {
     index: number;
@@ -78,11 +89,11 @@ export default function (text: string): {
     }
 
     if (hits.length === 0) {
-        return { prose: text, calls: [], errors };
+        return { prose: unescape(text), calls: [], errors };
     }
 
     const first = hits[0]!;
-    const prose = text.slice(0, first.index).replace(/\n+$/, '');
+    const prose = unescape(text.slice(0, first.index).replace(/\n+$/, ''));
 
     const calls: types.agent.MarkerCall[] = [];
     for (let i = 0; i < hits.length; i++) {
@@ -100,7 +111,7 @@ export default function (text: string): {
         // (model hallucinating that work is already done). Treating these as
         // real calls produces phantom tool bubbles in the UI.
         if (content.trim() === '') continue;
-        cur.call.content = content;
+        cur.call.content = unescape(content);
         calls.push(cur.call);
     }
 

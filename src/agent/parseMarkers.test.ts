@@ -148,6 +148,44 @@ describe('agent.parseMarkers', () => {
         expect(r.calls[0]).toEqual({ kind: 'write', path: 'a.ts', content: 'export const a = 1;' });
     });
 
+    test('escape: ////eval in prose is content, unescaped to ///eval', () => {
+        const text = 'Можно писать ////eval в тексте — это буквальный маркер.\n////eval\nlet x = 1;';
+        const r = parseMarkers(text);
+        // No real markers — both ////eval lines are escaped.
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toEqual([]);
+        // After unescape, prose shows ///eval as the user intended.
+        expect(r.prose).toContain('///eval в тексте');
+        expect(r.prose).toContain('\n///eval\nlet x = 1;');
+    });
+
+    test('escape: ////write: in prose is content, unescaped to ///write:', () => {
+        const text = 'Маркер записи: ////write:src/foo.ts\nbody';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toEqual([]);
+        expect(r.prose).toContain('///write:src/foo.ts');
+    });
+
+    test('escape: ////marker INSIDE a real eval body becomes ///marker for the runtime', () => {
+        // The model wants to eval a string containing `///eval`. It escapes
+        // the literal in its body with four slashes; the parser unescapes
+        // back to three so the executed code sees the intended string.
+        const text = '///eval\nconst s = "////eval is the escape";\nconsole.log(s);';
+        const r = parseMarkers(text);
+        expect(r.calls).toHaveLength(1);
+        expect(r.calls[0]!.content).toContain('///eval is the escape');
+    });
+
+    test('escape: real ///eval still works alongside escaped ////eval', () => {
+        const text = '////eval\nthis line is escaped\n///eval\nconsole.log(1);';
+        const r = parseMarkers(text);
+        expect(r.calls).toHaveLength(1);
+        expect(r.calls[0]!.content).toBe('console.log(1);');
+        // The escaped line lives in prose with three slashes after unescape.
+        expect(r.prose).toBe('///eval\nthis line is escaped');
+    });
+
     test('eval after write — both parsed', () => {
         const r = parseMarkers('///write:a\nA\n///eval\nreturn 1\n');
         expect(r.calls).toEqual([
