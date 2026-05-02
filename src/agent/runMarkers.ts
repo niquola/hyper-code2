@@ -50,44 +50,49 @@ export default async function (
 
         const { prose, calls, errors } = ctx.fns.agent.parseMarkers(String(text ?? ''));
 
-        // Always persist the assistant turn verbatim (markers + prose). The model
-        // sees its own emitted content on subsequent turns, same as function-calling
-        // role:assistant messages with tool_calls.
-        const assistantAppend = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: text });
-        ctx.fns.session.syncAgentState(ctx, agent);
-
+        // No markers and no parser errors — close the turn cleanly. Persist
+        // the full assistant content verbatim (it's natural-language reply).
         if (calls.length === 0 && errors.length === 0) {
+            const append = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: text });
+            ctx.fns.session.syncAgentState(ctx, agent);
             const html = await ctx.fns.markdown.render(ctx, prose || text || '');
             await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
-                text: prose || text || '',
-                html,
-                usage,
-                messageIdx: assistantAppend.idx,
+                text: prose || text || '', html, usage, messageIdx: append.idx,
             });
             ctx.fns.session.syncAgentState(ctx, agent);
             return { text, usage };
         }
 
-        // If the assistant wrote any prose before the first marker, render it
-        // as an assistant bubble — otherwise the natural-language explanation
-        // is lost from the UI (only tool-call bubbles would show).
+        // We have markers (and possibly errors). Split the assistant turn
+        // into a chain so the LLM sees clean per-call pairing on later turns:
+        //   [assistant: prose?] → (assistant<marker> → user<result>)+ → [user: errors?]
+        // Without this, multi-marker turns produce one giant assistant blob
+        // and one user blob with all results stacked — model loses sight of
+        // which result came from which call.
+
         if (prose.trim()) {
+            const proseAppend = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: prose });
+            ctx.fns.session.syncAgentState(ctx, agent);
             const proseHtml = await ctx.fns.markdown.render(ctx, prose);
             await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
-                text: prose, html: proseHtml, usage, messageIdx: assistantAppend.idx,
+                text: prose, html: proseHtml, usage, messageIdx: proseAppend.idx,
             });
             ctx.fns.session.syncAgentState(ctx, agent);
         }
 
-        // Execute each call sequentially, render UI events, and accumulate
-        // result blocks for one synthetic user message.
-        const resultBlocks: string[] = [];
         for (const call of calls) {
+            // Persist THIS marker as its own assistant message — paired with
+            // its own result message immediately after.
+            const markerText = call.kind === 'write'
+                ? `///write:${call.path}\n${call.content}`
+                : `///eval\n${call.content}`;
+            ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: markerText });
+            ctx.fns.session.syncAgentState(ctx, agent);
+
             let output = '';
             let isError = false;
             try {
                 if (call.kind === 'eval') {
-                    // repl.eval now always returns a string (Jupyter-style buffer).
                     output = await ctx.fns.repl.eval(ctx, call.content, { agent });
                 } else if (call.kind === 'write') {
                     await ctx.fns.files.write(ctx, call.path, call.content);
@@ -99,38 +104,29 @@ export default async function (
                 isError = true;
             }
 
-            const argsHtml = call.kind === 'eval'
-                ? await ctx.fns.markdown.highlight(ctx, call.content, 'ts')
-                : await ctx.fns.markdown.highlight(ctx, call.content, 'ts');
+            const argsHtml = await ctx.fns.markdown.highlight(ctx, call.content, 'ts');
             const resultHtml = await highlightResult(ctx, output);
             await ctx.fns.session.appendToolCallEvent(ctx, agent.id, {
                 name: call.kind,
                 args: call.kind === 'write' ? { path: call.path, content: call.content } : { code: call.content },
                 result: output,
-                argsHtml,
-                resultHtml,
-                isError,
+                argsHtml, resultHtml, isError,
             });
 
-            resultBlocks.push(ctx.fns.agent.formatMarkerResult(call, output, isError));
+            const resultText = ctx.fns.agent.formatMarkerResult(call, output, isError);
+            ctx.fns.session.appendMessage(ctx, agent.id, { role: 'user', content: resultText });
+            ctx.fns.session.syncAgentState(ctx, agent);
         }
 
-        // Append parser errors (misplaced markers etc.) AFTER any successful
-        // results, so the model sees both what worked and what to retry. Also
-        // surface them as UI error events so they don't vanish silently.
-        for (const err of errors) {
-            const block = ctx.fns.agent.formatMarkerError(err);
-            resultBlocks.push(block);
-            await ctx.fns.session.appendErrorEvent(ctx, agent.id, err.hint);
+        // Parser errors (misplaced markers, etc.) tail the chain as one user
+        // message so the model can self-correct on the next turn.
+        if (errors.length > 0) {
+            for (const e of errors) {
+                await ctx.fns.session.appendErrorEvent(ctx, agent.id, e.hint);
+            }
+            const errText = errors.map(e => ctx.fns.agent.formatMarkerError(e)).join('\n\n');
+            ctx.fns.session.appendMessage(ctx, agent.id, { role: 'user', content: errText });
+            ctx.fns.session.syncAgentState(ctx, agent);
         }
-        ctx.fns.session.syncAgentState(ctx, agent);
-
-        // Feed all results back as a single user message so the model continues
-        // on the next turn. Use raw appendMessage (writes only to messages table) —
-        // appendUserMessage would ALSO emit a user-event, which the UI would render
-        // as a duplicate bubble next to the tool-call bubble we already added above.
-        const resultText = resultBlocks.join('\n\n');
-        ctx.fns.session.appendMessage(ctx, agent.id, { role: 'user', content: resultText });
-        ctx.fns.session.syncAgentState(ctx, agent);
     }
 }

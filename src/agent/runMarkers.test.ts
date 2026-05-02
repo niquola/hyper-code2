@@ -97,7 +97,7 @@ describe('agent.runMarkers', () => {
         expect(ctx.state.__written['tricky.ts']).toBe(tricky);
     });
 
-    test('multiple markers in one turn execute sequentially, results joined', async () => {
+    test('multiple markers split into chained assistant→user pairs', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
@@ -116,10 +116,18 @@ describe('agent.runMarkers', () => {
         await runMarkers(ctx, a, 'two things');
 
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        // Single user message contains BOTH result blocks.
-        const resultMsg = msgs[2]!.content;
-        expect(resultMsg).toContain('///result:eval');
-        expect(resultMsg).toContain('///result:write:a.ts');
+        // Chain: user(input) → assistant(prose) → assistant(///eval) →
+        //        user(///result:eval) → assistant(///write) → user(///result:write) → assistant(done)
+        expect(msgs.map((m: any) => m.role))
+            .toEqual(['user', 'assistant', 'assistant', 'user', 'assistant', 'user', 'assistant']);
+        expect(msgs[1]!.content).toBe('doing two things');
+        expect(msgs[2]!.content).toBe('///eval\nconsole.log(1);');
+        expect(msgs[3]!.content).toContain('///result:eval');
+        expect(msgs[3]!.content).toContain('1');
+        expect(msgs[3]!.content).not.toContain('///result:write'); // result is per-call, not joined
+        expect(msgs[4]!.content).toBe('///write:a.ts\nexport const a = 1;');
+        expect(msgs[5]!.content).toContain('///result:write:a.ts');
+        expect(msgs[6]!.content).toBe('done');
         expect(ctx.state.__written['a.ts']).toBe('export const a = 1;');
     });
 
