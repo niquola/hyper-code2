@@ -4,14 +4,17 @@
 // referenced from CORE and read on demand via ctx.fns.files.read.
 //
 // Layers:
-//   1. SYSTEM_PROMPT_CORE.md  — invariants + map of ctx.fns + doc pointers
-//   2. SYSTEM_PROMPT.md       — markers wire-format
+//   1. SYSTEM_PROMPT_CORE.txt — invariants + map of ctx.fns + doc pointers
+//   2. SYSTEM_PROMPT.txt      — markers wire-format
 //   3. agent.systemPrompt     — per-agent additive override (if any)
 //   4. runtime context block  — cwd, agent id, db path
+// Files are .txt (not .md) on purpose — most frontier models follow plain
+// telegraphic text better than nested markdown headers + fences when the
+// content is itself describing markup that they're meant to emit.
 import { resolve } from "node:path";
 
-const CORE_PATH = resolve(import.meta.dir, "SYSTEM_PROMPT_CORE.md");
-const WIRE_PATH = resolve(import.meta.dir, "SYSTEM_PROMPT.md");
+const CORE_PATH = resolve(import.meta.dir, "SYSTEM_PROMPT_CORE.txt");
+const WIRE_PATH = resolve(import.meta.dir, "SYSTEM_PROMPT.txt");
 
 export default async function (ctx: Context, agent: types.agent.Agent): Promise<string> {
     const core = await Bun.file(CORE_PATH).text();
