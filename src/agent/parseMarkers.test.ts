@@ -186,6 +186,34 @@ describe('agent.parseMarkers', () => {
         expect(r.prose).toBe('///eval\nthis line is escaped');
     });
 
+    test('///html marker captures raw HTML body', () => {
+        const text = '///html\n<div class="card"><b>Hi</b></div>';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([{ kind: 'html', content: '<div class="card"><b>Hi</b></div>' }]);
+    });
+
+    test('///html with backticks/quotes survives untouched', () => {
+        const body = '<script>const x = `${name}`; alert("hi");</script>';
+        const r = parseMarkers(`///html\n${body}`);
+        expect(r.calls[0]).toEqual({ kind: 'html', content: body });
+    });
+
+    test('html mid-line missing-newline is reported as misplaced', () => {
+        const text = 'смотри.///html\n<b>x</b>';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toHaveLength(1);
+        expect(r.errors[0]!.marker).toBe('html');
+    });
+
+    test('escape: ////html is content not a marker', () => {
+        const text = 'У нас есть маркер ////html для рендера HTML.';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toEqual([]);
+        expect(r.prose).toContain('///html');
+    });
+
     test('eval after write — both parsed', () => {
         const r = parseMarkers('///write:a\nA\n///eval\nreturn 1\n');
         expect(r.calls).toEqual([

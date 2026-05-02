@@ -76,9 +76,21 @@ export default async function (
             // its own result message immediately after.
             const markerText = call.kind === 'write'
                 ? `///write:${call.path}\n${call.content}`
-                : `///eval\n${call.content}`;
-            ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: markerText });
+                : call.kind === 'html'
+                    ? `///html\n${call.content}`
+                    : `///eval\n${call.content}`;
+            const append = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: markerText });
             ctx.fns.session.syncAgentState(ctx, agent);
+
+            // ///html: render the body straight to a chat bubble. No tool
+            // execution, no synthetic result-feedback — it IS the reply.
+            if (call.kind === 'html') {
+                await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
+                    text: '', html: call.content, usage, messageIdx: append.idx,
+                });
+                ctx.fns.session.syncAgentState(ctx, agent);
+                continue;
+            }
 
             let output = '';
             let isError = false;

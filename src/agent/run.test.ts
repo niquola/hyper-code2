@@ -216,6 +216,35 @@ describe('agent.run', () => {
         expect(errFeedback?.excluded_from_cursor).toBe(1);
     });
 
+    test('///html marker renders an assistant bubble with raw HTML and no synthetic result', async () => {
+        const ctx = await setup();
+        let turn = 0;
+        ctx.fns.llm.stream = async () => {
+            turn++;
+            if (turn === 1) return { text: '///html\n<div class="card">Hi</div>', toolCalls: [], thinking: '', usage: {} };
+            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
+        };
+
+        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        ctx.fns.session.save(ctx, a);
+
+        await run(ctx, a, 'render a card');
+
+        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        // Chain: user → assistant(///html) → assistant(done)
+        // No synthetic ///result:html — html doesn't produce results.
+        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'assistant']);
+        expect(msgs[1]!.content).toBe('///html\n<div class="card">Hi</div>');
+        expect(msgs[1]!.content).not.toContain('///result');
+        expect(msgs[2]!.content).toBe('done');
+
+        // The UI event for the html marker carries the raw HTML, not the marker text.
+        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const htmlEvent = events.find((e: any) => e.html === '<div class="card">Hi</div>');
+        expect(htmlEvent).toBeDefined();
+        expect(htmlEvent.type).toBe('assistant');
+    });
+
     test('eval errors are tagged :error in the result block', async () => {
         const ctx = await setup();
         let turn = 0;

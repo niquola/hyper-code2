@@ -1,9 +1,10 @@
 # Wire format: markers protocol
 
-You have two tools:
+You have three markers:
 
-- `///eval`
-- `///write:<relative-path>`
+- `///eval` — run JS/TS; the captured stdout comes back as a result message.
+- `///write:<relative-path>` — write the body verbatim to a file.
+- `///html` — render the body as raw HTML directly to the user's chat bubble. No execution, no result is fed back. Use this when the reply benefits from rich formatting (tables, embedded SVG, custom layout) beyond plain markdown.
 
 ## Hard rules first
 
@@ -66,6 +67,13 @@ Use this when you need to:
 
 - Writes the body verbatim to the target path.
 - Use it for full file contents.
+
+## HTML behavior
+
+- Body is treated as raw HTML and rendered into a chat bubble for the user.
+- No sandboxing — the HTML runs in the browser context, so prefer self-contained markup. Avoid loading external resources you can't trust.
+- No result is fed back to you. This marker is a final answer, not a tool call.
+- Combine with `///eval` first when you need to compute the data: gather data with `///eval`, then on the next turn render it with `///html`.
 
 ## Result messages
 

@@ -1,6 +1,8 @@
-// Parse a marker-protocol assistant response. Two markers, hardcoded:
-//   ///eval            → kind='eval'
-//   ///write:<path>    → kind='write', <path> = everything between `:` and end of line
+// Parse a marker-protocol assistant response. Three markers, hardcoded:
+//   ///eval            → kind='eval'  (run JS, body is code, has a result)
+//   ///write:<path>    → kind='write' (write file, <path> after `:` to EOL)
+//   ///html            → kind='html'  (raw HTML rendered straight to the chat
+//                                      bubble; no execution, no result feedback)
 //
 // FORMAT (strict):
 //   - marker starts at column 1 (preceded by \n or start-of-input)
@@ -24,6 +26,7 @@
 // (in prose and call.content) is collapsed back to `///` for display.
 const EVAL_RE  = /(?<!\/)\/\/\/eval(?=\n|$)/g;
 const WRITE_RE = /(?<!\/)\/\/\/write:([^\n]+)/g;
+const HTML_RE  = /(?<!\/)\/\/\/html(?=\n|$)/g;
 
 // Reverse the escape: `^////` → `^///` line-by-line (multiline mode).
 function unescape(s: string): string {
@@ -33,7 +36,7 @@ function unescape(s: string): string {
 type Candidate = {
     index: number;
     len: number;
-    kind: 'eval' | 'write';
+    kind: 'eval' | 'write' | 'html';
     path?: string;
 };
 
@@ -51,6 +54,9 @@ export default function (text: string): {
         const path = m[1]!.trim();
         if (!path) continue;
         candidates.push({ index: m.index!, len: m[0].length, kind: 'write', path });
+    }
+    for (const m of text.matchAll(HTML_RE)) {
+        candidates.push({ index: m.index!, len: m[0].length, kind: 'html' });
     }
     candidates.sort((a, b) => a.index - b.index);
 
@@ -72,13 +78,17 @@ export default function (text: string): {
             const consumeLen = after < text.length ? c.len + 1 : c.len;
             const call: types.agent.MarkerCall = c.kind === 'write'
                 ? { kind: 'write', path: c.path!, content: '' }
-                : { kind: 'eval', content: '' };
+                : c.kind === 'html'
+                    ? { kind: 'html', content: '' }
+                    : { kind: 'eval', content: '' };
             hits.push({ index: c.index, consumeLen, call });
         } else {
             // Almost-marker: looks like a marker (followed by \n) but glued to
             // preceding text. Almost certainly the model forgot the leading \n.
             const prevChar = text[c.index - 1]!;
-            const markerStr = c.kind === 'write' ? `///write:${c.path}` : '///eval';
+            const markerStr = c.kind === 'write' ? `///write:${c.path}`
+                : c.kind === 'html' ? '///html'
+                : '///eval';
             errors.push({
                 kind: 'misplaced',
                 marker: c.kind,
