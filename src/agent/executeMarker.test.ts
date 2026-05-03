@@ -38,7 +38,7 @@ describe('agent.executeMarker', () => {
         const ctx = await setup();
         const a = mkAgent(ctx);
 
-        await executeMarker(ctx, a, { kind: 'eval', content: '1 + 1' }, { usage: {} });
+        await executeMarker(ctx, { agent: a, call: { kind: 'eval', content: '1 + 1' }, usage: {} });
 
         const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         expect(msgs.map((m: any) => m.role)).toEqual(['assistant', 'user']);
@@ -55,7 +55,7 @@ describe('agent.executeMarker', () => {
         const ctx = await setup();
         const a = mkAgent(ctx);
 
-        await executeMarker(ctx, a, { kind: 'eval', content: 'throw boom' }, { usage: {} });
+        await executeMarker(ctx, { agent: a, call: { kind: 'eval', content: 'throw boom' }, usage: {} });
 
         const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         expect(msgs[1]!.content).toContain('§result:eval:error');
@@ -70,7 +70,7 @@ describe('agent.executeMarker', () => {
         const a = mkAgent(ctx);
         const body = 'export default 1;\n';
 
-        await executeMarker(ctx, a, { kind: 'write', path: 'src/x.ts', content: body }, { usage: {} });
+        await executeMarker(ctx, { agent: a, call: { kind: 'write', path: 'src/x.ts', content: body }, usage: {} });
 
         expect(ctx.state.__written['src/x.ts']).toBe(body);
 
@@ -84,7 +84,7 @@ describe('agent.executeMarker', () => {
         const ctx = await setup();
         const a = mkAgent(ctx);
 
-        await executeMarker(ctx, a, { kind: 'bash', content: 'echo hello' }, { usage: {} });
+        await executeMarker(ctx, { agent: a, call: { kind: 'bash', content: 'echo hello' }, usage: {} });
 
         const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         expect(msgs[0]!.content).toBe('§bash\necho hello');
@@ -98,7 +98,7 @@ describe('agent.executeMarker', () => {
         const ctx = await setup();
         const a = mkAgent(ctx);
 
-        await executeMarker(ctx, a, { kind: 'bash', content: 'exit 3' }, { usage: {} });
+        await executeMarker(ctx, { agent: a, call: { kind: 'bash', content: 'exit 3' }, usage: {} });
 
         const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         expect(msgs[1]!.content).toContain('§result:bash:error');
@@ -111,7 +111,7 @@ describe('agent.executeMarker', () => {
         const ctx = await setup();
         const a = mkAgent(ctx);
 
-        await executeMarker(ctx, a, { kind: 'html', content: '<p class="x">hi</p>' }, { usage: {} });
+        await executeMarker(ctx, { agent: a, call: { kind: 'html', content: '<p class="x">hi</p>' }, usage: {} });
 
         const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         // Only the assistant marker message — no synthetic §result.
@@ -128,7 +128,7 @@ describe('agent.executeMarker', () => {
         const a = mkAgent(ctx);
 
         const body = '<!DOCTYPE html><html><body><style>x{}</style><script>alert(1)</script><p class="x">ok</p></body></html>';
-        await executeMarker(ctx, a, { kind: 'html', content: body }, { usage: {} });
+        await executeMarker(ctx, { agent: a, call: { kind: 'html', content: body }, usage: {} });
 
         const events = ctx.fns.session.getEvents(ctx, { id: a.id });
         expect(events[0]!.html).toBe('<p class="x">ok</p>');
@@ -141,7 +141,7 @@ describe('agent.executeMarker', () => {
         // Plain HTML mode — anything that looks like a template var stays
         // as literal text in the bubble.
         const body = '<p>hello {agent.id} — {1 + 1}</p>';
-        await executeMarker(ctx, a, { kind: 'html', content: body }, { usage: {} });
+        await executeMarker(ctx, { agent: a, call: { kind: 'html', content: body }, usage: {} });
 
         const events = ctx.fns.session.getEvents(ctx, { id: a.id });
         expect(events[0]!.html).toBe('<p>hello {agent.id} — {1 + 1}</p>');
@@ -151,7 +151,7 @@ describe('agent.executeMarker', () => {
         const ctx = await setup();
         const a = mkAgent(ctx);
 
-        await executeMarker(ctx, a, { kind: 'eval', content: '1' }, { usage: {} });
+        await executeMarker(ctx, { agent: a, call: { kind: 'eval', content: '1' }, usage: {} });
 
         // Drop into raw DB to see the column directly.
         const rows = ctx.fns.db.select(ctx, { sql: 'SELECT role, excluded_from_cursor FROM messages WHERE agent_id = ? ORDER BY idx', params: [a.id] });

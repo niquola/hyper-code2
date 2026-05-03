@@ -2,7 +2,8 @@
 // JSON output is pretty-printed and highlighted as `json`; everything else
 // falls back to `javascript` (loose enough for repl return values, error
 // stacks, plain text — Shiki will tolerate them).
-export default async function (ctx: Context, output: string): Promise<string> {
+export default async function (ctx: Context, opts: { output: string }): Promise<string> {
+    const { output } = opts;
     const trimmed = output.trim();
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         try {

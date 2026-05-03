@@ -14,20 +14,19 @@
 //              bubble, so no synthetic feedback.
 export default async function (
     ctx: Context,
-    agent: types.agent.Agent,
-    call: types.agent.MarkerCall,
-    opts: { usage?: any } = {},
+    opts: { agent: types.agent.Agent; call: types.agent.MarkerCall; usage?: any },
 ): Promise<void> {
+    const { agent, call } = opts;
     const usage = opts.usage;
 
     // 1. Persist this marker as its own assistant message.
-    const markerText = ctx.fns.agent.serializeMarkerCall(call);
+    const markerText = ctx.fns.agent.serializeMarkerCall(ctx, { call });
     const append = ctx.fns.session.appendAssistantMessage(ctx, { id: agent.id, msg: { content: markerText } });
     ctx.fns.session.syncAgentState(ctx, { agent });
 
     // 2. §html — plain HTML, sanitised. No tool_call event, no §result feedback.
     if (call.kind === 'html') {
-        const html = ctx.fns.agent.sanitizeHtmlBody(call.content);
+        const html = ctx.fns.agent.sanitizeHtmlBody(ctx, { html: call.content });
         await ctx.fns.session.appendAssistantEvent(ctx, { id: agent.id, payload: {
             text: '', html, usage, messageIdx: append.idx,
         } });
@@ -46,7 +45,7 @@ export default async function (
             const lines = call.content.split('\n').length;
             output = `wrote ${call.path} (${call.content.length} bytes, ${lines} lines)`;
         } else if (call.kind === 'bash') {
-            const r = await ctx.fns.agent.executeBash(ctx, call.content);
+            const r = await ctx.fns.agent.executeBash(ctx, { code: call.content });
             output = r.output;
             isError = r.isError;
         }
@@ -58,7 +57,7 @@ export default async function (
     // 4. Persist tool_call event with highlighted args + result.
     const codeLang = call.kind === 'bash' ? 'bash' : 'ts';
     const argsHtml = await ctx.fns.markdown.highlight(ctx, call.content, codeLang);
-    const resultHtml = await ctx.fns.agent.highlightResult(ctx, output);
+    const resultHtml = await ctx.fns.agent.highlightResult(ctx, { output });
     await ctx.fns.session.appendToolCallEvent(ctx, { id: agent.id, payload: {
         name: call.kind,
         args: call.kind === 'write' ? { path: call.path, content: call.content } : { code: call.content },
@@ -69,7 +68,7 @@ export default async function (
     // 5. Synthetic §result:* user message — what the model sees next turn.
     //    excluded_from_cursor=1 so workerLoop's user-frontier ignores it
     //    (otherwise every result row would retrigger another run).
-    const resultText = ctx.fns.agent.formatMarkerResult(call, output, isError);
+    const resultText = ctx.fns.agent.formatMarkerResult(ctx, { call, output, isError });
     ctx.fns.session.appendMessage(ctx, { id: agent.id, message: {
         role: 'user', content: resultText, excluded_from_cursor: true,
     } });

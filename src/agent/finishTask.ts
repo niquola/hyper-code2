@@ -1,16 +1,16 @@
 export default function (
     ctx: Context,
-    agent: types.agent.Agent,
-    payload: { summary: string; result?: any; wakeParent?: boolean },
+    opts: { agent: types.agent.Agent; summary: string; result?: any; wakeParent?: boolean },
 ): { ok: true; parentId: string | null; summary: string; waiterFound: boolean } {
+    const { agent } = opts;
     const meta = agent.scratchpad?.delegateTask;
     if (!meta || typeof meta !== "object") throw new Error("finishTask: missing delegateTask metadata");
-    const summary = String(payload?.summary ?? "").trim();
+    const summary = String(opts?.summary ?? "").trim();
     if (!summary) throw new Error("finishTask: summary is required");
     const parentId = meta.parentId ? String(meta.parentId) : null;
     const finished = {
         summary,
-        result: payload?.result ?? null,
+        result: opts?.result ?? null,
         finishedAt: Date.now(),
     };
     meta.status = "finished";
@@ -21,7 +21,7 @@ export default function (
     const waiters = (((ctx.state as any).delegateTaskWaiters) ??= new Map());
     const waiter = meta.mode === "await" ? waiters.get(agent.id) : null;
     if (waiter?.resolve) {
-        waiter.resolve({ childId: agent.id, summary, result: payload?.result ?? null });
+        waiter.resolve({ childId: agent.id, summary, result: opts?.result ?? null });
         waiters.delete(agent.id);
         return { ok: true, parentId, summary, waiterFound: true };
     }

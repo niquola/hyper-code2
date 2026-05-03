@@ -43,7 +43,7 @@ export default function (ctx: Context, opts: { task: string; instructions?: stri
         "- Do not ask the user questions.",
         "- Do not fork/delegate further unless explicitly instructed.",
         "- Keep your work focused and concise.",
-        "- When done, call ctx.fns.agent.finishTask(ctx, agent, ...) via evalCode.",
+        "- When done, call ctx.fns.agent.finishTask(ctx, { agent, summary, result? }) via evalCode.",
         "- Do not dump large raw outputs into the transcript if a concise summary is enough.",
         "",
         "Task:",

@@ -17,9 +17,10 @@
 //   streamer. messages is [bootstrap-user, bootstrap-ack, ...transcript].
 export default async function (
     ctx: Context,
-    agent: types.agent.Agent,
+    opts: { agent: types.agent.Agent },
 ): Promise<{ system: string; messages: any[] }> {
-    const fullPrompt = await ctx.fns.agent.fullSystemPrompt(ctx, agent);
+    const { agent } = opts;
+    const fullPrompt = await ctx.fns.agent.fullSystemPrompt(ctx, { agent });
     const base = agent.parentId
         ? ctx.fns.session.getFullMessages(ctx, { id: agent.id })
         : (agent.messages ?? []);

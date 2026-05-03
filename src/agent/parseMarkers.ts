@@ -50,11 +50,12 @@ type Candidate = {
     path?: string;
 };
 
-export default function (text: string): {
+export default function (_ctx: Context, opts: { text: string }): {
     prose: string;
     calls: types.agent.MarkerCall[];
     errors: types.agent.MarkerParseError[];
 } {
+    const { text } = opts;
     const candidates: Candidate[] = [];
 
     for (const m of text.matchAll(EVAL_RE)) {

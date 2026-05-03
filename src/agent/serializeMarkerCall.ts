@@ -5,7 +5,8 @@
 //   §write:<path>\n<content>
 //   §bash\n<content>
 //   §html\n<content>
-export default function (call: types.agent.MarkerCall): string {
+export default function (_ctx: Context, opts: { call: types.agent.MarkerCall }): string {
+    const { call } = opts;
     if (call.kind === 'write') return `§write:${call.path}\n${call.content}`;
     if (call.kind === 'html') return `§html\n${call.content}`;
     if (call.kind === 'bash') return `§bash\n${call.content}`;

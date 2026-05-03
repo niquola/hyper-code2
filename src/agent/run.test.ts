@@ -1,9 +1,11 @@
 import { describe, test, expect } from 'bun:test';
 import { mkTestCtx } from '../_testCtx.entry';
-import run from './run';
+import runFn from './run';
 import parseMarkers from './parseMarkers';
 import formatMarkerResult from './formatMarkerResult';
 import formatMarkerError from './formatMarkerError';
+
+const run = (ctx: any, agent: any, userText: string) => runFn(ctx, { agent, userText });
 
 async function setup() {
     const ctx = await mkTestCtx();

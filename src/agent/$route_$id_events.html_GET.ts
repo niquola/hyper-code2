@@ -18,7 +18,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     const events = ctx.fns.session.getEvents(ctx, { id, fromIdx: offset });
     const eventsHtml = (await Promise.all(events.map(async (ev: any) => {
         const cached = ev.eventHtml ?? (ev.type !== 'assistant' ? ev.html : undefined);
-        return cached ?? await ctx.fns.agent.renderEventHtml(ctx, ev, { agentId: id });
+        return cached ?? await ctx.fns.agent.renderEventHtml(ctx, { event: ev, agentId: id });
     }))).join('\n');
 
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');

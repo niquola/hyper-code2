@@ -1,12 +1,12 @@
 export default async function (
     ctx: Context,
-    agent: types.agent.Agent,
-    input: { file: string; task: string; maxChars?: number; model?: string },
+    opts: { agent: types.agent.Agent; file: string; task: string; maxChars?: number; model?: string },
 ): Promise<{ file: string; summary: string; usage: any }> {
-    const file = String(input?.file ?? '').trim();
-    const task = String(input?.task ?? '').trim();
-    const maxChars = Number(input?.maxChars ?? 120000);
-    const model = input?.model ? String(input.model) : undefined;
+    const { agent } = opts;
+    const file = String(opts?.file ?? '').trim();
+    const task = String(opts?.task ?? '').trim();
+    const maxChars = Number(opts?.maxChars ?? 120000);
+    const model = opts?.model ? String(opts.model) : undefined;
 
     if (!file) throw new Error('readAndSummarize: file is required');
     if (!task) throw new Error('readAndSummarize: task is required');
@@ -38,7 +38,8 @@ export default async function (
         content.length > sliced.length ? '[truncated; original chars=' + content.length + ']' : '',
     ].filter(Boolean).join('\n');
 
-    const result = await ctx.fns.agent.llmCall(ctx, agent, {
+    const result = await ctx.fns.agent.llmCall(ctx, {
+        agent,
         system,
         user,
         model,

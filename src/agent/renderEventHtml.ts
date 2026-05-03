@@ -25,8 +25,9 @@ function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = 
         + '</div>';
 }
 
-export default async function (_ctx: Context, ev: any, opts: { agentId?: string } = {}): Promise<string> {
-    const agentId = String(opts.agentId ?? ev.agentId ?? '');
+export default async function (_ctx: Context, opts: { event: any; agentId?: string }): Promise<string> {
+    const ev = opts.event;
+    const agentId = String(opts.agentId ?? ev?.agentId ?? '');
     if (!ev || typeof ev !== "object") return "";
 
     if (ev.type === "user") {

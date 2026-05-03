@@ -14,7 +14,7 @@ describe("agent.finishTask", () => {
         const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "" });
         agent.scratchpad.delegateTask = { parentId: "parent1", mode: "await", status: "running" };
         ctx.fns.session.save(ctx, { agent });
-        const res = finishTask(ctx, agent, { summary: "done", result: { value: 1 } });
+        const res = finishTask(ctx, { agent, summary: "done", result: { value: 1 } });
         expect(res).toMatchObject({ ok: true, parentId: "parent1", summary: "done" });
     });
 
@@ -23,7 +23,7 @@ describe("agent.finishTask", () => {
         const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "" });
         agent.scratchpad.delegateTask = { parentId: "parent1", mode: "await", status: "running" };
         ctx.fns.session.save(ctx, { agent });
-        finishTask(ctx, agent, { summary: "done", result: { value: 2 } });
+        finishTask(ctx, { agent, summary: "done", result: { value: 2 } });
         const loaded = ctx.fns.session.load(ctx, { id: agent.id })!;
         expect(loaded.scratchpad.delegateTask.status).toBe("finished");
         expect(loaded.scratchpad.delegateTask.result.summary).toBe("done");
@@ -37,7 +37,7 @@ describe("agent.finishTask", () => {
         ctx.fns.session.save(ctx, { agent });
         let resolved: any = null;
         ctx.state.delegateTaskWaiters = new Map([[agent.id, { resolve: (v: any) => { resolved = v; } }]]);
-        const res = finishTask(ctx, agent, { summary: "done", result: { value: 3 } });
+        const res = finishTask(ctx, { agent, summary: "done", result: { value: 3 } });
         expect(res.waiterFound).toBe(true);
         expect(resolved).toEqual({ childId: agent.id, summary: "done", result: { value: 3 } });
     });
@@ -46,7 +46,7 @@ describe("agent.finishTask", () => {
         const ctx = await setup();
         const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "" });
         ctx.fns.session.save(ctx, { agent });
-        expect(() => finishTask(ctx, agent, { summary: "done" })).toThrow("finishTask: missing delegateTask metadata");
+        expect(() => finishTask(ctx, { agent, summary: "done" })).toThrow("finishTask: missing delegateTask metadata");
     });
 
     test("async mode does not resolve waiter", async () => {
@@ -56,7 +56,7 @@ describe("agent.finishTask", () => {
         ctx.fns.session.save(ctx, { agent });
         let resolved: any = null;
         ctx.state.delegateTaskWaiters = new Map([[agent.id, { resolve: (v: any) => { resolved = v; } }]]);
-        const res = finishTask(ctx, agent, { summary: "done", result: { value: 4 } });
+        const res = finishTask(ctx, { agent, summary: "done", result: { value: 4 } });
         expect(res.waiterFound).toBe(false);
         expect(resolved).toBeNull();
     });
@@ -66,6 +66,6 @@ describe("agent.finishTask", () => {
         const agent = ctx.fns.agent.start(ctx, { model: "m", systemPrompt: "" });
         agent.scratchpad.delegateTask = { parentId: "parent1", mode: "await", status: "running" };
         ctx.fns.session.save(ctx, { agent });
-        expect(() => finishTask(ctx, agent, { summary: "   " })).toThrow("finishTask: summary is required");
+        expect(() => finishTask(ctx, { agent, summary: "   " })).toThrow("finishTask: summary is required");
     });
 });

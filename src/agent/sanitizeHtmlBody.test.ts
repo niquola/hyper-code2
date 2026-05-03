@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'bun:test';
-import sanitizeHtmlBody from './sanitizeHtmlBody';
+import sanitizeHtmlBodyFn from './sanitizeHtmlBody';
+const sanitizeHtmlBody = (html: string) => sanitizeHtmlBodyFn(null as any, { html });
 
 describe('agent.sanitizeHtmlBody', () => {
     test('plain markup passes through unchanged', () => {

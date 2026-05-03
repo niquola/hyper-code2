@@ -8,10 +8,9 @@
 // file is intentionally small — orchestration only.
 export default async function (
     ctx: Context,
-    agent: types.agent.Agent,
-    userText: string,
-    opts: { userMessageAlreadyAppended?: boolean } = {},
+    opts: { agent: types.agent.Agent; userText: string; userMessageAlreadyAppended?: boolean },
 ) {
+    const { agent, userText } = opts;
     const ac = new AbortController();
     agent.abortController = ac;
 
@@ -23,7 +22,7 @@ export default async function (
     while (true) {
         const { text, usage } = await ctx.fns.llm.stream(ctx, agent, { signal: ac.signal });
 
-        const { prose, calls, errors } = ctx.fns.agent.parseMarkers(String(text ?? ''));
+        const { prose, calls, errors } = ctx.fns.agent.parseMarkers(ctx, { text: String(text ?? '') });
 
         // No markers and no parser errors — close the turn cleanly.
         if (calls.length === 0 && errors.length === 0) {
@@ -56,7 +55,7 @@ export default async function (
         }
 
         for (const call of calls) {
-            await ctx.fns.agent.executeMarker(ctx, agent, call, { usage });
+            await ctx.fns.agent.executeMarker(ctx, { agent, call, usage });
         }
 
         // Parser errors (misplaced markers etc) tail the chain as a single
@@ -65,7 +64,7 @@ export default async function (
             for (const e of errors) {
                 await ctx.fns.session.appendErrorEvent(ctx, { id: agent.id, error: e.hint });
             }
-            const errText = errors.map(e => ctx.fns.agent.formatMarkerError(e)).join('\n\n');
+            const errText = errors.map(e => ctx.fns.agent.formatMarkerError(ctx, { error: e })).join('\n\n');
             ctx.fns.session.appendMessage(ctx, { id: agent.id, message: {
                 role: 'user', content: errText, excluded_from_cursor: true,
             } });

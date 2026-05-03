@@ -7,8 +7,8 @@
 //   3. <!DOCTYPE …> declaration
 // Result is collapsed of leading/trailing whitespace. Tailwind utility
 // classes inline still work because they're already loaded by $layout.ts.
-export default function (html: string): string {
-    let s = html;
+export default function (_ctx: Context, opts: { html: string }): string {
+    let s = opts.html;
     s = s.replace(/<!doctype[^>]*>/gi, '');
     // Strip block elements WITH content first (open through close).
     s = s.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');

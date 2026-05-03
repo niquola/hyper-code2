@@ -30,7 +30,7 @@ export default async function (ctx: Context, _session: any, req: any) {
 
     const eventsHtml = (await Promise.all(events.map(async (ev: any) => {
         const cached = ev.eventHtml ?? (ev.type !== 'assistant' ? ev.html : undefined);
-        return cached ?? await ctx.fns.agent.renderEventHtml(ctx, ev, { agentId: id });
+        return cached ?? await ctx.fns.agent.renderEventHtml(ctx, { event: ev, agentId: id });
     }))).join('\n');
 
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
@@ -42,7 +42,7 @@ export default async function (ctx: Context, _session: any, req: any) {
   ${agent.parentId ? `<span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">fork · inherited ${inheritedCount} msgs</span>` : ''}
   <span class="text-xs text-gray-400 font-mono">${esc(agent.model)}</span>
   <span id="context-usage" class="text-xs text-gray-500 font-mono">${esc(initialUsageText)}</span>
-  ${ctx.fns.agent.renderStatusBar(ctx, id)}
+  ${ctx.fns.agent.renderStatusBar(ctx, { agentId: id })}
   <div class="ml-auto flex gap-2">
     <form method="POST" action="/agent/${encodeURIComponent(id)}/stop" class="inline">
       <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">stop</button>

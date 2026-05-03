@@ -12,7 +12,7 @@ describe("agent.compact", () => {
             { role: "user", content: "§result:eval\n" + "A".repeat(2000) },
         );
         ctx.fns.session = { replaceMessages: (_c: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
-        const res = compact(ctx, agent, "listed 42 files");
+        const res = compact(ctx, { agent, summary: "listed 42 files" });
         expect(res.replaced).toBe(true);
         expect(res.resultIdx).toBe(2);
         expect(agent.messages.at(-1).content).toBe("[compacted] listed 42 files");
@@ -22,7 +22,7 @@ describe("agent.compact", () => {
         const ctx: any = await mkTestCtx();
         const agent = ctx.fns.agent.start(ctx, { model: "x" });
         agent.messages.push({ role: "user", content: "hi" });
-        expect(compact(ctx, agent, "s").replaced).toBe(false);
+        expect(compact(ctx, { agent, summary: "s" }).replaced).toBe(false);
     });
 
     test("targets the MOST RECENT result when several exist", async () => {
@@ -34,7 +34,7 @@ describe("agent.compact", () => {
             { role: "user", content: "§result:eval\nbig payload" },
         );
         ctx.fns.session = { replaceMessages: (_c: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
-        compact(ctx, agent, "summary");
+        compact(ctx, { agent, summary: "summary" });
         expect(agent.messages[0].content).toBe("§result:eval\nold");
         expect(agent.messages[2].content).toBe("[compacted] summary");
     });
@@ -51,7 +51,7 @@ describe("agent.compact", () => {
                 { role: "user", content: "go deeper" },
             );
             ctx.fns.session = { replaceMessages: (_c: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
-            const res = compact(ctx, agent, { message: 2, summary: "explored A/B/C dead-ends" });
+            const res = compact(ctx, { agent, message: 2, summary: "explored A/B/C dead-ends" });
             expect(res.replaced).toBe(true);
             expect(res.from).toBe(2);
             expect(agent.messages).toHaveLength(3);
@@ -72,7 +72,7 @@ describe("agent.compact", () => {
             ctx.fns.session = { replaceMessages: (_c: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
             // Asking to compact at idx 4 (a result) walks back over the result
             // and its marker assistant — landing at idx 3.
-            const res = compact(ctx, agent, { message: 4, summary: "tool B too long" });
+            const res = compact(ctx, { agent, message: 4, summary: "tool B too long" });
             expect(res.from).toBe(3);
             expect(agent.messages.at(-1).role).toBe("user");
             expect(agent.messages.at(-1).content).toContain("[compacted from #3");
@@ -82,8 +82,8 @@ describe("agent.compact", () => {
             const ctx: any = await mkTestCtx();
             const agent = ctx.fns.agent.start(ctx, { model: "x" });
             agent.messages.push({ role: "user", content: "hi" });
-            expect(compact(ctx, agent, { message: 99, summary: "x" }).replaced).toBe(false);
-            expect(compact(ctx, agent, { message: -1, summary: "x" }).replaced).toBe(false);
+            expect(compact(ctx, { agent, message: 99, summary: "x" }).replaced).toBe(false);
+            expect(compact(ctx, { agent, message: -1, summary: "x" }).replaced).toBe(false);
         });
     });
 });

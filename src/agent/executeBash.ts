@@ -7,8 +7,9 @@
 // - exit !=0:  return "[exit N]\n<stderr>\nstdout:\n<stdout>", isError=true
 export default async function (
     _ctx: Context,
-    code: string,
+    opts: { code: string },
 ): Promise<{ output: string; isError: boolean }> {
+    const { code } = opts;
     const proc = Bun.spawn({
         cmd: ['bash', '-c', code],
         stdout: 'pipe',

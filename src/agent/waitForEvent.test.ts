@@ -1,6 +1,10 @@
 import { describe, test, expect } from 'bun:test';
-import waitForEvent from './waitForEvent';
-import wakeWaiters from './wakeWaiters';
+import waitForEventFn from './waitForEvent';
+import wakeWaitersFn from './wakeWaiters';
+
+const waitForEvent = (ctx: any, agentId: string, timeoutMs: number, signal?: AbortSignal) =>
+    waitForEventFn(ctx, { agentId, timeoutMs, signal });
+const wakeWaiters = (ctx: any, agentId: string) => wakeWaitersFn(ctx, { agentId });
 
 function mkCtx() {
     return { state: {}, env: {}, fns: {} } as unknown as Context;

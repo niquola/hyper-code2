@@ -8,7 +8,7 @@ export default async function (
     finishReason: string | null;
     usage: any;
 }> {
-    const { system: sys, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, agent);
+    const { system: sys, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, { agent });
     const messages: any[] = [];
     if (sys) messages.push({ role: "system", content: sys });
     messages.push(...convo);

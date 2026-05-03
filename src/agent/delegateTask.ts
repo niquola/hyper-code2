@@ -1,7 +1,7 @@
 export default async function (
     ctx: Context,
-    parentAgent: types.agent.Agent,
     opts: {
+        parent: types.agent.Agent;
         task: string;
         forkContext?: boolean;
         instructions?: string;
@@ -9,6 +9,7 @@ export default async function (
         responseFormat?: "text" | "json" | "report" | { kind: "report" | "json"; fields?: string[] };
     },
 ): Promise<{ childId: string; summary?: string; result?: any; started?: true }> {
+    const parentAgent = opts.parent;
     const task = String(opts?.task ?? "").trim();
     if (!task) throw new Error("delegateTask: task is required");
     const mode = opts?.mode === "async" ? "async" : "await";
@@ -40,7 +41,7 @@ export default async function (
     const prompt = ctx.fns.agent.buildDelegatedTaskPrompt(ctx, { task, instructions, responseFormat });
 
     if (mode === "async") {
-        void ctx.fns.agent.run(ctx, child, prompt);
+        void ctx.fns.agent.run(ctx, { agent: child, userText: prompt });
         return { childId: child.id, started: true };
     }
 
@@ -50,7 +51,7 @@ export default async function (
     });
 
     try {
-        await ctx.fns.agent.run(ctx, child, prompt);
+        await ctx.fns.agent.run(ctx, { agent: child, userText: prompt });
         const meta = child.scratchpad?.delegateTask;
         if (meta?.status === "finished" && meta.result) {
             waiters.delete(child.id);

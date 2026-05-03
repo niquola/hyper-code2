@@ -1,7 +1,7 @@
 export default async function (
     ctx: Context,
-    agent: types.agent.Agent,
-    input: {
+    opts: {
+        agent: types.agent.Agent;
         user: string;
         system?: string;
         model?: string;
@@ -10,9 +10,10 @@ export default async function (
         response_format?: any;
     },
 ): Promise<{ text: string; finishReason: string | null; usage: any; raw: any }> {
-    const user = String(input?.user ?? '').trim();
-    const system = String(input?.system ?? '').trim();
-    const model = String(input?.model ?? agent.model ?? '').trim();
+    const { agent } = opts;
+    const user = String(opts?.user ?? '').trim();
+    const system = String(opts?.system ?? '').trim();
+    const model = String(opts?.model ?? agent.model ?? '').trim();
 
     if (!user) throw new Error('llmCall: user is required');
     if (!model) throw new Error('llmCall: model is required');
@@ -68,9 +69,9 @@ export default async function (
         stream: false,
     };
 
-    if (input?.temperature != null) body.temperature = input.temperature;
-    if (input?.max_tokens != null) body.max_tokens = input.max_tokens;
-    if (input?.response_format != null) body.response_format = input.response_format;
+    if (opts?.temperature != null) body.temperature = opts.temperature;
+    if (opts?.max_tokens != null) body.max_tokens = opts.max_tokens;
+    if (opts?.response_format != null) body.response_format = opts.response_format;
 
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (ep.apiKey) headers.authorization = 'Bearer ' + ep.apiKey;

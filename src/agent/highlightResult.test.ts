@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'bun:test';
-import highlightResult from './highlightResult';
+import highlightResultFn from './highlightResult';
+const highlightResult = (ctx: any, output: string) => highlightResultFn(ctx, { output });
 
 function mkCtx() {
     const calls: { code: string; lang: string }[] = [];

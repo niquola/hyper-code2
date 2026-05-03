@@ -18,7 +18,7 @@ describe('agent.stop', () => {
         },
       },
     };
-    const res = stop(ctx, agent, { clearQueue: true });
+    const res = stop(ctx, { agent, clearQueue: true });
     expect(res.ok).toBe(true);
     expect(calls[0]).toEqual(['abort', 'stopped_by_user']);
     expect(calls[1][0]).toBe('db.exec');
@@ -39,7 +39,7 @@ describe('agent.stop', () => {
         session: { appendErrorEvent: () => {}, syncAgentState: () => {} },
       },
     };
-    stop(ctx, agent, { clearQueue: false });
+    stop(ctx, { agent, clearQueue: false });
     expect(calls[0]).toMatch(/next_run_at = next_run_at/);
   });
 });

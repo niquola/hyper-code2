@@ -8,7 +8,7 @@ export default function (ctx: Context, opts: { id: string; event: any; ts?: numb
     // Wake any in-process waiters AND broadcast over SSE so browser tabs
     // showing this agent fetch the delta with a short hx-get instead of
     // holding a long-poll connection per tab.
-    ctx.fns.agent?.wakeWaiters?.(ctx, id);
+    ctx.fns.agent?.wakeWaiters?.(ctx, { agentId: id });
     ctx.fns.events?.emit?.(ctx, { type: 'agent.event_appended', agentId: id, idx });
     return { idx };
 }

@@ -1,9 +1,9 @@
 // Two operations available to the agent for shrinking transcript context:
-// 1. compact(ctx, agent, "summary string")
+// 1. compact(ctx, { agent, summary: "summary string" })
 //    Find the most recent §result:* / §error:* synthetic user-message
 //    and replace its content with a "[compacted] <summary>" note. Loses the
 //    verbose tool output but keeps the call→result chain intact for the LLM.
-// 2. compact(ctx, agent, { message: <idx>, summary: "..." })
+// 2. compact(ctx, { agent, message: <idx>, summary: "..." })
 //    Drop messages[<idx>..] and replace with one synthetic user note. If
 //    <idx> lands inside a marker pair, walks back over the pair so we never
 //    leave half a pair stranded — same invariant as truncateMessagesFrom.
@@ -23,17 +23,17 @@ function isToolResult(m: any): boolean {
 
 export default function (
     ctx: Context,
-    agent: types.agent.Agent,
-    arg: string | { message: number; summary: string },
+    opts: { agent: types.agent.Agent; summary: string; message?: number },
 ): { replaced: boolean; from?: number; before?: number; after?: number; resultIdx?: number } {
+    const { agent, summary: summaryRaw, message: from } = opts;
     ctx.fns?.session?.syncAgentState?.(ctx, { agent });
 
-    if (typeof arg === "object" && arg !== null) {
-        const { message: from, summary } = arg;
-        if (!Number.isInteger(from) || from < 0 || from >= agent.messages.length) {
+    if (Number.isInteger(from)) {
+        const idx = from as number;
+        if (idx < 0 || idx >= agent.messages.length) {
             return { replaced: false };
         }
-        let effectiveFrom = from;
+        let effectiveFrom = idx;
         while (effectiveFrom > 0) {
             const cur = agent.messages[effectiveFrom];
             const prev = agent.messages[effectiveFrom - 1];
@@ -42,7 +42,7 @@ export default function (
         }
         const dropped = agent.messages.slice(effectiveFrom);
         const before = dropped.reduce((n, m) => n + JSON.stringify(m).length, 0);
-        const note = `[compacted from #${effectiveFrom}, ${dropped.length} msg(s)] ${summary}`;
+        const note = `[compacted from #${effectiveFrom}, ${dropped.length} msg(s)] ${summaryRaw}`;
         const next = agent.messages.slice(0, effectiveFrom);
         next.push({ role: "user", content: note });
         ctx.fns?.session?.replaceMessages?.(ctx, { id: agent.id, messages: next });
@@ -51,7 +51,7 @@ export default function (
     }
 
     // String form: shrink the most recent tool-result message in place.
-    const summary = String(arg);
+    const summary = String(summaryRaw);
     for (let i = agent.messages.length - 1; i >= 0; i--) {
         const m = agent.messages[i];
         if (!isToolResult(m)) continue;

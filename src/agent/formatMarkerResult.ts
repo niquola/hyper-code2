@@ -6,10 +6,10 @@
 //   §result:write:<path>[:error]      + "wrote N bytes" / error message
 //   §result:bash[:error]              + stdout (or stderr / exit code on error)
 export default function (
-    call: types.agent.MarkerCall,
-    output: string,
-    isError: boolean,
+    _ctx: Context,
+    opts: { call: types.agent.MarkerCall; output: string; isError: boolean },
 ): string {
+    const { call, output, isError } = opts;
     const head = call.kind === 'write' ? `§result:write:${call.path}`
         : call.kind === 'bash' ? `§result:bash`
         : `§result:eval`;

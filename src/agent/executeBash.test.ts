@@ -1,7 +1,8 @@
 import { describe, test, expect } from 'bun:test';
-import executeBash from './executeBash';
+import executeBashFn from './executeBash';
 
 const ctx: any = {};
+const executeBash = (c: any, code: string) => executeBashFn(c, { code });
 
 describe('agent.executeBash', () => {
     test('successful exit returns stdout', async () => {

@@ -14,7 +14,7 @@ export default async function (
     // buildLlmRequest handles the claude-code anti-fraud header (kept in
     // system) and moves the rest of the instruction body into messages
     // (option A — "system-as-messages").
-    const { system, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, agent);
+    const { system, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, { agent });
 
     const body: any = {
         model: ep.modelId,

@@ -1,4 +1,5 @@
-export default function (ctx: Context, agentId: string): string {
+export default function (ctx: Context, opts: { agentId: string }): string {
+    const { agentId } = opts;
     const now = Date.now();
     const row = ctx.fns.db.select<any>(ctx, {
         sql: 'SELECT run_state, run_started_at, next_run_at FROM agents WHERE id = ?',

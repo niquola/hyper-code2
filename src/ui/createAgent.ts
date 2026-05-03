@@ -19,7 +19,7 @@ export default async function (
         agent.events.push({ type: 'user', text });
         agent.isStreaming = true;
         queueMicrotask(async () => {
-            try { await ctx.fns.agent.run(ctx, agent, text); }
+            try { await ctx.fns.agent.run(ctx, { agent, userText: text }); }
             catch (e: any) { agent.events.push({ type: 'error', error: e.message }); }
             finally { agent.isStreaming = false; }
         });

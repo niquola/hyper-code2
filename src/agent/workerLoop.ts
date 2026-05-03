@@ -98,7 +98,7 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
     let aborted = false;
 
     try {
-        await ctx.fns.agent.run(ctx, agent, '', { userMessageAlreadyAppended: true });
+        await ctx.fns.agent.run(ctx, { agent, userText: '', userMessageAlreadyAppended: true });
     } catch (e: any) {
         if (isAbortError(e)) {
             aborted = true;

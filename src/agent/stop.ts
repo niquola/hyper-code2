@@ -1,4 +1,5 @@
-export default function (ctx: Context, agent: types.agent.Agent, opts: { clearQueue?: boolean } = {}) {
+export default function (ctx: Context, opts: { agent: types.agent.Agent; clearQueue?: boolean }) {
+    const { agent } = opts;
     const clearQueue = opts.clearQueue === true;
     const now = Date.now();
 

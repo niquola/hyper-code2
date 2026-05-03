@@ -35,10 +35,10 @@ describe('agent.workerLoop', () => {
         // of intervals end-to-end with no overlap. Parallel worker fires all
         // three at once; intervals overlap heavily.
         const intervals: { id: string; start: number; end: number }[] = [];
-        ctx.fns.agent.run = async (_c: any, agent: any) => {
+        ctx.fns.agent.run = async (_c: any, opts: any) => {
             const start = Date.now();
             await Bun.sleep(100);
-            intervals.push({ id: agent.id, start, end: Date.now() });
+            intervals.push({ id: opts.agent.id, start, end: Date.now() });
         };
 
         const loopPromise = workerLoop(ctx);
@@ -113,10 +113,10 @@ describe('agent.workerLoop', () => {
         for (const id of ids) seedReadyAgent(ctx, id, past);
 
         const intervals: { id: string; start: number; end: number }[] = [];
-        ctx.fns.agent.run = async (_c: any, agent: any) => {
+        ctx.fns.agent.run = async (_c: any, opts: any) => {
             const start = Date.now();
             await Bun.sleep(100);
-            intervals.push({ id: agent.id, start, end: Date.now() });
+            intervals.push({ id: opts.agent.id, start, end: Date.now() });
         };
 
         const t0 = Date.now();

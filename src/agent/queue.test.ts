@@ -26,7 +26,7 @@ describe('agent queue (state on agents row)', () => {
     test('POST sets next_run_at, worker drains, advances cursor', async () => {
         const ctx = await mkTestCtx();
         const seen: string[] = [];
-        ctx.fns.agent.run = async (_c: any, agent: any) => { seen.push(agent.id); };
+        ctx.fns.agent.run = async (_c: any, opts: any) => { seen.push(opts.agent.id); };
 
         const a = ctx.fns.agent.start(ctx, { model: 'm' });
         ctx.fns.session.save(ctx, { agent: a });
@@ -66,7 +66,7 @@ describe('agent queue (state on agents row)', () => {
     test('multiple agents drained serially', async () => {
         const ctx = await mkTestCtx();
         const seen: string[] = [];
-        ctx.fns.agent.run = async (_c: any, agent: any) => { seen.push(agent.id); };
+        ctx.fns.agent.run = async (_c: any, opts: any) => { seen.push(opts.agent.id); };
 
         const a1 = ctx.fns.agent.start(ctx, { model: 'm' });
         const a2 = ctx.fns.agent.start(ctx, { model: 'm' });
@@ -137,7 +137,8 @@ describe('agent queue (state on agents row)', () => {
         // and reschedule on every successful turn → infinite loop replying to the same user msg.
         const ctx = await mkTestCtx();
         const seenUserTexts: string[] = [];
-        ctx.fns.agent.run = async (c: any, agent: any) => {
+        ctx.fns.agent.run = async (c: any, opts: any) => {
+            const agent = opts.agent;
             // Realistic: read full transcript, then append our assistant reply.
             const msgs = c.fns.session.getMessages(c, { id: agent.id });
             for (const m of msgs) if (m.role === 'user') seenUserTexts.push(m.content);

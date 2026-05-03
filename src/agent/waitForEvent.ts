@@ -2,10 +2,9 @@
 // Resolves with { woken: true | false }. Designed for long-poll handlers.
 export default function (
     ctx: Context,
-    agentId: string,
-    timeoutMs: number,
-    signal?: AbortSignal,
+    opts: { agentId: string; timeoutMs: number; signal?: AbortSignal },
 ): Promise<{ woken: boolean }> {
+    const { agentId, timeoutMs, signal } = opts;
     const map: Map<string, Set<() => void>> = ((ctx.state as any).eventWaiters ??= new Map());
     return new Promise((resolve) => {
         let settled = false;
