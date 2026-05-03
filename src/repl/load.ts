@@ -2,7 +2,8 @@ async function roots(ctx: Context) {
     return ctx.fns.project.roots(ctx);
 }
 
-export default async function (ctx: Context, target: string) {
+export default async function (ctx: Context, opts: { name: string }) {
+    const target = opts.name;
     if (target.includes('.')) {
         const segs = target.split('.');
         const fnName = segs.pop()!;

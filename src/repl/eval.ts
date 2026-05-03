@@ -18,9 +18,10 @@ function formatArg(a: any): string {
 
 export default async function (
     ctx: Context,
-    code: string,
-    bindings: Record<string, any> = {},
+    opts: { code: string; agent?: any },
 ): Promise<string> {
+    const code = opts.code;
+    const bindings: Record<string, any> = opts.agent ? { agent: opts.agent } : {};
     const buffer: string[] = [];
     const log = (...args: any[]) => buffer.push(args.map(formatArg).join(' '));
     const errLog = (...args: any[]) => buffer.push(args.map(formatArg).join(' '));

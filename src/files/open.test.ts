@@ -8,23 +8,23 @@ const mkCtx = () => ({ state: {}, env: {}, fns: {} as any, routes: {} }) as unkn
 describe("files.open / close / listOpen", () => {
     test("open adds path and is idempotent", () => {
         const ctx = mkCtx();
-        open(ctx, "README.md");
-        open(ctx, "README.md");
-        open(ctx, "src/$main.ts");
+        open(ctx, { path: "README.md" });
+        open(ctx, { path: "README.md" });
+        open(ctx, { path: "src/$main.ts" });
         expect(listOpen(ctx)).toEqual(["README.md", "src/$main.ts"]);
     });
 
     test("close removes path", () => {
         const ctx = mkCtx();
-        open(ctx, "a");
-        open(ctx, "b");
-        close(ctx, "a");
+        open(ctx, { path: "a" });
+        open(ctx, { path: "b" });
+        close(ctx, { path: "a" });
         expect(listOpen(ctx)).toEqual(["b"]);
     });
 
     test("empty path is ignored by open", () => {
         const ctx = mkCtx();
-        open(ctx, "");
+        open(ctx, { path: "" });
         expect(listOpen(ctx)).toEqual([]);
     });
 

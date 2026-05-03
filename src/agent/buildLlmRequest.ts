@@ -25,7 +25,7 @@ export default async function (
         ? ctx.fns.session.getFullMessages(ctx, { id: agent.id })
         : (agent.messages ?? []);
 
-    const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
+    const ep = ctx.fns.llm.resolveEndpoint(ctx, { model: agent.model });
     const claudeCodeHeader = "You are Claude Code, Anthropic's official CLI for Claude.";
 
     let system = '';

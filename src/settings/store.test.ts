@@ -91,7 +91,7 @@ describe("settings integration", () => {
             value: "http://from-settings:9999",
         });
 
-        const r = resolve(ctx, "some-model");
+        const r = resolve(ctx, { model: "some-model" });
         expect(r.url).toBe("http://from-settings:9999/v1/chat/completions");
     });
 

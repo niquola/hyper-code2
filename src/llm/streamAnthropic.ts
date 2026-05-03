@@ -1,15 +1,15 @@
 // Stream from an Anthropic Messages API endpoint (anthropic.com, kimi.com/coding, etc).
 export default async function (
     ctx: Context,
-    agent: types.agent.Agent,
-    opts: { signal?: AbortSignal; onEvent?: (ev: any) => void } = {},
+    opts: { agent: types.agent.Agent; signal?: AbortSignal; onEvent?: (ev: any) => void },
 ): Promise<{
     text: string;
     thinking: string;
     finishReason: string | null;
     usage: any;
 }> {
-    const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
+    const { agent } = opts;
+    const ep = ctx.fns.llm.resolveEndpoint(ctx, { model: agent.model });
 
     // buildLlmRequest handles the claude-code anti-fraud header (kept in
     // system) and moves the rest of the instruction body into messages
@@ -19,7 +19,7 @@ export default async function (
     const body: any = {
         model: ep.modelId,
         system,
-        messages: ctx.fns.llm.toAnthropicMessages(convo),
+        messages: ctx.fns.llm.toAnthropicMessages(ctx, { messages: convo }),
         stream: true,
         max_tokens: 8192,
     };

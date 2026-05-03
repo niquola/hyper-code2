@@ -17,21 +17,21 @@ describe("files.write", () => {
     test("creates a file and its parent directories", async () => {
         const ctx = await mkCtx();
         const path = `${TEST_DIR}/deep/nested/hello.txt`;
-        const res = await write(ctx, path, "hi!");
+        const res = await write(ctx, { path, content: "hi!" });
         expect(res.bytes).toBe(3);
-        expect(await read(ctx, path)).toBe("hi!");
+        expect(await read(ctx, { path })).toBe("hi!");
     });
 
     test("overwrites existing file", async () => {
         const ctx = await mkCtx();
         const path = `${TEST_DIR}/overwrite.txt`;
-        await write(ctx, path, "v1");
-        await write(ctx, path, "v2 longer");
-        expect(await read(ctx, path)).toBe("v2 longer");
+        await write(ctx, { path, content: "v1" });
+        await write(ctx, { path, content: "v2 longer" });
+        expect(await read(ctx, { path })).toBe("v2 longer");
     });
 
     test("refuses paths outside workspace", async () => {
         const ctx = await mkCtx();
-        await expect(write(ctx, "../evil.txt", "x")).rejects.toThrow(/outside workspace/);
+        await expect(write(ctx, { path: "../evil.txt", content: "x" })).rejects.toThrow(/outside workspace/);
     });
 });

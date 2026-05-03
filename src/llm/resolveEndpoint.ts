@@ -1,12 +1,13 @@
 // Parse agent.model "provider:modelId" → {url, apiKey, modelId, provider, api}.
 // "modelId" without prefix defaults to provider "lmstudio".
-export default function (ctx: Context, model: string): {
+export default function (ctx: Context, opts: { model: string }): {
     url: string;
     apiKey: string | null;
     modelId: string;
     provider: string;
     api: "openai" | "anthropic" | "responses" | "mock";
 } {
+    const model = opts.model;
     const m = /^([a-z][\w\-]*):(.+)$/.exec(model);
     const provider = m ? m[1]! : "lmstudio";
     const modelId = m ? m[2]! : model;

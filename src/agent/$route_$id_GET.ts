@@ -71,7 +71,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     class="flex-1 px-3 py-2 border border-gray-300 rounded font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
 </form>
 <script>window.__init = ${initJson};</script>
-${ctx.fns.ui.script(ctx, 'agent.chat')}`;
+${ctx.fns.ui.script(ctx, { target: 'agent.chat' })}`;
 
     return { currentId: id, title: id, main };
 }

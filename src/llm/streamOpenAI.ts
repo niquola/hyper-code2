@@ -1,19 +1,19 @@
 export default async function (
     ctx: Context,
-    agent: types.agent.Agent,
-    opts: { signal?: AbortSignal; onEvent?: (ev: any) => void } = {},
+    opts: { agent: types.agent.Agent; signal?: AbortSignal; onEvent?: (ev: any) => void },
 ): Promise<{
     text: string;
     thinking: string;
     finishReason: string | null;
     usage: any;
 }> {
+    const { agent } = opts;
     const { system: sys, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, { agent });
     const messages: any[] = [];
     if (sys) messages.push({ role: "system", content: sys });
     messages.push(...convo);
 
-    const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
+    const ep = ctx.fns.llm.resolveEndpoint(ctx, { model: agent.model });
 
     const body: any = {
         model: ep.modelId,

@@ -11,16 +11,16 @@ const mkCtx = async () => {
 describe("files.exists", () => {
     test("true for existing file", async () => {
         const ctx = await mkCtx();
-        expect(await exists(ctx, "README.md")).toBe(true);
+        expect(await exists(ctx, { path: "README.md" })).toBe(true);
     });
 
     test("false for missing file", async () => {
         const ctx = await mkCtx();
-        expect(await exists(ctx, ".hyper/nope-" + Math.random().toString(36).slice(2))).toBe(false);
+        expect(await exists(ctx, { path: ".hyper/nope-" + Math.random().toString(36).slice(2) })).toBe(false);
     });
 
     test("refuses outside workspace", async () => {
         const ctx = await mkCtx();
-        await expect(exists(ctx, "../secret")).rejects.toThrow(/outside workspace/);
+        await expect(exists(ctx, { path: "../secret" })).rejects.toThrow(/outside workspace/);
     });
 });

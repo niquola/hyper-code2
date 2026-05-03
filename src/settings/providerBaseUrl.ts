@@ -1,9 +1,9 @@
-export default function (ctx: Context, provider: string, fallback: string): string {
+export default function (ctx: Context, opts: { provider: string; fallback: string }): string {
     return ctx.fns.settings?.getString?.(ctx, {
         module: 'provider',
         scopeType: 'provider',
-        scopeId: provider,
+        scopeId: opts.provider,
         key: 'baseUrl',
-        fallback,
-    }) ?? fallback;
+        fallback: opts.fallback,
+    }) ?? opts.fallback;
 }

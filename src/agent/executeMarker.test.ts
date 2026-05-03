@@ -17,13 +17,13 @@ async function setup() {
     ctx.fns.agent.formatMarkerResult = formatMarkerResult;
     // files.write — record into ctx.state.__written for assertions.
     ctx.fns.files = ctx.fns.files ?? {};
-    ctx.fns.files.write = async (c: any, path: string, content: string) => {
-        ((c.state as any).__written ??= {})[path] = content;
+    ctx.fns.files.write = async (c: any, opts: { path: string; content: string }) => {
+        ((c.state as any).__written ??= {})[opts.path] = opts.content;
         return { ok: true };
     };
     // repl.eval — return a deterministic value per code.
-    ctx.fns.repl.eval = async (_c: any, code: string) =>
-        code.includes('throw') ? (() => { throw new Error('boom'); })() : `eval-result-of:${code}`;
+    ctx.fns.repl.eval = async (_c: any, opts: { code: string }) =>
+        opts.code.includes('throw') ? (() => { throw new Error('boom'); })() : `eval-result-of:${opts.code}`;
     return ctx;
 }
 

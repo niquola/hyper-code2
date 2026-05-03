@@ -28,7 +28,7 @@ export default async function (_ctx: Context) {
         "    else if (ev.level === 'warn') box.classList.add('border-yellow-300', 'text-yellow-800');",
         "    else box.classList.add('border-gray-300', 'text-gray-800');",
         "    if (ev.html) box.innerHTML = ev.html;",
-        "    else box.textContent = ev.text ?? '';",
+        "    else box.textContent = ev.message ?? ev.text ?? '';",
         "    document.body.appendChild(box);",
         "    setTimeout(() => box.remove(), 2500);",
         "  };",

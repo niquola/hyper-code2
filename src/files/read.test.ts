@@ -11,12 +11,12 @@ const mkCtx = async () => {
 describe("files.read", () => {
     test("reads an existing project file", async () => {
         const ctx = await mkCtx();
-        const pkg = await read(ctx, "package.json");
+        const pkg = await read(ctx, { path: "package.json" });
         expect(pkg).toContain("\"name\": \"hyper-code2\"");
     });
 
     test("rejects paths that escape workspace", async () => {
         const ctx = await mkCtx();
-        await expect(read(ctx, "../secret")).rejects.toThrow(/outside workspace/);
+        await expect(read(ctx, { path: "../secret" })).rejects.toThrow(/outside workspace/);
     });
 });

@@ -5,7 +5,7 @@ export default async function (ctx: Context, opts: { code: string; agent?: any }
     const pending = ((ctx.state as any).uiEval ??= { pending: new Map() });
     const entry: any = { id, status: 'pending', code, createdAt: Date.now() };
     pending.pending.set(id, entry);
-    ctx.fns.events.emit(ctx, { type: 'ui.eval', id, code });
+    ctx.fns.events.emit(ctx, { event: { type: 'ui.eval', id, code } });
     if (opts.agent) {
         opts.agent.scratchpad ??= {};
         opts.agent.scratchpad.uiEval ??= {};

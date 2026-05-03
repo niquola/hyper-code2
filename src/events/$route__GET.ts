@@ -9,7 +9,7 @@ export default async function (ctx: Context, _session: any, req: Request) {
                 catch { unsub(); }
             };
             send({ type: "hello" });
-            const unsub = ctx.fns.events.subscribe(ctx, send);
+            const unsub = ctx.fns.events.subscribe(ctx, { handler: send });
             const keepalive = setInterval(() => {
                 try { controller.enqueue(enc.encode(`: ping\n\n`)); } catch { /* closed */ }
             }, 25_000);

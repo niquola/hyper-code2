@@ -3,8 +3,9 @@
 // Responses API takes them at the top level).
 export default function (
     _ctx: Context,
-    messages: { role: string; content?: any }[],
+    opts: { messages: { role: string; content?: any }[] },
 ): { instructions: string; input: any[] } {
+    const messages = opts.messages;
     let instructions = "";
     const input: any[] = [];
 

@@ -6,7 +6,7 @@ import pending from './pending';
 const mkCtx = () => ({
   state: {},
   fns: {
-    events: { emit(ctx: any, ev: any) { ((ctx.state as any).emitted ??= []).push(ev); } },
+    events: { emit(ctx: any, opts: { event: any }) { ((ctx.state as any).emitted ??= []).push(opts.event); } },
   },
 }) as unknown as Context;
 
@@ -16,7 +16,7 @@ describe('ui eval transport', () => {
     const res = await uiEval(ctx, { code: '1 + 1' });
     expect(res.id.startsWith('uieval_')).toBe(true);
     expect(ctx.state.emitted[0].type).toBe('ui.eval');
-    const item = await pending(ctx, res.id);
+    const item = await pending(ctx, { id: res.id });
     expect(item.code).toBe('1 + 1');
     expect(item.status).toBe('pending');
   });
@@ -26,7 +26,7 @@ describe('ui eval transport', () => {
     const res = await action(ctx, { name: 'ping', args: { a: 1 } });
     expect(res.id.startsWith('uiaction_')).toBe(true);
     expect(ctx.state.emitted[0].type).toBe('ui.action');
-    const item = await pending(ctx, res.id);
+    const item = await pending(ctx, { id: res.id });
     expect(item.action).toBe('ping');
   });
 });

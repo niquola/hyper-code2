@@ -6,7 +6,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     const url = new URL(req.url);
     const path = url.searchParams.get("path") ?? "";
     const tab = url.searchParams.get("tab") ?? "";
-    const abs = ctx.fns.files.resolveSafe(ctx, path);
+    const abs = ctx.fns.files.resolveSafe(ctx, { path });
     const st = await stat(abs).catch(() => null);
     if (!st) {
         return {
@@ -20,12 +20,12 @@ export default async function (ctx: Context, _session: any, req: any) {
 
     // User is already navigating here — add to tabs but don't broadcast
     // (self-echo would cancel the in-flight nav and re-trigger it).
-    ctx.fns.files.open(ctx, path, { broadcast: false });
+    ctx.fns.files.open(ctx, { path, broadcast: false });
     return renderFile(ctx, path, tab);
 }
 
 async function renderDir(ctx: Context, path: string) {
-    const entries = await ctx.fns.files.list(ctx, path);
+    const entries = await ctx.fns.files.list(ctx, { path });
     const crumbs = breadcrumbs(path);
     const rows = entries.map(e => {
         const full = path ? `${path}/${e.name}` : e.name;
@@ -41,7 +41,7 @@ async function renderDir(ctx: Context, path: string) {
 }
 
 async function renderFile(ctx: Context, path: string, tabParam: string) {
-    const content = await ctx.fns.files.read(ctx, path);
+    const content = await ctx.fns.files.read(ctx, { path });
     const name = basename(path);
     const ext = extname(name).slice(1).toLowerCase();
     const isMd = ext === "md" || ext === "markdown";
@@ -65,7 +65,7 @@ async function renderFile(ctx: Context, path: string, tabParam: string) {
     let contentEl = "";
     let headExtra = "";
     if (tab === "preview" && isMd) {
-        const html = await ctx.fns.markdown.render(ctx, content);
+        const html = await ctx.fns.markdown.render(ctx, { source: content });
         contentEl = `<div class="flex-1 overflow-auto p-6"><div class="prose prose-sm max-w-none">${html}</div></div>`;
     } else if (tab === "preview" && isHtml) {
         contentEl = `<iframe srcdoc="${esc(content)}" class="flex-1 w-full border-0" sandbox="allow-scripts"></iframe>`;
@@ -78,7 +78,7 @@ async function renderFile(ctx: Context, path: string, tabParam: string) {
 <script src="/files/editor.js" defer></script>`;
         contentEl = `<div id="cm-editor" class="flex-1 overflow-hidden"></div>`;
     } else {
-        const html = await ctx.fns.markdown.highlight(ctx, content, shikiLang);
+        const html = await ctx.fns.markdown.highlight(ctx, { code: content, lang: shikiLang });
         contentEl = `<div class="flex-1 overflow-auto text-xs bg-white [&_pre]:m-0 [&_pre]:rounded-none [&_pre]:p-4">${html}</div>`;
     }
 

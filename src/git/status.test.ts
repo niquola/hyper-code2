@@ -91,8 +91,8 @@ describe("git.status", () => {
     const ctx = {
       fns: {
         git: {
-          run: async (_ctx: Context, a: string[]) => {
-            args = a;
+          run: async (_ctx: Context, opts: { args: string[] }) => {
+            args = opts.args;
             return { ok: true, code: 0, stdout: "", stderr: "" };
           },
         },

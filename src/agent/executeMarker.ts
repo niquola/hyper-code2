@@ -39,9 +39,9 @@ export default async function (
     let isError = false;
     try {
         if (call.kind === 'eval') {
-            output = await ctx.fns.repl.eval(ctx, call.content, { agent });
+            output = await ctx.fns.repl.eval(ctx, { code: call.content, agent });
         } else if (call.kind === 'write') {
-            await ctx.fns.files.write(ctx, call.path, call.content);
+            await ctx.fns.files.write(ctx, { path: call.path, content: call.content });
             const lines = call.content.split('\n').length;
             output = `wrote ${call.path} (${call.content.length} bytes, ${lines} lines)`;
         } else if (call.kind === 'bash') {
@@ -56,7 +56,7 @@ export default async function (
 
     // 4. Persist tool_call event with highlighted args + result.
     const codeLang = call.kind === 'bash' ? 'bash' : 'ts';
-    const argsHtml = await ctx.fns.markdown.highlight(ctx, call.content, codeLang);
+    const argsHtml = await ctx.fns.markdown.highlight(ctx, { code: call.content, lang: codeLang });
     const resultHtml = await ctx.fns.agent.highlightResult(ctx, { output });
     await ctx.fns.session.appendToolCallEvent(ctx, { id: agent.id, payload: {
         name: call.kind,

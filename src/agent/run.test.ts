@@ -15,8 +15,8 @@ async function setup() {
     // Real eval — uses ctx.fns.repl.eval which mkTestCtx wires to a default fn.
     // Override per-test for richer behaviours.
     ctx.fns.files = ctx.fns.files ?? {};
-    ctx.fns.files.write = async (_c: any, path: string, content: string) => {
-        ((_c.state as any).__written ??= {})[path] = content;
+    ctx.fns.files.write = async (_c: any, opts: { path: string; content: string }) => {
+        ((_c.state as any).__written ??= {})[opts.path] = opts.content;
         return { ok: true };
     };
     return ctx;
@@ -47,7 +47,7 @@ describe('agent.run', () => {
             return { text: 'computed: 4', toolCalls: [], thinking: '', usage: {} };
         };
         // repl.eval is Jupyter-style: returns the captured log buffer as a string.
-        ctx.fns.repl.eval = async (_c: any, code: string) => code.includes('console.log(2 + 2)') ? '4' : '';
+        ctx.fns.repl.eval = async (_c: any, opts: { code: string }) => opts.code.includes('console.log(2 + 2)') ? '4' : '';
 
         const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
         ctx.fns.session.save(ctx, { agent: a });
@@ -149,9 +149,9 @@ describe('agent.run', () => {
             return { text: 'computed: 4', toolCalls: [], thinking: '', usage: {} };
         };
         let evalCalls = 0;
-        ctx.fns.repl.eval = async (_c: any, code: string) => {
+        ctx.fns.repl.eval = async (_c: any, opts: { code: string }) => {
             evalCalls++;
-            return code.includes('console.log(2 + 2)') ? '4' : '';
+            return opts.code.includes('console.log(2 + 2)') ? '4' : '';
         };
 
         const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });

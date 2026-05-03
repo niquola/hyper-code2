@@ -1,13 +1,13 @@
 export default async function (
     ctx: Context,
-    agent: types.agent.Agent,
-    _opts: { signal?: AbortSignal; onEvent?: (ev: any) => void } = {},
+    opts: { agent: types.agent.Agent; signal?: AbortSignal; onEvent?: (ev: any) => void },
 ): Promise<{
     text: string;
     thinking: string;
     finishReason: string | null;
     usage: any;
 }> {
+    const { agent } = opts;
     const messages = agent.parentId ? ctx.fns.session.getFullMessages(ctx, { id: agent.id }) : (agent.messages ?? []);
     const last = messages[messages.length - 1] ?? null;
     const cfg = agent.scratchpad.mockLLM ?? {};

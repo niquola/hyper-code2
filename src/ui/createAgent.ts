@@ -12,7 +12,7 @@ export default async function (
         systemPrompt: opts.systemPrompt ?? '',
     });
     try { ctx.fns.session?.save?.(ctx, { agent }); } catch (e: any) { console.error('[session.save]', e?.message); }
-    if (opts.open !== false) ctx.fns.events.emit(ctx, { type: 'ui.navigate', path: '/agent/' + encodeURIComponent(agent.id) });
+    if (opts.open !== false) ctx.fns.events.emit(ctx, { event: { type: 'ui.navigate', path: '/agent/' + encodeURIComponent(agent.id) } });
     if (opts.startText?.trim()) {
         const text = opts.startText.trim();
         const offset = agent.events.length;

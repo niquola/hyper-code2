@@ -18,9 +18,9 @@ export async function getHL(): Promise<Highlighter> {
     return _hl;
 }
 
-export default async function (_ctx: Context, code: string, lang: string): Promise<string> {
-    const safeCode = String(code ?? "");
-    const safeLang = String(lang ?? "text");
+export default async function (_ctx: Context, opts: { code: string; lang: string }): Promise<string> {
+    const safeCode = String(opts.code ?? "");
+    const safeLang = String(opts.lang ?? "text");
     const hl = await getHL();
     const normalized = ALIASES[safeLang.toLowerCase()] ?? safeLang.toLowerCase();
     if (hl.getLoadedLanguages().includes(normalized as any)) {

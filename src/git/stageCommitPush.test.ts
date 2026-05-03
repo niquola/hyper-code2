@@ -11,9 +11,9 @@ import stageCommitPush from "./stageCommitPush";
 async function mkRepo() {
     const dir = await mkdtemp(join(tmpdir(), "hyper-git-"));
     const ctx: any = { fns: { git: { run, stage, commit, status, stageCommitPush } } };
-    await run(ctx, ["init"], { dir });
-    await run(ctx, ["config", "user.email", "test@example.com"], { dir });
-    await run(ctx, ["config", "user.name", "Test User"], { dir });
+    await run(ctx, { args: ["init"], dir });
+    await run(ctx, { args: ["config", "user.email", "test@example.com"], dir });
+    await run(ctx, { args: ["config", "user.name", "Test User"], dir });
     return { dir, ctx };
 }
 
@@ -21,9 +21,9 @@ describe("git helpers", () => {
     test("stage + commit in temp repo", async () => {
         const { dir, ctx } = await mkRepo();
         await writeFile(join(dir, "a.txt"), "hello\n");
-        await stage(ctx, ["a.txt"], { dir });
-        await commit(ctx, "add a", { dir });
-        const log = await run(ctx, ["log", "--oneline", "-1"], { dir });
+        await stage(ctx, { paths: ["a.txt"], dir });
+        await commit(ctx, { message: "add a", dir });
+        const log = await run(ctx, { args: ["log", "--oneline", "-1"], dir });
         expect(log.stdout).toContain("add a");
     });
 

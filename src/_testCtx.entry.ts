@@ -86,8 +86,8 @@ import settingsDeclared from './settings/declared';
 import settingsAgentDebounceMs from './settings/agentDebounceMs';
 import settingsRenderDeclaredForm from './settings/renderDeclaredForm';
 
-const fastHighlight = async (_c: any, s: any) =>
-    String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const fastHighlight = async (_c: any, opts: any) =>
+    String(opts?.code ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } = {}): Promise<any> {
     const settingsRegistry = new Map<string, any>([
@@ -137,7 +137,7 @@ export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } =
             },
             markdown: {
                 highlight: fastHighlight,
-                render: async (_c: any, s: string) => s,
+                render: async (_c: any, opts: { source: string }) => opts.source,
             },
             events: {
                 emit: () => {},
@@ -147,7 +147,7 @@ export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } =
             repl: {
                 // Default eval: echoes 'ok' for any code, returns 4 for "2+2".
                 // Override per-test for richer behaviours.
-                eval: async (_c: any, code: string) => (code === '2+2' ? 4 : 'ok'),
+                eval: async (_c: any, opts: { code: string }) => (opts.code === '2+2' ? 4 : 'ok'),
             },
             settings: {
                 get: settingsGet,

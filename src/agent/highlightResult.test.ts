@@ -7,9 +7,9 @@ function mkCtx() {
     const ctx: any = {
         fns: {
             markdown: {
-                highlight: async (_c: any, code: string, lang: string) => {
-                    calls.push({ code, lang });
-                    return `<${lang}>${code}</${lang}>`;
+                highlight: async (_c: any, opts: { code: string; lang: string }) => {
+                    calls.push({ code: opts.code, lang: opts.lang });
+                    return `<${opts.lang}>${opts.code}</${opts.lang}>`;
                 },
             },
         },

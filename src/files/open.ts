@@ -5,14 +5,14 @@
 // no need to self-echo and re-navigate to the same URL).
 export default function (
     ctx: Context,
-    path: string,
-    opts: { broadcast?: boolean } = {},
+    opts: { path: string; broadcast?: boolean },
 ): string[] {
+    const path = opts.path;
     if (!path) return ((ctx.state as any).files?.open ?? []) as string[];
     const s = (ctx.state as any).files ?? ((ctx.state as any).files = { open: [] });
     if (!s.open.includes(path)) s.open.push(path);
     if (opts.broadcast !== false) {
-        ctx.fns.events?.emit?.(ctx, { type: "files.open", path });
+        ctx.fns.events?.emit?.(ctx, { event: { type: "files.open", path } });
     }
     return s.open;
 }

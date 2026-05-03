@@ -2,12 +2,12 @@
 // Same return shape regardless of provider — callers don't care.
 export default async function (
     ctx: Context,
-    agent: types.agent.Agent,
-    opts: { signal?: AbortSignal; onEvent?: (ev: any) => void } = {},
+    opts: { agent: types.agent.Agent; signal?: AbortSignal; onEvent?: (ev: any) => void },
 ) {
-    const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
-    if (ep.api === "mock") return ctx.fns.llm.streamMock(ctx, agent, opts);
-    if (ep.api === "anthropic") return ctx.fns.llm.streamAnthropic(ctx, agent, opts);
-    if (ep.api === "responses") return ctx.fns.llm.streamCodex(ctx, agent, opts);
-    return ctx.fns.llm.streamOpenAI(ctx, agent, opts);
+    const { agent } = opts;
+    const ep = ctx.fns.llm.resolveEndpoint(ctx, { model: agent.model });
+    if (ep.api === "mock") return ctx.fns.llm.streamMock(ctx, opts);
+    if (ep.api === "anthropic") return ctx.fns.llm.streamAnthropic(ctx, opts);
+    if (ep.api === "responses") return ctx.fns.llm.streamCodex(ctx, opts);
+    return ctx.fns.llm.streamOpenAI(ctx, opts);
 }

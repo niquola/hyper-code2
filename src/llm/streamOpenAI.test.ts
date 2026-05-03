@@ -28,7 +28,7 @@ describe.skipIf(!process.env.LIVE_LLM)("agent.stream — stateless /v1/chat/comp
             systemPrompt: "Reply in one short sentence.",
         });
         agent.messages.push({ role: "user", content: "say hi" });
-        const result = await stream(ctx, agent);
+        const result = await stream(ctx, { agent });
         expect(result.text.length).toBeGreaterThan(0);
         expect(result.usage?.prompt_tokens ?? result.usage?.input_tokens).toBeGreaterThan(0);
     }, 60_000);
@@ -41,7 +41,8 @@ describe.skipIf(!process.env.LIVE_LLM)("agent.stream — stateless /v1/chat/comp
         });
         agent.messages.push({ role: "user", content: "pick a number 1-9" });
         const deltas: string[] = [];
-        const result = await stream(ctx, agent, {
+        const result = await stream(ctx, {
+            agent,
             onEvent: (ev) => { if (ev.type === "text_delta") deltas.push(ev.delta); },
         });
         expect(deltas.length).toBeGreaterThan(0);

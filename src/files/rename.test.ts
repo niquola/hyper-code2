@@ -22,19 +22,19 @@ describe("files.rename", () => {
         const ctx = await mkCtx();
         const from = `${TEST_DIR}/a.txt`;
         const to = `${TEST_DIR}/b.txt`;
-        await write(ctx, from, "hello");
-        await rename(ctx, from, to);
-        expect(await exists(ctx, from)).toBe(false);
-        expect(await read(ctx, to)).toBe("hello");
+        await write(ctx, { path: from, content: "hello" });
+        await rename(ctx, { from, to });
+        expect(await exists(ctx, { path: from })).toBe(false);
+        expect(await read(ctx, { path: to })).toBe("hello");
     });
 
     test("migrates open-tab entry", async () => {
         const ctx = await mkCtx();
         const from = `${TEST_DIR}/c.txt`;
         const to = `${TEST_DIR}/d.txt`;
-        await write(ctx, from, "yo");
-        open(ctx, from);
-        await rename(ctx, from, to);
+        await write(ctx, { path: from, content: "yo" });
+        open(ctx, { path: from });
+        await rename(ctx, { from, to });
         const tabs = listOpen(ctx);
         expect(tabs).not.toContain(from);
         expect(tabs).toContain(to);

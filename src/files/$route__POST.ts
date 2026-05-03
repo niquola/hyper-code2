@@ -6,7 +6,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     if (!path) return new Response("missing ?path", { status: 400 });
     const form = await req.formData();
     const content = (form.get("content") as string) ?? "";
-    await ctx.fns.files.write(ctx, path, content);
+    await ctx.fns.files.write(ctx, { path, content });
     return new Response(null, {
         status: 303,
         headers: { location: `/files?path=${encodeURIComponent(path)}` },

@@ -1,5 +1,5 @@
-export default async function (ctx: Context, payload: { text: string; level?: 'info' | 'warn' | 'error'; html?: string }) {
-    const event = { type: 'ui.notify', level: payload.level ?? 'info', text: payload.text, html: payload.html ?? null };
-    ctx.fns.events.emit(ctx, event);
+export default async function (ctx: Context, opts: { message: string; level?: 'info' | 'warn' | 'error'; html?: string }) {
+    const event = { type: 'ui.notify', level: opts.level ?? 'info', message: opts.message, html: opts.html ?? null };
+    ctx.fns.events.emit(ctx, { event });
     return event;
 }

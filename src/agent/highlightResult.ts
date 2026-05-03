@@ -8,8 +8,8 @@ export default async function (ctx: Context, opts: { output: string }): Promise<
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         try {
             const pretty = JSON.stringify(JSON.parse(trimmed), null, 2);
-            return await ctx.fns.markdown.highlight(ctx, pretty, 'json');
+            return await ctx.fns.markdown.highlight(ctx, { code: pretty, lang: 'json' });
         } catch {}
     }
-    return await ctx.fns.markdown.highlight(ctx, output, 'javascript');
+    return await ctx.fns.markdown.highlight(ctx, { code: output, lang: 'javascript' });
 }

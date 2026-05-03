@@ -6,7 +6,7 @@ export default async function (ctx: Context, opts: { agentId: string; text: stri
     if (agent.isStreaming) throw new Error('agent busy');
     const offset = agent.events.length;
     agent.events.push({ type: 'user', text });
-    if (opts.open) ctx.fns.events.emit(ctx, { type: 'ui.navigate', path: '/agent/' + encodeURIComponent(agent.id) });
+    if (opts.open) ctx.fns.events.emit(ctx, { event: { type: 'ui.navigate', path: '/agent/' + encodeURIComponent(agent.id) } });
     agent.isStreaming = true;
     queueMicrotask(async () => {
         try { await ctx.fns.agent.run(ctx, { agent, userText: text }); }

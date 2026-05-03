@@ -15,15 +15,16 @@ const mkCtx = () => ({
         return agent;
       },
       async systemPrompt() { return 'default system'; },
-      async run(_ctx: any, agent: any, text: string) {
-        agent.events.push({ type: 'assistant', text: 'ok:' + text });
+      async run(_ctx: any, _opts: any) {
+        const agent = _opts.agent;
+        agent.events.push({ type: 'assistant', text: 'ok:' + _opts.userText });
       },
     },
     session: { save() {} },
-    events: { emit(_ctx: any, ev: any) { ((_ctx.state as any).emitted ??= []).push(ev); } },
+    events: { emit(_ctx: any, opts: { event: any }) { ((_ctx.state as any).emitted ??= []).push(opts.event); } },
     files: {
-      async resolveSafe(_ctx: any, path: string) { return path; },
-      open(_ctx: any, path: string) { ((_ctx.state as any).openedFiles ??= []).push(path); },
+      async resolveSafe(_ctx: any, opts: { path: string }) { return opts.path; },
+      open(_ctx: any, opts: { path: string }) { ((_ctx.state as any).openedFiles ??= []).push(opts.path); },
     },
   },
 }) as unknown as Context;
@@ -46,13 +47,13 @@ describe('ui control helpers', () => {
 
   test('notify emits ui.notify event', async () => {
     const ctx: any = mkCtx();
-    await notify(ctx, { text: 'hi', level: 'warn' });
+    await notify(ctx, { message: 'hi', level: 'warn' });
     expect(ctx.state.emitted[0].type).toBe('ui.notify');
   });
 
   test('openFile resolves and opens file', async () => {
     const ctx: any = mkCtx();
-    const res = await openFile(ctx, 'src/x.ts');
+    const res = await openFile(ctx, { path: 'src/x.ts' });
     expect(res.opened).toBe('src/x.ts');
     expect(ctx.state.openedFiles).toEqual(['src/x.ts']);
   });

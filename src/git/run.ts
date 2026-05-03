@@ -5,9 +5,9 @@ async function readAll(stream?: ReadableStream<Uint8Array> | null): Promise<stri
 
 export default async function (
     _ctx: Context,
-    args: string[],
-    opts: { dir?: string; allowFailure?: boolean } = {},
+    opts: { args: string[]; dir?: string; allowFailure?: boolean },
 ): Promise<types.git.Result> {
+    const args = opts.args;
     const proc = Bun.spawn(["git", ...args], {
         cwd: opts.dir ?? process.cwd(),
         stdout: "pipe",

@@ -27,7 +27,7 @@ const mkCtx = (env: Record<string, string> = {}) => ({
 
 describe("ai.resolveEndpoint", () => {
     test("no prefix → lmstudio default", () => {
-        const r = resolve(mkCtx(), "minimax/minimax-m2.7");
+        const r = resolve(mkCtx(), { model: "minimax/minimax-m2.7" });
         expect(r.provider).toBe("lmstudio");
         expect(r.modelId).toBe("minimax/minimax-m2.7");
         expect(r.url).toBe("http://localhost:1234/v1/chat/completions");
@@ -35,12 +35,12 @@ describe("ai.resolveEndpoint", () => {
     });
 
     test("LMSTUDIO_URL env override", () => {
-        const r = resolve(mkCtx({ LMSTUDIO_URL: "http://other:5000" }), "foo");
+        const r = resolve(mkCtx({ LMSTUDIO_URL: "http://other:5000" }), { model: "foo" });
         expect(r.url).toBe("http://other:5000/v1/chat/completions");
     });
 
     test("kimi: prefix → moonshot endpoint + KIMI_API_KEY", () => {
-        const r = resolve(mkCtx({ KIMI_API_KEY: "sk-kimi" }), "kimi:kimi-k2-turbo-preview");
+        const r = resolve(mkCtx({ KIMI_API_KEY: "sk-kimi" }), { model: "kimi:kimi-k2-turbo-preview" });
         expect(r.provider).toBe("kimi");
         expect(r.modelId).toBe("kimi-k2-turbo-preview");
         expect(r.url).toBe("https://api.moonshot.ai/v1/chat/completions");
@@ -48,23 +48,23 @@ describe("ai.resolveEndpoint", () => {
     });
 
     test("openai: prefix", () => {
-        const r = resolve(mkCtx({ OPENAI_API_KEY: "sk-oai" }), "openai:gpt-4o-mini");
+        const r = resolve(mkCtx({ OPENAI_API_KEY: "sk-oai" }), { model: "openai:gpt-4o-mini" });
         expect(r.modelId).toBe("gpt-4o-mini");
         expect(r.url).toBe("https://api.openai.com/v1/chat/completions");
         expect(r.apiKey).toBe("sk-oai");
     });
 
     test("unknown provider throws", () => {
-        expect(() => resolve(mkCtx(), "zzz:model")).toThrow(/unknown provider/);
+        expect(() => resolve(mkCtx(), { model: "zzz:model" })).toThrow(/unknown provider/);
     });
 
     test("modelId with colon preserved", () => {
-        const r = resolve(mkCtx(), "kimi:some/model:with:colons");
+        const r = resolve(mkCtx(), { model: "kimi:some/model:with:colons" });
         expect(r.modelId).toBe("some/model:with:colons");
     });
 
     test("claude-code: prefix → anthropic /v1/messages, apiKey null (refreshed lazily)", () => {
-        const r = resolve(mkCtx(), "claude-code:claude-opus-4-7");
+        const r = resolve(mkCtx(), { model: "claude-code:claude-opus-4-7" });
         expect(r.provider).toBe("claude-code");
         expect(r.api).toBe("anthropic");
         expect(r.modelId).toBe("claude-opus-4-7");

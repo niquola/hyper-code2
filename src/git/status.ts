@@ -1,5 +1,5 @@
 export default async function (ctx: Context, opts: { dir?: string; staged?: boolean; summary?: boolean } = {}) {
-    const raw = await ctx.fns.git.run(ctx, ["status", "--porcelain=v1", "-z", ...(opts.staged ? ["--untracked-files=no"] : [])], { dir: opts.dir });
+    const raw = await ctx.fns.git.run(ctx, { args: ["status", "--porcelain=v1", "-z", ...(opts.staged ? ["--untracked-files=no"] : [])], dir: opts.dir });
     const modified = new Set<string>();
     const staged = new Set<string>();
     const untracked = new Set<string>();

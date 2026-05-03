@@ -20,23 +20,23 @@ describe("files.remove", () => {
     test("deletes a file", async () => {
         const ctx = await mkCtx();
         const path = `${TEST_DIR}/tmp.txt`;
-        await write(ctx, path, "x");
-        await remove(ctx, path);
-        expect(await exists(ctx, path)).toBe(false);
+        await write(ctx, { path, content: "x" });
+        await remove(ctx, { path });
+        expect(await exists(ctx, { path })).toBe(false);
     });
 
     test("no-op on missing path", async () => {
         const ctx = await mkCtx();
-        await remove(ctx, `${TEST_DIR}/ghost-${Math.random()}`);
+        await remove(ctx, { path: `${TEST_DIR}/ghost-${Math.random()}` });
     });
 
     test("also removes from open tabs", async () => {
         const ctx = await mkCtx();
         const path = `${TEST_DIR}/closing.txt`;
-        await write(ctx, path, "x");
-        open(ctx, path);
+        await write(ctx, { path, content: "x" });
+        open(ctx, { path });
         expect(listOpen(ctx)).toContain(path);
-        await remove(ctx, path);
+        await remove(ctx, { path });
         expect(listOpen(ctx)).not.toContain(path);
     });
 });

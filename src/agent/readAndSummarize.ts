@@ -11,10 +11,10 @@ export default async function (
     if (!file) throw new Error('readAndSummarize: file is required');
     if (!task) throw new Error('readAndSummarize: task is required');
 
-    const exists = await ctx.fns.files.exists(ctx, file);
+    const exists = await ctx.fns.files.exists(ctx, { path: file });
     if (!exists) throw new Error('readAndSummarize: file not found: ' + file);
 
-    const text = await ctx.fns.files.read(ctx, file);
+    const text = await ctx.fns.files.read(ctx, { path: file });
     const content = typeof text === 'string' ? text : String(text ?? '');
     const sliced = content.length > maxChars ? content.slice(0, maxChars) : content;
 

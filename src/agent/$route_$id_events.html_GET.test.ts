@@ -37,7 +37,7 @@ function mkCtx() {
         const ids = ['a', 'b', 'c', 'd', 'e'];
         return () => ids[i++] ?? 'z';
     })();
-    ctx.fns.markdown.highlight = async (_c: any, s: string) => String(s);
+    ctx.fns.markdown.highlight = async (_c: any, opts: { code: string }) => String(opts.code);
     return ctx;
 }
 

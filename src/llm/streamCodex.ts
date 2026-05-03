@@ -5,21 +5,21 @@
 // stream.ts can swap providers transparently.
 export default async function (
     ctx: Context,
-    agent: types.agent.Agent,
-    opts: { signal?: AbortSignal; onEvent?: (ev: any) => void } = {},
+    opts: { agent: types.agent.Agent; signal?: AbortSignal; onEvent?: (ev: any) => void },
 ): Promise<{
     text: string;
     thinking: string;
     finishReason: string | null;
     usage: { prompt_tokens: number; completion_tokens: number };
 }> {
-    const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
+    const { agent } = opts;
+    const ep = ctx.fns.llm.resolveEndpoint(ctx, { model: agent.model });
     const apiKey = await ctx.fns.llm.refreshCodex(ctx) ?? ep.apiKey;
     if (!apiKey) throw new Error("codex: no access_token (run /settings → login)");
     const accountId = extractAccountId(apiKey);
 
     const { system: instructions, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, { agent });
-    const { input } = ctx.fns.llm.toCodexInput(ctx, convo as any);
+    const { input } = ctx.fns.llm.toCodexInput(ctx, { messages: convo as any });
 
     const body: any = {
         model: ep.modelId,

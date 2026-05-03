@@ -1,8 +1,9 @@
-export default function (ctx: Context, agentId: string, fallback = 5000): number {
+export default function (ctx: Context, opts: { agentId: string; fallback?: number }): number {
+    const fallback = opts.fallback ?? 5000;
     return ctx.fns.settings?.getNumber?.(ctx, {
         module: 'ui',
         scopeType: 'agent',
-        scopeId: agentId,
+        scopeId: opts.agentId,
         key: 'debounceMs',
         fallback,
     }) ?? fallback;
