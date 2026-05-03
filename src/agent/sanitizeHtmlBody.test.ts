@@ -10,11 +10,9 @@ describe('agent.sanitizeHtmlBody', () => {
         expect(sanitizeHtmlBody('<!DOCTYPE html>\n<div>x</div>')).toBe('<div>x</div>');
     });
 
-    test('strips html/head/body/meta/title/link tags but keeps inner text', () => {
-        // Tags are stripped but inner text content is preserved verbatim
-        // (we deliberately do not parse HTML — we just kill the wrappers).
+    test('strips html/body wrappers; <head> and <title> blocks (with content) are nuked', () => {
         const input = '<html><head><meta charset="utf-8"><title>t</title></head><body><p>real</p></body></html>';
-        expect(sanitizeHtmlBody(input)).toBe('t<p>real</p>');
+        expect(sanitizeHtmlBody(input)).toBe('<p>real</p>');
     });
 
     test('removes <style> blocks entirely', () => {

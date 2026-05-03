@@ -1,19 +1,17 @@
 // Execute a single marker call from an LLM turn and persist the result.
 // One invocation = one assistant message (the marker text) + one event
 // (tool_call or assistant for §html) + one synthetic user feedback message
-// (§result:* or §error:html), so the model sees a clean per-call pairing
-// when it reads the transcript on the next turn.
+// (§result:* — §html doesn't get one), so the model sees a clean per-call
+// pairing when it reads the transcript on the next turn.
 //
 // Marker kinds:
 //   §eval    — run JS via ctx.fns.repl.eval; output is captured stdout/return
 //   §write   — write file via ctx.fns.files.write; output is "wrote N bytes"
 //   §bash    — run shell via ctx.fns.agent.executeBash
-//   §html    — render TSX body; appendAssistantEvent with rendered HTML
-//              (no synthetic feedback — the model SEES its own card)
-//
-// The §html branch is special: render errors become an §error:html
-// feedback so the model can self-correct on the next turn. All other kinds
-// produce a §result:* feedback regardless of success/error status.
+//   §html    — sanitise raw HTML body (strip <!doctype>, <html>, <body>,
+//              <style>, <script>) and inject as a chat bubble. No
+//              templating, no JS execution. The model SEES its own
+//              bubble, so no synthetic feedback.
 export default async function (
     ctx: Context,
     agent: types.agent.Agent,
@@ -27,31 +25,13 @@ export default async function (
     const append = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: markerText });
     ctx.fns.session.syncAgentState(ctx, agent);
 
-    // 2. §html — TSX render path. No tool_call event, no §result feedback.
-    //    On render error: emit §error:html so the model self-corrects.
+    // 2. §html — plain HTML, sanitised. No tool_call event, no §result feedback.
     if (call.kind === 'html') {
-        let html = '';
-        let renderError: any = null;
-        try {
-            const rendered = ctx.fns.agent.renderTsx(ctx, call.content, agent);
-            html = ctx.fns.agent.sanitizeHtmlBody(rendered);
-        } catch (e: any) {
-            renderError = e;
-        }
-        if (renderError === null) {
-            await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
-                text: '', html, usage, messageIdx: append.idx,
-            });
-            ctx.fns.session.syncAgentState(ctx, agent);
-        } else {
-            const detail = ctx.fns.agent.describeTsxError(renderError, call.content);
-            await ctx.fns.session.appendErrorEvent(ctx, agent.id, `§html render error:\n${detail}`);
-            const hint = `§error:html\n${detail}\n\nThe §html body must be a valid TSX expression. Self-close void tags (\`<br/>\`, \`<img/>\`, \`<input/>\`), match every opening tag, and escape \`<\` / \`>\` in text content with \`&lt;\` / \`&gt;\`. {expr} blocks must be valid JS expressions.`;
-            ctx.fns.session.appendMessage(ctx, agent.id, {
-                role: 'user', content: hint, excluded_from_cursor: true,
-            });
-            ctx.fns.session.syncAgentState(ctx, agent);
-        }
+        const html = ctx.fns.agent.sanitizeHtmlBody(call.content);
+        await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
+            text: '', html, usage, messageIdx: append.idx,
+        });
+        ctx.fns.session.syncAgentState(ctx, agent);
         return;
     }
 

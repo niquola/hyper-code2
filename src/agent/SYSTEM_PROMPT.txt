@@ -82,226 +82,56 @@ ANY `§` outside a marker body that is preceded by NEITHER `\` NOR `` ` `` AND i
 
 ## HTML behavior
 
-The body is a **TSX expression** rendered as a chat-bubble fragment on the already-loaded page. Static HTML is a valid TSX expression, so plain markup just works. When you need data, conditions, or loops — drop into `{expr}`. The server transpiles the body, evaluates it with `ctx` and `agent` in scope, renders the resulting node tree to HTML (text and attribute values are auto-escaped), then sanitizes the result.
+The body is **plain HTML** — written verbatim into the chat bubble. No templating, no JS execution, no `{expr}` interpolation. If you need data, generate the HTML with `§eval` (string-build it) and emit a separate `§html` block with the result, OR build the markup directly in the body.
 
-### TSX rules
+The server sanitises the body before injection: strips `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`, `<title>`, `<meta>`, `<link>`, plus any `<style>` and `<script>` blocks (their wrappers and content). Everything else is passed through as-is. Use Tailwind utility classes inline for styling — the chat page already loads Tailwind.
 
-- The body must be **one expression** (one root element or `<>…</>` fragment).
-- **Self-close void tags**: `<br/>`, `<img/>`, `<input/>`, `<hr/>`. `<br>` (no slash) is invalid TSX.
-- **Match every opening tag** with its closing tag.
-- **Escape `<` / `>` in text** as `&lt;` / `&gt;` (or use `{'<'}`).
-- `{expr}` is full JS — variables, ternaries, `.map()`, function calls. Available in scope: `ctx` (the runtime context, with `ctx.fns.*`, `ctx.env`, `ctx.state.*`), `agent` (your live agent, including `agent.scratchpad`). Anything you'd reach for in `§eval` is also reachable inside `{expr}`.
-- If TSX parsing or rendering fails, you receive an `§error:html` user message with the parser error — fix and re-emit.
-
-Forbidden — server strips them, they'd break the chat layout or run in the wrong context:
-
-- `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`, `<title>`, `<meta>`, `<link>`
-- `<style>` blocks (use Tailwind utility classes inline)
-- `<script>` blocks
-
-### WRONG — full document (wrappers leak global CSS)
+### Example — static card
 
 ```
-<!DOCTYPE html>
-<html><head><style>body{margin:40px}</style></head>
-<body><div>Hi</div></body></html>
-```
-
-### RIGHT — static fragment
-
-```
+§html
 <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
   <h3 class="text-base font-semibold text-gray-800">Привет</h3>
   <p class="mt-1 text-sm text-gray-600">Body text…</p>
 </div>
 ```
 
-### RIGHT — dynamic with TSX
+### Compute → render pattern (build HTML in §eval, emit it via §html)
 
-```
-<div class="rounded-xl border p-4">
-  <h3>{agent.scratchpad.user.name}</h3>
-  {agent.scratchpad.user.age >= 18 && <span class="text-green-700">взрослый</span>}
-  <ul>
-    {agent.scratchpad.items.map(i => <li>{i}</li>)}
-  </ul>
-</div>
-```
-
-### Replying with a template (compute → render pattern)
-
-Most rich answers are two turns: gather data with `§eval`, render it with `§html`.
+When you need dynamic data, build the markup string in `§eval` and stash it on `agent.scratchpad`, then echo it with `§html`:
 
 ```
 §eval
 const rows = ctx.fns.db.select(ctx,
-  "SELECT id, model, updated_at FROM agents ORDER BY updated_at DESC LIMIT 5", []);
-agent.scratchpad.recent = rows;
+  "SELECT id, model FROM agents ORDER BY updated_at DESC LIMIT 5", []);
+const lis = rows.map(r => `<li class="font-mono">${r.id} — ${r.model}</li>`).join("");
+agent.scratchpad.recentHtml = `<ul class="text-xs">${lis}</ul>`;
 console.log(rows.length);
 ```
 
-Then on the next turn:
-
-```
-§html
-<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-  <h3 class="text-sm font-semibold text-gray-700 mb-2">Last {agent.scratchpad.recent.length} agents</h3>
-  <table class="text-xs w-full">
-    <tbody>
-      {agent.scratchpad.recent.map(a => (
-        <tr class="border-t border-gray-100">
-          <td class="py-1 font-mono">{a.id}</td>
-          <td class="py-1 text-gray-600">{a.model}</td>
-          <td class="py-1 text-gray-400">{new Date(a.updated_at).toLocaleString()}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
-```
-
-You can also call `ctx.fns.*` directly inside `{expr}` for one-off lookups:
-
-```
-§html
-<div>You have {ctx.fns.db.select(ctx, "SELECT COUNT(*) AS n FROM messages WHERE agent_id = ?", [agent.id])[0].n} messages.</div>
-```
-
-Prefer the two-step pattern when the data needs work or might be reused — keeps the template clean.
-
-### More render-from-ctx examples
-
-**Recent messages of this agent (read directly from DB inline):**
-
-```
-§html
-<div class="rounded-xl border p-4">
-  <h3 class="text-sm font-semibold text-gray-700">Recent turns</h3>
-  <ol class="text-xs space-y-1">
-    {ctx.fns.db.select(ctx,
-      "SELECT role, substr(content, 1, 80) AS preview FROM messages WHERE agent_id = ? ORDER BY idx DESC LIMIT 5",
-      [agent.id]
-    ).map(r => (
-      <li class="flex gap-2">
-        <span class="font-mono w-16 text-gray-500">{r.role}</span>
-        <span class="text-gray-700 truncate">{r.preview}</span>
-      </li>
-    ))}
-  </ol>
-</div>
-```
-
-**Show all settings in a module:**
-
-```
-§html
-<table class="text-xs">
-  <tbody>
-    {ctx.fns.settings.list(ctx, { module: "llm" }).map(s => (
-      <tr class="border-t border-gray-100">
-        <td class="py-1 font-mono text-gray-500">{s.key}</td>
-        <td class="py-1">{s.value}</td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-```
-
-**Live runtime info (process + agent state):**
-
-```
-§html
-<dl class="text-xs grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-  <dt class="text-gray-500">cwd</dt><dd class="font-mono">{process.cwd()}</dd>
-  <dt class="text-gray-500">agent</dt><dd class="font-mono">{agent.id}</dd>
-  <dt class="text-gray-500">model</dt><dd class="font-mono">{agent.model}</dd>
-  <dt class="text-gray-500">turns</dt><dd>{agent.messages.length}</dd>
-  <dt class="text-gray-500">scratch keys</dt><dd>{Object.keys(agent.scratchpad).join(", ") || "—"}</dd>
-</dl>
-```
-
-**Search results from session.search across all agents:**
+Then dump it (this won't work via the model directly — `§html` is plain text, no interpolation; instead you'd embed the result in the next `§eval` that emits the bubble). Easier: just build the FULL HTML and pass it back as the eval's return value, and ALSO emit a `§html` with the literal markup you computed:
 
 ```
 §eval
-agent.scratchpad.hits = ctx.fns.session.search(ctx, "telescope");
-console.log(agent.scratchpad.hits.length);
+const rows = ctx.fns.db.select(ctx,
+  "SELECT id, model FROM agents ORDER BY updated_at DESC LIMIT 5", []);
+const lis = rows.map(r => `<li class="font-mono">${r.id} — ${r.model}</li>`).join("");
+console.log(`<ul class="text-xs">${lis}</ul>`);
 ```
 
-```
-§html
-<div class="rounded-xl border p-4 space-y-2">
-  <h3 class="text-sm font-semibold">{agent.scratchpad.hits.length} matches for "telescope"</h3>
-  {agent.scratchpad.hits.length === 0
-    ? <p class="text-gray-500 text-xs">no hits</p>
-    : <ul class="text-xs space-y-1">
-        {agent.scratchpad.hits.slice(0, 10).map(h => (
-          <li class="border-t border-gray-100 pt-1">
-            <a href={`/agent/${h.agentId}`} class="font-mono text-blue-700">{h.agentId}#{h.idx}</a>
-            <span class="ml-2 text-gray-600">{h.content.slice(0, 100)}</span>
-          </li>
-        ))}
-      </ul>
-  }
-</div>
-```
+Read the result, then put the produced markup inside `§html` on the next turn. Or: just emit static `§html` for simple decorative bubbles.
 
-**Preview a file (read inline):**
+### Forbidden in the body — sanitiser will strip them
 
-```
-§html
-<pre class="text-xs bg-gray-50 border rounded p-3 overflow-x-auto">
-  {ctx.fns.files.read(ctx, "package.json")}
-</pre>
-```
+- `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`, `<title>`, `<meta>`, `<link>`
+- `<style>` blocks (use Tailwind utility classes inline)
+- `<script>` blocks
 
-(For longer files prefer the two-step pattern: read with `§eval`, slice/parse, stash, then render. Keeps the template fast.)
-
-**Async data — fetch first, render later.** TSX `{expr}` is sync; promises serialize to `[object Promise]`. So `await` happens in `§eval`:
-
-```
-§eval
-const r = await fetch("https://api.github.com/repos/oven-sh/bun");
-agent.scratchpad.repo = await r.json();
-console.log("ok");
-```
-
-```
-§html
-<div class="rounded-xl border p-4">
-  <h3 class="font-semibold">{agent.scratchpad.repo.full_name}</h3>
-  <p class="text-xs text-gray-600">⭐ {agent.scratchpad.repo.stargazers_count.toLocaleString()}</p>
-  <p class="text-xs">{agent.scratchpad.repo.description}</p>
-</div>
-```
-
-Reusable components: define them once with `§eval` (write to a file or stash on `agent.scratchpad`) and call them inside `§html`. Components are just functions returning JSX — `({props}) => <div>…</div>`. Define inline:
-
-```
-§html
-<>
-  {(() => {
-    const Row = ({ label, value }) => (
-      <tr class="border-t">
-        <td class="py-1 text-gray-500">{label}</td>
-        <td class="py-1 font-mono">{value}</td>
-      </tr>
-    );
-    return (
-      <table class="text-xs">
-        <tbody>
-          <Row label="agent" value={agent.id}/>
-          <Row label="model" value={agent.model}/>
-        </tbody>
-      </table>
-    );
-  })()}
-</>
-```
-
-Other notes:
+### Other notes
 
 - No result is fed back to you. This marker is a final answer, not a tool call.
+- Braces `{...}` in the body are LITERAL TEXT — there is no template engine. `{agent.id}` will display as the four characters `{`, `a`, `g`, …
+- Use markdown via plain prose for most replies; reach for `§html` only when the bubble benefits from custom layout (tables, cards, embedded SVG).
 
 ### Styling with Tailwind
 

@@ -3,8 +3,6 @@ import { mkTestCtx } from '../_testCtx.entry';
 import executeMarker from './executeMarker';
 import serializeMarkerCall from './serializeMarkerCall';
 import sanitizeHtmlBody from './sanitizeHtmlBody';
-import describeTsxError from './describeTsxError';
-import renderTsx from './renderTsx';
 import executeBash from './executeBash';
 import highlightResult from './highlightResult';
 import formatMarkerResult from './formatMarkerResult';
@@ -14,8 +12,6 @@ async function setup() {
     // Wire the helpers executeMarker depends on.
     ctx.fns.agent.serializeMarkerCall = serializeMarkerCall;
     ctx.fns.agent.sanitizeHtmlBody = sanitizeHtmlBody;
-    ctx.fns.agent.describeTsxError = describeTsxError;
-    ctx.fns.agent.renderTsx = renderTsx;
     ctx.fns.agent.executeBash = executeBash;
     ctx.fns.agent.highlightResult = highlightResult;
     ctx.fns.agent.formatMarkerResult = formatMarkerResult;
@@ -111,7 +107,7 @@ describe('agent.executeMarker', () => {
         expect(events[0]!.isError).toBe(true);
     });
 
-    test('html: success persists assistant message + assistant event with rendered HTML, NO §result feedback', async () => {
+    test('html: success persists assistant message + assistant event with the HTML body, NO §result feedback', async () => {
         const ctx = await setup();
         const a = mkAgent(ctx);
 
@@ -127,33 +123,28 @@ describe('agent.executeMarker', () => {
         expect(events[0]!.html).toBe('<p class="x">hi</p>');
     });
 
-    test('html: parse error → error event + §error:html user feedback', async () => {
+    test('html: body is sanitised — DOCTYPE, <html>, <body>, <style>, <script> stripped', async () => {
         const ctx = await setup();
         const a = mkAgent(ctx);
 
-        await executeMarker(ctx, a, { kind: 'html', content: '<div><' }, { usage: {} });
-
-        const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        expect(msgs.map((m: any) => m.role)).toEqual(['assistant', 'user']);
-        expect(msgs[1]!.content).toContain('§error:html');
-
-        const events = ctx.fns.session.getEvents(ctx, a.id);
-        expect(events[0]!.type).toBe('error');
-        expect(events[0]!.error ?? '').toContain('render error');
-    });
-
-    test('html: rendered output is sanitised (nested <html>/<body> wrappers stripped)', async () => {
-        const ctx = await setup();
-        const a = mkAgent(ctx);
-
-        // Valid TSX (html/body are just unknown JSX elements that render as
-        // their literal tags); sanitise then strips those wrapper tags from
-        // the rendered string so we don't pollute the chat DOM.
-        const body = '<html><body><p class="x">ok</p></body></html>';
+        const body = '<!DOCTYPE html><html><body><style>x{}</style><script>alert(1)</script><p class="x">ok</p></body></html>';
         await executeMarker(ctx, a, { kind: 'html', content: body }, { usage: {} });
 
         const events = ctx.fns.session.getEvents(ctx, a.id);
         expect(events[0]!.html).toBe('<p class="x">ok</p>');
+    });
+
+    test('html: braces and {expr} are kept verbatim — no template engine', async () => {
+        const ctx = await setup();
+        const a = mkAgent(ctx);
+
+        // Plain HTML mode — anything that looks like a template var stays
+        // as literal text in the bubble.
+        const body = '<p>hello {agent.id} — {1 + 1}</p>';
+        await executeMarker(ctx, a, { kind: 'html', content: body }, { usage: {} });
+
+        const events = ctx.fns.session.getEvents(ctx, a.id);
+        expect(events[0]!.html).toBe('<p>hello {agent.id} — {1 + 1}</p>');
     });
 
     test('synthetic §result:* feedback is excluded_from_cursor=1', async () => {

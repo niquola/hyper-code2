@@ -1,14 +1,22 @@
 // Sanitize an §html body before injecting it into the chat DOM. Models
-// (notably Haiku) sometimes emit a full <!DOCTYPE> document with a <style>
-// block that resets `body { margin: 40px auto }` — which then applies
-// GLOBALLY to the chat page. Strip document-level wrappers and any <style>
-// or <script> blocks; keep the actual content. Tailwind utility classes
-// inline still work because they're already loaded by $layout.ts.
+// (notably Haiku) sometimes emit a full <!DOCTYPE> document. We strip:
+//   1. block-level elements with content — <head>, <title>, <style>,
+//      <script>, <noscript> — including everything between open and close
+//   2. wrapper-only tags — <html>, <body>, <meta>, <link> — leaving inner
+//      content intact (rare; usually empty)
+//   3. <!DOCTYPE …> declaration
+// Result is collapsed of leading/trailing whitespace. Tailwind utility
+// classes inline still work because they're already loaded by $layout.ts.
 export default function (html: string): string {
     let s = html;
     s = s.replace(/<!doctype[^>]*>/gi, '');
-    s = s.replace(/<\/?(?:html|head|body|meta|title|link)[^>]*>/gi, '');
+    // Strip block elements WITH content first (open through close).
+    s = s.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
+    s = s.replace(/<title[^>]*>[\s\S]*?<\/title>/gi, '');
     s = s.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
     s = s.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+    s = s.replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '');
+    // Then strip remaining wrapper tags (open and close, no content stripping).
+    s = s.replace(/<\/?(?:html|body|meta|link)[^>]*>/gi, '');
     return s.trim();
 }

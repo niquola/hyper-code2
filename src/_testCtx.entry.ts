@@ -53,8 +53,6 @@ import streamLLM from './agent/llmCall';
 import executeMarker from './agent/executeMarker';
 import executeBash from './agent/executeBash';
 import sanitizeHtmlBody from './agent/sanitizeHtmlBody';
-import renderTsx from './agent/renderTsx';
-import describeTsxError from './agent/describeTsxError';
 import highlightResult from './agent/highlightResult';
 import serializeMarkerCall from './agent/serializeMarkerCall';
 import formatMarkerResult from './agent/formatMarkerResult';
@@ -124,7 +122,7 @@ export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } =
                 // Marker turn-loop helpers.
                 parseMarkers,
                 executeMarker, executeBash,
-                sanitizeHtmlBody, renderTsx, describeTsxError,
+                sanitizeHtmlBody,
                 highlightResult, serializeMarkerCall,
                 formatMarkerResult, formatMarkerError,
             },

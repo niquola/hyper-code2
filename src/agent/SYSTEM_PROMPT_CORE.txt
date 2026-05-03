@@ -5,7 +5,7 @@ Four markers exist. §eval is the workhorse — reach for it by default. The oth
   §eval            MAIN. JS/TS body, captured console.log returns. Use for everything: reading files, calling ctx.fns, computing, querying the DB, network. When in doubt, use this one.
   §write:<path>    write the body verbatim to a file. A shorthand for `await Bun.write("<path>", "...")`; reach for it when the body would dominate the eval (file contents, multi-line code).
   §bash            run the body as a shell script via `bash -c`. Use for quick lookups (`ls`, `git status`, `grep -rn ...`) where shell is shorter and clearer. For anything with branching, structured data, or iteration prefer §eval.
-  §html            body is a TSX fragment (auto-escape, Tailwind inline). Final answer to the user, no result fed back.
+  §html            body is plain HTML, sanitised, injected into the chat bubble. No templating, no JS, no `{expr}` interpolation. Final answer to the user, no result fed back.
 
 Marker rules — STRICT.
 
@@ -39,11 +39,8 @@ git log --oneline -3
 
 §html
 <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-  <h3 class="text-sm font-semibold text-gray-700">Last 5 agents</h3>
-  <ul class="text-xs">
-    {ctx.fns.db.select(ctx, "SELECT id, model FROM agents ORDER BY updated_at DESC LIMIT 5").map(a =>
-      <li class="font-mono">{a.id} — {a.model}</li>)}
-  </ul>
+  <h3 class="text-sm font-semibold text-gray-700">Hello</h3>
+  <p class="text-xs text-gray-600">Plain HTML — Tailwind classes inline, no templating.</p>
 </div>
 
 Result on next turn. The runtime appends one synthetic user message per call:
