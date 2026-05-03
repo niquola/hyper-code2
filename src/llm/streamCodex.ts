@@ -18,8 +18,8 @@ export default async function (
     if (!apiKey) throw new Error("codex: no access_token (run /settings → login)");
     const accountId = extractAccountId(apiKey);
 
-    const { input } = ctx.fns.llm.toCodexInput(ctx, agent.messages as any);
-    const instructions = await ctx.fns.agent.fullSystemPrompt(ctx, agent);
+    const { system: instructions, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, agent);
+    const { input } = ctx.fns.llm.toCodexInput(ctx, convo as any);
 
     const body: any = {
         model: ep.modelId,

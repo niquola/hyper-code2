@@ -50,6 +50,8 @@ import compact from './agent/compact';
 import stop from './agent/stop';
 import clear from './agent/clear';
 import streamLLM from './agent/llmCall';
+import buildLlmRequest from './agent/buildLlmRequest';
+import fullSystemPrompt from './agent/fullSystemPrompt';
 import executeMarker from './agent/executeMarker';
 import executeBash from './agent/executeBash';
 import sanitizeHtmlBody from './agent/sanitizeHtmlBody';
@@ -125,6 +127,8 @@ export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } =
                 sanitizeHtmlBody,
                 highlightResult, serializeMarkerCall,
                 formatMarkerResult, formatMarkerError,
+                // System-prompt → messages bootstrap.
+                buildLlmRequest, fullSystemPrompt,
             },
             llm: {
                 stream: streamDispatch,

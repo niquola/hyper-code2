@@ -11,19 +11,15 @@ export default async function (
 }> {
     const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);
 
-    let system = await ctx.fns.agent.fullSystemPrompt(ctx, agent);
-    // Anthropic OAuth subscription tokens require the first line of the system
-    // prompt to identify the client as Claude Code; otherwise the server can
-    // reject or downgrade the request. Prepend it idempotently.
-    if (ep.provider === "claude-code") {
-        const claudeHeader = "You are Claude Code, Anthropic's official CLI for Claude.";
-        if (!system.startsWith(claudeHeader)) system = claudeHeader + "\n\n" + system;
-    }
+    // buildLlmRequest handles the claude-code anti-fraud header (kept in
+    // system) and moves the rest of the instruction body into messages
+    // (option A — "system-as-messages").
+    const { system, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, agent);
 
     const body: any = {
         model: ep.modelId,
         system,
-        messages: ctx.fns.llm.toAnthropicMessages(agent.messages),
+        messages: ctx.fns.llm.toAnthropicMessages(convo),
         stream: true,
         max_tokens: 8192,
     };

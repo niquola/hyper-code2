@@ -5,6 +5,7 @@ declare global {
     interface FnsRegistry {
         agent: {
         buildDelegatedTaskPrompt: typeof import("./agent/buildDelegatedTaskPrompt").default;
+        buildLlmRequest: typeof import("./agent/buildLlmRequest").default;
         clear: typeof import("./agent/clear").default;
         compact: typeof import("./agent/compact").default;
         delegateTask: typeof import("./agent/delegateTask").default;

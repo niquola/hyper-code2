@@ -3,12 +3,13 @@ import start from "../agent/start";
 import stream from "./streamOpenAI";
 import resolveEndpoint from "./resolveEndpoint";
 import fullSystemPrompt from "../agent/fullSystemPrompt";
+import buildLlmRequest from "../agent/buildLlmRequest";
 
 // Exercises streamOpenAI directly, bypassing the stream.ts dispatcher.
 const mkCtx = () => ({
     state: {},
     env: { LMSTUDIO_URL: process.env.LMSTUDIO_URL, MODEL: process.env.MODEL },
-    fns: { llm: { resolveEndpoint }, agent: { fullSystemPrompt } },
+    fns: { llm: { resolveEndpoint }, agent: { fullSystemPrompt, buildLlmRequest } },
 } as unknown as Context);
 
 // Live integration with LM Studio at process.env.LMSTUDIO_URL.
