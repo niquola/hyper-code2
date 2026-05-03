@@ -21,13 +21,13 @@ describe("llm.toAnthropicMessages", () => {
         ]);
     });
 
-    test("markers content (///eval, ///result:eval) is just text — no special handling", () => {
+    test("markers content (§eval, §result:eval) is just text — no special handling", () => {
         expect(convert([
-            { role: "assistant", content: "///eval\nconsole.log(1);" },
-            { role: "user", content: "///result:eval\n1" },
+            { role: "assistant", content: "§eval\nconsole.log(1);" },
+            { role: "user", content: "§result:eval\n1" },
         ])).toEqual([
-            { role: "assistant", content: [{ type: "text", text: "///eval\nconsole.log(1);" }] },
-            { role: "user",      content: [{ type: "text", text: "///result:eval\n1" }] },
+            { role: "assistant", content: [{ type: "text", text: "§eval\nconsole.log(1);" }] },
+            { role: "user",      content: [{ type: "text", text: "§result:eval\n1" }] },
         ]);
     });
 });

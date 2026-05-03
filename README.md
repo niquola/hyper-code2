@@ -4,11 +4,11 @@
 
 A self-extending AI agent server on Bun. Procedural TypeScript, ~1000 LOC, **markers protocol** instead of native tool-calls.
 
-The agent acts by emitting `///eval` / `///write:<path>` / `///bash` / `///html` markers in plain content. The runtime parses each marker, executes its body (JS/TS for eval, file write for write, `bash -c` for bash, TSX render for html), and feeds the result back as a synthetic user message on the next turn. No JSON tool schemas, no escape-in-escape, one wire format.
+The agent acts by emitting `§eval` / `§write:<path>` / `§bash` / `§html` markers in plain content. The runtime parses each marker, executes its body (JS/TS for eval, file write for write, `bash -c` for bash, TSX render for html), and feeds the result back as a synthetic user message on the next turn. No JSON tool schemas, no escape-in-escape, one wire format.
 
 **State is separated from functions.** Behaviour lives in files under `src/` / `.hyper/` and is loaded into `ctx.fns.<module>.<fn>`; runtime state lives on `ctx.state` (in-memory) and a SQLite DB (`agents`, `messages`, `events`, any table the agent chooses to add). Replacing a file + `ctx.fns.repl.load(ctx, "<module>")` swaps the function everywhere without touching state or restarting the process — routes, procedures, types, even the agent loop itself can be extended live.
 
-**All sessions are in SQLite and fully agent-accessible.** Every turn's messages and UI events for every agent are rows in `.hyper/_runtime/sessions`. The agent reads its own + other agents' history with a one-liner: `///eval\nctx.fns.db.select(ctx, "SELECT … FROM messages …")`. Useful for recalling prior work, mining patterns, or building custom indexes.
+**All sessions are in SQLite and fully agent-accessible.** Every turn's messages and UI events for every agent are rows in `.hyper/_runtime/sessions`. The agent reads its own + other agents' history with a one-liner: `§eval\nctx.fns.db.select(ctx, "SELECT … FROM messages …")`. Useful for recalling prior work, mining patterns, or building custom indexes.
 
 ## What it is
 
@@ -16,12 +16,12 @@ A tiny HTTP server that hosts a multi-agent chat. Each agent has four markers it
 
 | marker            | body                | result fed back                    | used for                                  |
 | ----------------- | ------------------- | ---------------------------------- | ----------------------------------------- |
-| `///eval`         | JS/TS              | captured `console.log` output      | **main action** — compute, call ctx.fns, query DB |
-| `///write:<path>` | file contents       | "wrote N bytes"                    | dropping multi-line file content verbatim |
-| `///bash`         | shell script        | stdout (or `[exit N]` + stderr)    | quick lookups: `ls`, `git`, `grep`, `head` |
-| `///html`         | TSX fragment        | nothing (final answer)             | rich UI bubbles with Tailwind, interactive forms |
+| `§eval`         | JS/TS              | captured `console.log` output      | **main action** — compute, call ctx.fns, query DB |
+| `§write:<path>` | file contents       | "wrote N bytes"                    | dropping multi-line file content verbatim |
+| `§bash`         | shell script        | stdout (or `[exit N]` + stderr)    | quick lookups: `ls`, `git`, `grep`, `head` |
+| `§html`         | TSX fragment        | nothing (final answer)             | rich UI bubbles with Tailwind, interactive forms |
 
-Through `///eval` the agent can:
+Through `§eval` the agent can:
 
 - Compute anything via the Bun runtime — `Bun.file`, `Bun.write`, `Bun.$` shell, `bun:sqlite`, `Bun.sql`, `Bun.redis`, `Bun.s3`, `fetch`, `crypto`.
 - **Read its own source** (`Bun.file("src/agent/run.ts").text()`).
@@ -30,7 +30,7 @@ Through `///eval` the agent can:
 - Mutate its own model, system prompt, scratchpad between turns.
 - Compact its own history (`ctx.fns.agent.compact(ctx, agent, …)`) when results grow too large.
 
-Through `///html` the agent answers with **TSX**: full JS interpolation in `{expr}`, auto-escape, Tailwind classes inline, even `<form method="POST">` that sends the user's input straight back into the conversation. No template engine — JSX is the template engine.
+Through `§html` the agent answers with **TSX**: full JS interpolation in `{expr}`, auto-escape, Tailwind classes inline, even `<form method="POST">` that sends the user's input straight back into the conversation. No template engine — JSX is the template engine.
 
 ## Architecture in one picture
 
@@ -75,7 +75,7 @@ flowchart LR
 
 **DB-first.** The DB is the source of truth for messages, events, and run state. Browser drives long-poll + status/sidebar polls — no JSON polling for chat, no SSE for data. Client JS is ~30 lines (Enter-key + scroll-on-swap). Full spec: [`docs/architecture.md`](docs/architecture.md).
 
-**No queue table.** "When should this agent run next?" lives on `agents.next_run_at`; "is it running right now?" on `agents.run_state`. POST writes one message + bumps `next_run_at`; the worker atomically claims via `UPDATE agents … RETURNING id` and processes everything since `last_processed_msg_idx` in one pass. Synthetic `///result:*` user-messages emitted by `run()` itself are tagged `excluded_from_cursor=1` so they don't look like fresh input — only real user POSTs schedule the next run.
+**No queue table.** "When should this agent run next?" lives on `agents.next_run_at`; "is it running right now?" on `agents.run_state`. POST writes one message + bumps `next_run_at`; the worker atomically claims via `UPDATE agents … RETURNING id` and processes everything since `last_processed_msg_idx` in one pass. Synthetic `§result:*` user-messages emitted by `run()` itself are tagged `excluded_from_cursor=1` so they don't look like fresh input — only real user POSTs schedule the next run.
 
 **Settings.** Declared key/value store in `src/<mod>/$setting_<key>.ts`. Resolution chain: explicit caller input → DB row → declared `env` binding → declared `default` → caller fallback. Shipping declarations: `llm.defaultModel`, `agent.debounceMs`, `agent.protocol`, `provider.{baseUrl,apiKey}` for each LLM backend, plus per-provider api-key declarations.
 
@@ -104,8 +104,8 @@ src/
     SYSTEM_PROMPT.txt             markers wire-format with full HTML/TSX examples (~10 KB)
     fullSystemPrompt.ts           composes CORE + WIRE + per-agent + runtime
     parseMarkers.ts               three regexes + lookbehind escape + permissive misplaced-marker detection
-    formatMarkerResult.ts         renders ///result:eval / ///result:write:<path> / ///result:bash blocks
-    formatMarkerError.ts          renders ///error:marker-misplaced warning blocks
+    formatMarkerResult.ts         renders §result:eval / §result:write:<path> / §result:bash blocks
+    formatMarkerError.ts          renders §error:marker-misplaced warning blocks
     run.ts                        turn loop — stream → parse → execute markers → feed results
     workerLoop.ts / wakeWorker    single in-process drainer
     waitForEvent / wakeWaiters    per-agent long-poll wake mechanism
@@ -165,28 +165,28 @@ CLAUDE.md                         project conventions consumed by tooling and an
 Body of any marker spans from the line **after** the marker to the **next** marker line at column 1 (or end of message). No closing delimiter. Examples emitted by the agent (each is one full assistant reply):
 
 ```
-///eval
+§eval
 const pkg = await Bun.file("package.json").json();
 console.log(pkg.name, Object.keys(pkg.dependencies ?? {}).length, "deps");
 ```
 
 ```
-///bash
+§bash
 ls -la src/agent | head -10
 git log --oneline -3
 ```
 
 ```
-///html
+§html
 <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
   <h3>{agent.scratchpad.user.name}</h3>
   <ul>{agent.scratchpad.items.map(i => <li>{i}</li>)}</ul>
 </div>
 ```
 
-After the runtime executes, the next turn's transcript shows `assistant: ///eval\n<code>` directly followed by `user: ///result:eval\n<stdout>`. Markers can be chained in one reply — each gets its own assistant + result pair, so the model sees crisp call→result alignment.
+After the runtime executes, the next turn's transcript shows `assistant: §eval\n<code>` directly followed by `user: §result:eval\n<stdout>`. Markers can be chained in one reply — each gets its own assistant + result pair, so the model sees crisp call→result alignment.
 
-If the model glues a marker to preceding text without a leading `\n` (`текст.///eval\n…`) the parser executes it anyway and attaches a `///error:marker-misplaced` warning so the model self-corrects on the next turn — no wasted turn. To put a literal `///marker` in prose, escape with four slashes (`////eval` → renders as `///eval`) or break the slashes (`/./eval` is content, doesn't match the regex). See [`src/agent/SYSTEM_PROMPT_CORE.txt`](src/agent/SYSTEM_PROMPT_CORE.txt) for the full agent-facing spec, [`src/agent/parseMarkers.ts`](src/agent/parseMarkers.ts) for the implementation.
+If the model glues a marker to preceding text without a leading `\n` (`текст.§eval\n…`) the parser executes it anyway and attaches a `§error:marker-misplaced` warning so the model self-corrects on the next turn — no wasted turn. To put a literal `///marker` in prose, escape with four slashes (`/§eval` → renders as `§eval`) or break the slashes (`/./eval` is content, doesn't match the regex). See [`src/agent/SYSTEM_PROMPT_CORE.txt`](src/agent/SYSTEM_PROMPT_CORE.txt) for the full agent-facing spec, [`src/agent/parseMarkers.ts`](src/agent/parseMarkers.ts) for the implementation.
 
 ## Quick start
 

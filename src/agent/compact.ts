@@ -1,6 +1,6 @@
 // Two operations available to the agent for shrinking transcript context:
 // 1. compact(ctx, agent, "summary string")
-//    Find the most recent ///result:* / ///error:* synthetic user-message
+//    Find the most recent §result:* / §error:* synthetic user-message
 //    and replace its content with a "[compacted] <summary>" note. Loses the
 //    verbose tool output but keeps the call→result chain intact for the LLM.
 // 2. compact(ctx, agent, { message: <idx>, summary: "..." })
@@ -10,15 +10,15 @@
 function isAssistantInvocation(m: any): boolean {
     if (m?.role !== "assistant") return false;
     const c = String(m.content ?? "");
-    return c.startsWith("///eval\n") || c === "///eval"
-        || c.startsWith("///write:")
-        || c.startsWith("///bash\n") || c === "///bash"
-        || c.startsWith("///html\n") || c === "///html";
+    return c.startsWith("§eval\n") || c === "§eval"
+        || c.startsWith("§write:")
+        || c.startsWith("§bash\n") || c === "§bash"
+        || c.startsWith("§html\n") || c === "§html";
 }
 function isToolResult(m: any): boolean {
     if (m?.role !== "user") return false;
     const c = String(m.content ?? "");
-    return c.startsWith("///result:") || c.startsWith("///error:");
+    return c.startsWith("§result:") || c.startsWith("§error:");
 }
 
 export default function (

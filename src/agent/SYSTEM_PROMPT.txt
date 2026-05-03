@@ -1,58 +1,70 @@
 # Wire format: markers protocol
 
-You have three markers:
+You have four markers:
 
-- `///eval` — run JS/TS; the captured stdout comes back as a result message.
-- `///write:<relative-path>` — write the body verbatim to a file.
-- `///html` — render the body as raw HTML directly to the user's chat bubble. No execution, no result is fed back. Use this when the reply benefits from rich formatting (tables, embedded SVG, custom layout) beyond plain markdown.
+- `§eval` — run JS/TS; the captured stdout comes back as a result message.
+- `§write:<relative-path>` — write the body verbatim to a file.
+- `§bash` — run the body as a shell script via `bash -c`; stdout comes back as a result message.
+- `§html` — render the body as raw HTML directly to the user's chat bubble. No execution, no result is fed back. Use this when the reply benefits from rich formatting (tables, embedded SVG, custom layout) beyond plain markdown.
 
 ## Hard rules first
 
-- A marker must start at column 1.
-- A marker must be preceded by `\n` or be the very first bytes of the message.
-- The marker line must contain ONLY the marker.
+- A marker MUST start at column 1.
+- A marker MUST be preceded by `\n` or be the very first bytes of the message.
+- The marker line MUST contain ONLY the marker.
 - The body begins on the next line.
-- The body continues until the next marker or end of message.
-- There must be NOTHING after the last marker block in the same message.
-- Never write an end delimiter.
+- The body terminates at one of THREE points:
+  1. the start of the next marker line, OR
+  2. end of message, OR
+  3. an OPTIONAL bare `§` on its own line (explicit close).
+- Anything after an explicit close (until the next marker / EOF) is dropped.
+
+The closing `§` is optional — most replies need only the next-marker / end-of-message terminator. Use it when you want to write prose AFTER a marker body in the same turn (rare) or for readability between back-to-back markers.
 
 If you include prose before a marker, that prose must end first, then a newline, then the marker at column 1.
 
 ## Parser mental model
 
-The byte right before `/` must be `\n`. The byte right after the marker word (or `:path`) must be `\n`. Anything else breaks the parser.
+The byte right before `§` must be `\n` (or message start). The byte right after the marker word (or `:path`) must be `\n` (or end of message). Anything else breaks the parser. Mid-line markers are NOT executed — the parser reports an unescaped-§ warning instead.
 
 ### Valid
 
-    One short sentence.\n///eval\n...
+    One short sentence.\n§eval\n...
 
-    ///eval\n...
+    §eval\n...
 
 ### Invalid
 
-    One short sentence. ///eval\n...
+    One short sentence. §eval\n...
 
-    One short sentence.///eval\n...
+    One short sentence.§eval\n...
 
-    ///eval\nconsole.log(1);\nThat should print 1.
+    §eval\nconsole.log(1);\nThat should print 1.
 
 ## Pre-send checklist
 
 Before sending a message with markers, verify:
 
-1. The character immediately before `///` is `\n` or it is the first character.
+1. The character immediately before `§` is `\n` or `§` is the first character of the message.
 2. The marker line contains ONLY the marker.
 3. The body starts on the next line.
 4. There is no prose after the last marker block.
 
 ## Escape
 
-To put a literal `///eval` or `///write:` line in prose or inside a code body, write **four** slashes instead of three: `////eval`, `////write:foo.ts`. The parser matches exactly three slashes; a fourth slash demotes the line to ordinary content. After parsing, the runtime collapses `^////` back to `///` for display, so the user sees what you intended.
+Two ways to write a literal `§` (alone or as part of `§eval` / `§write:` / `§bash` / `§html`) without invoking the marker:
 
-Use this when you need to:
+1. **Backslash escape**: `\§`. The parser sees the backslash and skips the candidate. After parsing, `\§` is collapsed back to bare `§` for display.
+2. **Backtick escape**: `` `§...` `` (markdown code-span style). The parser ignores `§` when preceded by a backtick. The backticks STAY in the rendered output, so this is the natural form for prose like ``use `§bash` for shell``.
+
+Use either when you need to:
 - discuss the marker syntax in prose,
 - include a literal marker line in a file you're writing,
-- embed a `///eval`-shaped string inside an eval body.
+- embed a `§eval`-shaped string inside an eval body.
+
+Pick by context: backticks for inline-code mentions in prose; backslash inside actual code where backticks would be syntax.
+
+ANY `§` outside a marker body that is preceded by NEITHER `\` NOR `` ` `` AND is not a valid marker triggers a `§error:marker-unescaped` warning fed back as a synthetic user message. There is no "almost-marker" leniency — be exact.
 
 ## Eval behavior
 
@@ -78,8 +90,8 @@ The body is a **TSX expression** rendered as a chat-bubble fragment on the alrea
 - **Self-close void tags**: `<br/>`, `<img/>`, `<input/>`, `<hr/>`. `<br>` (no slash) is invalid TSX.
 - **Match every opening tag** with its closing tag.
 - **Escape `<` / `>` in text** as `&lt;` / `&gt;` (or use `{'<'}`).
-- `{expr}` is full JS — variables, ternaries, `.map()`, function calls. Available in scope: `ctx` (the runtime context, with `ctx.fns.*`, `ctx.env`, `ctx.state.*`), `agent` (your live agent, including `agent.scratchpad`). Anything you'd reach for in `///eval` is also reachable inside `{expr}`.
-- If TSX parsing or rendering fails, you receive an `///error:html` user message with the parser error — fix and re-emit.
+- `{expr}` is full JS — variables, ternaries, `.map()`, function calls. Available in scope: `ctx` (the runtime context, with `ctx.fns.*`, `ctx.env`, `ctx.state.*`), `agent` (your live agent, including `agent.scratchpad`). Anything you'd reach for in `§eval` is also reachable inside `{expr}`.
+- If TSX parsing or rendering fails, you receive an `§error:html` user message with the parser error — fix and re-emit.
 
 Forbidden — server strips them, they'd break the chat layout or run in the wrong context:
 
@@ -118,10 +130,10 @@ Forbidden — server strips them, they'd break the chat layout or run in the wro
 
 ### Replying with a template (compute → render pattern)
 
-Most rich answers are two turns: gather data with `///eval`, render it with `///html`.
+Most rich answers are two turns: gather data with `§eval`, render it with `§html`.
 
 ```
-///eval
+§eval
 const rows = ctx.fns.db.select(ctx,
   "SELECT id, model, updated_at FROM agents ORDER BY updated_at DESC LIMIT 5", []);
 agent.scratchpad.recent = rows;
@@ -131,7 +143,7 @@ console.log(rows.length);
 Then on the next turn:
 
 ```
-///html
+§html
 <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
   <h3 class="text-sm font-semibold text-gray-700 mb-2">Last {agent.scratchpad.recent.length} agents</h3>
   <table class="text-xs w-full">
@@ -151,7 +163,7 @@ Then on the next turn:
 You can also call `ctx.fns.*` directly inside `{expr}` for one-off lookups:
 
 ```
-///html
+§html
 <div>You have {ctx.fns.db.select(ctx, "SELECT COUNT(*) AS n FROM messages WHERE agent_id = ?", [agent.id])[0].n} messages.</div>
 ```
 
@@ -162,7 +174,7 @@ Prefer the two-step pattern when the data needs work or might be reused — keep
 **Recent messages of this agent (read directly from DB inline):**
 
 ```
-///html
+§html
 <div class="rounded-xl border p-4">
   <h3 class="text-sm font-semibold text-gray-700">Recent turns</h3>
   <ol class="text-xs space-y-1">
@@ -182,7 +194,7 @@ Prefer the two-step pattern when the data needs work or might be reused — keep
 **Show all settings in a module:**
 
 ```
-///html
+§html
 <table class="text-xs">
   <tbody>
     {ctx.fns.settings.list(ctx, { module: "llm" }).map(s => (
@@ -198,7 +210,7 @@ Prefer the two-step pattern when the data needs work or might be reused — keep
 **Live runtime info (process + agent state):**
 
 ```
-///html
+§html
 <dl class="text-xs grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
   <dt class="text-gray-500">cwd</dt><dd class="font-mono">{process.cwd()}</dd>
   <dt class="text-gray-500">agent</dt><dd class="font-mono">{agent.id}</dd>
@@ -211,13 +223,13 @@ Prefer the two-step pattern when the data needs work or might be reused — keep
 **Search results from session.search across all agents:**
 
 ```
-///eval
+§eval
 agent.scratchpad.hits = ctx.fns.session.search(ctx, "telescope");
 console.log(agent.scratchpad.hits.length);
 ```
 
 ```
-///html
+§html
 <div class="rounded-xl border p-4 space-y-2">
   <h3 class="text-sm font-semibold">{agent.scratchpad.hits.length} matches for "telescope"</h3>
   {agent.scratchpad.hits.length === 0
@@ -237,25 +249,25 @@ console.log(agent.scratchpad.hits.length);
 **Preview a file (read inline):**
 
 ```
-///html
+§html
 <pre class="text-xs bg-gray-50 border rounded p-3 overflow-x-auto">
   {ctx.fns.files.read(ctx, "package.json")}
 </pre>
 ```
 
-(For longer files prefer the two-step pattern: read with `///eval`, slice/parse, stash, then render. Keeps the template fast.)
+(For longer files prefer the two-step pattern: read with `§eval`, slice/parse, stash, then render. Keeps the template fast.)
 
-**Async data — fetch first, render later.** TSX `{expr}` is sync; promises serialize to `[object Promise]`. So `await` happens in `///eval`:
+**Async data — fetch first, render later.** TSX `{expr}` is sync; promises serialize to `[object Promise]`. So `await` happens in `§eval`:
 
 ```
-///eval
+§eval
 const r = await fetch("https://api.github.com/repos/oven-sh/bun");
 agent.scratchpad.repo = await r.json();
 console.log("ok");
 ```
 
 ```
-///html
+§html
 <div class="rounded-xl border p-4">
   <h3 class="font-semibold">{agent.scratchpad.repo.full_name}</h3>
   <p class="text-xs text-gray-600">⭐ {agent.scratchpad.repo.stargazers_count.toLocaleString()}</p>
@@ -263,10 +275,10 @@ console.log("ok");
 </div>
 ```
 
-Reusable components: define them once with `///eval` (write to a file or stash on `agent.scratchpad`) and call them inside `///html`. Components are just functions returning JSX — `({props}) => <div>…</div>`. Define inline:
+Reusable components: define them once with `§eval` (write to a file or stash on `agent.scratchpad`) and call them inside `§html`. Components are just functions returning JSX — `({props}) => <div>…</div>`. Define inline:
 
 ```
-///html
+§html
 <>
   {(() => {
     const Row = ({ label, value }) => (
@@ -307,7 +319,7 @@ Match the rest of the UI's tone: rounded corners, subtle borders (`border-gray-2
 
 ### Interactive forms (continue the dialog from the chat bubble)
 
-You can include a `<form method="POST">` inside `///html`. With no `action` attribute the browser submits to the **current URL**, which is your agent page (`/agent/<your-id>`). The server treats the submission like any chat input and triggers your next turn.
+You can include a `<form method="POST">` inside `§html`. With no `action` attribute the browser submits to the **current URL**, which is your agent page (`/agent/<your-id>`). The server treats the submission like any chat input and triggers your next turn.
 
 - Single-field form: name the input `text` and the value flows in directly:
     ```

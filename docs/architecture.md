@@ -133,7 +133,7 @@ Rules:
 
 - `POST` does `UPDATE agents SET next_run_at = MAX(COALESCE(next_run_at, 0), now + N)`. The `MAX` prevents an earlier message from rolling back an already-pushed-out run.
 - The worker's atomic claim is `UPDATE agents SET run_state='running' WHERE id IN (SELECT id FROM agents WHERE run_state='idle' AND next_run_at <= now ORDER BY next_run_at ASC LIMIT 1) RETURNING id`. SQLite's `RETURNING` makes this one-statement-atomic — two concurrent statements **cannot** both win the same row, so two parallel runners trying to grab the same agent will see exactly one `claimed.length === 1` and one `claimed.length === 0`.
-- **Cursor scope is `role='user'` AND `excluded_from_cursor=0`.** Both the pre-run frontier snapshot and the post-run "still pending" check filter out synthetic `///result:*` / `///error:*` user-rows. Assistant emissions are not `role='user'` to begin with. Without this, every successful turn would look like fresh input and the worker would re-run on the same conversation forever.
+- **Cursor scope is `role='user'` AND `excluded_from_cursor=0`.** Both the pre-run frontier snapshot and the post-run "still pending" check filter out synthetic `§result:*` / `§error:*` user-rows. Assistant emissions are not `role='user'` to begin with. Without this, every successful turn would look like fresh input and the worker would re-run on the same conversation forever.
 - `last_processed_msg_idx` only advances on **success**. Aborted or failed runs leave the cursor where it was. They also do **not** auto-reschedule (`next_run_at = NULL` on the failure path) — the user's next POST decides whether to retry. Otherwise a permanently broken LLM call would burn the worker in a tight loop.
 - If new **real user** messages land while a run is in progress, the worker's `finally` block detects `MAX(idx) WHERE role='user' AND excluded_from_cursor=0 > cursor` and sets `next_run_at = now + 5s` again before returning to `idle`. Successful run → auto-rescheduling for the new input. Failed run → no rescheduling.
 
@@ -236,32 +236,32 @@ The server response contains the new events HTML followed by a fresh `#msg-tail`
 
 ## Markers protocol (only wire format)
 
-The agent never sees a JSON tool schema. It emits **markers** in the assistant content; the runtime parses, executes, and feeds results back as `role='user'` messages with `///result:*` content. Four markers, hardcoded in `src/agent/parseMarkers.ts`:
+The agent never sees a JSON tool schema. It emits **markers** in the assistant content; the runtime parses, executes, and feeds results back as `role='user'` messages with `§result:*` content. Four markers, hardcoded in `src/agent/parseMarkers.ts`:
 
 | marker            | regex                          | body                | result fed back as                          |
 |-------------------|--------------------------------|---------------------|---------------------------------------------|
-| `///eval`         | `(?<!/)\/\/\/eval(?=\n\|$)`    | JS/TS               | `///result:eval` + captured `console.log`   |
-| `///write:<path>` | `(?<!/)\/\/\/write:([^\n]+)`   | file body           | `///result:write:<path>` + "wrote N bytes"  |
-| `///bash`         | `(?<!/)\/\/\/bash(?=\n\|$)`    | shell script        | `///result:bash` + stdout, or `:error` + `[exit N]` + stderr |
-| `///html`         | `(?<!/)\/\/\/html(?=\n\|$)`    | TSX fragment        | nothing — final answer rendered into a chat bubble |
+| `§eval`         | `(?<!/)\/\/\/eval(?=\n\|$)`    | JS/TS               | `§result:eval` + captured `console.log`   |
+| `§write:<path>` | `(?<!/)\/\/\/write:([^\n]+)`   | file body           | `§result:write:<path>` + "wrote N bytes"  |
+| `§bash`         | `(?<!/)\/\/\/bash(?=\n\|$)`    | shell script        | `§result:bash` + stdout, or `:error` + `[exit N]` + stderr |
+| `§html`         | `(?<!/)\/\/\/html(?=\n\|$)`    | TSX fragment        | nothing — final answer rendered into a chat bubble |
 
-Body of each marker spans from the line after the marker to the start of the next marker (or end of message). The negative lookbehind `(?<!/)` makes `////eval` and friends a recognised escape — runtime collapses `^////` back to `///` in `prose` and `///html` output. Splitting the slashes with any non-slash character (`/./eval`) is also "not a marker" because the regex requires three consecutive slashes.
+Body of each marker spans from the line after the marker to the start of the next marker (or end of message). The negative lookbehind `(?<!/)` makes `/§eval` and friends a recognised escape — runtime collapses `^////` back to `///` in `prose` and `§html` output. Splitting the slashes with any non-slash character (`/./eval`) is also "not a marker" because the regex requires three consecutive slashes.
 
 ### Permissive parsing
 
-If a marker is followed by `\n` but isn't at column 1 (`текст.///eval\n…`), `parseMarkers` records a `misplaced` error AND still adds the call to `hits[]`. `run.ts` executes it normally, then appends a `///error:marker-misplaced` warning user-message after the `///result:*` block so the model self-corrects on the next turn — no wasted turn. Configurable in [`src/agent/parseMarkers.ts`](../src/agent/parseMarkers.ts) and [`src/agent/$type_MarkerParseError.ts`](../src/agent/$type_MarkerParseError.ts).
+If a marker is followed by `\n` but isn't at column 1 (`текст.§eval\n…`), `parseMarkers` records a `misplaced` error AND still adds the call to `hits[]`. `run.ts` executes it normally, then appends a `§error:marker-misplaced` warning user-message after the `§result:*` block so the model self-corrects on the next turn — no wasted turn. Configurable in [`src/agent/parseMarkers.ts`](../src/agent/parseMarkers.ts) and [`src/agent/$type_MarkerParseError.ts`](../src/agent/$type_MarkerParseError.ts).
 
 ### Marker-pair invariant
 
-Every assistant `///eval` / `///write:` / `///bash` / `///html` is followed by exactly one user message. `///eval`/`///write`/`///bash` get a `///result:*` (with `excluded_from_cursor=1`); `///html` doesn't get a result row but the assistant's marker message is still persisted. `truncateMessagesFrom` / `deleteMessageAt` / `compact` walk this pair when the user asks to "delete from here" so we never leave half a pair stranded.
+Every assistant `§eval` / `§write:` / `§bash` / `§html` is followed by exactly one user message. `§eval`/`§write`/`§bash` get a `§result:*` (with `excluded_from_cursor=1`); `§html` doesn't get a result row but the assistant's marker message is still persisted. `truncateMessagesFrom` / `deleteMessageAt` / `compact` walk this pair when the user asks to "delete from here" so we never leave half a pair stranded.
 
 ### `excluded_from_cursor` column on `messages`
 
-Synthetic `///result:*` and `///error:*` user-messages are tagged `excluded_from_cursor=1`. `workerLoop`'s frontier query is `MAX(idx) WHERE role='user' AND excluded_from_cursor=0` — without this flag, every tool result would look like fresh user input and trigger a re-run, producing phantom turns.
+Synthetic `§result:*` and `§error:*` user-messages are tagged `excluded_from_cursor=1`. `workerLoop`'s frontier query is `MAX(idx) WHERE role='user' AND excluded_from_cursor=0` — without this flag, every tool result would look like fresh user input and trigger a re-run, producing phantom turns.
 
-### `///html` is TSX, not raw HTML
+### `§html` is TSX, not raw HTML
 
-`run.ts` transpiles the body via `Bun.Transpiler({ loader: 'tsx', jsxFactory: 'h', jsxFragmentFactory: 'Fragment' })`, evaluates it inside a `new Function('h', 'Fragment', 'render', 'ctx', 'agent', js)` with a 30-line h/render runtime, and renders the resulting node tree to HTML with auto-escape on text and attributes. The body is wrapped in `<>…</>` before transpiling so trailing prose ("done" after a card) lands as a Fragment text-child instead of breaking parse. Sanitiser strips `<style>` / `<script>` / document-level wrappers (`<!DOCTYPE>`, `<html>`, `<head>`, `<body>`) so a stray full-document emission can't leak global CSS into the chat layout. Errors come back as `///error:html` user-messages with the `Bun.Transpiler` `BuildMessage.position` (line/col/lineText) plus the first 800 chars of the body, so the model sees the actual parse failure context.
+`run.ts` transpiles the body via `Bun.Transpiler({ loader: 'tsx', jsxFactory: 'h', jsxFragmentFactory: 'Fragment' })`, evaluates it inside a `new Function('h', 'Fragment', 'render', 'ctx', 'agent', js)` with a 30-line h/render runtime, and renders the resulting node tree to HTML with auto-escape on text and attributes. The body is wrapped in `<>…</>` before transpiling so trailing prose ("done" after a card) lands as a Fragment text-child instead of breaking parse. Sanitiser strips `<style>` / `<script>` / document-level wrappers (`<!DOCTYPE>`, `<html>`, `<head>`, `<body>`) so a stray full-document emission can't leak global CSS into the chat layout. Errors come back as `§error:html` user-messages with the `Bun.Transpiler` `BuildMessage.position` (line/col/lineText) plus the first 800 chars of the body, so the model sees the actual parse failure context.
 
 ---
 

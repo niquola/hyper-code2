@@ -42,11 +42,11 @@ describe("session.appendMessage / appendEvent", () => {
     await ctx.fns.db.migrate(ctx);
     save(ctx, seedAgent());
     appendMessage(ctx, 'a1', { role: 'user', content: 'real input' });
-    appendMessage(ctx, 'a1', { role: 'user', content: '///result:eval\n4', excluded_from_cursor: true });
+    appendMessage(ctx, 'a1', { role: 'user', content: '§result:eval\n4', excluded_from_cursor: true });
     const rows = ctx.fns.db.select(ctx, 'SELECT idx, content, excluded_from_cursor FROM messages WHERE agent_id = ? ORDER BY idx', ['a1']);
     expect(rows).toEqual([
       { idx: 0, content: 'real input',          excluded_from_cursor: 0 },
-      { idx: 1, content: '///result:eval\n4',   excluded_from_cursor: 1 },
+      { idx: 1, content: '§result:eval\n4',   excluded_from_cursor: 1 },
     ]);
   });
 
@@ -56,10 +56,10 @@ describe("session.appendMessage / appendEvent", () => {
     await ctx.fns.db.migrate(ctx);
     save(ctx, seedAgent());
     appendMessage(ctx, 'a1', { role: 'user',      content: 'real' });                                      // idx 0 — real
-    appendMessage(ctx, 'a1', { role: 'assistant', content: '///eval\nx' });                                // idx 1
-    appendMessage(ctx, 'a1', { role: 'user',      content: '///result:eval\n1', excluded_from_cursor: true }); // idx 2 — synthetic
+    appendMessage(ctx, 'a1', { role: 'assistant', content: '§eval\nx' });                                // idx 1
+    appendMessage(ctx, 'a1', { role: 'user',      content: '§result:eval\n1', excluded_from_cursor: true }); // idx 2 — synthetic
     appendMessage(ctx, 'a1', { role: 'assistant', content: 'done' });                                      // idx 3
-    // Frontier should be 0 (real input), NOT 2 (synthetic ///result).
+    // Frontier should be 0 (real input), NOT 2 (synthetic §result).
     const r = ctx.fns.db.select(ctx,
       "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
       ['a1']);

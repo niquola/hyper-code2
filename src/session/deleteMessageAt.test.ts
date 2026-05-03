@@ -29,12 +29,12 @@ describe('delete message operations', () => {
     expect(getMessages(ctx, 'a1').map((m: any) => m.content)).toEqual(['u1', 'u2']);
   });
 
-  test('rejects deleting markers half-pair: assistant ///eval alone', async () => {
+  test('rejects deleting markers half-pair: assistant §eval alone', async () => {
     const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, ':memory:'); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
     replaceMessages(ctx, 'a1', [
       { role: 'user',      content: 'go' },
-      { role: 'assistant', content: '///eval\nconsole.log(1);' },
-      { role: 'user',      content: '///result:eval\n1' },
+      { role: 'assistant', content: '§eval\nconsole.log(1);' },
+      { role: 'user',      content: '§result:eval\n1' },
       { role: 'assistant', content: 'done' },
     ]);
     expect(deleteMessageAt(ctx, 'a1', 1).ok).toBe(false);
@@ -43,12 +43,12 @@ describe('delete message operations', () => {
     expect(deleteMessageAt(ctx, 'a1', 3).ok).toBe(true);
   });
 
-  test('rejects deleting markers half-pair: assistant ///write alone', async () => {
+  test('rejects deleting markers half-pair: assistant §write alone', async () => {
     const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, ':memory:'); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
     replaceMessages(ctx, 'a1', [
       { role: 'user',      content: 'create a file' },
-      { role: 'assistant', content: '///write:src/foo.ts\nexport default 1;' },
-      { role: 'user',      content: '///result:write:src/foo.ts\nwrote ...' },
+      { role: 'assistant', content: '§write:src/foo.ts\nexport default 1;' },
+      { role: 'user',      content: '§result:write:src/foo.ts\nwrote ...' },
     ]);
     expect(deleteMessageAt(ctx, 'a1', 1).ok).toBe(false);
     expect(deleteMessageAt(ctx, 'a1', 2).ok).toBe(false);
@@ -58,12 +58,12 @@ describe('delete message operations', () => {
     const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, ':memory:'); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
     replaceMessages(ctx, 'a1', [
       { role: 'user',      content: 'go' },
-      { role: 'assistant', content: '///eval\nconsole.log(1);' },
-      { role: 'user',      content: '///result:eval\n1' },
+      { role: 'assistant', content: '§eval\nconsole.log(1);' },
+      { role: 'user',      content: '§result:eval\n1' },
       { role: 'assistant', content: 'done' },
     ]);
     // User asks "delete from idx 2 (the result)" — must walk back to idx 1
-    // (the marker assistant) so we don't leave an orphan ///eval.
+    // (the marker assistant) so we don't leave an orphan §eval.
     const res = truncateMessagesFrom(ctx, 'a1', 2);
     expect(res.ok).toBe(true);
     expect(res.from).toBe(1);
@@ -75,8 +75,8 @@ describe('delete message operations', () => {
     replaceMessages(ctx, 'a1', [
       { role: 'user',      content: 'go' },
       { role: 'assistant', content: 'doing it' },
-      { role: 'assistant', content: '///eval\nconsole.log(1);' },
-      { role: 'user',      content: '///result:eval\n1' },
+      { role: 'assistant', content: '§eval\nconsole.log(1);' },
+      { role: 'user',      content: '§result:eval\n1' },
     ]);
     // "delete from idx 3 (the result)" — walk back over the result, but
     // STOP at the marker (idx 2 stays as boundary, since prev (idx 1) is

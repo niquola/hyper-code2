@@ -8,13 +8,13 @@ describe("agent.renderEventHtml", () => {
     // Markers protocol — the event name is the marker kind, label rendered as ///<kind>.
     const evalHtml = await renderEventHtml(ctx, { type: "tool_call", name: "eval", argsHtml: "<pre>a</pre>", resultHtml: "<pre>b</pre>", result: "b", args: { code: "a" }, isError: false });
     expect(evalHtml).toContain("<details");
-    expect(evalHtml).toContain("///eval");
+    expect(evalHtml).toContain("§eval");
     expect(evalHtml).toContain("<pre>a</pre>");
     expect(evalHtml).toContain("<pre>b</pre>");
 
-    // ///write:<path> includes the target in the label and is open by default.
+    // §write:<path> includes the target in the label and is open by default.
     const writeHtml = await renderEventHtml(ctx, { type: "tool_call", name: "write", argsHtml: "<pre>x</pre>", resultHtml: "<pre>ok</pre>", result: "ok", args: { path: "src/foo.ts", content: "x" }, isError: false });
-    expect(writeHtml).toContain("///write:src/foo.ts");
+    expect(writeHtml).toContain("§write:src/foo.ts");
     expect(writeHtml).toContain("<details open");
 
     // Errors stay open too so the user sees the failure body without a click.

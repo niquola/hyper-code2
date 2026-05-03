@@ -45,7 +45,7 @@ export default async function (ctx: Context, _session: any, req: any) {
         return new Response(null, { status: 204 });
     }
     // Plain browser HTML form submit (e.g. a <form method="POST"> emitted from
-    // an ///html marker) — bounce back to the agent page so the user lands on
+    // an §html marker) — bounce back to the agent page so the user lands on
     // the chat with their submission already in flight. Detect by Accept header
     // preferring text/html and the absence of an XHR/Fetch JSON intent.
     const accept = String(req.headers?.get?.('accept') ?? '');
@@ -63,7 +63,7 @@ export default async function (ctx: Context, _session: any, req: any) {
 // Read the user's submitted text. Three input shapes are accepted:
 // 1. form `text=...` (the default chat-input single-field form) → use as-is.
 // 2. multi-field form (no `text` field present) → serialize every name/value
-//    pair into a "key: value" block so an ///html-emitted form can collect
+//    pair into a "key: value" block so an §html-emitted form can collect
 //    structured data without the agent having to invent a custom protocol.
 // 3. plain text body (non-form Content-Type) → trimmed body.
 async function readSubmittedText(req: any): Promise<string> {

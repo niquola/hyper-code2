@@ -85,7 +85,7 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
 
     // Snapshot USER-message frontier before run(). Cursor only advances on success,
     // and "did new messages arrive during the run" must mean new real user
-    // messages — synthetic ///result:* / ///error:* user-rows are
+    // messages — synthetic §result:* / §error:* user-rows are
     // excluded_from_cursor=1, assistant emissions are not 'user' role.
     const frontier = ctx.fns.db.select<any>(ctx,
         "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",

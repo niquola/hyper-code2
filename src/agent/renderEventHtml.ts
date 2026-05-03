@@ -59,13 +59,13 @@ export default async function (_ctx: Context, ev: any, opts: { agentId?: string 
         const argsLen = String(ev.args?.code ?? JSON.stringify(ev.args ?? {})).length;
         const resultLen = String(ev.result ?? '').length;
         const status = ev.isError ? '<span class="text-red-600">error</span>' : '<span class="text-green-700">ok</span>';
-        // Marker label: ///eval, ///write:<path>, ///html — visually mirrors what
+        // Marker label: §eval, §write:<path>, §html — visually mirrors what
         // the agent actually emitted. Falls back to the raw event name for any
         // legacy/non-marker tool events still in the DB.
         const label = ev.name === 'write' && ev.args?.path
-            ? `///write:${esc(ev.args.path)}`
-            : ev.name === 'eval' ? '///eval'
-            : ev.name === 'html' ? '///html'
+            ? `§write:${esc(ev.args.path)}`
+            : ev.name === 'eval' ? '§eval'
+            : ev.name === 'html' ? '§html'
             : esc(ev.name || 'tool');
         // Open by default for write (the path is the interesting bit) and on
         // error — both cases the user usually wants to see the body without an

@@ -4,16 +4,16 @@
 function isAssistantInvocation(m: any): boolean {
     if (m?.role !== "assistant") return false;
     const c = String(m.content ?? "");
-    return c.startsWith("///eval\n") || c === "///eval"
-        || c.startsWith("///write:")
-        || c.startsWith("///bash\n") || c === "///bash"
-        || c.startsWith("///html\n") || c === "///html";
+    return c.startsWith("§eval\n") || c === "§eval"
+        || c.startsWith("§write:")
+        || c.startsWith("§bash\n") || c === "§bash"
+        || c.startsWith("§html\n") || c === "§html";
 }
 
 function isToolResult(m: any): boolean {
     if (m?.role !== "user") return false;
     const c = String(m.content ?? "");
-    return c.startsWith("///result:") || c.startsWith("///error:");
+    return c.startsWith("§result:") || c.startsWith("§error:");
 }
 
 export default function (ctx: Context, id: string, idx: number): { ok: boolean; reason?: string } {

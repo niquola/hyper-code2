@@ -1,20 +1,20 @@
 // Drop messages[from..] (inclusive). Walks back if `from` lands inside
 // a marker pair so we never leave half a pair in the transcript:
-// assistant ///eval / ///write:<path> / ///html → user ///result:* / ///error:*.
+// assistant §eval / §write:<path> / §html → user §result:* / §error:*.
 // Returns {ok, from} with `from` = effective truncation index post-walkback.
 function isAssistantInvocation(m: any): boolean {
     if (m?.role !== "assistant") return false;
     const c = String(m.content ?? "");
-    return c.startsWith("///eval\n") || c === "///eval"
-        || c.startsWith("///write:")
-        || c.startsWith("///bash\n") || c === "///bash"
-        || c.startsWith("///html\n") || c === "///html";
+    return c.startsWith("§eval\n") || c === "§eval"
+        || c.startsWith("§write:")
+        || c.startsWith("§bash\n") || c === "§bash"
+        || c.startsWith("§html\n") || c === "§html";
 }
 
 function isToolResult(m: any): boolean {
     if (m?.role !== "user") return false;
     const c = String(m.content ?? "");
-    return c.startsWith("///result:") || c.startsWith("///error:");
+    return c.startsWith("§result:") || c.startsWith("§error:");
 }
 
 export default function (ctx: Context, id: string, from: number): { ok: boolean; from?: number; reason?: string } {

@@ -36,12 +36,12 @@ describe('agent.run', () => {
         expect(msgs[1].content).toBe('just a chat reply');
     });
 
-    test('single ///eval marker is executed and result fed back', async () => {
+    test('single §eval marker is executed and result fed back', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: '///eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: '§eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
             return { text: 'computed: 4', toolCalls: [], thinking: '', usage: {} };
         };
         // repl.eval is Jupyter-style: returns the captured log buffer as a string.
@@ -53,21 +53,21 @@ describe('agent.run', () => {
         await run(ctx, a, 'add 2 and 2');
 
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        // user → assistant(///eval) → user(///result:eval) → assistant(prose)
+        // user → assistant(§eval) → user(§result:eval) → assistant(prose)
         expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
-        expect(msgs[1].content).toContain('///eval');
-        expect(msgs[2].content).toContain('///result:eval');
+        expect(msgs[1].content).toContain('§eval');
+        expect(msgs[2].content).toContain('§result:eval');
         expect(msgs[2].content).toContain('4');
         expect(msgs[3].content).toBe('computed: 4');
     });
 
-    test('///write marker invokes files.write with raw content', async () => {
+    test('§write marker invokes files.write with raw content', async () => {
         const ctx = await setup();
         let turn = 0;
         const body = 'export default function () {\n  return `hi ${who}`;\n}\n';
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: `///write:src/foo.ts\n${body}`, toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: `§write:src/foo.ts\n${body}`, toolCalls: [], thinking: '', usage: {} };
             return { text: 'done', toolCalls: [], thinking: '', usage: {} };
         };
 
@@ -86,7 +86,7 @@ describe('agent.run', () => {
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: `///write:tricky.ts\n${tricky}`, toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: `§write:tricky.ts\n${tricky}`, toolCalls: [], thinking: '', usage: {} };
             return { text: 'ok', toolCalls: [], thinking: '', usage: {} };
         };
 
@@ -103,7 +103,7 @@ describe('agent.run', () => {
         ctx.fns.llm.stream = async () => {
             turn++;
             if (turn === 1) return {
-                text: 'doing two things\n///eval\nconsole.log(1);\n///write:a.ts\nexport const a = 1;',
+                text: 'doing two things\n§eval\nconsole.log(1);\n§write:a.ts\nexport const a = 1;',
                 toolCalls: [], thinking: '', usage: {},
             };
             return { text: 'done', toolCalls: [], thinking: '', usage: {} };
@@ -116,33 +116,41 @@ describe('agent.run', () => {
         await run(ctx, a, 'two things');
 
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        // Chain: user(input) → assistant(prose) → assistant(///eval) →
-        //        user(///result:eval) → assistant(///write) → user(///result:write) → assistant(done)
+        // Chain: user(input) → assistant(prose) → assistant(§eval) →
+        //        user(§result:eval) → assistant(§write) → user(§result:write) → assistant(done)
         expect(msgs.map((m: any) => m.role))
             .toEqual(['user', 'assistant', 'assistant', 'user', 'assistant', 'user', 'assistant']);
         expect(msgs[1]!.content).toBe('doing two things');
-        expect(msgs[2]!.content).toBe('///eval\nconsole.log(1);');
-        expect(msgs[3]!.content).toContain('///result:eval');
+        expect(msgs[2]!.content).toBe('§eval\nconsole.log(1);');
+        expect(msgs[3]!.content).toContain('§result:eval');
         expect(msgs[3]!.content).toContain('1');
-        expect(msgs[3]!.content).not.toContain('///result:write'); // result is per-call, not joined
-        expect(msgs[4]!.content).toBe('///write:a.ts\nexport const a = 1;');
-        expect(msgs[5]!.content).toContain('///result:write:a.ts');
+        expect(msgs[3]!.content).not.toContain('§result:write'); // result is per-call, not joined
+        expect(msgs[4]!.content).toBe('§write:a.ts\nexport const a = 1;');
+        expect(msgs[5]!.content).toContain('§result:write:a.ts');
         expect(msgs[6]!.content).toBe('done');
         expect(ctx.state.__written['a.ts']).toBe('export const a = 1;');
     });
 
-    test('misplaced marker (no \\n before ///) is executed AND warned about', async () => {
+    test('misplaced marker (no \\n before §) is NOT executed; warning fed back to model', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
             if (turn === 1) {
-                // Live-bug pattern: prose glued to marker without \n.
-                return { text: 'считаю.///eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
+                // Bug pattern: model glues prose to marker without \n.
+                return { text: 'считаю.§eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
+            }
+            // After seeing the warning, model retries with proper format.
+            if (turn === 2) {
+                return { text: '§eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
             }
             return { text: 'computed: 4', toolCalls: [], thinking: '', usage: {} };
         };
-        ctx.fns.repl.eval = async (_c: any, code: string) => code.includes('console.log(2 + 2)') ? '4' : '';
+        let evalCalls = 0;
+        ctx.fns.repl.eval = async (_c: any, code: string) => {
+            evalCalls++;
+            return code.includes('console.log(2 + 2)') ? '4' : '';
+        };
 
         const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
         ctx.fns.session.save(ctx, a);
@@ -150,26 +158,27 @@ describe('agent.run', () => {
         await run(ctx, a, 'compute');
 
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        // The eval is executed (result gets fed back) AND a warning user-message
-        // is appended after it. Then the model produces its closing prose.
-        const result = msgs.find((m: any) => String(m.content ?? '').startsWith('///result:eval'));
-        expect(result).toBeDefined();
-        expect(result.content).toContain('4');
-        const warn = msgs.find((m: any) => String(m.content ?? '').includes('///error:marker-misplaced'));
+        // Strict: turn 1's misplaced §eval did NOT run. Only turn 2's clean
+        // §eval ran. So exactly one §result:eval lands.
+        const results = msgs.filter((m: any) => String(m.content ?? '').startsWith('§result:eval'));
+        expect(results).toHaveLength(1);
+        expect(evalCalls).toBe(1);
+        // The warning was fed back: a user message containing §error:marker-unescaped.
+        const warn = msgs.find((m: any) => String(m.content ?? '').includes('§error:marker-unescaped'));
         expect(warn).toBeDefined();
         expect(warn.content).toContain('Warning');
-        expect(warn.content).toContain('executed anyway');
+        expect(warn.content).toContain('reserved for marker execution');
         // Closing prose lands as the last assistant message.
         const lastAssistant = [...msgs].reverse().find((m: any) => m.role === 'assistant');
         expect(lastAssistant.content).toBe('computed: 4');
     });
 
-    test('synthetic ///result user-message is flagged excluded_from_cursor', async () => {
+    test('synthetic §result user-message is flagged excluded_from_cursor', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: '///eval\nconsole.log(1);', toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: '§eval\nconsole.log(1);', toolCalls: [], thinking: '', usage: {} };
             return { text: 'done', toolCalls: [], thinking: '', usage: {} };
         };
         ctx.fns.repl.eval = async () => '1';
@@ -182,11 +191,11 @@ describe('agent.run', () => {
         const rows = ctx.fns.db.select(ctx,
             'SELECT idx, role, excluded_from_cursor, substr(content, 1, 30) as preview FROM messages WHERE agent_id = ? ORDER BY idx',
             [a.id]);
-        // user(real) → assistant(///eval) → user(synthetic ///result) → assistant(done)
+        // user(real) → assistant(§eval) → user(synthetic §result) → assistant(done)
         expect(rows).toEqual([
             { idx: 0, role: 'user',      excluded_from_cursor: 0, preview: 'go' },
-            { idx: 1, role: 'assistant', excluded_from_cursor: 0, preview: '///eval\nconsole.log(1);' },
-            { idx: 2, role: 'user',      excluded_from_cursor: 1, preview: '///result:eval\n1' },
+            { idx: 1, role: 'assistant', excluded_from_cursor: 0, preview: '§eval\nconsole.log(1);' },
+            { idx: 2, role: 'user',      excluded_from_cursor: 1, preview: '§result:eval\n1' },
             { idx: 3, role: 'assistant', excluded_from_cursor: 0, preview: 'done' },
         ]);
     });
@@ -196,7 +205,7 @@ describe('agent.run', () => {
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: 'считаю.///eval\nconsole.log(1);', toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: 'считаю.§eval\nconsole.log(1);', toolCalls: [], thinking: '', usage: {} };
             return { text: 'fixed', toolCalls: [], thinking: '', usage: {} };
         };
         ctx.fns.repl.eval = async () => '1';
@@ -209,19 +218,19 @@ describe('agent.run', () => {
         const rows = ctx.fns.db.select(ctx,
             'SELECT idx, role, content, excluded_from_cursor FROM messages WHERE agent_id = ? AND role = ? ORDER BY idx',
             [a.id, 'user']);
-        // Real input: idx 0, excluded=0. Tool result + warning are synthetic.
+        // Real input: idx 0, excluded=0. Synthetic warning is excluded.
         expect(rows[0].excluded_from_cursor).toBe(0);
-        const warn = rows.find((r: any) => String(r.content ?? '').includes('///error:marker-misplaced'));
+        const warn = rows.find((r: any) => String(r.content ?? '').includes('§error:marker-unescaped'));
         expect(warn).toBeDefined();
         expect(warn.excluded_from_cursor).toBe(1);
     });
 
-    test('///html marker renders an assistant bubble with raw HTML and no synthetic result', async () => {
+    test('§html marker renders an assistant bubble with raw HTML and no synthetic result', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: '///html\n<div class="card">Hi</div>', toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: '§html\n<div class="card">Hi</div>', toolCalls: [], thinking: '', usage: {} };
             return { text: 'done', toolCalls: [], thinking: '', usage: {} };
         };
 
@@ -231,11 +240,11 @@ describe('agent.run', () => {
         await run(ctx, a, 'render a card');
 
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        // Chain: user → assistant(///html) → assistant(done)
-        // No synthetic ///result:html — html doesn't produce results.
+        // Chain: user → assistant(§html) → assistant(done)
+        // No synthetic §result:html — html doesn't produce results.
         expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'assistant']);
-        expect(msgs[1]!.content).toBe('///html\n<div class="card">Hi</div>');
-        expect(msgs[1]!.content).not.toContain('///result');
+        expect(msgs[1]!.content).toBe('§html\n<div class="card">Hi</div>');
+        expect(msgs[1]!.content).not.toContain('§result');
         expect(msgs[2]!.content).toBe('done');
 
         // The UI event for the html marker carries the raw HTML, not the marker text.
@@ -245,14 +254,14 @@ describe('agent.run', () => {
         expect(htmlEvent.type).toBe('assistant');
     });
 
-    test('///html body with TSX {expr} renders interpolated values from agent.scratchpad', async () => {
+    test('§html body with TSX {expr} renders interpolated values from agent.scratchpad', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
             if (turn === 1) {
                 return {
-                    text: '///html\n<div class="card"><h3>{agent.scratchpad.user.name}</h3><ul>{[1,2,3].map(n => <li>item {n}</li>)}</ul></div>',
+                    text: '§html\n<div class="card"><h3>{agent.scratchpad.user.name}</h3><ul>{[1,2,3].map(n => <li>item {n}</li>)}</ul></div>',
                     toolCalls: [], thinking: '', usage: {},
                 };
             }
@@ -271,12 +280,12 @@ describe('agent.run', () => {
         expect(htmlEvent.html).toBe('<div class="card"><h3>Иван</h3><ul><li>item 1</li><li>item 2</li><li>item 3</li></ul></div>');
     });
 
-    test('///html TSX auto-escapes interpolated text (no XSS via scratchpad)', async () => {
+    test('§html TSX auto-escapes interpolated text (no XSS via scratchpad)', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: '///html\n<div>{agent.scratchpad.danger}</div>', toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: '§html\n<div>{agent.scratchpad.danger}</div>', toolCalls: [], thinking: '', usage: {} };
             return { text: 'done', toolCalls: [], thinking: '', usage: {} };
         };
         const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
@@ -293,13 +302,13 @@ describe('agent.run', () => {
         expect(htmlEvent.html).toContain('&lt;script&gt;');
     });
 
-    test('///html TSX parse error is fed back as ///error:html user message', async () => {
+    test('§html TSX parse error is fed back as §error:html user message', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
             // Unmatched closing tag — invalid TSX.
-            if (turn === 1) return { text: '///html\n<div><span>oops</div>', toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: '§html\n<div><span>oops</div>', toolCalls: [], thinking: '', usage: {} };
             return { text: 'fixed', toolCalls: [], thinking: '', usage: {} };
         };
         const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
@@ -308,13 +317,13 @@ describe('agent.run', () => {
         await run(ctx, a, 'render broken');
 
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        // user(input) → assistant(///html bad) → user(///error:html) → assistant(fixed)
-        const errMsg = msgs.find((m: any) => String(m.content ?? '').startsWith('///error:html'));
+        // user(input) → assistant(§html bad) → user(§error:html) → assistant(fixed)
+        const errMsg = msgs.find((m: any) => String(m.content ?? '').startsWith('§error:html'));
         expect(errMsg).toBeDefined();
         expect(errMsg.role).toBe('user');
     });
 
-    test('///html body that is a full HTML document fails TSX parse and feeds error back', async () => {
+    test('§html body that is a full HTML document fails TSX parse and feeds error back', async () => {
         // Full <!DOCTYPE>/<html>/<body> markup is not a valid single TSX
         // expression — the parser rejects it. We expect an error-feedback
         // user-message (the agent can re-emit a clean fragment), and no
@@ -332,7 +341,7 @@ describe('agent.run', () => {
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: `///html\n${dirty}`, toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: `§html\n${dirty}`, toolCalls: [], thinking: '', usage: {} };
             return { text: 'fixed', toolCalls: [], thinking: '', usage: {} };
         };
         const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
@@ -341,17 +350,17 @@ describe('agent.run', () => {
         await run(ctx, a, 'render bad');
 
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        const errMsg = msgs.find((m: any) => String(m.content ?? '').startsWith('///error:html'));
+        const errMsg = msgs.find((m: any) => String(m.content ?? '').startsWith('§error:html'));
         expect(errMsg).toBeDefined();
         expect(errMsg.role).toBe('user');
     });
 
-    test('///bash marker runs `bash -c` and feeds back ///result:bash with stdout', async () => {
+    test('§bash marker runs `bash -c` and feeds back §result:bash with stdout', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: '///bash\necho hello-bash', toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: '§bash\necho hello-bash', toolCalls: [], thinking: '', usage: {} };
             return { text: 'ok', toolCalls: [], thinking: '', usage: {} };
         };
 
@@ -362,18 +371,18 @@ describe('agent.run', () => {
 
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
         expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
-        expect(msgs[1]!.content).toBe('///bash\necho hello-bash');
-        expect(msgs[2]!.content).toContain('///result:bash');
+        expect(msgs[1]!.content).toBe('§bash\necho hello-bash');
+        expect(msgs[2]!.content).toContain('§result:bash');
         expect(msgs[2]!.content).toContain('hello-bash');
         expect(msgs[3]!.content).toBe('ok');
     });
 
-    test('///bash non-zero exit is tagged :error and includes [exit N]', async () => {
+    test('§bash non-zero exit is tagged :error and includes [exit N]', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: '///bash\nexit 7', toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: '§bash\nexit 7', toolCalls: [], thinking: '', usage: {} };
             return { text: 'caught', toolCalls: [], thinking: '', usage: {} };
         };
 
@@ -382,7 +391,7 @@ describe('agent.run', () => {
 
         await run(ctx, a, 'fail bash');
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        expect(msgs[2]!.content).toContain('///result:bash:error');
+        expect(msgs[2]!.content).toContain('§result:bash:error');
         expect(msgs[2]!.content).toContain('[exit 7]');
     });
 
@@ -391,7 +400,7 @@ describe('agent.run', () => {
         let turn = 0;
         ctx.fns.llm.stream = async () => {
             turn++;
-            if (turn === 1) return { text: '///eval\nthrow new Error("boom");', toolCalls: [], thinking: '', usage: {} };
+            if (turn === 1) return { text: '§eval\nthrow new Error("boom");', toolCalls: [], thinking: '', usage: {} };
             return { text: 'caught', toolCalls: [], thinking: '', usage: {} };
         };
         ctx.fns.repl.eval = async () => { throw new Error('boom'); };
@@ -401,7 +410,7 @@ describe('agent.run', () => {
 
         await run(ctx, a, 'fail');
         const msgs = ctx.fns.session.getMessages(ctx, a.id);
-        expect(msgs[2]!.content).toContain('///result:eval:error');
+        expect(msgs[2]!.content).toContain('§result:eval:error');
         expect(msgs[2]!.content).toContain('boom');
     });
 });

@@ -3,13 +3,13 @@ import { mkTestCtx } from "../_testCtx.entry";
 import compact from "./compact";
 
 describe("agent.compact", () => {
-    test("replaces last ///result:* user message with summary", async () => {
+    test("replaces last §result:* user message with summary", async () => {
         const ctx: any = await mkTestCtx();
         const agent = ctx.fns.agent.start(ctx, { model: "x" });
         agent.messages.push(
             { role: "user", content: "do it" },
-            { role: "assistant", content: "///eval\nconsole.log(1);" },
-            { role: "user", content: "///result:eval\n" + "A".repeat(2000) },
+            { role: "assistant", content: "§eval\nconsole.log(1);" },
+            { role: "user", content: "§result:eval\n" + "A".repeat(2000) },
         );
         ctx.fns.session = { replaceMessages: (_c: any, _id: string, next: any[]) => { agent.messages = next; }, syncAgentState: () => agent };
         const res = compact(ctx, agent, "listed 42 files");
@@ -29,13 +29,13 @@ describe("agent.compact", () => {
         const ctx: any = await mkTestCtx();
         const agent = ctx.fns.agent.start(ctx, { model: "x" });
         agent.messages.push(
-            { role: "user", content: "///result:eval\nold" },
+            { role: "user", content: "§result:eval\nold" },
             { role: "assistant", content: "intermediate" },
-            { role: "user", content: "///result:eval\nbig payload" },
+            { role: "user", content: "§result:eval\nbig payload" },
         );
         ctx.fns.session = { replaceMessages: (_c: any, _id: string, next: any[]) => { agent.messages = next; }, syncAgentState: () => agent };
         compact(ctx, agent, "summary");
-        expect(agent.messages[0].content).toBe("///result:eval\nold");
+        expect(agent.messages[0].content).toBe("§result:eval\nold");
         expect(agent.messages[2].content).toBe("[compacted] summary");
     });
 
@@ -64,10 +64,10 @@ describe("agent.compact", () => {
             const agent = ctx.fns.agent.start(ctx, { model: "x" });
             agent.messages.push(
                 { role: "user", content: "hi" },
-                { role: "assistant", content: "///eval\nconsole.log(1);" },
-                { role: "user", content: "///result:eval\nresult A" },
-                { role: "assistant", content: "///eval\nconsole.log(2);" },
-                { role: "user", content: "///result:eval\nresult B" },
+                { role: "assistant", content: "§eval\nconsole.log(1);" },
+                { role: "user", content: "§result:eval\nresult A" },
+                { role: "assistant", content: "§eval\nconsole.log(2);" },
+                { role: "user", content: "§result:eval\nresult B" },
             );
             ctx.fns.session = { replaceMessages: (_c: any, _id: string, next: any[]) => { agent.messages = next; }, syncAgentState: () => agent };
             // Asking to compact at idx 4 (a result) walks back over the result

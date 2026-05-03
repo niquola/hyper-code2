@@ -50,6 +50,16 @@ import compact from './agent/compact';
 import stop from './agent/stop';
 import clear from './agent/clear';
 import streamLLM from './agent/llmCall';
+import executeMarker from './agent/executeMarker';
+import executeBash from './agent/executeBash';
+import sanitizeHtmlBody from './agent/sanitizeHtmlBody';
+import renderTsx from './agent/renderTsx';
+import describeTsxError from './agent/describeTsxError';
+import highlightResult from './agent/highlightResult';
+import serializeMarkerCall from './agent/serializeMarkerCall';
+import formatMarkerResult from './agent/formatMarkerResult';
+import formatMarkerError from './agent/formatMarkerError';
+import parseMarkers from './agent/parseMarkers';
 
 import streamMock from './llm/streamMock';
 import resolveEndpoint from './llm/resolveEndpoint';
@@ -111,6 +121,12 @@ export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } =
                 renderEventHtml, renderStatusBar,
                 compact, stop, clear,
                 llmCall: streamLLM,
+                // Marker turn-loop helpers.
+                parseMarkers,
+                executeMarker, executeBash,
+                sanitizeHtmlBody, renderTsx, describeTsxError,
+                highlightResult, serializeMarkerCall,
+                formatMarkerResult, formatMarkerError,
             },
             llm: {
                 stream: streamDispatch,

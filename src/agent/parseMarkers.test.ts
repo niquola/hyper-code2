@@ -8,35 +8,35 @@ describe('agent.parseMarkers', () => {
         expect(r.calls).toEqual([]);
     });
 
-    test('single ///eval at start of message', () => {
-        const r = parseMarkers('///eval\n2 + 2\n');
+    test('single §eval at start of message', () => {
+        const r = parseMarkers('§eval\n2 + 2\n');
         expect(r.prose).toBe('');
         expect(r.calls).toEqual([{ kind: 'eval', content: '2 + 2' }]);
     });
 
     test('prose preamble before marker', () => {
-        const r = parseMarkers('Let me check.\n///eval\nawait Bun.file("x").text()');
+        const r = parseMarkers('Let me check.\n§eval\nawait Bun.file("x").text()');
         expect(r.prose).toBe('Let me check.');
         expect(r.calls[0]).toEqual({ kind: 'eval', content: 'await Bun.file("x").text()' });
     });
 
-    test('///write:<path> captures path and content verbatim', () => {
-        const r = parseMarkers('///write:src/foo.ts\nexport default 1;\n');
+    test('§write:<path> captures path and content verbatim', () => {
+        const r = parseMarkers('§write:src/foo.ts\nexport default 1;\n');
         expect(r.calls).toEqual([{ kind: 'write', path: 'src/foo.ts', content: 'export default 1;' }]);
     });
 
     test('content keeps internal newlines and special chars', () => {
         const body = 'export default function () {\n  return `hi ${who}`;\n}';
-        const r = parseMarkers(`///write:src/foo.ts\n${body}\n`);
+        const r = parseMarkers(`§write:src/foo.ts\n${body}\n`);
         expect(r.calls[0]).toEqual({ kind: 'write', path: 'src/foo.ts', content: body });
     });
 
     test('multiple markers run sequentially', () => {
         const text = [
             'ok, doing two things:',
-            '///eval',
+            '§eval',
             'return 1 + 1;',
-            '///write:a.ts',
+            '§write:a.ts',
             'export const a = 1;',
         ].join('\n');
         const r = parseMarkers(text);
@@ -47,198 +47,256 @@ describe('agent.parseMarkers', () => {
         ]);
     });
 
-    test('lines starting with /// that are NOT eval/write are content, not markers', () => {
-        const text = [
-            '///write:src/lib.rs',
-            '/// doc comment for the module',
-            'pub fn x() {}',
-        ].join('\n');
-        const r = parseMarkers(text);
-        expect(r.calls).toHaveLength(1);
-        expect(r.calls[0]).toEqual({
-            kind: 'write',
-            path: 'src/lib.rs',
-            content: '/// doc comment for the module\npub fn x() {}',
-        });
-    });
-
-    test('marker mid-line without trailing newline is content (not flagged)', () => {
-        // "see ///eval somewhere" — looks like a casual mention, no \n right
-        // after `///eval`, so no candidate. Whole text stays as prose.
-        const text = 'see ///eval somewhere mid-line\nmore prose';
+    test('mid-line marker without trailing newline is content + warns about unescaped §', () => {
+        // "see §eval somewhere" — casual mention, no \n right after `§eval`,
+        // so no candidate. Whole text stays as prose, but the unescaped `§`
+        // surfaces as a warning so the model self-corrects.
+        const text = 'see §eval somewhere mid-line\nmore prose';
         const r = parseMarkers(text);
         expect(r.calls).toEqual([]);
-        expect(r.errors).toEqual([]);
+        expect(r.errors).toHaveLength(1);
+        expect(r.errors[0]!.kind).toBe('unescaped');
+        expect(r.errors[0]!.hint).toContain('§eval');
         expect(r.prose).toBe(text);
     });
 
-    test('almost-marker (missing \\n before ///eval) is executed and a warning is attached', () => {
-        // Live bug pattern: model writes `prose.///eval\nbody`. We execute it
-        // anyway (so the turn isn't wasted) but emit a warning so it fixes the
-        // format on the next turn.
-        const text = 'считаю.///eval\nlet n = 10; console.log(n);';
+    test('marker not at column 1 is content + warns', () => {
+        // Live bug pattern: model writes `prose.§eval\nbody`. Strict: this
+        // is content. The unescaped-§ warning tells the model to either
+        // escape (`\§eval`) or move the marker to column 1.
+        const text = 'считаю.§eval\nlet n = 10; console.log(n);';
         const r = parseMarkers(text);
-        expect(r.calls).toHaveLength(1);
-        expect(r.calls[0]).toMatchObject({ kind: 'eval' });
-        expect(r.calls[0]!.content).toBe('let n = 10; console.log(n);');
+        expect(r.calls).toEqual([]);
         expect(r.errors).toHaveLength(1);
-        expect(r.errors[0]!.kind).toBe('misplaced');
-        expect(r.errors[0]!.marker).toBe('eval');
-        expect(r.errors[0]!.hint).toContain('Warning');
-        expect(r.errors[0]!.hint).toContain('executed anyway');
+        expect(r.errors[0]!.kind).toBe('unescaped');
+        expect(r.prose).toBe(text);
     });
 
-    test('almost-marker for ///write is also executed with a warning', () => {
-        const text = 'lemme write a file.///write:foo.ts\nexport default 1;';
+    test('§write glued to preceding text without \\n is content + warns', () => {
+        const text = 'lemme write a file.§write:foo.ts\nexport default 1;';
         const r = parseMarkers(text);
-        expect(r.calls).toHaveLength(1);
-        expect(r.calls[0]).toMatchObject({ kind: 'write', path: 'foo.ts' });
-        expect(r.calls[0]!.content).toBe('export default 1;');
+        expect(r.calls).toEqual([]);
         expect(r.errors).toHaveLength(1);
-        expect(r.errors[0]!.marker).toBe('write');
+        expect(r.errors[0]!.kind).toBe('unescaped');
     });
 
-    test('mixed: one valid eval and one misplaced — both run, only the misplaced one warns', () => {
-        const text = 'first one is good:\n///eval\nconsole.log(1);\nthen.///eval\nconsole.log(2);';
+    test('mixed: well-placed marker runs; misplaced § stays in body (no warning since prose is empty)', () => {
+        const text = 'first one is good:\n§eval\nconsole.log(1);\nthen.§eval\nconsole.log(2);';
         const r = parseMarkers(text);
-        expect(r.calls).toHaveLength(2);
-        // First eval body extends until the second marker's start byte. With
-        // the misplaced `then.` glued in, that prose lands inside the body.
-        // (The model gets a warning anyway, so it'll fix this on the next turn.)
+        expect(r.calls).toHaveLength(1);
+        // The misplaced `then.§eval\nconsole.log(2);` is captured into the
+        // first marker's body. Body content is not scanned for unescaped §
+        // (could be legitimate code/text), so no warning here.
         expect(r.calls[0]!.content).toContain('console.log(1);');
-        expect(r.calls[1]!.content).toBe('console.log(2);');
+        expect(r.calls[0]!.content).toContain('then.§eval');
+        expect(r.errors).toEqual([]);
+    });
+
+    test('stray bare § in prose triggers warning', () => {
+        const text = 'просто § символ в тексте';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([]);
         expect(r.errors).toHaveLength(1);
-        expect(r.errors[0]!.marker).toBe('eval');
+        expect(r.errors[0]!.kind).toBe('unescaped');
+    });
+
+    test('escaped \\§ does NOT trigger warning', () => {
+        const text = 'literal \\§ in text and \\§eval mention';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toEqual([]);
+        expect(r.prose).toBe('literal § in text and §eval mention');
+    });
+
+    test('backtick escape: `§eval` in prose is content, no warning, backticks preserved', () => {
+        const text = 'See `§eval` for details.';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toEqual([]);
+        expect(r.prose).toBe('See `§eval` for details.');
+    });
+
+    test('backtick escape: lone `§` no warning', () => {
+        const text = 'the `§` symbol';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toEqual([]);
+        expect(r.prose).toBe('the `§` symbol');
+    });
+
+    test('backtick escape works for all marker kinds', () => {
+        const text = 'use `§bash`, `§eval`, `§write:`, `§html` markers';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([]);
+        expect(r.errors).toEqual([]);
+        expect(r.prose).toContain('`§bash`');
     });
 
     test('last marker content extends to end of message (no trailing newline required)', () => {
-        const r = parseMarkers('///eval\n42');
+        const r = parseMarkers('§eval\n42');
         expect(r.calls).toEqual([{ kind: 'eval', content: '42' }]);
     });
 
     test('preserves blank lines inside content', () => {
-        const text = '///eval\nline1\n\nline3\n';
+        const text = '§eval\nline1\n\nline3\n';
         const r = parseMarkers(text);
         expect(r.calls[0]!.content).toBe('line1\n\nline3');
     });
 
-    test('empty path in ///write: is rejected (treated as content)', () => {
-        const r = parseMarkers('///write:\nbody');
+    test('empty path in §write: is rejected (treated as content)', () => {
+        const r = parseMarkers('§write:\nbody');
         expect(r.calls).toEqual([]);
-        expect(r.prose).toBe('///write:\nbody');
+        expect(r.prose).toBe('§write:\nbody');
     });
 
-    test('Haiku quirk: trailing closing fence `\\n///` is stripped from body', () => {
-        // Haiku adds a `///` closing fence at the end of eval bodies, mimicking
-        // ``` style. Without normalization this becomes garbage inside the body.
-        const text = '///eval\nconsole.log(2 + 2)\n///\n';
+    test('Haiku quirk: trailing closing fence `\\n§` is stripped from body', () => {
+        const text = '§eval\nconsole.log(2 + 2)\n§\n';
         const r = parseMarkers(text);
         expect(r.calls).toHaveLength(1);
         expect(r.calls[0]!.content).toBe('console.log(2 + 2)');
     });
 
+    test('explicit closing § terminates body early; content after close is dropped', () => {
+        const text = '§eval\nline1\n§\ndropped tail';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([{ kind: 'eval', content: 'line1' }]);
+    });
+
+    test('explicit closing § followed by another marker', () => {
+        const text = '§eval\nline1\n§\n§eval\nline2';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([
+            { kind: 'eval', content: 'line1' },
+            { kind: 'eval', content: 'line2' },
+        ]);
+    });
+
+    test('closing § as the very first line of body = empty body, dropped', () => {
+        const text = '§eval\n§\nline\n§eval\nbody';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([{ kind: 'eval', content: 'body' }]);
+    });
+
+    test('escaped \\§ inside body is content, not a close', () => {
+        const text = '§eval\nline1\n\\§\nline2';
+        const r = parseMarkers(text);
+        expect(r.calls).toHaveLength(1);
+        // \§ is not a close (parser skips it). After unescape, body shows §.
+        expect(r.calls[0]!.content).toBe('line1\n§\nline2');
+    });
+
+    test('§ in middle of line is body content, not a close', () => {
+        const text = '§eval\nconst s = "§ symbol";';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([{ kind: 'eval', content: 'const s = "§ symbol";' }]);
+    });
+
+    test('explicit close in §write body', () => {
+        const text = '§write:src/x.ts\nexport default 1;\n§\nfollow-up prose';
+        const r = parseMarkers(text);
+        expect(r.calls).toEqual([{ kind: 'write', path: 'src/x.ts', content: 'export default 1;' }]);
+    });
+
     test('Haiku quirk: trailing empty marker (hallucinated next call) is dropped', () => {
-        // Haiku sometimes emits a second `///eval` with empty body on the same
-        // turn, before tool results have come back. Treat these as fabricated.
-        const text = '///eval\nconsole.log(1);\n///eval\n';
+        const text = '§eval\nconsole.log(1);\n§eval\n';
         const r = parseMarkers(text);
         expect(r.calls).toHaveLength(1);
         expect(r.calls[0]!.content).toBe('console.log(1);');
     });
 
     test('Haiku quirk: empty trailing write marker is dropped', () => {
-        const text = '///write:a.ts\nexport const a = 1;\n///write:b.ts\n';
+        const text = '§write:a.ts\nexport const a = 1;\n§write:b.ts\n';
         const r = parseMarkers(text);
         expect(r.calls).toHaveLength(1);
         expect(r.calls[0]).toEqual({ kind: 'write', path: 'a.ts', content: 'export const a = 1;' });
     });
 
-    test('escape: ////eval in prose is content, unescaped to ///eval', () => {
-        const text = 'Можно писать ////eval в тексте — это буквальный маркер.\n////eval\nlet x = 1;';
+    test('escape: \\§eval in prose is content, unescaped to §eval', () => {
+        const text = 'Можно писать \\§eval в тексте — это буквальный маркер.\n\\§eval\nlet x = 1;';
         const r = parseMarkers(text);
-        // No real markers — both ////eval lines are escaped.
+        // No real markers — both \§eval lines are escaped.
         expect(r.calls).toEqual([]);
         expect(r.errors).toEqual([]);
-        // After unescape, prose shows ///eval as the user intended.
-        expect(r.prose).toContain('///eval в тексте');
-        expect(r.prose).toContain('\n///eval\nlet x = 1;');
+        // After unescape, prose shows §eval as the user intended.
+        expect(r.prose).toContain('§eval в тексте');
+        expect(r.prose).toContain('\n§eval\nlet x = 1;');
     });
 
-    test('escape: ////write: in prose is content, unescaped to ///write:', () => {
-        const text = 'Маркер записи: ////write:src/foo.ts\nbody';
+    test('escape: \\§write: in prose is content, unescaped to §write:', () => {
+        const text = 'Маркер записи: \\§write:src/foo.ts\nbody';
         const r = parseMarkers(text);
         expect(r.calls).toEqual([]);
         expect(r.errors).toEqual([]);
-        expect(r.prose).toContain('///write:src/foo.ts');
+        expect(r.prose).toContain('§write:src/foo.ts');
     });
 
-    test('escape: ////marker INSIDE a real eval body becomes ///marker for the runtime', () => {
-        // The model wants to eval a string containing `///eval`. It escapes
-        // the literal in its body with four slashes; the parser unescapes
-        // back to three so the executed code sees the intended string.
-        const text = '///eval\nconst s = "////eval is the escape";\nconsole.log(s);';
+    test('escape: \\§marker INSIDE a real eval body becomes §marker for the runtime', () => {
+        // The model wants to eval a string containing `§eval`. It escapes
+        // the literal in its body with `\§`; the parser unescapes back to
+        // bare `§` so the executed code sees the intended string.
+        const text = '§eval\nconst s = "\\§eval is the escape";\nconsole.log(s);';
         const r = parseMarkers(text);
         expect(r.calls).toHaveLength(1);
-        expect(r.calls[0]!.content).toContain('///eval is the escape');
+        expect(r.calls[0]!.content).toContain('§eval is the escape');
     });
 
-    test('escape: real ///eval still works alongside escaped ////eval', () => {
-        const text = '////eval\nthis line is escaped\n///eval\nconsole.log(1);';
+    test('escape: real §eval still works alongside escaped \\§eval', () => {
+        const text = '\\§eval\nthis line is escaped\n§eval\nconsole.log(1);';
         const r = parseMarkers(text);
         expect(r.calls).toHaveLength(1);
         expect(r.calls[0]!.content).toBe('console.log(1);');
-        // The escaped line lives in prose with three slashes after unescape.
-        expect(r.prose).toBe('///eval\nthis line is escaped');
+        // The escaped line lives in prose with bare § after unescape.
+        expect(r.prose).toBe('§eval\nthis line is escaped');
     });
 
-    test('///html marker captures raw HTML body', () => {
-        const text = '///html\n<div class="card"><b>Hi</b></div>';
+    test('§html marker captures raw HTML body', () => {
+        const text = '§html\n<div class="card"><b>Hi</b></div>';
         const r = parseMarkers(text);
         expect(r.calls).toEqual([{ kind: 'html', content: '<div class="card"><b>Hi</b></div>' }]);
     });
 
-    test('///html with backticks/quotes survives untouched', () => {
+    test('§html with backticks/quotes survives untouched', () => {
         const body = '<script>const x = `${name}`; alert("hi");</script>';
-        const r = parseMarkers(`///html\n${body}`);
+        const r = parseMarkers(`§html\n${body}`);
         expect(r.calls[0]).toEqual({ kind: 'html', content: body });
     });
 
-    test('html mid-line missing-newline is executed with a warning', () => {
-        const text = 'смотри.///html\n<b>x</b>';
+    test('html mid-line missing-newline is content (strict) + warns', () => {
+        const text = 'смотри.§html\n<b>x</b>';
         const r = parseMarkers(text);
-        expect(r.calls).toHaveLength(1);
-        expect(r.calls[0]).toMatchObject({ kind: 'html' });
+        expect(r.calls).toEqual([]);
         expect(r.errors).toHaveLength(1);
-        expect(r.errors[0]!.marker).toBe('html');
+        expect(r.errors[0]!.kind).toBe('unescaped');
+        expect(r.prose).toBe(text);
     });
 
-    test('escape: ////html is content not a marker', () => {
-        const text = 'У нас есть маркер ////html для рендера HTML.';
+    test('escape: \\§html is content not a marker', () => {
+        const text = 'У нас есть маркер \\§html для рендера HTML.';
         const r = parseMarkers(text);
         expect(r.calls).toEqual([]);
         expect(r.errors).toEqual([]);
-        expect(r.prose).toContain('///html');
+        expect(r.prose).toContain('§html');
     });
 
-    test('///bash captures shell body', () => {
-        const r = parseMarkers('///bash\nls -la\ngit status\n');
+    test('§bash captures shell body', () => {
+        const r = parseMarkers('§bash\nls -la\ngit status\n');
         expect(r.calls).toEqual([{ kind: 'bash', content: 'ls -la\ngit status' }]);
     });
 
-    test('escape: ////bash is content not a marker', () => {
-        const r = parseMarkers('запусти ////bash для команд.');
+    test('escape: \\§bash is content not a marker', () => {
+        const r = parseMarkers('запусти \\§bash для команд.');
         expect(r.calls).toEqual([]);
         expect(r.errors).toEqual([]);
-        expect(r.prose).toContain('///bash');
+        expect(r.prose).toContain('§bash');
     });
 
     test('mixed eval + bash + write in one turn', () => {
         const r = parseMarkers([
-            '///eval',
+            '§eval',
             'console.log(1);',
-            '///bash',
+            '§bash',
             'ls',
-            '///write:foo.ts',
+            '§write:foo.ts',
             'export default 1;',
         ].join('\n'));
         expect(r.calls.map((c: any) => c.kind)).toEqual(['eval', 'bash', 'write']);
@@ -246,7 +304,7 @@ describe('agent.parseMarkers', () => {
     });
 
     test('eval after write — both parsed', () => {
-        const r = parseMarkers('///write:a\nA\n///eval\nreturn 1\n');
+        const r = parseMarkers('§write:a\nA\n§eval\nreturn 1\n');
         expect(r.calls).toEqual([
             { kind: 'write', path: 'a', content: 'A' },
             { kind: 'eval', content: 'return 1' },

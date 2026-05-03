@@ -1,10 +1,15 @@
-// Diagnostics from parseMarkers when a candidate marker is found at a position
-// that LOOKS like a marker (followed by a newline) but isn't valid syntax —
-// most commonly, marker not at column 1 because the model forgot the leading \n.
-// Fed back to the model in a result message so it can self-correct.
+// Diagnostics from parseMarkers when something looks like a marker but
+// isn't valid syntax. Fed back to the model in a result message so it can
+// self-correct.
+//
+// kinds:
+//   'unescaped' — the parser saw an unescaped `§` in prose (anywhere
+//     outside a marker body). Either it should be `\§` (literal) or
+//     placed at column 1 followed by \n with a known kind (eval/write/
+//     bash/html) for execution. Strict — no implicit execution.
 export type MarkerParseError = {
-    kind: 'misplaced';
-    marker: 'eval' | 'write' | 'html' | 'bash';
+    kind: 'unescaped';
+    marker?: 'eval' | 'write' | 'html' | 'bash';
     position: number;
     hint: string;
 };

@@ -30,8 +30,8 @@ describe("session.load", () => {
         save(ctx, original);
         replaceMessages(ctx, original.id, [
             { role: 'user', content: 'a' },
-            { role: 'assistant', content: '///eval\nconsole.log(1);' },
-            { role: 'user', content: '///result:eval\n1' },
+            { role: 'assistant', content: '§eval\nconsole.log(1);' },
+            { role: 'user', content: '§result:eval\n1' },
         ]);
         replaceEvents(ctx, original.id, [
             { type: 'user', text: 'a' },
@@ -47,8 +47,8 @@ describe("session.load", () => {
         expect(loaded!.systemPrompt).toBe("sp");
         expect(loaded!.messages).toEqual([
             { role: 'user', content: 'a' },
-            { role: 'assistant', content: '///eval\nconsole.log(1);' },
-            { role: 'user', content: '///result:eval\n1' },
+            { role: 'assistant', content: '§eval\nconsole.log(1);' },
+            { role: 'user', content: '§result:eval\n1' },
         ]);
         expect(loaded!.events).toEqual([
             { type: 'user', text: 'a' },
