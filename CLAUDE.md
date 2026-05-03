@@ -53,9 +53,9 @@ src/
   db/                      ctx.fns.db.* — shared SQLite infrastructure
     connect.ts             opens db (WAL), stores on ctx.state.db
     migrate.ts             scans **/$migrate_<ts>_<name>.up.sql, applies pending in ts-order, tracks in _migrations
-    exec.ts                exec(ctx, sql, params) → {changes, lastInsertRowid}
-    select.ts              select<T>(ctx, sql, params) → T[]
-    insert.ts              insert(ctx, table, {col: val}) → {changes, lastInsertRowid}
+    exec.ts                exec(ctx, {sql, params?}) → {changes, lastInsertRowid}
+    select.ts              select<T>(ctx, {sql, params?}) → T[]
+    insert.ts              insert(ctx, {table, row}) → {changes, lastInsertRowid}
 
   session/                 ctx.fns.session.* — per-agent persistence (uses db/)
     $migrate_20260418000000_init.up.sql  — baseline schema (agents, messages, events)
@@ -64,8 +64,12 @@ src/
 
 ## Conventions
 
-- `export default async function (ctx: Context, ...)` — **anonymous**, no function name.
-- Cross-file calls go through `ctx.fns.<ns>.<fn>(ctx, ...)`. **No cross-imports between project files.** Only `import` from `bun`, `node:*`, or third-party.
+- `export default async function (ctx: Context, opts: {...})` — **anonymous**, no function name. Every fn takes `ctx` first, then a single options-object.
+- **Universal calling convention**: `ctx.fns.<ns>.<fn>(ctx, { ...opts })`. Single rule, no per-fn argument-order recall. The agent reads the destructuring pattern via `fn.toString()` rather than guessing positional arguments.
+  - Single-arg fns still take an opts wrapper: `files.read(ctx, { path })`, not `files.read(ctx, path)`.
+  - Zero-arg fns are `(ctx)` only (no opts wrapper): `session.list(ctx)`, `agent.workerLoop(ctx)`, `llm.listModels(ctx)`.
+  - Optional fields go inside opts as `opts.x ?? default`.
+- Cross-file calls go through `ctx.fns.<ns>.<fn>(ctx, { ... })`. **No cross-imports between project files.** Only `import` from `bun`, `node:*`, or third-party.
 - Types are global via auto-generated `ctx_ns.d.ts`:
   - `src/<mod>/$type_<Name>.ts` → `types.<mod>.<Name>` globally.
   - `src/$type_Context.ts` → global `Context` (composed with `FnsRegistry` + `RootFns`).
@@ -105,13 +109,13 @@ bun script/repl.ts -f /tmp/play.js          # from file
 echo '...' | bun script/repl.ts             # from stdin
 
 # hot-reload
-bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent")'         # whole folder
-bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent.run")'     # single fn
+bun script/repl.ts 'await ctx.fns.repl.load(ctx, { name: "agent" })'         # whole folder
+bun script/repl.ts 'await ctx.fns.repl.load(ctx, { name: "agent.run" })'     # single fn
 bun script/repl.ts 'return await ctx.genTypes(ctx)'                # regen ctx_ns.d.ts
 bun script/repl.ts 'return await ctx.fns.http.loadRoutes(ctx)'     # rescan routes
 
 # reset agent (new SYSTEM_PROMPT picked up lazily)
-bun script/repl.ts 'ctx.fns.agent.clear(ctx, ctx.state.agent.default); delete ctx.state.agent.default; return "ok"'
+bun script/repl.ts 'ctx.fns.agent.clear(ctx, { agent: ctx.state.agent.default }); delete ctx.state.agent.default; return "ok"'
 ```
 
 Server port written to `.hyper/port` (default 3000). `script/repl.ts` reads it.
@@ -120,10 +124,10 @@ Server port written to `.hyper/port` (default 3000). `script/repl.ts` reads it.
 
 `ctx.fns.db` is shared SQLite infra. One connection per process, stored on `ctx.state.db`. Default path: `.hyper/sessions` (override via `DB_PATH` env).
 
-**Procedural API:**
-- `ctx.fns.db.exec(ctx, sql, params)` — mutating statements → `{changes, lastInsertRowid}`
-- `ctx.fns.db.select<T>(ctx, sql, params)` — SELECT → `T[]`
-- `ctx.fns.db.insert(ctx, table, {col: val})` — object-to-INSERT shortcut
+**Procedural API** (uniform `(ctx, opts)` calling — see Conventions above):
+- `ctx.fns.db.exec(ctx, { sql, params? })` — mutating statements → `{changes, lastInsertRowid}`
+- `ctx.fns.db.select<T>(ctx, { sql, params? })` — SELECT → `T[]`
+- `ctx.fns.db.insert(ctx, { table, row })` — object-to-INSERT shortcut
 - Raw `ctx.state.db` Bun `Database` is available for advanced use (transactions, prepared reuse)
 
 **Migrations:** any file `<module>/$migrate_<timestamp>_<name>.up.sql` gets applied on startup by `ctx.fns.db.migrate(ctx)`. Convention:
