@@ -3,7 +3,7 @@ export default function (ctx: Context): { loaded: number } {
     (ctx.state as any).agent ??= {};
     let n = 0;
     for (const { id } of ids) {
-        const agent = ctx.fns.session.load(ctx, id);
+        const agent = ctx.fns.session.load(ctx, { id });
         if (agent) {
             (ctx.state as any).agent[id] = agent;
             n++;

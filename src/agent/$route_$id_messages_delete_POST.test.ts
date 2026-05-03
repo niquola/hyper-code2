@@ -13,7 +13,7 @@ function req(id: string, idx: string, mode: string): any {
 describe('POST /agent/:id/messages/delete', () => {
   test('delete one redirects back', async () => {
     const calls: any[] = [];
-    const ctx: any = { state: { agent: { a1: { id: 'a1' } } }, fns: { session: { load: () => null, deleteMessageAt: (_c: any, id: string, idx: number) => { calls.push(['one', id, idx]); return { ok: true }; }, truncateMessagesFrom: () => ({ ok: true }), syncAgentState: () => {} } } };
+    const ctx: any = { state: { agent: { a1: { id: 'a1' } } }, fns: { session: { load: () => null, deleteMessageAt: (_c: any, opts: { id: string; idx: number }) => { calls.push(['one', opts.id, opts.idx]); return { ok: true }; }, truncateMessagesFrom: () => ({ ok: true }), syncAgentState: () => {} } } };
     const res = await route(ctx, null, req('a1', '2', 'one'));
     expect(res.status).toBe(303);
     expect(calls[0]).toEqual(['one', 'a1', 2]);
@@ -21,7 +21,7 @@ describe('POST /agent/:id/messages/delete', () => {
 
   test('delete from redirects back', async () => {
     const calls: any[] = [];
-    const ctx: any = { state: { agent: { a1: { id: 'a1' } } }, fns: { session: { load: () => null, deleteMessageAt: () => ({ ok: true }), truncateMessagesFrom: (_c: any, id: string, idx: number) => { calls.push(['from', id, idx]); return { ok: true, from: idx }; }, syncAgentState: () => {} } } };
+    const ctx: any = { state: { agent: { a1: { id: 'a1' } } }, fns: { session: { load: () => null, deleteMessageAt: () => ({ ok: true }), truncateMessagesFrom: (_c: any, opts: { id: string; from: number }) => { calls.push(['from', opts.id, opts.from]); return { ok: true, from: opts.from }; }, syncAgentState: () => {} } } };
     const res = await route(ctx, null, req('a1', '3', 'from'));
     expect(res.status).toBe(303);
     expect(calls[0]).toEqual(['from', 'a1', 3]);

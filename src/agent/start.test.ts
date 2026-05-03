@@ -52,7 +52,7 @@ describe("agent.start", () => {
         const agent = start(ctx, { model: "codex:gpt-5.4" });
         expect(ctx.fns.agent.nextId).toHaveBeenCalledTimes(1);
         expect(ctx.fns.session.save).toHaveBeenCalledTimes(1);
-        expect(ctx.fns.session.save).toHaveBeenCalledWith(ctx, agent);
+        expect(ctx.fns.session.save).toHaveBeenCalledWith(ctx, { agent });
         expect(ctx.fns.events.emitAgentsChanged).toHaveBeenCalledTimes(1);
         expect(ctx.fns.events.emitAgentsChanged).toHaveBeenCalledWith(ctx, { agentId: agent.id, reason: "create" });
     });

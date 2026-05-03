@@ -172,7 +172,7 @@ describe('agent.workerLoop', () => {
         const past = Date.now() - 100;
         seedReadyAgent(ctx, 'aborter', past);
         // Append a real user message so we have a frontier > -1.
-        ctx.fns.session.appendMessage(ctx, 'aborter', { role: 'user', content: 'hi' });
+        ctx.fns.session.appendMessage(ctx, { id: 'aborter', message: { role: 'user', content: 'hi' } });
         const beforeCursor = ctx.fns.db.select(ctx, {
             sql: 'SELECT last_processed_msg_idx FROM agents WHERE id = ?',
             params: ['aborter'],

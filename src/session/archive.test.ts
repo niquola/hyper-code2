@@ -17,11 +17,11 @@ describe('session.archive', () => {
         ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const agent = ctx.fns.agent.start(ctx, { model: 'test:model', systemPrompt: '' });
-        save(ctx, agent);
-        await appendUserMessage(ctx, agent.id, 'hello archive');
+        save(ctx, { agent });
+        await appendUserMessage(ctx, { id: agent.id, text: 'hello archive' });
         expect(list(ctx).some((a: any) => a.id === agent.id)).toBe(true);
-        expect(archive(ctx, agent.id).ok).toBe(true);
+        expect(archive(ctx, { id: agent.id }).ok).toBe(true);
         expect(list(ctx).some((a: any) => a.id === agent.id)).toBe(false);
-        expect(load(ctx, agent.id)).toBeNull();
+        expect(load(ctx, { id: agent.id })).toBeNull();
     });
 });

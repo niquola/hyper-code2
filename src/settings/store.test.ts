@@ -99,7 +99,7 @@ describe("settings integration", () => {
         const ctx = await mkTestCtx();
         installSettings(ctx);
         const agent = ctx.fns.agent.start(ctx, { model: "mock:test", systemPrompt: "" });
-        ctx.fns.session.save(ctx, agent);
+        ctx.fns.session.save(ctx, { agent });
         (ctx.state as any).agent = { [agent.id]: agent };
 
         ctx.fns.settings.set(ctx, {

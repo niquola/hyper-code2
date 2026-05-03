@@ -30,19 +30,19 @@ describe('session.replaceMessages / replaceEvents', () => {
     const ctx: any = mkCtx();
     ctx.fns.db.connect(ctx, { path: ':memory:' });
     await ctx.fns.db.migrate(ctx);
-    save(ctx, seedAgent());
-    replaceMessages(ctx, 'a1', [{ role: 'user', content: 'x' }, { role: 'assistant', content: 'y' }]);
-    replaceMessages(ctx, 'a1', [{ role: 'user', content: 'z' }]);
-    expect(getMessages(ctx, 'a1').map((m: any) => m.content)).toEqual(['z']);
+    save(ctx, { agent: seedAgent() as any });
+    replaceMessages(ctx, { id: 'a1', messages: [{ role: 'user', content: 'x' }, { role: 'assistant', content: 'y' }] });
+    replaceMessages(ctx, { id: 'a1', messages: [{ role: 'user', content: 'z' }] });
+    expect(getMessages(ctx, { id: 'a1' }).map((m: any) => m.content)).toEqual(['z']);
   });
 
   test('replaces full event list', async () => {
     const ctx: any = mkCtx();
     ctx.fns.db.connect(ctx, { path: ':memory:' });
     await ctx.fns.db.migrate(ctx);
-    save(ctx, seedAgent());
-    replaceEvents(ctx, 'a1', [{ type: 'user', text: 'x' }, { type: 'assistant', text: 'y' }]);
-    replaceEvents(ctx, 'a1', [{ type: 'assistant', text: 'z' }]);
-    expect(getEvents(ctx, 'a1').map((e: any) => e.text)).toEqual(['z']);
+    save(ctx, { agent: seedAgent() as any });
+    replaceEvents(ctx, { id: 'a1', events: [{ type: 'user', text: 'x' }, { type: 'assistant', text: 'y' }] });
+    replaceEvents(ctx, { id: 'a1', events: [{ type: 'assistant', text: 'z' }] });
+    expect(getEvents(ctx, { id: 'a1' }).map((e: any) => e.text)).toEqual(['z']);
   });
 });

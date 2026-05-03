@@ -61,9 +61,9 @@ describe('GET /agent/:id/events.html', () => {
         ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
-        save(ctx, a);
-        appendEvent(ctx, a.id, { type: 'user', text: 'hi', html: '<div data-ev="user">hi</div>' });
-        appendEvent(ctx, a.id, { type: 'user', text: 'two', html: '<div data-ev="user">two</div>' });
+        save(ctx, { agent: a });
+        appendEvent(ctx, { id: a.id, event: { type: 'user', text: 'hi', html: '<div data-ev="user">hi</div>' } });
+        appendEvent(ctx, { id: a.id, event: { type: 'user', text: 'two', html: '<div data-ev="user">two</div>' } });
 
         const res = await route(ctx, null, reqFor(a.id, 0));
         const body = await res.text();
@@ -78,10 +78,10 @@ describe('GET /agent/:id/events.html', () => {
         ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
-        save(ctx, a);
-        appendEvent(ctx, a.id, { type: 'user', text: 'a', html: '<div>a</div>' });
-        appendEvent(ctx, a.id, { type: 'user', text: 'b', html: '<div>b</div>' });
-        appendEvent(ctx, a.id, { type: 'user', text: 'c', html: '<div>c</div>' });
+        save(ctx, { agent: a });
+        appendEvent(ctx, { id: a.id, event: { type: 'user', text: 'a', html: '<div>a</div>' } });
+        appendEvent(ctx, { id: a.id, event: { type: 'user', text: 'b', html: '<div>b</div>' } });
+        appendEvent(ctx, { id: a.id, event: { type: 'user', text: 'c', html: '<div>c</div>' } });
 
         const res = await route(ctx, null, reqFor(a.id, 2));
         const body = await res.text();
@@ -100,7 +100,7 @@ describe('GET /agent/:id/events.html', () => {
         ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
-        save(ctx, a);
+        save(ctx, { agent: a });
 
         const t0 = Date.now();
         const res = await route(ctx, null, reqFor(a.id, 0));
@@ -118,7 +118,7 @@ describe('GET /agent/:id/events.html', () => {
         ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
-        save(ctx, a);
+        save(ctx, { agent: a });
         const ac = new AbortController();
         const r = new Request('http://x/agent/' + a.id + '/events.html?offset=0', { signal: ac.signal });
         (r as any).params = { id: a.id };

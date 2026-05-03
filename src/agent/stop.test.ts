@@ -13,7 +13,7 @@ describe('agent.stop', () => {
       fns: {
         db: { exec: (_c: any, opts: { sql: string; params?: any[] }) => { calls.push(['db.exec', opts.sql.replace(/\s+/g, ' ').trim(), opts.params]); return { changes: 1, lastInsertRowid: 0 }; } },
         session: {
-          appendErrorEvent: (_c: any, id: string, error: string) => calls.push(['appendErrorEvent', id, error]),
+          appendErrorEvent: (_c: any, opts: { id: string; error: string }) => calls.push(['appendErrorEvent', opts.id, opts.error]),
           syncAgentState: () => {},
         },
       },

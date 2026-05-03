@@ -25,10 +25,10 @@ describe("session.loadAll", () => {
     test("rehydrates every saved agent into ctx.state.agent", async () => {
         const ctx = await mkCtx();
         const a = start(ctx, { model: "m1" });
-        save(ctx, a);
-        appendUserMessage(ctx, a.id, 'hi');
+        save(ctx, { agent: a });
+        appendUserMessage(ctx, { id: a.id, text: 'hi' });
         const b = start(ctx, { model: "m2", systemPrompt: "sp" });
-        save(ctx, b);
+        save(ctx, { agent: b });
 
         // fresh ctx, same db — simulate restart
         const ctx2 = await mkCtx();

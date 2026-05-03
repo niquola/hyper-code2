@@ -33,15 +33,15 @@ describe('session append helpers', () => {
     const ctx: any = mkCtx();
     ctx.fns.db.connect(ctx, { path: ':memory:' });
     await ctx.fns.db.migrate(ctx);
-    save(ctx, seedAgent());
-    await appendUserMessage(ctx, 'a1', 'u');
-    appendAssistantMessage(ctx, 'a1', { content: 'a' });
-    
-    await appendThinkingEvent(ctx, 'a1', '...');
-    await appendToolCallEvent(ctx, 'a1', { name: 'evalCode', args: {}, result: '1', argsHtml: '', resultHtml: '', isError: false });
-    await appendAssistantEvent(ctx, 'a1', { text: 'done', html: '<p>done</p>' });
-    await appendErrorEvent(ctx, 'a1', 'boom');
-    expect(getMessages(ctx, 'a1').map((m: any) => m.role)).toEqual(['user', 'assistant']);
-    expect(getEvents(ctx, 'a1').map((e: any) => e.type)).toEqual(['user', 'thinking', 'tool_call', 'assistant', 'error']);
+    save(ctx, { agent: seedAgent() as any });
+    await appendUserMessage(ctx, { id: 'a1', text: 'u' });
+    appendAssistantMessage(ctx, { id: 'a1', msg: { content: 'a' } });
+
+    await appendThinkingEvent(ctx, { id: 'a1', text: '...' });
+    await appendToolCallEvent(ctx, { id: 'a1', payload: { name: 'evalCode', args: {}, result: '1', argsHtml: '', resultHtml: '', isError: false } });
+    await appendAssistantEvent(ctx, { id: 'a1', payload: { text: 'done', html: '<p>done</p>' } });
+    await appendErrorEvent(ctx, { id: 'a1', error: 'boom' });
+    expect(getMessages(ctx, { id: 'a1' }).map((m: any) => m.role)).toEqual(['user', 'assistant']);
+    expect(getEvents(ctx, { id: 'a1' }).map((e: any) => e.type)).toEqual(['user', 'thinking', 'tool_call', 'assistant', 'error']);
   });
 });

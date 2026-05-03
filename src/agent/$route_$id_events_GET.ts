@@ -2,7 +2,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     const id = req.params.id;
     let agent = (ctx.state as any).agent?.[id];
     if (!agent) {
-        agent = ctx.fns.session?.load?.(ctx, id) ?? null;
+        agent = ctx.fns.session?.load?.(ctx, { id }) ?? null;
         if (agent) {
             (ctx.state as any).agent ??= {};
             (ctx.state as any).agent[id] = agent;
@@ -12,8 +12,8 @@ export default async function (ctx: Context, _session: any, req: any) {
 
     const url = new URL(req.url);
     const offset = Number(url.searchParams.get('offset') ?? '0') || 0;
-    const events = ctx.fns.session.getEvents(ctx, id, { fromIdx: offset });
-    const maxIdx = ctx.fns.session.getMaxEventIdx(ctx, id);
+    const events = ctx.fns.session.getEvents(ctx, { id, fromIdx: offset });
+    const maxIdx = ctx.fns.session.getMaxEventIdx(ctx, { id });
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
     const usage = lastAssistant?.usage ?? null;
 

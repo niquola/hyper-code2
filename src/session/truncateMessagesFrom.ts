@@ -17,8 +17,9 @@ function isToolResult(m: any): boolean {
     return c.startsWith("§result:") || c.startsWith("§error:");
 }
 
-export default function (ctx: Context, id: string, from: number): { ok: boolean; from?: number; reason?: string } {
-    const messages = ctx.fns.session.getMessages(ctx, id);
+export default function (ctx: Context, opts: { id: string; from: number }): { ok: boolean; from?: number; reason?: string } {
+    const { id, from } = opts;
+    const messages = ctx.fns.session.getMessages(ctx, { id });
     if (!Number.isInteger(from) || from < 0 || from >= messages.length) return { ok: false, reason: "invalid idx" };
     let effectiveFrom = from;
     while (effectiveFrom > 0) {
@@ -27,6 +28,6 @@ export default function (ctx: Context, id: string, from: number): { ok: boolean;
         if (isToolResult(cur) || isAssistantInvocation(prev)) effectiveFrom -= 1;
         else break;
     }
-    ctx.fns.session.replaceMessages(ctx, id, messages.slice(0, effectiveFrom));
+    ctx.fns.session.replaceMessages(ctx, { id, messages: messages.slice(0, effectiveFrom) });
     return { ok: true, from: effectiveFrom };
 }

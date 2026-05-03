@@ -11,7 +11,7 @@ describe("agent.compact", () => {
             { role: "assistant", content: "§eval\nconsole.log(1);" },
             { role: "user", content: "§result:eval\n" + "A".repeat(2000) },
         );
-        ctx.fns.session = { replaceMessages: (_c: any, _id: string, next: any[]) => { agent.messages = next; }, syncAgentState: () => agent };
+        ctx.fns.session = { replaceMessages: (_c: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
         const res = compact(ctx, agent, "listed 42 files");
         expect(res.replaced).toBe(true);
         expect(res.resultIdx).toBe(2);
@@ -33,7 +33,7 @@ describe("agent.compact", () => {
             { role: "assistant", content: "intermediate" },
             { role: "user", content: "§result:eval\nbig payload" },
         );
-        ctx.fns.session = { replaceMessages: (_c: any, _id: string, next: any[]) => { agent.messages = next; }, syncAgentState: () => agent };
+        ctx.fns.session = { replaceMessages: (_c: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
         compact(ctx, agent, "summary");
         expect(agent.messages[0].content).toBe("§result:eval\nold");
         expect(agent.messages[2].content).toBe("[compacted] summary");
@@ -50,7 +50,7 @@ describe("agent.compact", () => {
                 { role: "assistant", content: "step 2 done" },
                 { role: "user", content: "go deeper" },
             );
-            ctx.fns.session = { replaceMessages: (_c: any, _id: string, next: any[]) => { agent.messages = next; }, syncAgentState: () => agent };
+            ctx.fns.session = { replaceMessages: (_c: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
             const res = compact(ctx, agent, { message: 2, summary: "explored A/B/C dead-ends" });
             expect(res.replaced).toBe(true);
             expect(res.from).toBe(2);
@@ -69,7 +69,7 @@ describe("agent.compact", () => {
                 { role: "assistant", content: "§eval\nconsole.log(2);" },
                 { role: "user", content: "§result:eval\nresult B" },
             );
-            ctx.fns.session = { replaceMessages: (_c: any, _id: string, next: any[]) => { agent.messages = next; }, syncAgentState: () => agent };
+            ctx.fns.session = { replaceMessages: (_c: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
             // Asking to compact at idx 4 (a result) walks back over the result
             // and its marker assistant — landing at idx 3.
             const res = compact(ctx, agent, { message: 4, summary: "tool B too long" });

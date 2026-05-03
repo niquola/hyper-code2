@@ -17,7 +17,7 @@ export default async function (
     const responseFormat = opts?.responseFormat ?? "text";
 
     const child = forkContext
-        ? ctx.fns.session.fork(ctx, parentAgent.id)
+        ? ctx.fns.session.fork(ctx, { id: parentAgent.id })
         : ctx.fns.agent.start(ctx, {
             model: parentAgent.model,
             systemPrompt: parentAgent.systemPrompt,
@@ -33,9 +33,9 @@ export default async function (
         responseFormat,
         status: "running",
     };
-    ctx.fns.session.save(ctx, child);
-    ctx.fns.session.updateScratchpad(ctx, child.id, child.scratchpad);
-    ctx.fns.session.syncAgentState?.(ctx, child);
+    ctx.fns.session.save(ctx, { agent: child });
+    ctx.fns.session.updateScratchpad(ctx, { id: child.id, scratchpad: child.scratchpad });
+    ctx.fns.session.syncAgentState?.(ctx, { agent: child });
 
     const prompt = ctx.fns.agent.buildDelegatedTaskPrompt(ctx, { task, instructions, responseFormat });
 

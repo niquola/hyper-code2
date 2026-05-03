@@ -16,8 +16,9 @@ function isToolResult(m: any): boolean {
     return c.startsWith("§result:") || c.startsWith("§error:");
 }
 
-export default function (ctx: Context, id: string, idx: number): { ok: boolean; reason?: string } {
-    const messages = ctx.fns.session.getMessages(ctx, id);
+export default function (ctx: Context, opts: { id: string; idx: number }): { ok: boolean; reason?: string } {
+    const { id, idx } = opts;
+    const messages = ctx.fns.session.getMessages(ctx, { id });
     if (!Number.isInteger(idx) || idx < 0 || idx >= messages.length) return { ok: false, reason: "invalid idx" };
     const target = messages[idx];
     if (!target) return { ok: false, reason: "not found" };
@@ -28,6 +29,6 @@ export default function (ctx: Context, id: string, idx: number): { ok: boolean; 
         return { ok: false, reason: "cannot delete tool-result message alone; use delete from here" };
     }
     const next = messages.slice(0, idx).concat(messages.slice(idx + 1));
-    ctx.fns.session.replaceMessages(ctx, id, next);
+    ctx.fns.session.replaceMessages(ctx, { id, messages: next });
     return { ok: true };
 }

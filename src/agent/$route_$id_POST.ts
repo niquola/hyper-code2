@@ -2,7 +2,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     const id = req.params.id;
     let agent = (ctx.state as any).agent?.[id];
     if (!agent) {
-        agent = ctx.fns.session?.load?.(ctx, id) ?? null;
+        agent = ctx.fns.session?.load?.(ctx, { id }) ?? null;
         if (agent) {
             (ctx.state as any).agent ??= {};
             (ctx.state as any).agent[id] = agent;
@@ -27,8 +27,8 @@ export default async function (ctx: Context, _session: any, req: any) {
         : (perAgent ?? declared ?? 5000);
     const sendAt = Date.now() + debounceMs;
 
-    const userAppend = await ctx.fns.session.appendUserMessage(ctx, agent.id, text);
-    ctx.fns.session.syncAgentState(ctx, agent);
+    const userAppend = await ctx.fns.session.appendUserMessage(ctx, { id: agent.id, text });
+    ctx.fns.session.syncAgentState(ctx, { agent });
 
     // Schedule (or push back) the next run on the agent row itself.
     // MAX(...) keeps the latest message bumping the debounce window forward.

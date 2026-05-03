@@ -1,4 +1,5 @@
-export default function (ctx: Context, id: string, opts: { fromIdx?: number; limit?: number } = {}): any[] {
+export default function (ctx: Context, opts: { id: string; fromIdx?: number; limit?: number }): any[] {
+    const { id } = opts;
     const fromIdx = Number(opts.fromIdx ?? 0);
     const limitClause = opts.limit && opts.limit > 0 ? ` LIMIT ${Number(opts.limit)}` : '';
     const sql = fromIdx > 0

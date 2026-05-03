@@ -19,12 +19,12 @@ function mkCtx(calls: any[]) {
         },
       },
       session: {
-        appendUserMessage: async (_c: any, id: string, text: string) => {
-          calls.push(['appendUserMessage', id, text]);
+        appendUserMessage: async (_c: any, opts: { id: string; text: string }) => {
+          calls.push(['appendUserMessage', opts.id, opts.text]);
           return { idx: 0 };
         },
         appendErrorEvent: async () => {},
-        syncAgentState: (_c: any, a: any) => a,
+        syncAgentState: (_c: any, opts: { agent: any }) => opts.agent,
         load: () => null,
       },
       agent: {

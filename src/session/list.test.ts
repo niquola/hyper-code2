@@ -24,12 +24,12 @@ describe("session.list", () => {
     test("returns lightweight summaries ordered by updated_at desc", async () => {
         const ctx = await mkCtx();
         const a = start(ctx, { model: "m1" });
-        save(ctx, a);
-        appendUserMessage(ctx, a.id, 'first msg');
+        save(ctx, { agent: a });
+        appendUserMessage(ctx, { id: a.id, text: 'first msg' });
 
         await new Promise(r => setTimeout(r, 5));
         const b = start(ctx, { model: "m2" });
-        save(ctx, b);
+        save(ctx, { agent: b });
 
         const rows = list(ctx);
         expect(rows).toHaveLength(2);

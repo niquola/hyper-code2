@@ -11,7 +11,7 @@ describe('POST /agent/:id/fork', () => {
   test('forks and redirects to child agent page', async () => {
     const ctx: any = {
       state: { agent: { a1: { id: 'a1' } } },
-      fns: { session: { load: () => null, fork: (_c: any, id: string) => ({ id: id + '-child' }) } },
+      fns: { session: { load: () => null, fork: (_c: any, opts: { id: string }) => ({ id: opts.id + '-child' }) } },
     };
     const res = await route(ctx, null, req('a1'));
     expect(res.status).toBe(303);

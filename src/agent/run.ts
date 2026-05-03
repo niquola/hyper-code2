@@ -16,8 +16,8 @@ export default async function (
     agent.abortController = ac;
 
     if (!opts.userMessageAlreadyAppended) {
-        await ctx.fns.session.appendUserMessage(ctx, agent.id, userText);
-        ctx.fns.session.syncAgentState(ctx, agent);
+        await ctx.fns.session.appendUserMessage(ctx, { id: agent.id, text: userText });
+        ctx.fns.session.syncAgentState(ctx, { agent });
     }
 
     while (true) {
@@ -32,13 +32,13 @@ export default async function (
             if (!text || !String(text).trim()) {
                 return { text: text ?? '', usage };
             }
-            const append = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: text });
-            ctx.fns.session.syncAgentState(ctx, agent);
+            const append = ctx.fns.session.appendAssistantMessage(ctx, { id: agent.id, msg: { content: text } });
+            ctx.fns.session.syncAgentState(ctx, { agent });
             const html = await ctx.fns.markdown.render(ctx, prose || text || '');
-            await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
+            await ctx.fns.session.appendAssistantEvent(ctx, { id: agent.id, payload: {
                 text: prose || text || '', html, usage, messageIdx: append.idx,
-            });
-            ctx.fns.session.syncAgentState(ctx, agent);
+            } });
+            ctx.fns.session.syncAgentState(ctx, { agent });
             return { text, usage };
         }
 
@@ -46,13 +46,13 @@ export default async function (
         // Splitting prose from markers gives the model clean per-call pairing
         // on later turns: [assistant: prose?] → (assistant<marker> → user<result>)+.
         if (prose.trim()) {
-            const proseAppend = ctx.fns.session.appendAssistantMessage(ctx, agent.id, { content: prose });
-            ctx.fns.session.syncAgentState(ctx, agent);
+            const proseAppend = ctx.fns.session.appendAssistantMessage(ctx, { id: agent.id, msg: { content: prose } });
+            ctx.fns.session.syncAgentState(ctx, { agent });
             const proseHtml = await ctx.fns.markdown.render(ctx, prose);
-            await ctx.fns.session.appendAssistantEvent(ctx, agent.id, {
+            await ctx.fns.session.appendAssistantEvent(ctx, { id: agent.id, payload: {
                 text: prose, html: proseHtml, usage, messageIdx: proseAppend.idx,
-            });
-            ctx.fns.session.syncAgentState(ctx, agent);
+            } });
+            ctx.fns.session.syncAgentState(ctx, { agent });
         }
 
         for (const call of calls) {
@@ -63,13 +63,13 @@ export default async function (
         // user message so the model can self-correct on the next turn.
         if (errors.length > 0) {
             for (const e of errors) {
-                await ctx.fns.session.appendErrorEvent(ctx, agent.id, e.hint);
+                await ctx.fns.session.appendErrorEvent(ctx, { id: agent.id, error: e.hint });
             }
             const errText = errors.map(e => ctx.fns.agent.formatMarkerError(e)).join('\n\n');
-            ctx.fns.session.appendMessage(ctx, agent.id, {
+            ctx.fns.session.appendMessage(ctx, { id: agent.id, message: {
                 role: 'user', content: errText, excluded_from_cursor: true,
-            });
-            ctx.fns.session.syncAgentState(ctx, agent);
+            } });
+            ctx.fns.session.syncAgentState(ctx, { agent });
         }
     }
 }

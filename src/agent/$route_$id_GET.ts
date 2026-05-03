@@ -2,7 +2,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     const id = req.params.id;
     let agent = (ctx.state as any).agent?.[id];
     if (!agent) {
-        agent = ctx.fns.session?.load?.(ctx, id) ?? null;
+        agent = ctx.fns.session?.load?.(ctx, { id }) ?? null;
         if (agent) {
             (ctx.state as any).agent ??= {};
             (ctx.state as any).agent[id] = agent;
@@ -10,10 +10,10 @@ export default async function (ctx: Context, _session: any, req: any) {
     }
     if (!agent) return new Response('Not Found', { status: 404 });
 
-    const events = ctx.fns.session.getEvents(ctx, id);
-    const maxIdx = ctx.fns.session.getMaxEventIdx(ctx, id);
+    const events = ctx.fns.session.getEvents(ctx, { id });
+    const maxIdx = ctx.fns.session.getMaxEventIdx(ctx, { id });
     const inheritedCount = agent.parentId
-        ? ctx.fns.session.getFullMessages(ctx, id).length - ctx.fns.session.getMessages(ctx, id).length
+        ? ctx.fns.session.getFullMessages(ctx, { id }).length - ctx.fns.session.getMessages(ctx, { id }).length
         : 0;
     const stateRow = ctx.fns.db.select<any>(ctx, {
         sql: 'SELECT run_state, next_run_at FROM agents WHERE id = ?',

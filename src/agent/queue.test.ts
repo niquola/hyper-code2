@@ -29,11 +29,11 @@ describe('agent queue (state on agents row)', () => {
         ctx.fns.agent.run = async (_c: any, agent: any) => { seen.push(agent.id); };
 
         const a = ctx.fns.agent.start(ctx, { model: 'm' });
-        ctx.fns.session.save(ctx, a);
+        ctx.fns.session.save(ctx, { agent: a });
 
         // Simulate POST: append messages and bump next_run_at.
-        await ctx.fns.session.appendUserMessage(ctx, a.id, 'one');
-        await ctx.fns.session.appendUserMessage(ctx, a.id, 'two');
+        await ctx.fns.session.appendUserMessage(ctx, { id: a.id, text: 'one' });
+        await ctx.fns.session.appendUserMessage(ctx, { id: a.id, text: 'two' });
         ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
 
         await drainUntilIdle(ctx);
@@ -51,10 +51,10 @@ describe('agent queue (state on agents row)', () => {
         ctx.fns.agent.run = async () => { seen.push(Date.now()); };
 
         const a = ctx.fns.agent.start(ctx, { model: 'm' });
-        ctx.fns.session.save(ctx, a);
+        ctx.fns.session.save(ctx, { agent: a });
 
         const t0 = Date.now();
-        await ctx.fns.session.appendUserMessage(ctx, a.id, 'soon');
+        await ctx.fns.session.appendUserMessage(ctx, { id: a.id, text: 'soon' });
         ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [t0 + 150, a.id] });
 
         await drainUntilIdle(ctx, 1500);
@@ -70,11 +70,11 @@ describe('agent queue (state on agents row)', () => {
 
         const a1 = ctx.fns.agent.start(ctx, { model: 'm' });
         const a2 = ctx.fns.agent.start(ctx, { model: 'm' });
-        ctx.fns.session.save(ctx, a1);
-        ctx.fns.session.save(ctx, a2);
+        ctx.fns.session.save(ctx, { agent: a1 });
+        ctx.fns.session.save(ctx, { agent: a2 });
 
-        await ctx.fns.session.appendUserMessage(ctx, a1.id, 'a1');
-        await ctx.fns.session.appendUserMessage(ctx, a2.id, 'a2');
+        await ctx.fns.session.appendUserMessage(ctx, { id: a1.id, text: 'a1' });
+        await ctx.fns.session.appendUserMessage(ctx, { id: a2.id, text: 'a2' });
         const now = Date.now();
         ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id IN (?, ?)', params: [now, a1.id, a2.id] });
 
@@ -88,10 +88,10 @@ describe('agent queue (state on agents row)', () => {
         ctx.fns.agent.run = async () => { throw new Error('boom'); };
 
         const a = ctx.fns.agent.start(ctx, { model: 'm' });
-        ctx.fns.session.save(ctx, a);
+        ctx.fns.session.save(ctx, { agent: a });
 
-        await ctx.fns.session.appendUserMessage(ctx, a.id, 'one');
-        await ctx.fns.session.appendUserMessage(ctx, a.id, 'two');
+        await ctx.fns.session.appendUserMessage(ctx, { id: a.id, text: 'one' });
+        await ctx.fns.session.appendUserMessage(ctx, { id: a.id, text: 'two' });
         ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
 
         await drainUntilIdle(ctx);
@@ -116,9 +116,9 @@ describe('agent queue (state on agents row)', () => {
         };
 
         const a = ctx.fns.agent.start(ctx, { model: 'm' });
-        ctx.fns.session.save(ctx, a);
+        ctx.fns.session.save(ctx, { agent: a });
 
-        await ctx.fns.session.appendUserMessage(ctx, a.id, 'one');
+        await ctx.fns.session.appendUserMessage(ctx, { id: a.id, text: 'one' });
         ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
 
         await drainUntilIdle(ctx);
@@ -139,14 +139,14 @@ describe('agent queue (state on agents row)', () => {
         const seenUserTexts: string[] = [];
         ctx.fns.agent.run = async (c: any, agent: any) => {
             // Realistic: read full transcript, then append our assistant reply.
-            const msgs = c.fns.session.getMessages(c, agent.id);
+            const msgs = c.fns.session.getMessages(c, { id: agent.id });
             for (const m of msgs) if (m.role === 'user') seenUserTexts.push(m.content);
-            c.fns.session.appendMessage(c, agent.id, { role: 'assistant', content: 'reply' });
+            c.fns.session.appendMessage(c, { id: agent.id, message: { role: 'assistant', content: 'reply' } });
         };
 
         const a = ctx.fns.agent.start(ctx, { model: 'm' });
-        ctx.fns.session.save(ctx, a);
-        await ctx.fns.session.appendUserMessage(ctx, a.id, 'hello');
+        ctx.fns.session.save(ctx, { agent: a });
+        await ctx.fns.session.appendUserMessage(ctx, { id: a.id, text: 'hello' });
         ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
 
         await drainUntilIdle(ctx, 2000);
@@ -164,15 +164,15 @@ describe('agent queue (state on agents row)', () => {
         ctx.fns.agent.run = async () => { /* success */ };
 
         const a = ctx.fns.agent.start(ctx, { model: 'm' });
-        ctx.fns.session.save(ctx, a);
+        ctx.fns.session.save(ctx, { agent: a });
 
         // Pre-existing: 2 messages already processed (e.g. a server restart).
-        await ctx.fns.session.appendUserMessage(ctx, a.id, 'old1');
-        await ctx.fns.session.appendUserMessage(ctx, a.id, 'old2');
+        await ctx.fns.session.appendUserMessage(ctx, { id: a.id, text: 'old1' });
+        await ctx.fns.session.appendUserMessage(ctx, { id: a.id, text: 'old2' });
         ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET last_processed_msg_idx = ? WHERE id = ?', params: [1, a.id] });
 
         // New message arrives.
-        await ctx.fns.session.appendUserMessage(ctx, a.id, 'new');
+        await ctx.fns.session.appendUserMessage(ctx, { id: a.id, text: 'new' });
         ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
 
         await drainUntilIdle(ctx);

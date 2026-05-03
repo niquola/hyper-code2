@@ -47,9 +47,9 @@ describe('GET /agent/:id', () => {
         const loaded = { id: 'db', model: 'db-model', messages: [], events: [], isStreaming: false };
         const ctx = mkCtx();
         let requestedId = '';
-        (ctx.fns as any).session.load = (_ctx: Context, id: string) => {
-            requestedId = id;
-            return id === 'db' ? loaded : null;
+        (ctx.fns as any).session.load = (_ctx: Context, opts: { id: string }) => {
+            requestedId = opts.id;
+            return opts.id === 'db' ? loaded : null;
         };
 
         const html = await render(ctx, 'db');

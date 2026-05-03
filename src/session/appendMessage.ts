@@ -1,9 +1,9 @@
 export default function (
     ctx: Context,
-    id: string,
-    message: any,
-    ts = Date.now(),
+    opts: { id: string; message: any; ts?: number },
 ): { idx: number } {
+    const { id, message } = opts;
+    const ts = opts.ts ?? Date.now();
     const row = ctx.fns.db.select<any>(ctx, { sql: 'SELECT COALESCE(MAX(idx), -1) AS n FROM messages WHERE agent_id = ?', params: [id] })[0];
     const idx = Number(row?.n ?? -1) + 1;
     ctx.fns.db.exec(ctx, {

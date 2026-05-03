@@ -19,7 +19,7 @@ export default function (ctx: Context, agent: types.agent.Agent, opts: { clearQu
 
     agent.abortController = null;
     agent.isStreaming = false;
-    ctx.fns.session?.appendErrorEvent?.(ctx, agent.id, clearQueue ? 'stopped by user; queue cleared' : 'stopped by user');
-    ctx.fns.session?.syncAgentState?.(ctx, agent);
+    ctx.fns.session?.appendErrorEvent?.(ctx, { id: agent.id, error: clearQueue ? 'stopped by user; queue cleared' : 'stopped by user' });
+    ctx.fns.session?.syncAgentState?.(ctx, { agent });
     return { ok: true, clearQueue };
 }

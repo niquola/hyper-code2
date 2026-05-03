@@ -1,4 +1,6 @@
-export default function (ctx: Context, id: string, event: any, ts = Date.now()): { idx: number } {
+export default function (ctx: Context, opts: { id: string; event: any; ts?: number }): { idx: number } {
+    const { id, event } = opts;
+    const ts = opts.ts ?? Date.now();
     const row = ctx.fns.db.select<any>(ctx, { sql: 'SELECT COALESCE(MAX(idx), -1) AS n FROM events WHERE agent_id = ?', params: [id] })[0];
     const idx = Number(row?.n ?? -1) + 1;
     ctx.fns.db.exec(ctx, { sql: 'INSERT INTO events (agent_id, idx, type, payload, ts) VALUES (?, ?, ?, ?, ?)', params: [id, idx, event.type, JSON.stringify(event), ts] });

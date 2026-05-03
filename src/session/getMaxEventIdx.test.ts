@@ -32,8 +32,8 @@ describe('session.getMaxEventIdx & getEvents(opts)', () => {
         ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
-        save(ctx, a);
-        expect(getMaxEventIdx(ctx, a.id)).toBe(-1);
+        save(ctx, { agent: a });
+        expect(getMaxEventIdx(ctx, { id: a.id })).toBe(-1);
     });
 
     test('idx grows monotonically', async () => {
@@ -41,14 +41,14 @@ describe('session.getMaxEventIdx & getEvents(opts)', () => {
         ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
-        save(ctx, a);
-        const r1 = appendEvent(ctx, a.id, { type: 'user', text: 'hi' });
-        const r2 = appendEvent(ctx, a.id, { type: 'thinking', text: '...' });
-        const r3 = appendEvent(ctx, a.id, { type: 'assistant', text: 'hi back' });
+        save(ctx, { agent: a });
+        const r1 = appendEvent(ctx, { id: a.id, event: { type: 'user', text: 'hi' } });
+        const r2 = appendEvent(ctx, { id: a.id, event: { type: 'thinking', text: '...' } });
+        const r3 = appendEvent(ctx, { id: a.id, event: { type: 'assistant', text: 'hi back' } });
         expect(r1.idx).toBe(0);
         expect(r2.idx).toBe(1);
         expect(r3.idx).toBe(2);
-        expect(getMaxEventIdx(ctx, a.id)).toBe(2);
+        expect(getMaxEventIdx(ctx, { id: a.id })).toBe(2);
     });
 
     test('getEvents fromIdx slices correctly', async () => {
@@ -56,14 +56,14 @@ describe('session.getMaxEventIdx & getEvents(opts)', () => {
         ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
-        save(ctx, a);
-        appendEvent(ctx, a.id, { type: 'user', text: 'one' });
-        appendEvent(ctx, a.id, { type: 'user', text: 'two' });
-        appendEvent(ctx, a.id, { type: 'user', text: 'three' });
+        save(ctx, { agent: a });
+        appendEvent(ctx, { id: a.id, event: { type: 'user', text: 'one' } });
+        appendEvent(ctx, { id: a.id, event: { type: 'user', text: 'two' } });
+        appendEvent(ctx, { id: a.id, event: { type: 'user', text: 'three' } });
 
-        expect(getEvents(ctx, a.id).map((e: any) => e.text)).toEqual(['one', 'two', 'three']);
-        expect(getEvents(ctx, a.id, { fromIdx: 1 }).map((e: any) => e.text)).toEqual(['two', 'three']);
-        expect(getEvents(ctx, a.id, { fromIdx: 3 })).toEqual([]);
-        expect(getEvents(ctx, a.id, { fromIdx: 0, limit: 2 }).map((e: any) => e.text)).toEqual(['one', 'two']);
+        expect(getEvents(ctx, { id: a.id }).map((e: any) => e.text)).toEqual(['one', 'two', 'three']);
+        expect(getEvents(ctx, { id: a.id, fromIdx: 1 }).map((e: any) => e.text)).toEqual(['two', 'three']);
+        expect(getEvents(ctx, { id: a.id, fromIdx: 3 })).toEqual([]);
+        expect(getEvents(ctx, { id: a.id, fromIdx: 0, limit: 2 }).map((e: any) => e.text)).toEqual(['one', 'two']);
     });
 });

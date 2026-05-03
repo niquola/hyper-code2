@@ -33,9 +33,9 @@ describe("session.updateScratchpad", () => {
     const agent = start(ctx as any, { model: "m", systemPrompt: "" });
     agent.messages = [{ role: "user", content: "hello" }];
     agent.events = [{ type: "user", text: "hello" }];
-    save(ctx as any, agent);
-    ctx.fns.session.updateScratchpad(ctx as any, agent.id, { x: 1 });
-    const loaded = load(ctx as any, agent.id)!;
+    save(ctx as any, { agent });
+    ctx.fns.session.updateScratchpad(ctx as any, { id: agent.id, scratchpad: { x: 1 } });
+    const loaded = load(ctx as any, { id: agent.id })!;
     expect(loaded.scratchpad).toEqual({ x: 1 });
     expect(loaded.messages).toHaveLength(1);
     expect(loaded.events).toHaveLength(1);

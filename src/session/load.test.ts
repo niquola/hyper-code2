@@ -20,27 +20,27 @@ const mkCtx = async () => {
 describe("session.load", () => {
     test("returns null when id unknown", async () => {
         const ctx = await mkCtx();
-        expect(load(ctx, "nope")).toBeNull();
+        expect(load(ctx, { id: "nope" })).toBeNull();
     });
 
     test("round-trip: save → load reconstructs agent shape", async () => {
         const ctx = await mkCtx();
         const original = start(ctx, { model: "m", systemPrompt: "sp" });
         original.scratchpad.note = 'remember';
-        save(ctx, original);
-        replaceMessages(ctx, original.id, [
+        save(ctx, { agent: original });
+        replaceMessages(ctx, { id: original.id, messages: [
             { role: 'user', content: 'a' },
             { role: 'assistant', content: '§eval\nconsole.log(1);' },
             { role: 'user', content: '§result:eval\n1' },
-        ]);
-        replaceEvents(ctx, original.id, [
+        ] });
+        replaceEvents(ctx, { id: original.id, events: [
             { type: 'user', text: 'a' },
             { type: 'tool_call', name: 'eval', args: { code: 'console.log(1);' }, result: '1' },
-        ]);
+        ] });
 
         const ctx2 = await mkCtx();
         (ctx2.state as any).db = (ctx.state as any).db;
-        const loaded = load(ctx2, original.id);
+        const loaded = load(ctx2, { id: original.id });
         expect(loaded).not.toBeNull();
         expect(loaded!.id).toBe(original.id);
         expect(loaded!.model).toBe("m");

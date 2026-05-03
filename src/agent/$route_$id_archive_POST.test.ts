@@ -15,7 +15,7 @@ describe('POST /agent/:id/archive', () => {
       fns: {
         session: {
           list: () => [{ id: 'a1' }, { id: 'a2' }],
-          archive: (_c: any, id: string) => { calls.push(['archive', id]); return { ok: true }; },
+          archive: (_c: any, opts: { id: string }) => { calls.push(['archive', opts.id]); return { ok: true }; },
         },
       },
     };

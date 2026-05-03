@@ -16,8 +16,8 @@ export default function (
     meta.status = "finished";
     meta.result = finished;
     agent.scratchpad.delegateTask = meta;
-    ctx.fns.session.updateScratchpad(ctx, agent.id, agent.scratchpad, finished.finishedAt);
-    ctx.fns.session.syncAgentState?.(ctx, agent);
+    ctx.fns.session.updateScratchpad(ctx, { id: agent.id, scratchpad: agent.scratchpad, ts: finished.finishedAt });
+    ctx.fns.session.syncAgentState?.(ctx, { agent });
     const waiters = (((ctx.state as any).delegateTaskWaiters) ??= new Map());
     const waiter = meta.mode === "await" ? waiters.get(agent.id) : null;
     if (waiter?.resolve) {

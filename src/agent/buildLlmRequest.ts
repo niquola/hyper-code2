@@ -21,7 +21,7 @@ export default async function (
 ): Promise<{ system: string; messages: any[] }> {
     const fullPrompt = await ctx.fns.agent.fullSystemPrompt(ctx, agent);
     const base = agent.parentId
-        ? ctx.fns.session.getFullMessages(ctx, agent.id)
+        ? ctx.fns.session.getFullMessages(ctx, { id: agent.id })
         : (agent.messages ?? []);
 
     const ep = ctx.fns.llm.resolveEndpoint(ctx, agent.model);

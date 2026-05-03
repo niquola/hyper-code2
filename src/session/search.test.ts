@@ -20,13 +20,13 @@ describe("session.search", () => {
         const ctx = await mkCtx();
         const a = start(ctx, { model: "m" });
         a.messages.push({ role: "user", content: "how to deploy the telescope" });
-        save(ctx, a);
+        save(ctx, { agent: a });
 
         const b = start(ctx, { model: "m" });
         b.messages.push({ role: "user", content: "what is the weather" });
-        save(ctx, b);
+        save(ctx, { agent: b });
 
-        const hits = search(ctx, "telescope");
+        const hits = search(ctx, { query: "telescope" });
         expect(hits).toHaveLength(1);
         expect(hits[0]!.agentId).toBe(a.id);
         expect(hits[0]!.content).toContain("telescope");
@@ -41,8 +41,8 @@ describe("session.search", () => {
             { role: "assistant", content: "The ANSWER is forty-two" },
             { role: "tool", tool_call_id: "c1", content: "42" },
         );
-        save(ctx, a);
-        const hits = search(ctx, "answer");
+        save(ctx, { agent: a });
+        const hits = search(ctx, { query: "answer" });
         expect(hits.map(h => h.role)).toContain("assistant");
     });
 
@@ -50,7 +50,7 @@ describe("session.search", () => {
         const ctx = await mkCtx();
         const a = start(ctx, { model: "m" });
         a.messages.push({ role: "user", content: "hello" });
-        save(ctx, a);
-        expect(search(ctx, "xyzzy")).toEqual([]);
+        save(ctx, { agent: a });
+        expect(search(ctx, { query: "xyzzy" })).toEqual([]);
     });
 });

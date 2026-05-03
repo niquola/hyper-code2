@@ -8,7 +8,7 @@ export default async function (
     finishReason: string | null;
     usage: any;
 }> {
-    const messages = agent.parentId ? ctx.fns.session.getFullMessages(ctx, agent.id) : (agent.messages ?? []);
+    const messages = agent.parentId ? ctx.fns.session.getFullMessages(ctx, { id: agent.id }) : (agent.messages ?? []);
     const last = messages[messages.length - 1] ?? null;
     const cfg = agent.scratchpad.mockLLM ?? {};
     const usage = { prompt_tokens: messages.length, total_tokens: messages.length + 1 };

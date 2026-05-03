@@ -14,8 +14,8 @@ export default async function (ctx: Context, _session: any, req: any) {
     const agentRow = ctx.fns.db.select<any>(ctx, { sql: 'SELECT id FROM agents WHERE id = ?', params: [id] })[0];
     if (!agentRow) return new Response('not found', { status: 404 });
 
-    const maxIdx = ctx.fns.session.getMaxEventIdx(ctx, id);
-    const events = ctx.fns.session.getEvents(ctx, id, { fromIdx: offset });
+    const maxIdx = ctx.fns.session.getMaxEventIdx(ctx, { id });
+    const events = ctx.fns.session.getEvents(ctx, { id, fromIdx: offset });
     const eventsHtml = (await Promise.all(events.map(async (ev: any) => {
         const cached = ev.eventHtml ?? (ev.type !== 'assistant' ? ev.html : undefined);
         return cached ?? await ctx.fns.agent.renderEventHtml(ctx, ev, { agentId: id });

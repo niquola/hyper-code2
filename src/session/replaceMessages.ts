@@ -1,4 +1,6 @@
-export default function (ctx: Context, id: string, messages: any[], ts = Date.now()): { count: number } {
+export default function (ctx: Context, opts: { id: string; messages: any[]; ts?: number }): { count: number } {
+    const { id, messages } = opts;
+    const ts = opts.ts ?? Date.now();
     ctx.fns.db.exec(ctx, { sql: 'DELETE FROM messages WHERE agent_id = ?', params: [id] });
     messages.forEach((m: any, i: number) => {
         ctx.fns.db.exec(ctx, {

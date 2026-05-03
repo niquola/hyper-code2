@@ -29,7 +29,7 @@ async function setup() {
 
 function mkAgent(ctx: any) {
     const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-    ctx.fns.session.save(ctx, a);
+    ctx.fns.session.save(ctx, { agent: a });
     return a;
 }
 
@@ -40,12 +40,12 @@ describe('agent.executeMarker', () => {
 
         await executeMarker(ctx, a, { kind: 'eval', content: '1 + 1' }, { usage: {} });
 
-        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         expect(msgs.map((m: any) => m.role)).toEqual(['assistant', 'user']);
         expect(msgs[0]!.content).toBe('§eval\n1 + 1');
         expect(msgs[1]!.content).toBe('§result:eval\neval-result-of:1 + 1');
 
-        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const events = ctx.fns.session.getEvents(ctx, { id: a.id });
         expect(events.map((e: any) => e.type)).toEqual(['tool_call']);
         expect(events[0]!.name).toBe('eval');
         expect(events[0]!.isError).toBe(false);
@@ -57,11 +57,11 @@ describe('agent.executeMarker', () => {
 
         await executeMarker(ctx, a, { kind: 'eval', content: 'throw boom' }, { usage: {} });
 
-        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         expect(msgs[1]!.content).toContain('§result:eval:error');
         expect(msgs[1]!.content).toContain('boom');
 
-        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const events = ctx.fns.session.getEvents(ctx, { id: a.id });
         expect(events[0]!.isError).toBe(true);
     });
 
@@ -74,7 +74,7 @@ describe('agent.executeMarker', () => {
 
         expect(ctx.state.__written['src/x.ts']).toBe(body);
 
-        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         expect(msgs[0]!.content).toBe(`§write:src/x.ts\n${body}`);
         expect(msgs[1]!.content).toContain('§result:write:src/x.ts');
         expect(msgs[1]!.content).toContain(`wrote src/x.ts (${body.length} bytes`);
@@ -86,11 +86,11 @@ describe('agent.executeMarker', () => {
 
         await executeMarker(ctx, a, { kind: 'bash', content: 'echo hello' }, { usage: {} });
 
-        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         expect(msgs[0]!.content).toBe('§bash\necho hello');
         expect(msgs[1]!.content).toBe('§result:bash\nhello');
 
-        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const events = ctx.fns.session.getEvents(ctx, { id: a.id });
         expect(events[0]!.isError).toBe(false);
     });
 
@@ -100,10 +100,10 @@ describe('agent.executeMarker', () => {
 
         await executeMarker(ctx, a, { kind: 'bash', content: 'exit 3' }, { usage: {} });
 
-        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         expect(msgs[1]!.content).toContain('§result:bash:error');
         expect(msgs[1]!.content).toContain('[exit 3]');
-        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const events = ctx.fns.session.getEvents(ctx, { id: a.id });
         expect(events[0]!.isError).toBe(true);
     });
 
@@ -113,12 +113,12 @@ describe('agent.executeMarker', () => {
 
         await executeMarker(ctx, a, { kind: 'html', content: '<p class="x">hi</p>' }, { usage: {} });
 
-        const msgs = ctx.fns.session.getMessages(ctx, a.id);
+        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
         // Only the assistant marker message — no synthetic §result.
         expect(msgs.map((m: any) => m.role)).toEqual(['assistant']);
         expect(msgs[0]!.content).toBe('§html\n<p class="x">hi</p>');
 
-        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const events = ctx.fns.session.getEvents(ctx, { id: a.id });
         expect(events[0]!.type).toBe('assistant');
         expect(events[0]!.html).toBe('<p class="x">hi</p>');
     });
@@ -130,7 +130,7 @@ describe('agent.executeMarker', () => {
         const body = '<!DOCTYPE html><html><body><style>x{}</style><script>alert(1)</script><p class="x">ok</p></body></html>';
         await executeMarker(ctx, a, { kind: 'html', content: body }, { usage: {} });
 
-        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const events = ctx.fns.session.getEvents(ctx, { id: a.id });
         expect(events[0]!.html).toBe('<p class="x">ok</p>');
     });
 
@@ -143,7 +143,7 @@ describe('agent.executeMarker', () => {
         const body = '<p>hello {agent.id} — {1 + 1}</p>';
         await executeMarker(ctx, a, { kind: 'html', content: body }, { usage: {} });
 
-        const events = ctx.fns.session.getEvents(ctx, a.id);
+        const events = ctx.fns.session.getEvents(ctx, { id: a.id });
         expect(events[0]!.html).toBe('<p>hello {agent.id} — {1 + 1}</p>');
     });
 

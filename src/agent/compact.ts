@@ -26,7 +26,7 @@ export default function (
     agent: types.agent.Agent,
     arg: string | { message: number; summary: string },
 ): { replaced: boolean; from?: number; before?: number; after?: number; resultIdx?: number } {
-    ctx.fns?.session?.syncAgentState?.(ctx, agent);
+    ctx.fns?.session?.syncAgentState?.(ctx, { agent });
 
     if (typeof arg === "object" && arg !== null) {
         const { message: from, summary } = arg;
@@ -45,8 +45,8 @@ export default function (
         const note = `[compacted from #${effectiveFrom}, ${dropped.length} msg(s)] ${summary}`;
         const next = agent.messages.slice(0, effectiveFrom);
         next.push({ role: "user", content: note });
-        ctx.fns?.session?.replaceMessages?.(ctx, agent.id, next);
-        ctx.fns?.session?.syncAgentState?.(ctx, agent);
+        ctx.fns?.session?.replaceMessages?.(ctx, { id: agent.id, messages: next });
+        ctx.fns?.session?.syncAgentState?.(ctx, { agent });
         return { replaced: true, from: effectiveFrom, before, after: note.length };
     }
 
@@ -59,8 +59,8 @@ export default function (
         const newContent = `[compacted] ${summary}`;
         const next = agent.messages.slice();
         next[i] = { ...m, content: newContent };
-        ctx.fns?.session?.replaceMessages?.(ctx, agent.id, next);
-        ctx.fns?.session?.syncAgentState?.(ctx, agent);
+        ctx.fns?.session?.replaceMessages?.(ctx, { id: agent.id, messages: next });
+        ctx.fns?.session?.syncAgentState?.(ctx, { agent });
         return { replaced: true, resultIdx: i, before, after: newContent.length };
     }
     return { replaced: false };

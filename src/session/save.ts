@@ -1,4 +1,5 @@
-export default function (ctx: Context, agent: types.agent.Agent): void {
+export default function (ctx: Context, opts: { agent: types.agent.Agent }): void {
+    const { agent } = opts;
     const now = Date.now();
     ctx.fns.db.exec(ctx, {
         sql: `

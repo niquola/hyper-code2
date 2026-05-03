@@ -22,7 +22,7 @@ function isAbortError(error: any) {
 function loadAgent(ctx: Context, id: string): any {
     let a = (ctx.state as any).agent?.[id];
     if (a) return a;
-    a = ctx.fns.session?.load?.(ctx, id) ?? null;
+    a = ctx.fns.session?.load?.(ctx, { id }) ?? null;
     if (a) {
         (ctx.state as any).agent ??= {};
         (ctx.state as any).agent[id] = a;
@@ -104,7 +104,7 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
             aborted = true;
         } else {
             errorText = e?.message ?? String(e);
-            try { await ctx.fns.session.appendErrorEvent(ctx, agentId, errorText ?? 'unknown error', Date.now()); } catch {}
+            try { await ctx.fns.session.appendErrorEvent(ctx, { id: agentId, error: errorText ?? 'unknown error', ts: Date.now() }); } catch {}
         }
     } finally {
         const ts = Date.now();
@@ -141,7 +141,7 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
 
         agent.abortController = null;
         agent.isStreaming = false;
-        try { ctx.fns.session.syncAgentState(ctx, agent); } catch {}
+        try { ctx.fns.session.syncAgentState(ctx, { agent }); } catch {}
 
         // If we just rescheduled (stillPending) or unblocked some other agent's
         // queue, kick the worker so the loop notices without waiting for a poll.

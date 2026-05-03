@@ -21,11 +21,11 @@ describe("session.delete", () => {
     test("removes agent row + messages + events", async () => {
         const ctx = await mkCtx();
         const agent = start(ctx, { model: "m" });
-        save(ctx, agent);
-        appendUserMessage(ctx, agent.id, 'hi');
-        appendEvent(ctx, agent.id, { type: 'user', text: 'hi' });
+        save(ctx, { agent });
+        appendUserMessage(ctx, { id: agent.id, text: 'hi' });
+        appendEvent(ctx, { id: agent.id, event: { type: 'user', text: 'hi' } });
 
-        const r = del(ctx, agent.id);
+        const r = del(ctx, { id: agent.id });
         expect(r.ok).toBe(true);
 
         const db = (ctx.state as any).db;
@@ -36,7 +36,7 @@ describe("session.delete", () => {
 
     test("deleting unknown id is a no-op that returns ok:false", async () => {
         const ctx = await mkCtx();
-        const r = del(ctx, "nope");
+        const r = del(ctx, { id: "nope" });
         expect(r.ok).toBe(false);
     });
 });
