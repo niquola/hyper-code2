@@ -11,7 +11,7 @@ describe('agent.stop', () => {
     };
     const ctx: any = {
       fns: {
-        db: { exec: (_c: any, sql: string, params: any[]) => { calls.push(['db.exec', sql.replace(/\s+/g, ' ').trim(), params]); return { changes: 1, lastInsertRowid: 0 }; } },
+        db: { exec: (_c: any, opts: { sql: string; params?: any[] }) => { calls.push(['db.exec', opts.sql.replace(/\s+/g, ' ').trim(), opts.params]); return { changes: 1, lastInsertRowid: 0 }; } },
         session: {
           appendErrorEvent: (_c: any, id: string, error: string) => calls.push(['appendErrorEvent', id, error]),
           syncAgentState: () => {},
@@ -35,7 +35,7 @@ describe('agent.stop', () => {
     };
     const ctx: any = {
       fns: {
-        db: { exec: (_c: any, sql: string, _p: any[]) => { calls.push(sql.replace(/\s+/g, ' ').trim()); return { changes: 1, lastInsertRowid: 0 }; } },
+        db: { exec: (_c: any, opts: { sql: string; params?: any[] }) => { calls.push(opts.sql.replace(/\s+/g, ' ').trim()); return { changes: 1, lastInsertRowid: 0 }; } },
         session: { appendErrorEvent: () => {}, syncAgentState: () => {} },
       },
     };

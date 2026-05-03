@@ -15,10 +15,10 @@ export default async function (ctx: Context, _session: any, req: any) {
     const inheritedCount = agent.parentId
         ? ctx.fns.session.getFullMessages(ctx, id).length - ctx.fns.session.getMessages(ctx, id).length
         : 0;
-    const stateRow = ctx.fns.db.select<any>(ctx,
-        'SELECT run_state, next_run_at FROM agents WHERE id = ?',
-        [id],
-    )[0];
+    const stateRow = ctx.fns.db.select<any>(ctx, {
+        sql: 'SELECT run_state, next_run_at FROM agents WHERE id = ?',
+        params: [id],
+    })[0];
     const isStreaming = stateRow?.run_state === 'running' || !!stateRow?.next_run_at;
     const init = {
         agentId: id,

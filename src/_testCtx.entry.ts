@@ -163,7 +163,7 @@ export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } =
         },
     };
     if (opts.db !== false) {
-        ctx.fns.db.connect(ctx, opts.db ?? ':memory:');
+        ctx.fns.db.connect(ctx, { path: opts.db ?? ':memory:' });
         await ctx.fns.db.migrate(ctx);
     }
     return ctx;

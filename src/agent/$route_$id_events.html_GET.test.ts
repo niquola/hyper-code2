@@ -15,13 +15,15 @@ function mkCtx() {
     const ctx: any = { state: {}, env: {}, fns: { db: {}, session: {}, agent: {}, markdown: {} } };
     ctx.fns.db.connect = connect;
     ctx.fns.db.migrate = migrate;
-    ctx.fns.db.exec = (c: any, sql: string, params: any) => {
-        const q = c.state.db.query(sql);
+    ctx.fns.db.exec = (c: any, opts: { sql: string; params?: any }) => {
+        const params = opts.params ?? [];
+        const q = c.state.db.query(opts.sql);
         const res = Array.isArray(params) ? q.run(...params) : q.run(params);
         return { changes: Number(res.changes ?? c.state.db.changes ?? 0), lastInsertRowid: Number(res.lastInsertRowid ?? 0) };
     };
-    ctx.fns.db.select = (c: any, sql: string, params: any = []) => {
-        const q = c.state.db.query(sql);
+    ctx.fns.db.select = (c: any, opts: { sql: string; params?: any }) => {
+        const params = opts.params ?? [];
+        const q = c.state.db.query(opts.sql);
         return Array.isArray(params) ? q.all(...params) : q.all(params);
     };
     ctx.fns.session.appendEvent = appendEvent;
@@ -48,7 +50,7 @@ function reqFor(id: string, offset: number) {
 describe('GET /agent/:id/events.html', () => {
     test('404 for unknown agent', async () => {
         const ctx = mkCtx();
-        ctx.fns.db.connect(ctx, ':memory:');
+        ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const res = await route(ctx, null, reqFor('nope', 0));
         expect(res.status).toBe(404);
@@ -56,7 +58,7 @@ describe('GET /agent/:id/events.html', () => {
 
     test('returns events at offset and a tail with next offset', async () => {
         const ctx = mkCtx();
-        ctx.fns.db.connect(ctx, ':memory:');
+        ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
@@ -73,7 +75,7 @@ describe('GET /agent/:id/events.html', () => {
 
     test('returns only delta when offset is in the middle', async () => {
         const ctx = mkCtx();
-        ctx.fns.db.connect(ctx, ':memory:');
+        ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
@@ -95,7 +97,7 @@ describe('GET /agent/:id/events.html', () => {
         // hyper-tick (dispatched by events/client.js on
         // agent.event_appended SSE) or the 10s safety poll.
         const ctx = mkCtx();
-        ctx.fns.db.connect(ctx, ':memory:');
+        ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
@@ -113,7 +115,7 @@ describe('GET /agent/:id/events.html', () => {
 
     test('long-poll responds with empty delta on abort', async () => {
         const ctx = mkCtx();
-        ctx.fns.db.connect(ctx, ':memory:');
+        ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);

@@ -9,14 +9,16 @@ function mkCtx() {
   const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {} } };
   ctx.fns.db.connect = connect;
   ctx.fns.db.migrate = migrate;
-  ctx.fns.db.exec = (c: any, sql: string, params: any) => {
+  ctx.fns.db.exec = (c: any, opts: { sql: string; params?: any }) => {
+    const params = opts.params ?? [];
     const db = c.state.db;
-    const q = db.query(sql);
+    const q = db.query(opts.sql);
     const res = Array.isArray(params) ? q.run(...params) : q.run(params);
     return { changes: db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) };
   };
-  ctx.fns.db.select = (c: any, sql: string, params: any = []) => {
-    const q = c.state.db.query(sql);
+  ctx.fns.db.select = (c: any, opts: { sql: string; params?: any }) => {
+    const params = opts.params ?? [];
+    const q = c.state.db.query(opts.sql);
     return Array.isArray(params) ? q.all(...params) : q.all(params);
   };
   ctx.fns.session.save = save;
@@ -36,7 +38,7 @@ function agent(id: string, messages: any[], extra: any = {}) {
 describe("session.getFullMessages", () => {
   test("chains parent messages for child", async () => {
     const ctx: any = mkCtx();
-        ctx.fns.db.connect(ctx, ":memory:");
+        ctx.fns.db.connect(ctx, { path: ":memory:" });
     await ctx.fns.db.migrate(ctx);
     ctx.fns.session.save(ctx, agent("parent", [{ role: "user", content: "Hello" }, { role: "assistant", content: "Hi" }, { role: "user", content: "What is 2+2?" }]));
     ctx.fns.session.save(ctx, agent("child", [{ role: "user", content: "Child question" }, { role: "assistant", content: "Child answer" }], { parentId: "parent", forkOffset: 3 }));
@@ -50,7 +52,7 @@ describe("session.getFullMessages", () => {
 
   test("respects offset for mid-conversation fork", async () => {
     const ctx: any = mkCtx();
-        ctx.fns.db.connect(ctx, ":memory:");
+        ctx.fns.db.connect(ctx, { path: ":memory:" });
     await ctx.fns.db.migrate(ctx);
     ctx.fns.session.save(ctx, agent("parent", [
       { role: "user", content: "msg1" },
@@ -68,7 +70,7 @@ describe("session.getFullMessages", () => {
 
   test("chains grandparent -> parent -> child", async () => {
     const ctx: any = mkCtx();
-        ctx.fns.db.connect(ctx, ":memory:");
+        ctx.fns.db.connect(ctx, { path: ":memory:" });
     await ctx.fns.db.migrate(ctx);
     ctx.fns.session.save(ctx, agent("gp", [{ role: "user", content: "gp msg" }]));
     ctx.fns.session.save(ctx, agent("parent", [{ role: "user", content: "parent msg" }], { parentId: "gp", forkOffset: 1 }));
@@ -82,7 +84,7 @@ describe("session.getFullMessages", () => {
 
   test("getMessages returns only own messages", async () => {
     const ctx: any = mkCtx();
-        ctx.fns.db.connect(ctx, ":memory:");
+        ctx.fns.db.connect(ctx, { path: ":memory:" });
     await ctx.fns.db.migrate(ctx);
     ctx.fns.session.save(ctx, agent("parent", [{ role: "user", content: "parent msg" }]));
     ctx.fns.session.save(ctx, agent("child", [{ role: "user", content: "child msg" }], { parentId: "parent", forkOffset: 1 }));

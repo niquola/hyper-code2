@@ -11,8 +11,8 @@ function mkCtx() {
   const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {} } };
   ctx.fns.db.connect = connect;
   ctx.fns.db.migrate = migrate;
-  ctx.fns.db.exec = (c: any, sql: string, params: any) => { const q = c.state.db.query(sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
-  ctx.fns.db.select = (c: any, sql: string, params: any = []) => { const q = c.state.db.query(sql); return Array.isArray(params) ? q.all(...params) : q.all(params); };
+  ctx.fns.db.exec = (c: any, opts: { sql: string; params?: any }) => { const params = opts.params ?? []; const q = c.state.db.query(opts.sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
+  ctx.fns.db.select = (c: any, opts: { sql: string; params?: any }) => { const params = opts.params ?? []; const q = c.state.db.query(opts.sql); return Array.isArray(params) ? q.all(...params) : q.all(params); };
   ctx.fns.session.save = save;
   ctx.fns.session.appendMessage = appendMessage;
   ctx.fns.session.appendEvent = appendEvent;
@@ -28,7 +28,7 @@ function seedAgent() {
 describe("session.appendMessage / appendEvent", () => {
   test("appends messages with incrementing idx", async () => {
     const ctx: any = mkCtx();
-    ctx.fns.db.connect(ctx, ':memory:');
+    ctx.fns.db.connect(ctx, { path: ':memory:' });
     await ctx.fns.db.migrate(ctx);
     save(ctx, seedAgent());
     expect(appendMessage(ctx, 'a1', { role: 'user', content: 'hi' }).idx).toBe(0);
@@ -38,12 +38,12 @@ describe("session.appendMessage / appendEvent", () => {
 
   test("excluded_from_cursor flag round-trips and defaults to 0", async () => {
     const ctx: any = mkCtx();
-    ctx.fns.db.connect(ctx, ':memory:');
+    ctx.fns.db.connect(ctx, { path: ':memory:' });
     await ctx.fns.db.migrate(ctx);
     save(ctx, seedAgent());
     appendMessage(ctx, 'a1', { role: 'user', content: 'real input' });
     appendMessage(ctx, 'a1', { role: 'user', content: '§result:eval\n4', excluded_from_cursor: true });
-    const rows = ctx.fns.db.select(ctx, 'SELECT idx, content, excluded_from_cursor FROM messages WHERE agent_id = ? ORDER BY idx', ['a1']);
+    const rows = ctx.fns.db.select(ctx, { sql: 'SELECT idx, content, excluded_from_cursor FROM messages WHERE agent_id = ? ORDER BY idx', params: ['a1'] });
     expect(rows).toEqual([
       { idx: 0, content: 'real input',          excluded_from_cursor: 0 },
       { idx: 1, content: '§result:eval\n4',   excluded_from_cursor: 1 },
@@ -52,7 +52,7 @@ describe("session.appendMessage / appendEvent", () => {
 
   test("frontier query (workerLoop) skips excluded_from_cursor messages", async () => {
     const ctx: any = mkCtx();
-    ctx.fns.db.connect(ctx, ':memory:');
+    ctx.fns.db.connect(ctx, { path: ':memory:' });
     await ctx.fns.db.migrate(ctx);
     save(ctx, seedAgent());
     appendMessage(ctx, 'a1', { role: 'user',      content: 'real' });                                      // idx 0 — real
@@ -60,15 +60,16 @@ describe("session.appendMessage / appendEvent", () => {
     appendMessage(ctx, 'a1', { role: 'user',      content: '§result:eval\n1', excluded_from_cursor: true }); // idx 2 — synthetic
     appendMessage(ctx, 'a1', { role: 'assistant', content: 'done' });                                      // idx 3
     // Frontier should be 0 (real input), NOT 2 (synthetic §result).
-    const r = ctx.fns.db.select(ctx,
-      "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
-      ['a1']);
+    const r = ctx.fns.db.select(ctx, {
+      sql: "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
+      params: ['a1'],
+    });
     expect(r[0].max_idx).toBe(0);
   });
 
   test("appends events with incrementing idx", async () => {
     const ctx: any = mkCtx();
-    ctx.fns.db.connect(ctx, ':memory:');
+    ctx.fns.db.connect(ctx, { path: ':memory:' });
     await ctx.fns.db.migrate(ctx);
     save(ctx, seedAgent());
     expect(appendEvent(ctx, 'a1', { type: 'user', text: 'hi' }).idx).toBe(0);

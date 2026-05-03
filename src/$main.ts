@@ -9,7 +9,7 @@ export default async function () {
     const { default: loadFns } = await import("./loadFns");
     await loadFns(ctx);
     await ctx.genTypes(ctx);
-    ctx.fns.db.connect(ctx, ctx.env.DB_PATH ?? ".hyper/_runtime/sessions");
+    ctx.fns.db.connect(ctx, { path: ctx.env.DB_PATH ?? ".hyper/_runtime/sessions" });
     await ctx.fns.db.migrate(ctx);
     const rehydrated = ctx.fns.session.loadAll(ctx);
     console.log(`[session] rehydrated ${rehydrated.loaded} agent(s)`);

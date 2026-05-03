@@ -3,7 +3,7 @@ export default function (
     id: string,
     opts: { includeExcluded?: boolean } = {},
 ): any[] {
-    const rows = ctx.fns.db.select<any>(ctx, 'SELECT id, parent_id, fork_offset FROM agents WHERE id = ?', [id]);
+    const rows = ctx.fns.db.select<any>(ctx, { sql: 'SELECT id, parent_id, fork_offset FROM agents WHERE id = ?', params: [id] });
     const row = rows[0];
     if (!row) return [];
 

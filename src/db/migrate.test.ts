@@ -7,7 +7,7 @@ const mkCtx = () => ({ state: {}, env: {} } as unknown as Context);
 describe("db.migrate", () => {
     test("applies baseline migration and records it in _migrations", async () => {
         const ctx = mkCtx();
-        connect(ctx, ":memory:");
+        connect(ctx, { path: ":memory:" });
         const res = await migrate(ctx);
         expect(res.applied).toContain("20260418000000_init");
         const db = (ctx.state as any).db;
@@ -17,7 +17,7 @@ describe("db.migrate", () => {
 
     test("second call is a no-op (same migration not applied twice)", async () => {
         const ctx = mkCtx();
-        connect(ctx, ":memory:");
+        connect(ctx, { path: ":memory:" });
         await migrate(ctx);
         const second = await migrate(ctx);
         expect(second.applied).toEqual([]);
@@ -30,7 +30,7 @@ describe("db.migrate", () => {
             `CREATE TABLE IF NOT EXISTS _probe (k TEXT PRIMARY KEY);`);
         try {
             const ctx = mkCtx();
-            connect(ctx, ":memory:");
+            connect(ctx, { path: ":memory:" });
             const res = await migrate(ctx);
             expect(res.applied.indexOf("20260418000000_init")).toBeLessThan(res.applied.indexOf("20260418000001_probe"));
             const db = (ctx.state as any).db;

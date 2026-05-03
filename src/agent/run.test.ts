@@ -188,9 +188,10 @@ describe('agent.run', () => {
 
         await run(ctx, a, 'go');
 
-        const rows = ctx.fns.db.select(ctx,
-            'SELECT idx, role, excluded_from_cursor, substr(content, 1, 30) as preview FROM messages WHERE agent_id = ? ORDER BY idx',
-            [a.id]);
+        const rows = ctx.fns.db.select(ctx, {
+            sql: 'SELECT idx, role, excluded_from_cursor, substr(content, 1, 30) as preview FROM messages WHERE agent_id = ? ORDER BY idx',
+            params: [a.id],
+        });
         // user(real) → assistant(§eval) → user(synthetic §result) → assistant(done)
         expect(rows).toEqual([
             { idx: 0, role: 'user',      excluded_from_cursor: 0, preview: 'go' },
@@ -215,9 +216,10 @@ describe('agent.run', () => {
 
         await run(ctx, a, 'compute');
 
-        const rows = ctx.fns.db.select(ctx,
-            'SELECT idx, role, content, excluded_from_cursor FROM messages WHERE agent_id = ? AND role = ? ORDER BY idx',
-            [a.id, 'user']);
+        const rows = ctx.fns.db.select(ctx, {
+            sql: 'SELECT idx, role, content, excluded_from_cursor FROM messages WHERE agent_id = ? AND role = ? ORDER BY idx',
+            params: [a.id, 'user'],
+        });
         // Real input: idx 0, excluded=0. Synthetic warning is excluded.
         expect(rows[0].excluded_from_cursor).toBe(0);
         const warn = rows.find((r: any) => String(r.content ?? '').includes('§error:marker-unescaped'));

@@ -12,13 +12,15 @@ function mkCtx() {
     const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {}, agent: { nextId } } };
     ctx.fns.db.connect = connect;
     ctx.fns.db.migrate = migrate;
-    ctx.fns.db.exec = (c: any, sql: string, params: any) => {
-        const q = c.state.db.query(sql);
+    ctx.fns.db.exec = (c: any, opts: { sql: string; params?: any }) => {
+        const params = opts.params ?? [];
+        const q = c.state.db.query(opts.sql);
         const res = Array.isArray(params) ? q.run(...params) : q.run(params);
         return { changes: Number(res.changes ?? c.state.db.changes ?? 0), lastInsertRowid: Number(res.lastInsertRowid ?? 0) };
     };
-    ctx.fns.db.select = (c: any, sql: string, params: any = []) => {
-        const q = c.state.db.query(sql);
+    ctx.fns.db.select = (c: any, opts: { sql: string; params?: any }) => {
+        const params = opts.params ?? [];
+        const q = c.state.db.query(opts.sql);
         return Array.isArray(params) ? q.all(...params) : q.all(params);
     };
     return ctx;
@@ -27,7 +29,7 @@ function mkCtx() {
 describe('session.getMaxEventIdx & getEvents(opts)', () => {
     test('returns -1 when no events', async () => {
         const ctx = mkCtx();
-        ctx.fns.db.connect(ctx, ':memory:');
+        ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
@@ -36,7 +38,7 @@ describe('session.getMaxEventIdx & getEvents(opts)', () => {
 
     test('idx grows monotonically', async () => {
         const ctx = mkCtx();
-        ctx.fns.db.connect(ctx, ':memory:');
+        ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);
@@ -51,7 +53,7 @@ describe('session.getMaxEventIdx & getEvents(opts)', () => {
 
     test('getEvents fromIdx slices correctly', async () => {
         const ctx = mkCtx();
-        ctx.fns.db.connect(ctx, ':memory:');
+        ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const a = start(ctx, { model: 'm', systemPrompt: '' });
         save(ctx, a);

@@ -10,7 +10,7 @@ import nextId from "../agent/nextId";
 const mkCtx = async () => {
     const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;
     await loadFns(ctx);
-    connect(ctx, ":memory:");
+    connect(ctx, { path: ":memory:" });
     await migrate(ctx);
     return ctx;
 };

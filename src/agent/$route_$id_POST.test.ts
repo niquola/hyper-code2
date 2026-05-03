@@ -13,8 +13,8 @@ function mkCtx(calls: any[]) {
     state: { agent: { a1: agent } },
     fns: {
       db: {
-        exec: (_c: any, sql: string, params: any) => {
-          calls.push(['db.exec', sql.replace(/\s+/g, ' ').trim(), params]);
+        exec: (_c: any, opts: { sql: string; params?: any }) => {
+          calls.push(['db.exec', opts.sql.replace(/\s+/g, ' ').trim(), opts.params]);
           return { changes: 1, lastInsertRowid: 0 };
         },
       },

@@ -11,7 +11,7 @@ import nextId from "../agent/nextId";
 const mkCtx = async () => {
     const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;
     await loadFns(ctx);
-    connect(ctx, ":memory:");
+    connect(ctx, { path: ":memory:" });
     await migrate(ctx);
     return ctx;
 };
@@ -22,7 +22,7 @@ describe("session.save", () => {
         const agent = start(ctx, { model: "m1", systemPrompt: "sp" });
         agent.scratchpad.x = 42;
         save(ctx, agent);
-        const [row] = ctx.fns.db.select<any>(ctx, "SELECT * FROM agents WHERE id = ?", [agent.id]);
+        const [row] = ctx.fns.db.select<any>(ctx, { sql: "SELECT * FROM agents WHERE id = ?", params: [agent.id] });
         expect(row.model).toBe("m1");
         expect(row.system_prompt).toBe("sp");
         expect(JSON.parse(row.scratchpad)).toEqual({ x: 42 });
@@ -36,8 +36,8 @@ describe("session.save", () => {
         agent.events.push({ type: "user", text: "hello" } as any);
         agent.scratchpad.note = "x";
         save(ctx, agent);
-        const msgs = ctx.fns.db.select<any>(ctx, "SELECT * FROM messages WHERE agent_id = ? ORDER BY idx", [agent.id]);
-        const evs = ctx.fns.db.select<any>(ctx, "SELECT * FROM events WHERE agent_id = ? ORDER BY idx", [agent.id]);
+        const msgs = ctx.fns.db.select<any>(ctx, { sql: "SELECT * FROM messages WHERE agent_id = ? ORDER BY idx", params: [agent.id] });
+        const evs = ctx.fns.db.select<any>(ctx, { sql: "SELECT * FROM events WHERE agent_id = ? ORDER BY idx", params: [agent.id] });
         expect(msgs.map((m: any) => m.content)).toEqual(["hello"]);
         expect(evs.map((e: any) => e.type)).toEqual(["user"]);
     });

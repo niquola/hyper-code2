@@ -1,9 +1,9 @@
 export default async function (ctx: Context, _session: any, req: any) {
     const id = req.params.id;
-    const row = ctx.fns.db.select<any>(ctx,
-        'SELECT id, model, run_state, run_started_at, next_run_at, last_processed_msg_idx, last_error FROM agents WHERE id = ?',
-        [id],
-    )[0];
+    const row = ctx.fns.db.select<any>(ctx, {
+        sql: 'SELECT id, model, run_state, run_started_at, next_run_at, last_processed_msg_idx, last_error FROM agents WHERE id = ?',
+        params: [id],
+    })[0];
     if (!row) return Response.json({ error: 'not found' }, { status: 404 });
 
     const now = Date.now();

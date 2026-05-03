@@ -14,11 +14,11 @@ function encode(n: number): string {
 }
 
 export default function (ctx: Context): string {
-    const row = ctx.fns.db.select<any>(ctx, 'SELECT value FROM kv WHERE key = ?', ['agent:idCounter'])[0];
+    const row = ctx.fns.db.select<any>(ctx, { sql: 'SELECT value FROM kv WHERE key = ?', params: ['agent:idCounter'] })[0];
     const next = Number(row?.value ?? 0) + 1;
-    ctx.fns.db.exec(ctx,
-        'INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-        ['agent:idCounter', String(next)],
-    );
+    ctx.fns.db.exec(ctx, {
+        sql: 'INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+        params: ['agent:idCounter', String(next)],
+    });
     return encode(next);
 }

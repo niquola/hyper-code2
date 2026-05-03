@@ -8,11 +8,11 @@ import wakeWorker from './wakeWorker';
 // next_run_at to drive the worker.
 function seedReadyAgent(ctx: any, id: string, nextRunAt: number) {
     const ts = Date.now();
-    ctx.fns.db.exec(ctx,
-        `INSERT INTO agents (id, model, system_prompt, scratchpad, created_at, updated_at, next_run_at, run_state)
+    ctx.fns.db.exec(ctx, {
+        sql: `INSERT INTO agents (id, model, system_prompt, scratchpad, created_at, updated_at, next_run_at, run_state)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, 'mock:test', '', '{}', ts, ts, nextRunAt, 'idle'],
-    );
+        params: [id, 'mock:test', '', '{}', ts, ts, nextRunAt, 'idle'],
+    });
     (ctx.state as any).agent ??= {};
     (ctx.state as any).agent[id] = {
         id, model: 'mock:test', systemPrompt: '', scratchpad: {},
@@ -173,8 +173,10 @@ describe('agent.workerLoop', () => {
         seedReadyAgent(ctx, 'aborter', past);
         // Append a real user message so we have a frontier > -1.
         ctx.fns.session.appendMessage(ctx, 'aborter', { role: 'user', content: 'hi' });
-        const beforeCursor = ctx.fns.db.select(ctx,
-            'SELECT last_processed_msg_idx FROM agents WHERE id = ?', ['aborter'])[0].last_processed_msg_idx;
+        const beforeCursor = ctx.fns.db.select(ctx, {
+            sql: 'SELECT last_processed_msg_idx FROM agents WHERE id = ?',
+            params: ['aborter'],
+        })[0].last_processed_msg_idx;
 
         ctx.fns.agent.run = async () => { throw new Error('aborted by user'); };
 
@@ -184,9 +186,10 @@ describe('agent.workerLoop', () => {
         wakeWorker(ctx);
         await loopPromise;
 
-        const row = ctx.fns.db.select(ctx,
-            'SELECT run_state, next_run_at, last_processed_msg_idx FROM agents WHERE id = ?',
-            ['aborter'])[0];
+        const row = ctx.fns.db.select(ctx, {
+            sql: 'SELECT run_state, next_run_at, last_processed_msg_idx FROM agents WHERE id = ?',
+            params: ['aborter'],
+        })[0];
         expect(row.run_state).toBe('idle');
         expect(row.next_run_at).toBeNull();                       // not rescheduled
         expect(row.last_processed_msg_idx).toBe(beforeCursor);    // cursor preserved

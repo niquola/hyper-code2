@@ -11,7 +11,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     const url = new URL(req.url);
     const offset = Math.max(0, Number(url.searchParams.get('offset') ?? '0') || 0);
 
-    const agentRow = ctx.fns.db.select<any>(ctx, 'SELECT id FROM agents WHERE id = ?', [id])[0];
+    const agentRow = ctx.fns.db.select<any>(ctx, { sql: 'SELECT id FROM agents WHERE id = ?', params: [id] })[0];
     if (!agentRow) return new Response('not found', { status: 404 });
 
     const maxIdx = ctx.fns.session.getMaxEventIdx(ctx, id);

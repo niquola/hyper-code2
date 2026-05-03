@@ -14,7 +14,7 @@ import nextId from "../agent/nextId";
 describe('session.archive', () => {
     test('archived session disappears from list and cannot be loaded', async () => {
         const ctx: any = { state: {}, env: {}, fns: { db: { connect, migrate, select: (await import('../db/select')).default, exec: (await import('../db/exec')).default }, session: { save, list, archive, load, appendUserMessage, appendMessage, appendEvent }, agent: { start, nextId, renderEventHtml: async () => '' }, events: { emitAgentsChanged: () => {} } } };
-        ctx.fns.db.connect(ctx, ':memory:');
+        ctx.fns.db.connect(ctx, { path: ':memory:' });
         await ctx.fns.db.migrate(ctx);
         const agent = ctx.fns.agent.start(ctx, { model: 'test:model', systemPrompt: '' });
         save(ctx, agent);

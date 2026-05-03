@@ -1,5 +1,5 @@
 export default function (ctx: Context, id: string): types.agent.Agent | null {
-    const rows = ctx.fns.db.select<any>(ctx, 'SELECT * FROM agents WHERE id = ? AND archived_at IS NULL', [id]);
+    const rows = ctx.fns.db.select<any>(ctx, { sql: 'SELECT * FROM agents WHERE id = ? AND archived_at IS NULL', params: [id] });
     const row = rows[0];
     if (!row) return null;
 

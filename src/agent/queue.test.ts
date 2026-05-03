@@ -9,11 +9,11 @@ async function drainUntilIdle(ctx: any, deadlineMs = 5000) {
     const loop = ctx.fns.agent.workerLoop(ctx);
     const t0 = Date.now();
     while (Date.now() - t0 < deadlineMs) {
-        const busy = ctx.fns.db.select(ctx,
-            `SELECT COUNT(*) AS n FROM agents
+        const busy = ctx.fns.db.select(ctx, {
+            sql: `SELECT COUNT(*) AS n FROM agents
               WHERE archived_at IS NULL
                 AND (run_state = 'running' OR next_run_at IS NOT NULL)`,
-        )[0]?.n ?? 0;
+        })[0]?.n ?? 0;
         if (Number(busy) === 0) break;
         await new Promise(r => setTimeout(r, 20));
     }
@@ -34,12 +34,12 @@ describe('agent queue (state on agents row)', () => {
         // Simulate POST: append messages and bump next_run_at.
         await ctx.fns.session.appendUserMessage(ctx, a.id, 'one');
         await ctx.fns.session.appendUserMessage(ctx, a.id, 'two');
-        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id = ?', [Date.now(), a.id]);
+        ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
 
         await drainUntilIdle(ctx);
 
         expect(seen).toEqual([a.id]);
-        const row = ctx.fns.db.select(ctx, 'SELECT run_state, next_run_at, last_processed_msg_idx FROM agents WHERE id = ?', [a.id])[0];
+        const row = ctx.fns.db.select(ctx, { sql: 'SELECT run_state, next_run_at, last_processed_msg_idx FROM agents WHERE id = ?', params: [a.id] })[0];
         expect(row.run_state).toBe('idle');
         expect(row.next_run_at).toBeNull();
         expect(row.last_processed_msg_idx).toBe(1);
@@ -55,7 +55,7 @@ describe('agent queue (state on agents row)', () => {
 
         const t0 = Date.now();
         await ctx.fns.session.appendUserMessage(ctx, a.id, 'soon');
-        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id = ?', [t0 + 150, a.id]);
+        ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [t0 + 150, a.id] });
 
         await drainUntilIdle(ctx, 1500);
 
@@ -76,7 +76,7 @@ describe('agent queue (state on agents row)', () => {
         await ctx.fns.session.appendUserMessage(ctx, a1.id, 'a1');
         await ctx.fns.session.appendUserMessage(ctx, a2.id, 'a2');
         const now = Date.now();
-        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id IN (?, ?)', [now, a1.id, a2.id]);
+        ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id IN (?, ?)', params: [now, a1.id, a2.id] });
 
         await drainUntilIdle(ctx);
 
@@ -92,13 +92,14 @@ describe('agent queue (state on agents row)', () => {
 
         await ctx.fns.session.appendUserMessage(ctx, a.id, 'one');
         await ctx.fns.session.appendUserMessage(ctx, a.id, 'two');
-        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id = ?', [Date.now(), a.id]);
+        ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
 
         await drainUntilIdle(ctx);
 
-        const row = ctx.fns.db.select(ctx,
-            'SELECT run_state, last_processed_msg_idx, last_error FROM agents WHERE id = ?',
-            [a.id])[0];
+        const row = ctx.fns.db.select(ctx, {
+            sql: 'SELECT run_state, last_processed_msg_idx, last_error FROM agents WHERE id = ?',
+            params: [a.id],
+        })[0];
         expect(row.run_state).toBe('idle');
         expect(row.last_error).toContain('boom');
         // Critical: cursor must stay at -1 (initial), NOT jump to 1 (max idx).
@@ -118,13 +119,14 @@ describe('agent queue (state on agents row)', () => {
         ctx.fns.session.save(ctx, a);
 
         await ctx.fns.session.appendUserMessage(ctx, a.id, 'one');
-        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id = ?', [Date.now(), a.id]);
+        ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
 
         await drainUntilIdle(ctx);
 
-        const row = ctx.fns.db.select(ctx,
-            'SELECT run_state, last_processed_msg_idx FROM agents WHERE id = ?',
-            [a.id])[0];
+        const row = ctx.fns.db.select(ctx, {
+            sql: 'SELECT run_state, last_processed_msg_idx FROM agents WHERE id = ?',
+            params: [a.id],
+        })[0];
         expect(row.run_state).toBe('idle');
         // Aborted run: cursor stays at -1 so the message is retried on the next pass.
         expect(row.last_processed_msg_idx).toBe(-1);
@@ -145,15 +147,14 @@ describe('agent queue (state on agents row)', () => {
         const a = ctx.fns.agent.start(ctx, { model: 'm' });
         ctx.fns.session.save(ctx, a);
         await ctx.fns.session.appendUserMessage(ctx, a.id, 'hello');
-        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id = ?', [Date.now(), a.id]);
+        ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
 
         await drainUntilIdle(ctx, 2000);
 
         // Run was called exactly ONCE — no infinite reschedule loop.
         expect(seenUserTexts).toEqual(['hello']);
 
-        const row = ctx.fns.db.select(ctx,
-            'SELECT run_state, next_run_at FROM agents WHERE id = ?', [a.id])[0];
+        const row = ctx.fns.db.select(ctx, { sql: 'SELECT run_state, next_run_at FROM agents WHERE id = ?', params: [a.id] })[0];
         expect(row.run_state).toBe('idle');
         expect(row.next_run_at).toBeNull();
     });
@@ -168,16 +169,15 @@ describe('agent queue (state on agents row)', () => {
         // Pre-existing: 2 messages already processed (e.g. a server restart).
         await ctx.fns.session.appendUserMessage(ctx, a.id, 'old1');
         await ctx.fns.session.appendUserMessage(ctx, a.id, 'old2');
-        ctx.fns.db.exec(ctx, 'UPDATE agents SET last_processed_msg_idx = ? WHERE id = ?', [1, a.id]);
+        ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET last_processed_msg_idx = ? WHERE id = ?', params: [1, a.id] });
 
         // New message arrives.
         await ctx.fns.session.appendUserMessage(ctx, a.id, 'new');
-        ctx.fns.db.exec(ctx, 'UPDATE agents SET next_run_at = ? WHERE id = ?', [Date.now(), a.id]);
+        ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
 
         await drainUntilIdle(ctx);
 
-        const row = ctx.fns.db.select(ctx,
-            'SELECT last_processed_msg_idx FROM agents WHERE id = ?', [a.id])[0];
+        const row = ctx.fns.db.select(ctx, { sql: 'SELECT last_processed_msg_idx FROM agents WHERE id = ?', params: [a.id] })[0];
         expect(row.last_processed_msg_idx).toBe(2);
     });
 });

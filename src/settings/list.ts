@@ -29,12 +29,12 @@ export default function (ctx: Context, opts: ListOpts = {}): Array<{
         params.push(opts.scopeId ?? '');
     }
 
-    const rows = ctx.fns.db.select<any>(ctx,
-        `SELECT module, scope_type, scope_id, key, value, is_secret, updated_at
+    const rows = ctx.fns.db.select<any>(ctx, {
+        sql: `SELECT module, scope_type, scope_id, key, value, is_secret, updated_at
            FROM settings${where.length ? ' WHERE ' + where.join(' AND ') : ''}
           ORDER BY module, scope_type, scope_id, key`,
         params,
-    );
+    });
 
     return rows.map((row: any) => ({
         module: row.module,

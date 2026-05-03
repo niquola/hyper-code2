@@ -17,8 +17,8 @@ function mkCtx() {
   const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {}, agent: {}, events: {} } };
   ctx.fns.db.connect = connect;
   ctx.fns.db.migrate = migrate;
-  ctx.fns.db.exec = (c: any, sql: string, params: any) => { const q = c.state.db.query(sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
-  ctx.fns.db.select = (c: any, sql: string, params: any = []) => { const q = c.state.db.query(sql); return Array.isArray(params) ? q.all(...params) : q.all(params); };
+  ctx.fns.db.exec = (c: any, opts: { sql: string; params?: any }) => { const params = opts.params ?? []; const q = c.state.db.query(opts.sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
+  ctx.fns.db.select = (c: any, opts: { sql: string; params?: any }) => { const params = opts.params ?? []; const q = c.state.db.query(opts.sql); return Array.isArray(params) ? q.all(...params) : q.all(params); };
   ctx.fns.session.save = save;
   ctx.fns.session.load = load;
   ctx.fns.session.fork = fork;
@@ -38,7 +38,7 @@ function mkCtx() {
 describe("session.fork", () => {
   test("creates child with parent link and full-context offset", async () => {
     const ctx: any = mkCtx();
-    ctx.fns.db.connect(ctx, ":memory:");
+    ctx.fns.db.connect(ctx, { path: ":memory:" });
     await ctx.fns.db.migrate(ctx);
     const parent = start(ctx, { model: "openai/gpt-4o", systemPrompt: "sp" });
     save(ctx, parent);
@@ -52,7 +52,7 @@ describe("session.fork", () => {
 
   test("nested fork uses full parent count, not own-only count", async () => {
     const ctx: any = mkCtx();
-    ctx.fns.db.connect(ctx, ":memory:");
+    ctx.fns.db.connect(ctx, { path: ":memory:" });
     await ctx.fns.db.migrate(ctx);
     const gp = start(ctx, { model: "m", systemPrompt: "" });
     save(ctx, gp);

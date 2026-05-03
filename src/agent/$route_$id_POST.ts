@@ -32,13 +32,13 @@ export default async function (ctx: Context, _session: any, req: any) {
 
     // Schedule (or push back) the next run on the agent row itself.
     // MAX(...) keeps the latest message bumping the debounce window forward.
-    ctx.fns.db.exec(ctx,
-        `UPDATE agents
+    ctx.fns.db.exec(ctx, {
+        sql: `UPDATE agents
             SET next_run_at = MAX(COALESCE(next_run_at, 0), ?),
                 updated_at  = ?
           WHERE id = ?`,
-        [sendAt, Date.now(), agent.id],
-    );
+        params: [sendAt, Date.now(), agent.id],
+    });
     ctx.fns.agent.wakeWorker(ctx);
 
     if ((req.headers?.get?.('hx-request') ?? '') === 'true') {

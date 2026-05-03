@@ -9,12 +9,14 @@ function mkCtx() {
         state: { db },
         fns: {
             db: {
-                select: (ctx: any, sql: string, params?: any) => {
-                    const q = ctx.state.db.query(sql);
+                select: (ctx: any, opts: { sql: string; params?: any }) => {
+                    const params = opts.params;
+                    const q = ctx.state.db.query(opts.sql);
                     return Array.isArray(params) ? q.all(...params) : q.all(params ?? []);
                 },
-                exec: (ctx: any, sql: string, params?: any) => {
-                    const stmt = ctx.state.db.prepare(sql);
+                exec: (ctx: any, opts: { sql: string; params?: any }) => {
+                    const params = opts.params;
+                    const stmt = ctx.state.db.prepare(opts.sql);
                     const res = Array.isArray(params) ? stmt.run(...params) : stmt.run(params ?? []);
                     return { changes: res.changes ?? 0, lastInsertRowid: res.lastInsertRowid ?? 0 };
                 },

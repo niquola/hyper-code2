@@ -6,7 +6,8 @@ export default function (ctx: Context): Array<{
     createdAt: number;
     updatedAt: number;
 }> {
-    const rows = ctx.fns.db.select<any>(ctx,         `SELECT
+    const rows = ctx.fns.db.select<any>(ctx, {
+        sql: `SELECT
             a.id,
             a.model,
             a.created_at AS createdAt,
@@ -15,7 +16,8 @@ export default function (ctx: Context): Array<{
             (SELECT content FROM messages m WHERE m.agent_id = a.id AND m.role = 'user' ORDER BY idx LIMIT 1) AS firstUser
         FROM agents a
         WHERE a.archived_at IS NULL
-        ORDER BY a.updated_at DESC`);
+        ORDER BY a.updated_at DESC`,
+    });
     return rows.map((r: any) => ({
         id: r.id,
         model: r.model,

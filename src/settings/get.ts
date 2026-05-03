@@ -18,15 +18,15 @@ function parseEnv(raw: string, type?: string): any {
 }
 
 export default function (ctx: Context, opts: GetOpts): any {
-    const row = ctx.fns.db.select<{ value: string }>(ctx,
-        `SELECT value
+    const row = ctx.fns.db.select<{ value: string }>(ctx, {
+        sql: `SELECT value
            FROM settings
           WHERE module = ?
             AND scope_type = ?
             AND scope_id = ?
             AND key = ?`,
-        [opts.module, opts.scopeType, opts.scopeId ?? '', opts.key],
-    )[0];
+        params: [opts.module, opts.scopeType, opts.scopeId ?? '', opts.key],
+    })[0];
     if (row) return JSON.parse(row.value);
 
     // Declared default — only consulted for scope='global'. Per-instance scopes

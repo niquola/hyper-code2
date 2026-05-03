@@ -11,8 +11,8 @@ function mkCtx() {
   const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {} } };
   ctx.fns.db.connect = connect;
   ctx.fns.db.migrate = migrate;
-  ctx.fns.db.exec = (c: any, sql: string, params: any) => { const q = c.state.db.query(sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
-  ctx.fns.db.select = (c: any, sql: string, params: any = []) => { const q = c.state.db.query(sql); return Array.isArray(params) ? q.all(...params) : q.all(params); };
+  ctx.fns.db.exec = (c: any, opts: { sql: string; params?: any }) => { const params = opts.params ?? []; const q = c.state.db.query(opts.sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
+  ctx.fns.db.select = (c: any, opts: { sql: string; params?: any }) => { const params = opts.params ?? []; const q = c.state.db.query(opts.sql); return Array.isArray(params) ? q.all(...params) : q.all(params); };
   Object.assign(ctx.fns.session, { save, replaceMessages, getMessages, deleteMessageAt, truncateMessagesFrom });
   return ctx;
 }
@@ -23,14 +23,14 @@ function seedAgent() {
 
 describe('delete message operations', () => {
   test('deletes a plain message by idx', async () => {
-    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, ':memory:'); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
+    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, { path: ':memory:' }); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
     replaceMessages(ctx, 'a1', [{ role: 'user', content: 'u1' }, { role: 'assistant', content: 'a1' }, { role: 'user', content: 'u2' }]);
     expect(deleteMessageAt(ctx, 'a1', 1).ok).toBe(true);
     expect(getMessages(ctx, 'a1').map((m: any) => m.content)).toEqual(['u1', 'u2']);
   });
 
   test('rejects deleting markers half-pair: assistant §eval alone', async () => {
-    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, ':memory:'); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
+    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, { path: ':memory:' }); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
     replaceMessages(ctx, 'a1', [
       { role: 'user',      content: 'go' },
       { role: 'assistant', content: '§eval\nconsole.log(1);' },
@@ -44,7 +44,7 @@ describe('delete message operations', () => {
   });
 
   test('rejects deleting markers half-pair: assistant §write alone', async () => {
-    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, ':memory:'); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
+    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, { path: ':memory:' }); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
     replaceMessages(ctx, 'a1', [
       { role: 'user',      content: 'create a file' },
       { role: 'assistant', content: '§write:src/foo.ts\nexport default 1;' },
@@ -55,7 +55,7 @@ describe('delete message operations', () => {
   });
 
   test('truncate from walks back over markers pair (user-result)', async () => {
-    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, ':memory:'); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
+    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, { path: ':memory:' }); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
     replaceMessages(ctx, 'a1', [
       { role: 'user',      content: 'go' },
       { role: 'assistant', content: '§eval\nconsole.log(1);' },
@@ -71,7 +71,7 @@ describe('delete message operations', () => {
   });
 
   test('truncate from walks back over markers pair (assistant-marker)', async () => {
-    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, ':memory:'); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
+    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, { path: ':memory:' }); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
     replaceMessages(ctx, 'a1', [
       { role: 'user',      content: 'go' },
       { role: 'assistant', content: 'doing it' },
@@ -89,7 +89,7 @@ describe('delete message operations', () => {
   });
 
   test('truncate from on plain assistant does not walk back', async () => {
-    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, ':memory:'); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
+    const ctx: any = mkCtx(); ctx.fns.db.connect(ctx, { path: ':memory:' }); await ctx.fns.db.migrate(ctx); save(ctx, seedAgent());
     replaceMessages(ctx, 'a1', [
       { role: 'user',      content: 'q' },
       { role: 'assistant', content: 'a' },

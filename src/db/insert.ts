@@ -2,9 +2,9 @@
 // Returns { lastInsertRowid, changes }. Values are bound as positional params.
 export default function (
     ctx: Context,
-    table: string,
-    row: Record<string, any>,
+    opts: { table: string; row: Record<string, any> },
 ): { changes: number; lastInsertRowid: number | bigint } {
+    const { table, row } = opts;
     if (!/^[A-Za-z_][\w]*$/.test(table)) throw new Error(`bad table name: ${table}`);
     const cols = Object.keys(row);
     if (cols.length === 0) throw new Error("insert requires at least one column");
@@ -13,6 +13,6 @@ export default function (
     }
     const placeholders = cols.map(() => "?").join(", ");
     const sql = `INSERT INTO ${table} (${cols.join(", ")}) VALUES (${placeholders})`;
-    const values = cols.map(c => row[c]);
-    return ctx.fns.db.exec(ctx, sql, values);
+    const params = cols.map(c => row[c]);
+    return ctx.fns.db.exec(ctx, { sql, params });
 }

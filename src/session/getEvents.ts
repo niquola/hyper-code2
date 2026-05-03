@@ -5,6 +5,6 @@ export default function (ctx: Context, id: string, opts: { fromIdx?: number; lim
         ? `SELECT idx, payload FROM events WHERE agent_id = ? AND idx >= ? ORDER BY idx ASC${limitClause}`
         : `SELECT idx, payload FROM events WHERE agent_id = ? ORDER BY idx ASC${limitClause}`;
     const params = fromIdx > 0 ? [id, fromIdx] : [id];
-    const rows = ctx.fns.db.select<any>(ctx, sql, params);
+    const rows = ctx.fns.db.select<any>(ctx, { sql, params });
     return rows.map((r: any) => JSON.parse(r.payload));
 }

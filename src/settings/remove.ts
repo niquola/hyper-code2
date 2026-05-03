@@ -6,13 +6,13 @@ type RemoveOpts = {
 };
 
 export default function (ctx: Context, opts: RemoveOpts): { ok: true } {
-    ctx.fns.db.exec(ctx,
-        `DELETE FROM settings
+    ctx.fns.db.exec(ctx, {
+        sql: `DELETE FROM settings
           WHERE module = ?
             AND scope_type = ?
             AND scope_id = ?
             AND key = ?`,
-        [opts.module, opts.scopeType, opts.scopeId ?? '', opts.key],
-    );
+        params: [opts.module, opts.scopeType, opts.scopeId ?? '', opts.key],
+    });
     return { ok: true };
 }

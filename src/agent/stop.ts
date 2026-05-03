@@ -6,16 +6,16 @@ export default function (ctx: Context, agent: types.agent.Agent, opts: { clearQu
     try { agent.abortController?.abort('stopped_by_user'); } catch {}
 
     // Reset run state on the agent row. clearQueue also drops the pending debounce window.
-    ctx.fns.db.exec(ctx,
-        `UPDATE agents
+    ctx.fns.db.exec(ctx, {
+        sql: `UPDATE agents
             SET run_state = 'idle',
                 run_started_at = NULL,
                 next_run_at = ${clearQueue ? 'NULL' : 'next_run_at'},
                 last_error = ?,
                 updated_at = ?
           WHERE id = ?`,
-        [clearQueue ? 'stopped by user; queue cleared' : 'stopped by user', now, agent.id],
-    );
+        params: [clearQueue ? 'stopped by user; queue cleared' : 'stopped by user', now, agent.id],
+    });
 
     agent.abortController = null;
     agent.isStreaming = false;

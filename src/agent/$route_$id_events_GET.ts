@@ -17,10 +17,10 @@ export default async function (ctx: Context, _session: any, req: any) {
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
     const usage = lastAssistant?.usage ?? null;
 
-    const row = ctx.fns.db.select<any>(ctx,
-        'SELECT run_state, next_run_at FROM agents WHERE id = ?',
-        [id],
-    )[0];
+    const row = ctx.fns.db.select<any>(ctx, {
+        sql: 'SELECT run_state, next_run_at FROM agents WHERE id = ?',
+        params: [id],
+    })[0];
     const isStreaming = row?.run_state === 'running' || !!row?.next_run_at;
 
     return Response.json({

@@ -22,10 +22,10 @@ export default function (ctx: Context): DeclaredItem[] {
         const key = regKey.slice(dotIdx + 1);
 
         // Detect provenance.
-        const dbRow = ctx.fns.db.select<{ value: string }>(ctx,
-            "SELECT value FROM settings WHERE module = ? AND scope_type = 'global' AND scope_id = '' AND key = ?",
-            [module, key],
-        )[0];
+        const dbRow = ctx.fns.db.select<{ value: string }>(ctx, {
+            sql: "SELECT value FROM settings WHERE module = ? AND scope_type = 'global' AND scope_id = '' AND key = ?",
+            params: [module, key],
+        })[0];
 
         let source: 'db' | 'env' | 'default';
         let currentValue: any;

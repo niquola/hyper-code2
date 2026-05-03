@@ -154,7 +154,7 @@ describe('agent.executeMarker', () => {
         await executeMarker(ctx, a, { kind: 'eval', content: '1' }, { usage: {} });
 
         // Drop into raw DB to see the column directly.
-        const rows = ctx.fns.db.select(ctx, 'SELECT role, excluded_from_cursor FROM messages WHERE agent_id = ? ORDER BY idx', [a.id]);
+        const rows = ctx.fns.db.select(ctx, { sql: 'SELECT role, excluded_from_cursor FROM messages WHERE agent_id = ? ORDER BY idx', params: [a.id] });
         const userRow = rows.find((r: any) => r.role === 'user');
         expect(userRow.excluded_from_cursor).toBe(1);
         const assistantRow = rows.find((r: any) => r.role === 'assistant');

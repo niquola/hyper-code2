@@ -1,9 +1,9 @@
 export default function (ctx: Context, agentId: string): string {
     const now = Date.now();
-    const row = ctx.fns.db.select<any>(ctx,
-        'SELECT run_state, run_started_at, next_run_at FROM agents WHERE id = ?',
-        [agentId],
-    )[0];
+    const row = ctx.fns.db.select<any>(ctx, {
+        sql: 'SELECT run_state, run_started_at, next_run_at FROM agents WHERE id = ?',
+        params: [agentId],
+    })[0];
 
     let label: string;
     let cls: string;
