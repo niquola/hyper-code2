@@ -35,5 +35,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Runtime state
 .hyper/_runtime
+.hyper/_test_*
+.hyper/_tmp_*
+.hyper/tmp_*
 .kimi-results
 .claude/
