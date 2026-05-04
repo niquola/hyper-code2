@@ -3,6 +3,9 @@ declare global {
     type Context = import("./$type_Context").Context;
 
     interface FnsRegistry {
+        _test_hashline_edit: {
+        nearby: typeof import("../.hyper/_test_hashline_edit/nearby").default;
+        };
         agent: {
         buildDelegatedTaskPrompt: typeof import("./agent/buildDelegatedTaskPrompt").default;
         buildLlmRequest: typeof import("./agent/buildLlmRequest").default;

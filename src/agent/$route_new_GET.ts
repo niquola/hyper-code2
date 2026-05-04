@@ -2,7 +2,14 @@ export default async function (ctx: Context) {
     const defaultModel = ctx.fns.settings?.modelDefault?.(ctx) ?? ctx.env.MODEL ?? "";
     const groups = await ctx.fns.llm.listModels(ctx);
     const base = await ctx.fns.agent.getBasePromptParts(ctx);
+    const coreTokens = Math.ceil((base.core?.length || 0) / 4);
+    const wireTokens = Math.ceil((base.wire?.length || 0) / 4);
     const presets = await ctx.fns.agent.listPromptPresets(ctx);
+    const presetsWithTokens = Object.entries(presets).map(([id, preset]: [string, any]) => ({
+      id,
+      ...preset,
+      tokens: Math.ceil((preset.text?.length || 0) / 4)
+    }));
 
     const optgroups = Object.entries(groups).map(([provider, ids]) => {
         const opts = (ids as string[]).map(id =>
@@ -11,13 +18,13 @@ export default async function (ctx: Context) {
         return `<optgroup label="${esc(provider)}">${opts}</optgroup>`;
     }).join("");
 
-    const presetItems = Object.entries(presets).map(([id, preset]: [string, any]) => `
+    const presetItems = presetsWithTokens.map(preset => `
       <details class="rounded-md border border-gray-200 bg-white">
         <summary class="cursor-pointer select-none px-3 py-3">
           <label class="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
-            <input type="checkbox" name="promptPreset" value="${esc(id)}" class="mt-0.5">
+            <input type="checkbox" name="promptPreset" value="${esc(preset.id)}" class="mt-0.5">
             <span class="min-w-0 flex-1">
-              <span class="font-medium">${esc(preset.label)}</span>
+              <span class="font-medium">${esc(preset.label)} <span class="text-gray-400 font-normal">${preset.tokens}t</span></span>
               <span class="block text-xs text-gray-500 mt-0.5">${esc(oneLine(preset.text))}</span>
             </span>
           </label>
@@ -48,14 +55,14 @@ export default async function (ctx: Context) {
     </div>
 
     <details class="rounded-md border border-gray-200 bg-white">
-      <summary class="cursor-pointer select-none px-3 py-3 text-sm font-medium text-gray-700">Runtime and behavior</summary>
+      <summary class="cursor-pointer select-none px-3 py-3 text-sm font-medium text-gray-700">Runtime and behavior <span class="text-gray-400 font-normal ml-2">${coreTokens}t</span></summary>
       <div class="border-t border-gray-200 px-3 py-3">
         <pre class="whitespace-pre-wrap rounded border border-gray-200 bg-gray-50 p-3 text-[11px] leading-snug text-gray-700">${esc(base.core)}</pre>
       </div>
     </details>
 
     <details class="rounded-md border border-gray-200 bg-white">
-      <summary class="cursor-pointer select-none px-3 py-3 text-sm font-medium text-gray-700">Markers protocol</summary>
+      <summary class="cursor-pointer select-none px-3 py-3 text-sm font-medium text-gray-700">Markers protocol <span class="text-gray-400 font-normal ml-2">${wireTokens}t</span></summary>
       <div class="border-t border-gray-200 px-3 py-3">
         <pre class="whitespace-pre-wrap rounded border border-gray-200 bg-gray-50 p-3 text-[11px] leading-snug text-gray-700">${esc(base.wire)}</pre>
       </div>
