@@ -3,10 +3,8 @@
 // other concurrent agent's LLM stream for the duration of the shell command.
 //
 // Output shape mirrors the agent's expectations:
-// - exit 0 + stdout only:                 return stdout
-// - exit 0 + stderr only:                 return "stderr:\n<stderr>"
-// - exit 0 + stdout + stderr:             return "<stdout>\nstderr:\n<stderr>"
-// - exit !=0:                             return "[exit N]\n" + stderr/stdout blocks
+// - exit 0:    return stdout (or stderr if stdout empty, or "(no output)")
+// - exit !=0:  return "[exit N]\n<stderr>\nstdout:\n<stdout>", isError=true
 export default async function (
     _ctx: Context,
     opts: { code: string },
@@ -24,31 +22,14 @@ export default async function (
     ]);
     const stdout = stdoutText.trimEnd();
     const stderr = stderrText.trimEnd();
-
     if (exitCode !== 0) {
         const parts = [`[exit ${exitCode}]`];
-        if (stderr) parts.push('stderr:\n' + stderr);
+        if (stderr) parts.push(stderr);
         if (stdout) parts.push('stdout:\n' + stdout);
         return { output: parts.join('\n'), isError: true };
     }
-
-    if (stdout && stderr) {
-        return {
-            output: `${stdout}\nstderr:\n${stderr}`,
-            isError: false,
-        };
-    }
-
-    if (stdout) {
-        return { output: stdout, isError: false };
-    }
-
-    if (stderr) {
-        return { output: `stderr:\n${stderr}`, isError: false };
-    }
-
     return {
-        output: '(no output)',
+        output: stdout || (stderr ? '(stderr)\n' + stderr : '(no output)'),
         isError: false,
     };
 }
