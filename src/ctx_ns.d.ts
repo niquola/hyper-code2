@@ -73,6 +73,7 @@ declare global {
         status: typeof import("./git/status").default;
         };
         http: {
+        handleRequest: typeof import("./http/handleRequest").default;
         loadRoutes: typeof import("./http/loadRoutes").default;
         match: typeof import("./http/match").default;
         start: typeof import("./http/$start").default;

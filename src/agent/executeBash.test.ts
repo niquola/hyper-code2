@@ -10,18 +10,24 @@ describe('agent.executeBash', () => {
         expect(r).toEqual({ output: 'hello', isError: false });
     });
 
+    test('successful exit with stdout and stderr includes both streams', async () => {
+        const r = await executeBash(ctx, 'echo out; echo err 1>&2');
+        expect(r.isError).toBe(false);
+        expect(r.output).toBe('out\nstderr:\nerr');
+    });
+
     test('non-zero exit returns [exit N] + stderr', async () => {
         const r = await executeBash(ctx, 'echo oops 1>&2; exit 7');
         expect(r.isError).toBe(true);
         expect(r.output).toContain('[exit 7]');
-        expect(r.output).toContain('oops');
+        expect(r.output).toContain('stderr:\noops');
     });
 
     test('non-zero exit with stdout includes both', async () => {
         const r = await executeBash(ctx, 'echo before; echo bad 1>&2; exit 1');
         expect(r.isError).toBe(true);
         expect(r.output).toContain('[exit 1]');
-        expect(r.output).toContain('bad');
+        expect(r.output).toContain('stderr:\nbad');
         expect(r.output).toContain('stdout:\nbefore');
     });
 
@@ -30,10 +36,10 @@ describe('agent.executeBash', () => {
         expect(r).toEqual({ output: '(no output)', isError: false });
     });
 
-    test('only stderr on success → "(stderr)" prefix', async () => {
+    test('only stderr on success is returned with stderr label', async () => {
         const r = await executeBash(ctx, 'echo only-err 1>&2');
         expect(r.isError).toBe(false);
-        expect(r.output).toBe('(stderr)\nonly-err');
+        expect(r.output).toBe('stderr:\nonly-err');
     });
 
     test('trailing newline trimmed from stdout', async () => {
