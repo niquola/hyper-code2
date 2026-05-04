@@ -38,6 +38,34 @@ describe("agent.renderEventHtml", () => {
     expect(html).toContain(`hx-confirm="delete this message?"`);
   });
 
+  test("assistant: balanced rendered html passes through verbatim", async () => {
+    const balanced = '<p>line 1</p><p>line 2</p>';
+    const out = await renderEventHtml(ctx, { type: "assistant", html: balanced, text: 'line 1\nline 2', messageIdx: 1 });
+    expect(out).toContain(balanced);
+    expect(out).not.toContain('<pre class="text-xs whitespace-pre-wrap');
+  });
+
+  test("assistant: unbalanced rendered html falls back to escaped <pre> (one bad bubble cannot break the page)", async () => {
+    // This is the exact pattern that broke the chat page: model emitted
+    // `prose.§bash` mid-line + Python heredoc content; markdown.render
+    // produced an extra </div>. Without the balance-check fallback, every
+    // bubble below this one renders inside the broken div tree.
+    const broken = '<p>good prefix</p><div class="x">stuff</div></div>';
+    const text = 'Plain prose with <<\'PY\'\nfrom pathlib import Path\nPY\n';
+    const out = await renderEventHtml(ctx, { type: "assistant", html: broken, text, messageIdx: 42 });
+    // The original broken html must NOT appear in the output.
+    expect(out).not.toContain(broken);
+    // Instead, plain text wrapped in <pre> with HTML-escaped content.
+    expect(out).toContain('<pre class="text-xs whitespace-pre-wrap');
+    expect(out).toContain('&lt;&lt;&#39;PY&#39;');
+    expect(out).toContain('from pathlib import Path');
+  });
+
+  test("assistant: missing html falls back to escaped <p> (existing behaviour)", async () => {
+    const out = await renderEventHtml(ctx, { type: "assistant", text: 'hello & world', messageIdx: 0 });
+    expect(out).toContain('<p>hello &amp; world</p>');
+  });
+
   test("renders user with htmx delete + 'from here' buttons", async () => {
     const html = await renderEventHtml(ctx, { type: "user", text: "hi", messageIdx: 3 }, { agentId: 'a1' });
     expect(html).toContain("justify-end");

@@ -2,6 +2,25 @@ function esc(s: any): string {
     return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]!));
 }
 
+// Tags whose imbalance would shred the page layout when injected into
+// the chat stream. We don't try to balance every tag — just the ones
+// that markdown.render or assistant prose tends to produce. If even one
+// of these is mis-counted we fall back to a plain <pre> wrapper so a
+// single bad bubble can't break everything below it. Catches the
+// "heredoc / shell `>` / unclosed code block" class of bug.
+const BALANCE_TAGS = ['div', 'p', 'span', 'pre', 'code', 'details', 'ul', 'ol', 'li', 'table', 'tbody', 'thead', 'tr', 'td', 'th'];
+function isHtmlBalanced(html: string): boolean {
+    for (const tag of BALANCE_TAGS) {
+        const opens = html.match(new RegExp(`<${tag}(?:\\s|>|/)`, 'g')) ?? [];
+        const closes = html.match(new RegExp(`</${tag}\\s*>`, 'g')) ?? [];
+        // Treat self-closed (<tag/>) as both open and close — they cancel out.
+        const selfClose = html.match(new RegExp(`<${tag}(?:\\s[^>]*)?/>`, 'g')) ?? [];
+        const open = opens.length - selfClose.length;
+        if (open !== closes.length) return false;
+    }
+    return true;
+}
+
 function fmtTok(n: any): string {
     if (n == null) return "—";
     if (Number(n) < 1000) return String(n);
@@ -41,12 +60,20 @@ export default async function (_ctx: Context, opts: { event: any; agentId?: stri
 
     if (ev.type === "assistant") {
         const idx = ev.messageIdx ?? ev.idx ?? 0;
-        const usage = ''; 
+        const usage = '';
+        // Defensive: if the pre-rendered html is unbalanced (markdown.render
+        // sometimes chokes on heredoc / shell `>` / mixed-code prose) fall
+        // back to a plain escaped <pre>. One bad bubble must not break the
+        // whole page layout below it.
+        const rawHtml = ev.html || ('<p>' + esc(ev.text || '') + '</p>');
+        const safeHtml = isHtmlBalanced(rawHtml)
+            ? rawHtml
+            : '<pre class="text-xs whitespace-pre-wrap break-words">' + esc(ev.text || '') + '</pre>';
         return '<div class="group relative flex justify-start">'
             + deleteControls(idx, agentId, true, true)
             + '<div class="assistant max-w-[90%] rounded-2xl bg-gray-50 px-4 py-3 shadow-sm border border-gray-200">'
             + '<div class="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
-            + (ev.html || '<p>' + esc(ev.text || '') + '</p>')
+            + safeHtml
             + '</div>'
             + usage
             + '</div></div>';
