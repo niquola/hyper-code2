@@ -1,5 +1,10 @@
 export default async function (
     ctx: Context,
+/**
+ * Delegate a task to a child agent.
+ * In "await" mode, blocks until the child calls finishTask.
+ * In "async" mode, spawns the child and returns immediately.
+ */
     opts: {
         parent: types.agent.Agent;
         task: string;
@@ -61,6 +66,7 @@ export default async function (
         throw new Error("delegateTask: child completed without finishTask");
     } catch (error) {
         waiters.delete(child.id);
+        console.error(`delegateTask failed for child ${child.id}:`, error);
         throw error;
     }
 }

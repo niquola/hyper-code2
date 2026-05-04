@@ -15,10 +15,13 @@ declare global {
         formatMarkerError: typeof import("./agent/formatMarkerError").default;
         formatMarkerResult: typeof import("./agent/formatMarkerResult").default;
         fullSystemPrompt: typeof import("./agent/fullSystemPrompt").default;
+        getBasePromptParts: typeof import("./agent/getBasePromptParts").default;
         highlightResult: typeof import("./agent/highlightResult").default;
+        listPromptPresets: typeof import("./agent/listPromptPresets").default;
         llmCall: typeof import("./agent/llmCall").default;
         nextId: typeof import("./agent/nextId").default;
         parseMarkers: typeof import("./agent/parseMarkers").default;
+        parseReadMarker: typeof import("./agent/parseReadMarker").default;
         readAndSummarize: typeof import("./agent/readAndSummarize").default;
         renderEventHtml: typeof import("./agent/renderEventHtml").default;
         renderStatusBar: typeof import("./agent/renderStatusBar").default;
@@ -52,12 +55,20 @@ declare global {
         };
         files: {
         close: typeof import("./files/close").default;
+        editHashline: typeof import("./files/editHashline").default;
         exists: typeof import("./files/exists").default;
+        formatHashline: typeof import("./files/formatHashline").default;
+        grep: typeof import("./files/grep").default;
+        grepHashline: typeof import("./files/grepHashline").default;
+        lineHash: typeof import("./files/lineHash").default;
         list: typeof import("./files/list").default;
         listOpen: typeof import("./files/listOpen").default;
         mkdir: typeof import("./files/mkdir").default;
         open: typeof import("./files/open").default;
+        parseAnchor: typeof import("./files/parseAnchor").default;
+        parseHashlineEdit: typeof import("./files/parseHashlineEdit").default;
         read: typeof import("./files/read").default;
+        readHashline: typeof import("./files/readHashline").default;
         remove: typeof import("./files/remove").default;
         rename: typeof import("./files/rename").default;
         resolveSafe: typeof import("./files/resolveSafe").default;
@@ -195,6 +206,12 @@ declare global {
         }
         namespace events {
             type Event = import("./events/$type_Event").Event;
+        }
+        namespace files {
+            type EditHashlineOp = import("./files/$type_EditHashlineOp").EditHashlineOp;
+            type GrepMatch = import("./files/$type_GrepMatch").GrepMatch;
+            type ReadAnchorLine = import("./files/$type_ReadAnchorLine").ReadAnchorLine;
+            type ReadHashlineResult = import("./files/$type_ReadHashlineResult").ReadHashlineResult;
         }
         namespace git {
             type Result = import("./git/$type_Result").Result;

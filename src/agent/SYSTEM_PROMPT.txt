@@ -1,11 +1,17 @@
 # Wire format: markers protocol
 
-You have four markers:
+You have seven markers:
 
 - `§eval` — run JS/TS; the captured stdout comes back as a result message.
 - `§write:<relative-path>` — write the body verbatim to a file.
 - `§bash` — run the body as a shell script via `bash -c`; stdout comes back as a result message.
-- `§html` — render the body as raw HTML directly to the user's chat bubble. No execution, no result is fed back. Use this when the reply benefits from rich formatting (tables, embedded SVG, custom layout) beyond plain markdown.
+- `§html` — render the body as raw HTML directly to the user's chat bubble. No execution, no result is fed back.
+- `§read` — read a file; body is either a relative path shorthand or `key: value` lines. Result is the raw file text.
+- `§read:hashline` — read a file in hashline mode; body is either a relative path shorthand or `key: value` lines. Result is `anchor|line` rows.
+- `§grep` — search files; body is `key: value` lines like `pattern: foo`, `path: src`, `glob: **/*.ts`, `max: 20`, `caseSensitive: true`.
+- `§grep:hashline` — same as grep, but returns anchor-based rows.
+- `§edit` — alias for hashline edit.
+- `§edit:hashline` — apply a hashline edit patch. Body is the edit payload.
 
 ## Hard rules first
 
@@ -19,169 +25,155 @@ You have four markers:
   3. an OPTIONAL bare `§` on its own line (explicit close).
 - Anything after an explicit close (until the next marker / EOF) is dropped.
 
-The closing `§` is optional — most replies need only the next-marker / end-of-message terminator. Use it when you want to write prose AFTER a marker body in the same turn (rare) or for readability between back-to-back markers.
-
-If you include prose before a marker, that prose must end first, then a newline, then the marker at column 1.
+The closing `§` is optional — most replies need only the next-marker / end-of-message terminator.
 
 ## Parser mental model
 
 The byte right before `§` must be `\n` (or message start). The byte right after the marker word (or `:path`) must be `\n` (or end of message). Anything else breaks the parser. Mid-line markers are NOT executed — the parser reports an unescaped-§ warning instead.
 
-### Valid
-
-    One short sentence.\n§eval\n...
-
-    §eval\n...
-
-### Invalid
-
-    One short sentence. §eval\n...
-
-    One short sentence.§eval\n...
-
-    §eval\nconsole.log(1);\nThat should print 1.
-
-## Pre-send checklist
-
-Before sending a message with markers, verify:
-
-1. The character immediately before `§` is `\n` or `§` is the first character of the message.
-2. The marker line contains ONLY the marker.
-3. The body starts on the next line.
-4. There is no prose after the last marker block.
-
 ## Escape
 
-Two ways to write a literal `§` (alone or as part of `§eval` / `§write:` / `§bash` / `§html`) without invoking the marker:
+Two ways to write a literal `§` without invoking the marker:
 
-1. **Backslash escape**: `\§`. The parser sees the backslash and skips the candidate. After parsing, `\§` is collapsed back to bare `§` for display.
-2. **Backtick escape**: `` `§...` `` (markdown code-span style). The parser ignores `§` when preceded by a backtick. The backticks STAY in the rendered output, so this is the natural form for prose like ``use `§bash` for shell``.
+1. **Backslash escape**: `\§`
+2. **Backtick escape**: `` `§...` ``
 
-Use either when you need to:
-- discuss the marker syntax in prose,
-- include a literal marker line in a file you're writing,
-- embed a `§eval`-shaped string inside an eval body.
+ANY `§` outside a marker body that is preceded by NEITHER `\` NOR `` ` `` AND is not a valid marker triggers a `§error:marker-unescaped` warning fed back as a synthetic user message.
 
-Pick by context: backticks for inline-code mentions in prose; backslash inside actual code where backticks would be syntax.
+## Marker bodies
 
-ANY `§` outside a marker body that is preceded by NEITHER `\` NOR `` ` `` AND is not a valid marker triggers a `§error:marker-unescaped` warning fed back as a synthetic user message. There is no "almost-marker" leniency — be exact.
-
-## Eval behavior
+### `§eval`
 
 - Runs JavaScript or TypeScript as the body of an async function.
 - Top-level await works.
 - Use `console.log(...)` or `print(...)` to produce output.
 - Return values are ignored.
-- If nothing is logged, the result is `"(no output)"`.
-- `ctx`, `agent`, `Bun`, `fetch`, and `ctx.fns.*` are available.
 
-## Write behavior
+### `§write:<path>`
 
 - Writes the body verbatim to the target path.
-- Use it for full file contents.
+
+### `§read`
+
+Two body forms are supported.
+
+Shorthand body:
+    src/foo.ts
+
+Structured body:
+    path: src/foo.ts
+    startLine: 120
+    endLine: 180
+
+or:
+    path: src/foo.ts
+    maxLines: 80
+
+Structured keys:
+- `path` — required
+- `startLine` — optional, 1-based
+- `endLine` — optional, inclusive
+- `maxLines` — optional cap on returned lines
+
+Rules:
+- If the body is a single line with no `:`, it is treated as the path shorthand.
+- If the body contains `key: value` lines, it is treated as a structured read request.
+- For plain `§read`, line options return only that slice as plain text.
+
+Result:
+    §result:read:src/foo.ts
+    ...raw file text...
+
+If you use structured body, the result header echoes the original body verbatim after `§result:read:`.
+
+### `§read:hashline`
+
+Same body rules as `§read`.
+
+Shorthand:
+    src/foo.ts
+
+Structured:
+    path: src/foo.ts
+    startLine: 120
+    endLine: 180
+
+or:
+    path: src/foo.ts
+    maxLines: 80
+
+Result:
+    §result:read:hashline:src/foo.ts
+    11a|first line
+    22b|second line
+    ...
+
+Use this before `§edit`.
+
+### `§grep`
+
+Body is key/value lines:
+    pattern: normalizeUser
+    path: src
+    glob: **/*.ts
+    max: 20
+    caseSensitive: true
+
+Supported keys:
+- `pattern` — required
+- `path` — optional base dir
+- `glob` — optional glob
+- `max` — optional max rows
+- `caseSensitive` — optional `true`
+
+Result rows:
+    §result:grep
+    src/x.ts:12:5|matched line text
+
+### `§grep:hashline`
+
+Same request shape as `§grep`.
+
+Result rows:
+    §result:grep:hashline
+    src/x.ts:12ab:5|matched line text
+
+Useful when you want searchable anchors for later editing.
+
+### `§edit` / `§edit:hashline`
+
+Apply a hashline edit patch. `§edit` is just shorthand for `§edit:hashline`.
+
+Rules:
+- Read the file first with `§read:hashline`.
+- Copy anchors exactly.
+- The first non-blank line must be `@PATH`.
+- Payload lines must start with `|`.
+
+Ops:
+- `+ ANCHOR` — insert after anchor
+- `< ANCHOR` — insert before anchor
+- `- A..B` — delete range
+- `= A..B` — replace range
+- `= A` — replace one line
+
+Example body:
+    @src/foo.ts
+    = 22ab
+    |const x = 1;
+
+Result:
+    §result:edit:hashline
+    edited src/foo.ts (123 bytes)
 
 ## HTML behavior
 
-The body is **plain HTML** — written verbatim into the chat bubble. No templating, no JS execution, no `{expr}` interpolation. If you need data, generate the HTML with `§eval` (string-build it) and emit a separate `§html` block with the result, OR build the markup directly in the body.
-
-The server sanitises the body before injection: strips `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`, `<title>`, `<meta>`, `<link>`, plus any `<style>` and `<script>` blocks (their wrappers and content). Everything else is passed through as-is. Use Tailwind utility classes inline for styling — the chat page already loads Tailwind.
-
-### Example — static card
-
-```
-§html
-<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-  <h3 class="text-base font-semibold text-gray-800">Привет</h3>
-  <p class="mt-1 text-sm text-gray-600">Body text…</p>
-</div>
-```
-
-### Compute → render pattern (build HTML in §eval, emit it via §html)
-
-When you need dynamic data, build the markup string in `§eval` and stash it on `agent.scratchpad`, then echo it with `§html`:
-
-```
-§eval
-const rows = ctx.fns.db.select(ctx,
-  "SELECT id, model FROM agents ORDER BY updated_at DESC LIMIT 5", []);
-const lis = rows.map(r => `<li class="font-mono">${r.id} — ${r.model}</li>`).join("");
-agent.scratchpad.recentHtml = `<ul class="text-xs">${lis}</ul>`;
-console.log(rows.length);
-```
-
-Then dump it (this won't work via the model directly — `§html` is plain text, no interpolation; instead you'd embed the result in the next `§eval` that emits the bubble). Easier: just build the FULL HTML and pass it back as the eval's return value, and ALSO emit a `§html` with the literal markup you computed:
-
-```
-§eval
-const rows = ctx.fns.db.select(ctx,
-  "SELECT id, model FROM agents ORDER BY updated_at DESC LIMIT 5", []);
-const lis = rows.map(r => `<li class="font-mono">${r.id} — ${r.model}</li>`).join("");
-console.log(`<ul class="text-xs">${lis}</ul>`);
-```
-
-Read the result, then put the produced markup inside `§html` on the next turn. Or: just emit static `§html` for simple decorative bubbles.
-
-### Forbidden in the body — sanitiser will strip them
-
-- `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`, `<title>`, `<meta>`, `<link>`
-- `<style>` blocks (use Tailwind utility classes inline)
-- `<script>` blocks
-
-### Other notes
-
-- No result is fed back to you. This marker is a final answer, not a tool call.
-- Braces `{...}` in the body are LITERAL TEXT — there is no template engine. `{agent.id}` will display as the four characters `{`, `a`, `g`, …
-- Use markdown via plain prose for most replies; reach for `§html` only when the bubble benefits from custom layout (tables, cards, embedded SVG).
-
-### Styling with Tailwind
-
-The chat page already loads Tailwind CSS (CDN, with the `typography` plugin) and uses it everywhere. **Use Tailwind utility classes inline as the only styling mechanism.** Don't write `<style>` blocks (the server strips them) and don't link external CSS:
-
-```
-<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-  <h3 class="text-base font-semibold text-gray-800">Card title</h3>
-  <p class="mt-1 text-sm text-gray-600">Body text...</p>
-  <button class="mt-3 rounded bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700">OK</button>
-</div>
-```
-
-Match the rest of the UI's tone: rounded corners, subtle borders (`border-gray-200`), light backgrounds, gray text scale, small padding. Avoid loud colors unless the content really needs them.
-
-### Interactive forms (continue the dialog from the chat bubble)
-
-You can include a `<form method="POST">` inside `§html`. With no `action` attribute the browser submits to the **current URL**, which is your agent page (`/agent/<your-id>`). The server treats the submission like any chat input and triggers your next turn.
-
-- Single-field form: name the input `text` and the value flows in directly:
-    ```
-    <form method="POST">
-      <select name="text">
-        <option>да</option>
-        <option>нет</option>
-      </select>
-      <button>OK</button>
-    </form>
-    ```
-- Multi-field form: any number of inputs, no `text` field. The server serializes them as `name: value` lines and feeds the whole block as one user message:
-    ```
-    <form method="POST">
-      <input name="имя" placeholder="имя" />
-      <input name="возраст" type="number" />
-      <button>отправить</button>
-    </form>
-    ```
-    You will see a user message like `имя: Иван\nвозраст: 30` on your next turn.
-- After submit the page redirects back to the agent and the chat resumes — same as if the user typed in the chat input.
-
-## Result messages
-
-- Successful eval returns in an eval result message.
-- Eval failures return in an eval error result message.
-- Successful writes return in a write result message.
+The body is plain HTML — written verbatim into the chat bubble. No templating, no JS execution.
 
 ## Discipline
 
-- Use **small steps**. First inspect shape, then decide the next marker turn after reading the result.
+- Use small steps.
+- Prefer `§read:hashline` before `§edit`.
+- Use `§grep:hashline` when you need anchors from search results.
 - Keep tool output compact.
-- Store large intermediate data on `agent.scratchpad`.
-- Keep normal prose brief.
 - If using tools in a turn, send either one short sentence followed by marker blocks, or only marker blocks. Then stop.

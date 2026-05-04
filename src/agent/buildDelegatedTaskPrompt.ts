@@ -1,3 +1,6 @@
+/**
+ * Format the response contract instructions based on responseFormat option.
+ */
 function describeResponseFormat(responseFormat: any): string {
     if (!responseFormat || responseFormat === "text") {
         return [
@@ -35,6 +38,10 @@ function describeResponseFormat(responseFormat: any): string {
 
 export default function (ctx: Context, opts: { task: string; instructions?: string; responseFormat?: any }) {
     const extra = String(opts.instructions ?? "").trim();
+/**
+ * Build the system prompt for a delegated task child agent.
+ * Constructs instructions about task scope, response format, and finishTask contract.
+ */
     const lines = [
         "You are executing a delegated task for a parent agent.",
         "",

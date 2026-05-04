@@ -1,5 +1,9 @@
 export default function (
     ctx: Context,
+// Mark a delegated task as finished and notify the parent if awaiting
+ /**
+  * Completes a delegated task, stores the result, and wakes the parent if in await mode.
+  */
     opts: { agent: types.agent.Agent; summary: string; result?: any; wakeParent?: boolean },
 ): { ok: true; parentId: string | null; summary: string; waiterFound: boolean } {
     const { agent } = opts;
