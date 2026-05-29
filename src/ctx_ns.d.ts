@@ -3,9 +3,6 @@ declare global {
     type Context = import("./$type_Context").Context;
 
     interface FnsRegistry {
-        _test_hashline_edit: {
-        nearby: typeof import("../.hyper/_test_hashline_edit/nearby").default;
-        };
         agent: {
         buildDelegatedTaskPrompt: typeof import("./agent/buildDelegatedTaskPrompt").default;
         buildLlmRequest: typeof import("./agent/buildLlmRequest").default;
@@ -132,7 +129,6 @@ declare global {
         archive: typeof import("./session/archive").default;
         delete: typeof import("./session/delete").default;
         deleteMessageAt: typeof import("./session/deleteMessageAt").default;
-        estimateMessageTokens: typeof import("../.hyper/session/estimateMessageTokens").default;
         fork: typeof import("./session/fork").default;
         getEvents: typeof import("./session/getEvents").default;
         getFullMessages: typeof import("./session/getFullMessages").default;

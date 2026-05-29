@@ -6,7 +6,7 @@ import exists from "./exists";
 import open from "./open";
 import listOpen from "./listOpen";
 
-const TEST_DIR = ".hyper/_test_remove";
+const TEST_DIR = ".test-tmp/remove";
 
 const mkCtx = async () => {
     const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;

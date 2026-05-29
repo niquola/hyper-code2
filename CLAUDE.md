@@ -118,11 +118,11 @@ bun script/repl.ts 'return await ctx.fns.http.loadRoutes(ctx)'     # rescan rout
 bun script/repl.ts 'ctx.fns.agent.clear(ctx, { agent: ctx.state.agent.default }); delete ctx.state.agent.default; return "ok"'
 ```
 
-Server port written to `.hyper/port` (default 3000). `script/repl.ts` reads it.
+Server port written to `.hyper/_runtime/port` (default 3000, override via `PORT` env). `script/repl.ts` reads it.
 
 ## Database & migrations
 
-`ctx.fns.db` is shared SQLite infra. One connection per process, stored on `ctx.state.db`. Default path: `.hyper/sessions` (override via `DB_PATH` env).
+`ctx.fns.db` is shared SQLite infra. One connection per process, stored on `ctx.state.db`. Default path: `.hyper/_runtime/sessions` (override via `DB_PATH` env).
 
 **Procedural API** (uniform `(ctx, opts)` calling — see Conventions above):
 - `ctx.fns.db.exec(ctx, { sql, params? })` — mutating statements → `{changes, lastInsertRowid}`
@@ -178,27 +178,27 @@ Both `src/` and `.hyper/` are scanned by the loader, `genTypes`, `loadRoutes`, a
 
 ```
 .hyper/
-  port                       ← server writes this
+  _runtime/port              ← server writes this
+  _runtime/sessions          ← SQLite DB (DB_PATH default)
   skill/
     hello.ts                 → ctx.fns.skill.hello
     $route_todos_GET.ts      → GET /skill/todos
     $type_Todo.ts            → types.skill.Todo
 ```
 
-`.hyper/` loads AFTER `src/` so it can override core functions by same name.
+`.hyper/` loads AFTER `src/` so it can override core functions by same name. But because it IS scanned, **nothing the app depends on may live here** — see "Core code placement". `_runtime/`, `_test_*/`, `_tmp_*/`, `tmp_*/` are skipped by the scanner and never registered.
 
-## Agent (at `/`)
+## Agent
 
-- Single live agent stored at `ctx.state.agent.default`.
-- **Exactly one tool: `evalCode`**, declared in `src/agent/$route__POST.ts`. Agent writes JS, `ctx.fns.repl.eval` runs it with `ctx` and `agent` bound.
-- Stateless `/v1/chat/completions` to LM Studio (`LMSTUDIO_URL`, `MODEL` from env / `.env.test`). No `previous_response_id` — each turn sends full `agent.messages`, prefix cache via `prompt_cache_key: agent.id`.
-- Loop in `src/agent/run.ts`: user → stream → tool_calls → execute → tool results → stream → … until no tool_calls.
-- `agent.scratchpad` (plain object, per-agent) — persistent across turns, NOT sent to the model. For stashing fetched data, plans, caches.
-- `agent.events[]` — UI trace (user / tool_call / assistant / error). Surfaced via `GET /agent?offset=N`.
-- `agent.messages[]` — OpenAI chat transcript (user / assistant / tool). What the model sees.
-- Agent can read/write own source and hot-reload: `Bun.file("src/agent/run.ts").text()`, `Bun.write(".hyper/skill/x.ts", ...)`, `ctx.fns.repl.load(ctx, "skill")`, `ctx.genTypes(ctx)`.
+- **Multi-agent**, keyed by id at `ctx.state.agent[id]` (runtime view; DB is source of truth). Each is addressed by per-id routes (`/agent/:id`, `/agent/:id/events.html`, `/agent/:id/statusbar`, `/fork`, `/archive` …). `GET /` redirects to the most recent agent.
+- **No native tool-calls — markers protocol only.** The model emits `§eval` / `§write:<path>` / `§bash` / `§html` / `§read` / `§grep` / `§edit` markers in plain content; `parseMarkers` extracts them, `executeMarker` runs each, and the result is fed back as a synthetic `§result:*` user message on the next turn. See `src/agent/parseMarkers.ts` + `executeMarker.ts`.
+- Provider-agnostic via `ctx.fns.llm.stream` (`<provider>:<model-id>` → OpenAI / Anthropic / Codex / mock). Each turn sends the full transcript; prefix cache via `prompt_cache_key`.
+- Loop in `src/agent/run.ts`: stream → `parseMarkers` → execute each marker → feed `§result` → repeat until a marker-free (prose-only) reply. Drained by a single in-process `workerLoop` that atomically claims agents off `agents.next_run_at` / `run_state`.
+- `agent.scratchpad` (plain object, per-agent) — persists across turns, NOT sent to the model. For stashing fetched data, plans, caches.
+- `agent.events[]` — UI trace (user / thinking / tool_call / assistant / error), rendered by the long-poll `GET /agent/:id/events.html`. `agent.messages[]` — the LLM transcript. Both are **synchronized views of the DB**, not the store — mutate via `ctx.fns.session.append*/replace*/syncAgentState`, never `.push()` directly.
+- Agent can read/write its own source and hot-reload: `ctx.fns.files.*`, `Bun.write(".hyper/skill/x.ts", ...)`, `ctx.fns.repl.load(ctx, { name: "skill" })`, `ctx.genTypes(ctx)`.
 
-Authoritative agent behaviour lives in `src/agent/SYSTEM_PROMPT.md`. Edit that file, not the POST handler.
+Authoritative agent behaviour lives in `src/agent/SYSTEM_PROMPT_CORE.txt` (+ `SYSTEM_PROMPT.txt` for the markers wire-format), composed by `src/agent/fullSystemPrompt.ts`. Edit those, not the POST handler.
 
 ## Adding things (cheat-sheet)
 
@@ -214,12 +214,16 @@ Authoritative agent behaviour lives in `src/agent/SYSTEM_PROMPT.md`. Edit that f
 - **All tests MUST use the mock LLM (`model: 'mock:*'` → `ctx.fns.llm.streamMock`).** Never hit real LM Studio / OpenAI / Anthropic from the test suite — it's slow, flaky, and a hard dependency on a local server. If a test needs LLM behaviour, drive it through `agent.scratchpad.mockLLM` (see `src/llm/streamMock.ts` and `src/agent/run.test.ts`).
 - Don't read `process.env.LMSTUDIO_URL` / `MODEL` / similar in tests as a reason to call out — gate behaviour on `model.startsWith('mock:')` instead.
 - Don't invent frameworks — `describe` / `test` / `expect` from `bun:test` only.
+- Write file fixtures to `.test-tmp/` (gitignored), NOT into `src/` or `.hyper/` — those are scanned roots and a `.ts` fixture there pollutes `ctx.fns` / `ctx_ns.d.ts`. The shared `mkTestCtx()` lives in `src/_testCtx.entry.ts`.
 
 ## Core code placement
 
-- Any core runtime feature, migration, route, queueing logic, persistence schema, or agent behavior that is part of the product must live under `src/`.
-- Use `.hyper/` only for runtime-generated extensions, experiments, temporary overlays, or user/agent-added non-core customizations.
-- Do not place permanent core migrations or core app logic in `.hyper/`. If a feature is meant to ship with the app, move it to `src/`.
+**Hard rule: nothing core-related may live in `.hyper/`.** `.hyper/` is gitignored runtime scratch — it must never contain anything the app depends on. Concretely:
+
+- Any core runtime feature, migration, route, queueing logic, persistence schema, type, or agent behavior that is part of the product MUST live under `src/`. If a `.hyper/<mod>/<fn>.ts` ends up imported into the generated `src/ctx_ns.d.ts` (it will, since `genTypes` scans `.hyper/`), core now depends on `.hyper/` — that's the violation. Move it to `src/`.
+- `.hyper/` is only for genuinely runtime-generated, experimental, or per-user/agent overlays that the shipped app does not require.
+- **Test fixtures never go in a scanned root.** `src/` and `.hyper/` are both scanned by `loadFns`/`genTypes`/`repl.load`; a stray `.ts` fixture there leaks into `ctx.fns` and `ctx_ns.d.ts`. Tests write fixtures to `.test-tmp/` (gitignored, outside both roots — `files.*` sandbox is cwd, so this works). See `src/files/*.test.ts`.
+- The scanner (`src/project/scan.ts`) structurally enforces this: directory segments matching `_runtime` / `_test_*` / `_tmp_*` / `tmp_*` are skipped, so junk under those can never be registered. Keep that skip list and `.gitignore` in sync.
 
 ## What NOT to do
 

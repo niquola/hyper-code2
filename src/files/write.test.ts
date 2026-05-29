@@ -9,7 +9,7 @@ const mkCtx = async () => {
     return ctx;
 };
 
-const TEST_DIR = ".hyper/_test_write";
+const TEST_DIR = ".test-tmp/write";
 
 afterAll(async () => { await Bun.$`rm -rf ${TEST_DIR}`.quiet(); });
 

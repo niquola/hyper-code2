@@ -14,7 +14,7 @@ const mkCtx = async () => {
 describe("files.editHashline", () => {
     test("replaces anchored line", async () => {
         const ctx = await mkCtx();
-        const path = ".hyper/_test_hashline_edit/a.txt";
+        const path = ".test-tmp/hashline_edit/a.txt";
         await write(ctx, { path, content: "one\ntwo\nthree\n" });
         const r = await readHashline(ctx, { path });
         const a2 = r.lines[1]!.anchor;
@@ -24,7 +24,7 @@ describe("files.editHashline", () => {
 
     test("rejects stale anchor", async () => {
         const ctx = await mkCtx();
-        const path = ".hyper/_test_hashline_edit/stale.txt";
+        const path = ".test-tmp/hashline_edit/stale.txt";
         await write(ctx, { path, content: "one\ntwo\n" });
         const r = await readHashline(ctx, { path });
         const a2 = r.lines[1]!.anchor;
@@ -34,7 +34,7 @@ describe("files.editHashline", () => {
 
     test("applies nearby insert and replace against base coordinates", async () => {
         const ctx = await mkCtx();
-        const path = ".hyper/_test_hashline_edit/nearby.ts";
+        const path = ".test-tmp/hashline_edit/nearby.ts";
         await write(ctx, {
             path,
             content: [
@@ -68,7 +68,7 @@ describe("files.editHashline", () => {
 
     test("rejects overlapping replace and delete ranges", async () => {
         const ctx = await mkCtx();
-        const path = ".hyper/_test_hashline_edit/overlap.txt";
+        const path = ".test-tmp/hashline_edit/overlap.txt";
         await write(ctx, { path, content: "a\nb\nc\nd\n" });
         const r = await readHashline(ctx, { path });
         const a2 = r.lines[1]!.anchor;

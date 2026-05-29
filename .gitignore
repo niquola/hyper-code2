@@ -40,3 +40,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .hyper/tmp_*
 .kimi-results
 .claude/
+
+# Test fixtures — written at runtime by src/files/*.test.ts. Kept OUT of the
+# scanned roots (src/, .hyper/) so they can never leak into ctx.fns / ctx_ns.d.ts.
+.test-tmp/

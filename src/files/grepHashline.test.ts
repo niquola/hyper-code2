@@ -12,9 +12,9 @@ const mkCtx = async () => {
 describe("files.grepHashline", () => {
     test("returns anchored grep rows", async () => {
         const ctx = await mkCtx();
-        const path = ".hyper/_test_hashline_grep/a.txt";
+        const path = ".test-tmp/hashline_grep/a.txt";
         await write(ctx, { path, content: "hello\nworld\nhello again\n" });
-        const rows = await grepHashline(ctx, { pattern: "hello", path: ".hyper/_test_hashline_grep" });
+        const rows = await grepHashline(ctx, { pattern: "hello", path: ".test-tmp/hashline_grep" });
         expect(rows.length).toBeGreaterThan(0);
         expect(rows[0]!.anchor).toMatch(/^\d+[a-z0-9]{2}$/);
     });

@@ -12,7 +12,7 @@ const mkCtx = async () => {
 describe("files.readHashline", () => {
     test("returns anchored lines", async () => {
         const ctx = await mkCtx();
-        const path = ".hyper/_test_hashline_read/a.txt";
+        const path = ".test-tmp/hashline_read/a.txt";
         await write(ctx, { path, content: "aa\nbb\n" });
         const r = await readHashline(ctx, { path });
         expect(r.lines.length).toBeGreaterThanOrEqual(2);

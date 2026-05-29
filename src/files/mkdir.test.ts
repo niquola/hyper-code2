@@ -3,7 +3,7 @@ import loadFns from "../loadFns";
 import mkdir from "./mkdir";
 import exists from "./exists";
 
-const TEST_DIR = ".hyper/_test_mkdir";
+const TEST_DIR = ".test-tmp/mkdir";
 
 const mkCtx = async () => {
     const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;
