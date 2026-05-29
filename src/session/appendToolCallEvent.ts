@@ -1,4 +1,4 @@
-export default async function (ctx: Context, opts: { id: string; payload: { name: string; args: any; result: string; argsHtml: string; resultHtml: string; isError: boolean }; ts?: number }) {
+export default async function (ctx: Context, opts: { id: string; payload: { name: string; args: any; result: string; argsHtml: string; resultHtml: string; isError: boolean; messageIdx?: number }; ts?: number }) {
     const { id, payload } = opts;
     const ts = opts.ts ?? Date.now();
     const event = { type: "tool_call", ...payload } as any;

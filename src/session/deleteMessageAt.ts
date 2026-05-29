@@ -1,34 +1,57 @@
-// Delete a single message by idx. Refuses to delete one half of a marker
-// pair (would leave the other half stranded). For those cases the caller
-// should use truncateMessagesFrom, which walks the pair boundary.
-function isAssistantInvocation(m: any): boolean {
-    if (m?.role !== "assistant") return false;
-    const c = String(m.content ?? "");
+// Delete a single message by its DB idx, plus the UI event(s) that render it,
+// so the chat bubble actually disappears (the UI is driven by the events
+// table). Refuses to delete one half of a marker pair (would strand the other
+// half) — for those use truncateMessagesFrom, which walks the pair boundary.
+//
+// `idx` is a DB message idx (what the delete button posts as messageIdx), NOT
+// an array position. We delete by idx directly — no getMessages →
+// replaceMessages round-trip — so surviving rows keep their idx and flags and
+// stay aligned with their events. The resulting idx gap is harmless (reads are
+// ORDER BY idx, appends use MAX(idx)+1).
+function isAssistantInvocation(content: any): boolean {
+    const c = String(content ?? "");
     return c.startsWith("§eval\n") || c === "§eval"
         || c.startsWith("§write:")
         || c.startsWith("§bash\n") || c === "§bash"
         || c.startsWith("§html\n") || c === "§html";
 }
 
-function isToolResult(m: any): boolean {
-    if (m?.role !== "user") return false;
-    const c = String(m.content ?? "");
+function isToolResult(content: any): boolean {
+    const c = String(content ?? "");
     return c.startsWith("§result:") || c.startsWith("§error:");
 }
 
 export default function (ctx: Context, opts: { id: string; idx: number }): { ok: boolean; reason?: string } {
     const { id, idx } = opts;
-    const messages = ctx.fns.session.getMessages(ctx, { id });
-    if (!Number.isInteger(idx) || idx < 0 || idx >= messages.length) return { ok: false, reason: "invalid idx" };
-    const target = messages[idx];
+    if (!Number.isInteger(idx) || idx < 0) return { ok: false, reason: "invalid idx" };
+
+    const target = ctx.fns.db.select<any>(ctx, {
+        sql: "SELECT idx, role, content FROM messages WHERE agent_id = ? AND idx = ?",
+        params: [id, idx],
+    })[0];
     if (!target) return { ok: false, reason: "not found" };
-    if (isAssistantInvocation(target)) {
+    if (target.role === "assistant" && isAssistantInvocation(target.content)) {
         return { ok: false, reason: "cannot delete assistant marker message alone; use delete from here" };
     }
-    if (isToolResult(target)) {
+    if (target.role === "user" && isToolResult(target.content)) {
         return { ok: false, reason: "cannot delete tool-result message alone; use delete from here" };
     }
-    const next = messages.slice(0, idx).concat(messages.slice(idx + 1));
-    ctx.fns.session.replaceMessages(ctx, { id, messages: next });
+
+    ctx.fns.db.exec(ctx, { sql: "DELETE FROM messages WHERE agent_id = ? AND idx = ?", params: [id, idx] });
+
+    // Remove the event(s) that render this exact message (user / assistant
+    // bubbles carry messageIdx). Leaves surrounding events untouched.
+    const evRows = ctx.fns.db.select<any>(ctx, {
+        sql: "SELECT idx, payload FROM events WHERE agent_id = ? ORDER BY idx",
+        params: [id],
+    });
+    for (const e of evRows) {
+        let mi: any;
+        try { mi = JSON.parse(e.payload)?.messageIdx; } catch { mi = undefined; }
+        if (mi != null && Number(mi) === idx) {
+            ctx.fns.db.exec(ctx, { sql: "DELETE FROM events WHERE agent_id = ? AND idx = ?", params: [id, Number(e.idx)] });
+        }
+    }
+
     return { ok: true };
 }

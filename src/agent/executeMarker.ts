@@ -96,6 +96,9 @@ export default async function (
             : { code: (call as any).content, format: (call as any).format },
         result: output,
         argsHtml, resultHtml, isError,
+        // Anchor this event to the assistant marker message so delete/truncate
+        // can map an event boundary back to a message boundary (and vice-versa).
+        messageIdx: append.idx,
     } });
 
     const resultText = ctx.fns.agent.formatMarkerResult(ctx, { call, output, isError });

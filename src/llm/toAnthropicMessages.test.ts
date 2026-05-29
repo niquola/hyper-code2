@@ -32,4 +32,57 @@ describe("llm.toAnthropicMessages", () => {
             { role: "user",      content: [{ type: "text", text: "§result:eval\n1" }] },
         ]);
     });
+
+    // Anthropic 400s on empty text blocks ("text content blocks must be
+    // non-empty"). A null / "" / whitespace content row (e.g. a reentrant
+    // run() that appended undefined userText) must never reach the wire.
+    test("drops null-content message (the bx[79] poison row)", () => {
+        expect(convert(ctx, { messages: [
+            { role: "assistant", content: "ask" },
+            { role: "user", content: null },     // NULL-content user row
+            { role: "assistant", content: "answer" },
+        ] })).toEqual([
+            // null dropped → two assistants coalesce into one
+            { role: "assistant", content: [{ type: "text", text: "ask\n\nanswer" }] },
+        ]);
+    });
+
+    test("drops empty-string and whitespace-only content (then coalesces the now-adjacent users)", () => {
+        expect(convert(ctx, { messages: [
+            { role: "user", content: "hi" },
+            { role: "assistant", content: "" },
+            { role: "assistant", content: "   \n  " },
+            { role: "user", content: "again" },
+        ] })).toEqual([
+            // both empty assistants dropped → the two users become adjacent → coalesced
+            { role: "user", content: [{ type: "text", text: "hi\n\nagain" }] },
+        ]);
+    });
+
+    test("coalesces consecutive same-role messages (keeps roles alternating after drops)", () => {
+        expect(convert(ctx, { messages: [
+            { role: "user", content: "a" },
+            { role: "user", content: "b" },
+            { role: "assistant", content: "c" },
+        ] })).toEqual([
+            { role: "user", content: [{ type: "text", text: "a\n\nb" }] },
+            { role: "assistant", content: [{ type: "text", text: "c" }] },
+        ]);
+    });
+
+    test("INVARIANT: never emits an empty text block, whatever the input", () => {
+        const out = convert(ctx, { messages: [
+            { role: "user" },                     // missing content
+            { role: "user", content: undefined },
+            { role: "assistant", content: null },
+            { role: "user", content: "" },
+            { role: "assistant", content: "real" },
+            { role: "system", content: "" },
+        ] });
+        for (const m of out) {
+            for (const block of m.content) {
+                expect(block.text.length).toBeGreaterThan(0);
+            }
+        }
+    });
 });

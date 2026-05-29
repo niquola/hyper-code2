@@ -6,6 +6,7 @@ import replaceMessages from "./replaceMessages";
 import getMessages from "./getMessages";
 import deleteMessageAt from "./deleteMessageAt";
 import truncateMessagesFrom from "./truncateMessagesFrom";
+import { mkTestCtx } from "../_testCtx.entry";
 
 function mkCtx() {
   const ctx: any = { env: {}, state: {}, fns: { db: {}, session: {} } };
@@ -100,5 +101,26 @@ describe('delete message operations', () => {
     expect(res.ok).toBe(true);
     expect(res.from).toBe(3);
     expect(getMessages(ctx, { id: 'a1' }).map((m: any) => m.content)).toEqual(['q', 'a', 'q2']);
+  });
+});
+
+// The bug the user hit: delete only touched messages, so the chat bubble
+// (rendered from the events table) never disappeared. Delete must remove the
+// matching event too.
+describe('deleteMessageAt removes the rendered event in lockstep', () => {
+  test('deleting a user message deletes its event, keeps others', async () => {
+    const ctx = await mkTestCtx();
+    const id = ctx.fns.agent.start(ctx, { model: 'mock:x' }).id;
+    ctx.fns.session.appendMessage(ctx, { id, message: { role: 'user', content: 'hello' } });   // 0
+    ctx.fns.session.appendMessage(ctx, { id, message: { role: 'assistant', content: 'hi' } });  // 1
+    ctx.fns.session.appendEvent(ctx, { id, event: { type: 'user', text: 'hello', messageIdx: 0 } });
+    ctx.fns.session.appendEvent(ctx, { id, event: { type: 'assistant', text: 'hi', messageIdx: 1 } });
+
+    expect(ctx.fns.session.deleteMessageAt(ctx, { id, idx: 0 })).toEqual({ ok: true });
+    // message gone
+    expect(ctx.fns.session.getMessages(ctx, { id }).map((m: any) => m.content)).toEqual(['hi']);
+    // its event gone too — only the assistant bubble survives
+    const evs = ctx.fns.session.getEvents(ctx, { id });
+    expect(evs.map((e: any) => e.messageIdx)).toEqual([1]);
   });
 });
