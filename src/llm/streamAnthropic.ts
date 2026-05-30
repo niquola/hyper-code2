@@ -74,12 +74,15 @@ export default async function (
     let finishReason: string | null = null;
     let usage: any = { prompt_tokens: 0, completion_tokens: 0 };
 
-    for await (const ev of parseSSE(res.body)) {
-        if (ev.type === "message_start") {
-            const u = ev.data.message?.usage;
+    for await (const { event, data } of ctx.fns.llm.parseSSE(ctx, { body: res.body })) {
+        let msg: any;
+        try { msg = JSON.parse(data); } catch { continue; }
+        const type = event ?? "message";
+        if (type === "message_start") {
+            const u = msg.message?.usage;
             if (u) usage.prompt_tokens = u.input_tokens ?? 0;
-        } else if (ev.type === "content_block_delta") {
-            const d = ev.data.delta ?? {};
+        } else if (type === "content_block_delta") {
+            const d = msg.delta ?? {};
             if (d.type === "text_delta" && typeof d.text === "string") {
                 text += d.text;
                 opts.onEvent?.({ type: "text_delta", delta: d.text });
@@ -87,9 +90,9 @@ export default async function (
                 thinking += d.thinking;
                 opts.onEvent?.({ type: "thinking_delta", delta: d.thinking });
             }
-        } else if (ev.type === "message_delta") {
-            if (ev.data.delta?.stop_reason) finishReason = ev.data.delta.stop_reason;
-            if (ev.data.usage?.output_tokens != null) usage.completion_tokens = ev.data.usage.output_tokens;
+        } else if (type === "message_delta") {
+            if (msg.delta?.stop_reason) finishReason = msg.delta.stop_reason;
+            if (msg.usage?.output_tokens != null) usage.completion_tokens = msg.usage.output_tokens;
         }
     }
 
@@ -101,27 +104,4 @@ function mapStop(r: string | null): string | null {
     if (r === "end_turn" || r === "stop_sequence") return "stop";
     if (r === "max_tokens") return "length";
     return r;
-}
-
-async function* parseSSE(body: ReadableStream<Uint8Array>): AsyncGenerator<{ type: string; data: any }> {
-    const decoder = new TextDecoder();
-    let buf = "";
-    for await (const chunk of body) {
-        buf += decoder.decode(chunk, { stream: true });
-        let idx: number;
-        while ((idx = buf.indexOf("\n\n")) >= 0) {
-            const raw = buf.slice(0, idx);
-            buf = buf.slice(idx + 2);
-            let type = "message";
-            let dataLine = "";
-            // Kimi's SSE omits the space after the colon (event:foo / data:{...}),
-            // while Anthropic's uses "event: foo". Handle both.
-            for (const line of raw.split("\n")) {
-                if (line.startsWith("event:")) type = line.slice(6).trim();
-                else if (line.startsWith("data:")) dataLine += line.slice(5).trimStart();
-            }
-            if (!dataLine) continue;
-            try { yield { type, data: JSON.parse(dataLine) }; } catch { /* skip malformed */ }
-        }
-    }
 }

@@ -72,7 +72,10 @@ export default async function (
     let finishReason: string | null = null;
     const usage = { prompt_tokens: 0, completion_tokens: 0 };
 
-    for await (const ev of parseSSE(res.body)) {
+    for await (const { data } of ctx.fns.llm.parseSSE(ctx, { body: res.body })) {
+        if (!data || data === "[DONE]") continue;
+        let ev: any;
+        try { ev = JSON.parse(data); } catch { continue; }
         const t = ev.type;
         if (t === "response.output_text.delta" && typeof ev.delta === "string") {
             text += ev.delta;
@@ -127,26 +130,5 @@ function extractAccountId(token: string): string {
         return id;
     } catch (e: any) {
         throw new Error(`codex: cannot read account id from token: ${e?.message}`);
-    }
-}
-
-async function* parseSSE(body: ReadableStream<Uint8Array>): AsyncGenerator<any> {
-    const decoder = new TextDecoder();
-    let buf = "";
-    for await (const chunk of body) {
-        buf += decoder.decode(chunk, { stream: true });
-        let idx: number;
-        while ((idx = buf.indexOf("\n\n")) >= 0) {
-            const raw = buf.slice(0, idx);
-            buf = buf.slice(idx + 2);
-            const dataLines: string[] = [];
-            for (const line of raw.split("\n")) {
-                if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
-            }
-            if (!dataLines.length) continue;
-            const data = dataLines.join("\n").trim();
-            if (!data || data === "[DONE]") continue;
-            try { yield JSON.parse(data); } catch { /* skip malformed */ }
-        }
     }
 }

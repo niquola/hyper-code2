@@ -40,11 +40,12 @@ export default async function (
     let finishReason: string | null = null;
     let usage: any = undefined;
 
-    for await (const chunk of parseSSE(res.body)) {
-        if (chunk === "[DONE]") break;
-        const data: any = JSON.parse(chunk);
-        if (data.usage) usage = data.usage;
-        const choice = data.choices?.[0];
+    for await (const { data } of ctx.fns.llm.parseSSE(ctx, { body: res.body })) {
+        if (data === "[DONE]") break;
+        let parsed: any;
+        try { parsed = JSON.parse(data); } catch { continue; }
+        if (parsed.usage) usage = parsed.usage;
+        const choice = parsed.choices?.[0];
         if (!choice) continue;
         const delta = choice.delta ?? {};
         if (typeof delta.content === "string" && delta.content.length > 0) {
@@ -59,20 +60,4 @@ export default async function (
     }
 
     return { text, thinking, finishReason, usage };
-}
-
-async function* parseSSE(body: ReadableStream<Uint8Array>) {
-    const decoder = new TextDecoder();
-    let buf = "";
-    for await (const chunk of body) {
-        buf += decoder.decode(chunk, { stream: true });
-        let idx: number;
-        while ((idx = buf.indexOf("\n\n")) >= 0) {
-            const raw = buf.slice(0, idx);
-            buf = buf.slice(idx + 2);
-            for (const line of raw.split("\n")) {
-                if (line.startsWith("data: ")) yield line.slice(6);
-            }
-        }
-    }
 }
