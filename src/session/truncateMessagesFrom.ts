@@ -10,20 +10,7 @@
 //
 // Walks back if `from` lands inside a marker pair so we never leave half a pair:
 // assistant §eval / §write:<path> / §bash / §html → user §result:* / §error:*.
-function isAssistantInvocation(content: any): boolean {
-    const c = String(content ?? "");
-    return c.startsWith("§eval\n") || c === "§eval"
-        || c.startsWith("§write:")
-        || c.startsWith("§bash\n") || c === "§bash"
-        || c.startsWith("§html\n") || c === "§html";
-}
-
-function isToolResult(role: any, content: any): boolean {
-    if (role !== "user") return false;
-    const c = String(content ?? "");
-    return c.startsWith("§result:") || c.startsWith("§error:");
-}
-
+// Marker format lives in one place — ctx.fns.agent.markerKind.
 export default function (ctx: Context, opts: { id: string; from: number }): { ok: boolean; from?: number; reason?: string } {
     const { id, from } = opts;
     if (!Number.isInteger(from) || from < 0) return { ok: false, reason: "invalid idx" };
@@ -40,7 +27,9 @@ export default function (ctx: Context, opts: { id: string; from: number }): { ok
     while (p > 0) {
         const cur = rows[p];
         const prev = rows[p - 1];
-        if (isToolResult(cur.role, cur.content) || isAssistantInvocation(prev.content)) p -= 1;
+        const curIsResult = cur.role === "user" && ctx.fns.agent.markerKind(ctx, { content: cur.content }) === "result";
+        const prevIsInvocation = ctx.fns.agent.markerKind(ctx, { content: prev.content }) === "invocation";
+        if (curIsResult || prevIsInvocation) p -= 1;
         else break;
     }
     const effectiveFrom = Number(rows[p].idx);

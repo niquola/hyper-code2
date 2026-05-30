@@ -6,6 +6,7 @@ import replaceMessages from "./replaceMessages";
 import getMessages from "./getMessages";
 import deleteMessageAt from "./deleteMessageAt";
 import truncateMessagesFrom from "./truncateMessagesFrom";
+import markerKind from "../agent/markerKind";
 import { mkTestCtx } from "../_testCtx.entry";
 
 function mkCtx() {
@@ -15,6 +16,7 @@ function mkCtx() {
   ctx.fns.db.exec = (c: any, opts: { sql: string; params?: any }) => { const params = opts.params ?? []; const q = c.state.db.query(opts.sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
   ctx.fns.db.select = (c: any, opts: { sql: string; params?: any }) => { const params = opts.params ?? []; const q = c.state.db.query(opts.sql); return Array.isArray(params) ? q.all(...params) : q.all(params); };
   Object.assign(ctx.fns.session, { save, replaceMessages, getMessages, deleteMessageAt, truncateMessagesFrom });
+  ctx.fns.agent = { markerKind };
   return ctx;
 }
 

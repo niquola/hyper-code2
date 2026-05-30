@@ -7,20 +7,8 @@
 // an array position. We delete by idx directly — no getMessages →
 // replaceMessages round-trip — so surviving rows keep their idx and flags and
 // stay aligned with their events. The resulting idx gap is harmless (reads are
-// ORDER BY idx, appends use MAX(idx)+1).
-function isAssistantInvocation(content: any): boolean {
-    const c = String(content ?? "");
-    return c.startsWith("§eval\n") || c === "§eval"
-        || c.startsWith("§write:")
-        || c.startsWith("§bash\n") || c === "§bash"
-        || c.startsWith("§html\n") || c === "§html";
-}
-
-function isToolResult(content: any): boolean {
-    const c = String(content ?? "");
-    return c.startsWith("§result:") || c.startsWith("§error:");
-}
-
+// ORDER BY idx, appends use MAX(idx)+1). Marker format lives in one place —
+// ctx.fns.agent.markerKind.
 export default function (ctx: Context, opts: { id: string; idx: number }): { ok: boolean; reason?: string } {
     const { id, idx } = opts;
     if (!Number.isInteger(idx) || idx < 0) return { ok: false, reason: "invalid idx" };
@@ -30,10 +18,11 @@ export default function (ctx: Context, opts: { id: string; idx: number }): { ok:
         params: [id, idx],
     })[0];
     if (!target) return { ok: false, reason: "not found" };
-    if (target.role === "assistant" && isAssistantInvocation(target.content)) {
+    const kind = ctx.fns.agent.markerKind(ctx, { content: target.content });
+    if (target.role === "assistant" && kind === "invocation") {
         return { ok: false, reason: "cannot delete assistant marker message alone; use delete from here" };
     }
-    if (target.role === "user" && isToolResult(target.content)) {
+    if (target.role === "user" && kind === "result") {
         return { ok: false, reason: "cannot delete tool-result message alone; use delete from here" };
     }
 

@@ -19,6 +19,7 @@ declare global {
         highlightResult: typeof import("./agent/highlightResult").default;
         listPromptPresets: typeof import("./agent/listPromptPresets").default;
         llmCall: typeof import("./agent/llmCall").default;
+        markerKind: typeof import("./agent/markerKind").default;
         nextId: typeof import("./agent/nextId").default;
         parseMarkers: typeof import("./agent/parseMarkers").default;
         parseReadMarker: typeof import("./agent/parseReadMarker").default;
