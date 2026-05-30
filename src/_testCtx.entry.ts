@@ -22,6 +22,7 @@ import loadAll from './session/loadAll';
 import search from './session/search';
 import appendMessage from './session/appendMessage';
 import appendEvent from './session/appendEvent';
+import appendEventWithHtml from './session/appendEventWithHtml';
 import appendUserMessage from './session/appendUserMessage';
 import appendAssistantMessage from './session/appendAssistantMessage';
 import appendThinkingEvent from './session/appendThinkingEvent';
@@ -110,7 +111,7 @@ export async function mkTestCtx(opts: { db?: string | false; quiet?: boolean } =
             session: {
                 save, load, list, fork, loadAll, search,
                 archive: archiveSession, delete: deleteSession,
-                appendMessage, appendEvent,
+                appendMessage, appendEvent, appendEventWithHtml,
                 appendUserMessage, appendAssistantMessage,
                 appendThinkingEvent, appendAssistantEvent, appendToolCallEvent, appendErrorEvent,
                 getMessages, getEvents, getMaxEventIdx, getFullMessages,

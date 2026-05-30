@@ -1,7 +1,3 @@
 export default async function (ctx: Context, opts: { id: string; payload: { name: string; args: any; result: string; argsHtml: string; resultHtml: string; isError: boolean; messageIdx?: number }; ts?: number }) {
-    const { id, payload } = opts;
-    const ts = opts.ts ?? Date.now();
-    const event = { type: "tool_call", ...payload } as any;
-    event.html = await ctx.fns.agent.renderEventHtml(ctx, { event, agentId: id });
-    return ctx.fns.session.appendEvent(ctx, { id, event, ts });
+    return ctx.fns.session.appendEventWithHtml(ctx, { id: opts.id, type: "tool_call", payload: opts.payload, ts: opts.ts });
 }

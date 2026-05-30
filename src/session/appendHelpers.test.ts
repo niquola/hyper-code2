@@ -4,6 +4,7 @@ import migrate from "../db/migrate";
 import save from "./save";
 import appendMessage from "./appendMessage";
 import appendEvent from "./appendEvent";
+import appendEventWithHtml from "./appendEventWithHtml";
 import appendUserMessage from "./appendUserMessage";
 import appendAssistantMessage from "./appendAssistantMessage";
 import appendErrorEvent from "./appendErrorEvent";
@@ -20,7 +21,7 @@ function mkCtx() {
   ctx.fns.db.exec = (c: any, opts: { sql: string; params?: any }) => { const params = opts.params ?? []; const q = c.state.db.query(opts.sql); const res = Array.isArray(params) ? q.run(...params) : q.run(params); return { changes: c.state.db.changes, lastInsertRowid: Number(res.lastInsertRowid ?? 0) }; };
   ctx.fns.db.select = (c: any, opts: { sql: string; params?: any }) => { const params = opts.params ?? []; const q = c.state.db.query(opts.sql); return Array.isArray(params) ? q.all(...params) : q.all(params); };
   ctx.fns.agent.renderEventHtml = async () => '';
-  Object.assign(ctx.fns.session, { save, appendMessage, appendEvent, appendUserMessage, appendAssistantMessage, appendErrorEvent, appendThinkingEvent, appendAssistantEvent, appendToolCallEvent, getMessages, getEvents });
+  Object.assign(ctx.fns.session, { save, appendMessage, appendEvent, appendEventWithHtml, appendUserMessage, appendAssistantMessage, appendErrorEvent, appendThinkingEvent, appendAssistantEvent, appendToolCallEvent, getMessages, getEvents });
   return ctx;
 }
 

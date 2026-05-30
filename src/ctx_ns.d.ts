@@ -123,6 +123,7 @@ declare global {
         appendAssistantMessage: typeof import("./session/appendAssistantMessage").default;
         appendErrorEvent: typeof import("./session/appendErrorEvent").default;
         appendEvent: typeof import("./session/appendEvent").default;
+        appendEventWithHtml: typeof import("./session/appendEventWithHtml").default;
         appendMessage: typeof import("./session/appendMessage").default;
         appendThinkingEvent: typeof import("./session/appendThinkingEvent").default;
         appendToolCallEvent: typeof import("./session/appendToolCallEvent").default;
