@@ -6,10 +6,5 @@ export default async function (ctx: Context, opts: { code: string; agent?: any }
     const entry: any = { id, status: 'pending', code, createdAt: Date.now() };
     pending.pending.set(id, entry);
     ctx.fns.events.emit(ctx, { event: { type: 'ui.eval', id, code } });
-    if (opts.agent) {
-        opts.agent.scratchpad ??= {};
-        opts.agent.scratchpad.uiEval ??= {};
-        opts.agent.scratchpad.uiEval.last = { id, code };
-    }
     return { id, dispatched: true };
 }

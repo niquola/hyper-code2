@@ -155,8 +155,6 @@ declare global {
         logoutCodex: typeof import("./settings/logoutCodex").default;
         logoutKimi: typeof import("./settings/logoutKimi").default;
         modelDefault: typeof import("./settings/modelDefault").default;
-        providerApiKey: typeof import("./settings/providerApiKey").default;
-        providerBaseUrl: typeof import("./settings/providerBaseUrl").default;
         remove: typeof import("./settings/remove").default;
         renderDeclaredForm: typeof import("./settings/renderDeclaredForm").default;
         saveEnv: typeof import("./settings/saveEnv").default;

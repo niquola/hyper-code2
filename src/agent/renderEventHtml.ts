@@ -21,13 +21,6 @@ function isHtmlBalanced(html: string): boolean {
     return true;
 }
 
-function fmtTok(n: any): string {
-    if (n == null) return "—";
-    if (Number(n) < 1000) return String(n);
-    const v = Math.round(Number(n) / 100) / 10;
-    return String(v).replace(/\.0$/, "") + "k";
-}
-
 function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = true): string {
     if (!agentId) return '';
     const url = '/agent/' + encodeURIComponent(agentId) + '/messages/delete';
