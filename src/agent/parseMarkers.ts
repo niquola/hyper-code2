@@ -14,8 +14,10 @@ const READ_RE  = /(?<!\\)(?<!`)§read(?::([a-z]+))?(?=\n|$)/g;
 const GREP_RE  = /(?<!\\)(?<!`)§grep(?::([a-z]+))?(?=\n|$)/g;
 const EDIT_RE  = /(?<!\\)(?<!`)§edit(?::([a-z]+))?(?=\n|$)/g;
 
+// `\§` → literal `§`. (The old /\§/g was an unnecessary escape of a non-special
+// char — i.e. just /§/g, a no-op that left the backslash behind.)
 function unescape(s: string): string {
-    return s.replace(/\§/g, '§');
+    return s.replace(/\\§/g, '§');
 }
 
 const UNESCAPED_RE = /(?<!\\)(?<!`)§\S*/g;

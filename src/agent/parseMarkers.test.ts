@@ -170,4 +170,16 @@ describe('agent.parseMarkers', () => {
         const r = parseMarkers('§bash\nls -la\ngit status\n');
         expect(r.calls).toEqual([{ kind: 'bash', content: 'ls -la\ngit status' }]);
     });
+
+    test('backslash escape: \\§ un-escapes to a literal § (no stray backslash left)', () => {
+        const r = parseMarkers('a literal \\§eval here, not a marker');
+        expect(r.prose).toBe('a literal §eval here, not a marker');
+        expect(r.calls).toEqual([]);
+    });
+
+    test('escaped \\§ inside a marker body un-escapes', () => {
+        const r = parseMarkers('§eval\nconsole.log("the \\§eval marker")');
+        expect(r.calls).toHaveLength(1);
+        expect((r.calls[0] as any).content).toBe('console.log("the §eval marker")');
+    });
 });
