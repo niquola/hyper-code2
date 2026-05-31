@@ -30,8 +30,14 @@ describe("files.write", () => {
         expect(await read(ctx, { path })).toBe("v2 longer");
     });
 
-    test("refuses paths outside workspace", async () => {
+    test("can write outside the workspace (sandbox removed)", async () => {
         const ctx = await mkCtx();
-        await expect(write(ctx, { path: "../evil.txt", content: "x" })).rejects.toThrow(/outside workspace/);
+        const abs = `/tmp/hyper_write_${Math.random().toString(36).slice(2)}.txt`;
+        try {
+            await write(ctx, { path: abs, content: "x" });
+            expect(await read(ctx, { path: abs })).toBe("x");
+        } finally {
+            await Bun.$`rm -f ${abs}`.quiet();
+        }
     });
 });

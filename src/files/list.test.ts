@@ -41,8 +41,9 @@ describe("files.list", () => {
         expect(names).toContain("migrate.ts");
     });
 
-    test("refuses to escape workspace", async () => {
+    test("can list outside the workspace (sandbox removed)", async () => {
         const ctx = await mkCtx();
-        await expect(list(ctx, { path: "../" })).rejects.toThrow(/outside workspace/);
+        const names = await list(ctx, { path: "../" });
+        expect(Array.isArray(names)).toBe(true);
     });
 });

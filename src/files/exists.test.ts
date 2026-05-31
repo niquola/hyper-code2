@@ -19,8 +19,9 @@ describe("files.exists", () => {
         expect(await exists(ctx, { path: ".hyper/nope-" + Math.random().toString(36).slice(2) })).toBe(false);
     });
 
-    test("refuses outside workspace", async () => {
+    test("checks paths outside the workspace (sandbox removed)", async () => {
         const ctx = await mkCtx();
-        await expect(exists(ctx, { path: "../secret" })).rejects.toThrow(/outside workspace/);
+        // resolves & stats out-of-cwd instead of throwing; this one doesn't exist
+        expect(await exists(ctx, { path: "../nope-" + Math.random().toString(36).slice(2) })).toBe(false);
     });
 });

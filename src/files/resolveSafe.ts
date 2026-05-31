@@ -1,13 +1,14 @@
 import { resolve } from "node:path";
 
-// Resolve `path` against the workspace root (cwd) and ensure the result stays within it.
-// Throws on any attempt to escape. Empty path == workspace root.
+// Resolve `path` to an absolute path against the workspace root (cwd).
+// Relative paths resolve under cwd; absolute paths pass through unchanged;
+// empty path == cwd.
+//
+// NOTE: the previous workspace-confinement guard (it threw "outside workspace"
+// for any path that escaped cwd) was removed by request — files.* may now read
+// and write anywhere the process has permission, including ../ siblings and
+// absolute paths like /tmp or /Users/.../.claude. This deliberately
+// de-sandboxes the agent's file tools; only run agents you trust on this build.
 export default function (_ctx: Context, opts: { path: string }): string {
-    const path = opts.path;
-    const root = resolve(process.cwd());
-    const abs = resolve(root, path || ".");
-    if (abs !== root && !abs.startsWith(root + "/")) {
-        throw new Error(`outside workspace: ${path}`);
-    }
-    return abs;
+    return resolve(process.cwd(), opts.path || ".");
 }

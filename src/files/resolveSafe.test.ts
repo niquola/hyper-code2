@@ -1,4 +1,5 @@
 import { test, expect, describe } from "bun:test";
+import { resolve } from "node:path";
 import resolveSafe from "./resolveSafe";
 
 const ctx = {} as Context;
@@ -12,13 +13,15 @@ describe("files.resolveSafe", () => {
         expect(resolveSafe(ctx, { path: "src/agent" })).toBe(process.cwd() + "/src/agent");
     });
 
-    test("path traversal is rejected", () => {
-        expect(() => resolveSafe(ctx, { path: "../other" })).toThrow(/outside workspace/);
-        expect(() => resolveSafe(ctx, { path: "src/../../outside" })).toThrow(/outside workspace/);
+    // Workspace confinement was removed by request — resolveSafe is now just a
+    // relative→absolute resolver; out-of-cwd paths resolve, not throw.
+    test("parent traversal resolves (no longer rejected)", () => {
+        expect(resolveSafe(ctx, { path: "../other" })).toBe(resolve(process.cwd(), "../other"));
+        expect(resolveSafe(ctx, { path: "src/../../outside" })).toBe(resolve(process.cwd(), "../outside"));
     });
 
-    test("absolute paths outside cwd are rejected", () => {
-        expect(() => resolveSafe(ctx, { path: "/etc/passwd" })).toThrow(/outside workspace/);
+    test("absolute path outside cwd passes through (no throw)", () => {
+        expect(resolveSafe(ctx, { path: "/etc/passwd" })).toBe("/etc/passwd");
     });
 
     test("absolute path inside cwd is OK", () => {
