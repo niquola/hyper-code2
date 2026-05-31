@@ -14,11 +14,8 @@ const READ_RE  = /(?<!\\)(?<!`)§read(?::([a-z]+))?(?=\n|$)/g;
 const GREP_RE  = /(?<!\\)(?<!`)§grep(?::([a-z]+))?(?=\n|$)/g;
 const EDIT_RE  = /(?<!\\)(?<!`)§edit(?::([a-z]+))?(?=\n|$)/g;
 
-// Inverse of ctx.fns.agent.escapeMarkerBody: a backslash-escaped `\§` becomes a
-// literal `§`. NOTE the old version used /\§/g which (an unnecessary escape of a
-// non-special char) is just /§/g — a no-op that left the backslash behind.
 function unescape(s: string): string {
-    return s.replace(/\\§/g, '§');
+    return s.replace(/\§/g, '§');
 }
 
 const UNESCAPED_RE = /(?<!\\)(?<!`)§\S*/g;

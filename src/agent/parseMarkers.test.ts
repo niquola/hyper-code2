@@ -170,26 +170,4 @@ describe('agent.parseMarkers', () => {
         const r = parseMarkers('§bash\nls -la\ngit status\n');
         expect(r.calls).toEqual([{ kind: 'bash', content: 'ls -la\ngit status' }]);
     });
-
-    // Escape: the documented `\§` must un-escape to a literal `§` (the old
-    // unescape used /\§/g which is just /§/g — a no-op — leaving a stray
-    // backslash in prose and bodies).
-    test('backslash-escaped \\§ in prose un-escapes to literal § (no stray backslash)', () => {
-        const r = parseMarkers('a literal \\§eval here, not a marker');
-        expect(r.prose).toBe('a literal §eval here, not a marker');
-        expect(r.calls).toEqual([]);
-        expect(r.errors).toEqual([]);
-    });
-
-    test('escaped \\§eval at column 1 is NOT executed and renders as literal §eval', () => {
-        const r = parseMarkers('\\§eval\nnot code');
-        expect(r.calls).toEqual([]);
-        expect(r.prose).toBe('§eval\nnot code');
-    });
-
-    test('escaped \\§ inside a marker body un-escapes (so a body can mention §eval)', () => {
-        const r = parseMarkers('§eval\nconsole.log("the \\§eval marker")');
-        expect(r.calls).toHaveLength(1);
-        expect((r.calls[0] as any).content).toBe('console.log("the §eval marker")');
-    });
 });

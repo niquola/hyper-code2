@@ -9,7 +9,6 @@ declare global {
         clear: typeof import("./agent/clear").default;
         compact: typeof import("./agent/compact").default;
         delegateTask: typeof import("./agent/delegateTask").default;
-        escapeMarkerBody: typeof import("./agent/escapeMarkerBody").default;
         executeBash: typeof import("./agent/executeBash").default;
         executeMarker: typeof import("./agent/executeMarker").default;
         finishTask: typeof import("./agent/finishTask").default;

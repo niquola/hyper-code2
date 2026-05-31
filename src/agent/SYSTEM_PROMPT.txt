@@ -1,6 +1,6 @@
 # Wire format: markers protocol
 
-You have seven marker kinds (eval, write, bash, html, read, grep, edit — read/grep/edit also take an optional `:hashline` form):
+You have seven markers:
 
 - `§eval` — run JS/TS; the captured stdout comes back as a result message.
 - `§write:<relative-path>` — write the body verbatim to a file.
