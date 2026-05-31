@@ -1,6 +1,9 @@
-// Render a tool-call result as a synthetic user message.
+// Render a tool-call result as a synthetic user message. The output body is
+// escaped via ctx.fns.agent.escapeMarkerBody so a result line that happens to
+// start with `§` (e.g. bash echoing a marker) reads as literal data, not as a
+// new marker — keeping the wire format unambiguous.
 export default function (
-    _ctx: Context,
+    ctx: Context,
     opts: { call: types.agent.MarkerCall; output: string; isError: boolean },
 ): string {
     const { call, output, isError } = opts;
@@ -11,5 +14,5 @@ export default function (
     else if (call.kind === 'grep') head = `§result:grep${call.format && call.format !== 'plain' ? ':' + call.format : ''}`;
     else if (call.kind === 'edit') head = `§result:edit${call.format ? ':' + call.format : ''}`;
     const status = isError ? ':error' : '';
-    return `${head}${status}\n${output}`;
+    return `${head}${status}\n${ctx.fns.agent.escapeMarkerBody(ctx, { body: output })}`;
 }
