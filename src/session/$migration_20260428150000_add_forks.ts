@@ -2,5 +2,5 @@
 const up_sql = "ALTER TABLE agents ADD COLUMN parent_id TEXT;\nALTER TABLE agents ADD COLUMN fork_offset INTEGER;\nCREATE INDEX IF NOT EXISTS idx_agents_parent_id ON agents(parent_id);\n";
 
 export default {
-    up: (ctx: Context) => { ctx.fns.procs.db.exec({ sql: up_sql }); },
+    up: async (ctx: Context) => { await ctx.fns.procs.db.exec({ sql: up_sql }); },
 };

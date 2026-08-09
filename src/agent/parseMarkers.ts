@@ -3,9 +3,11 @@
 //   §write:<path>
 //   §bash
 //   §html
+//   §eval:html
 //   §read[:format]   body = file path
 //   §grep[:format]   body = query text
 //   §edit[:format]   body = edit payload
+const EVAL_HTML_RE = /(?<!\\)(?<!`)§eval:html(?=\n|$)/g;
 const EVAL_RE  = /(?<!\\)(?<!`)§eval(?=\n|$)/g;
 const WRITE_RE = /(?<!\\)(?<!`)§write:([^\n]+)/g;
 const BASH_RE  = /(?<!\\)(?<!`)§bash(?=\n|$)/g;
@@ -25,7 +27,7 @@ const UNESCAPED_RE = /(?<!\\)(?<!`)§\S*/g;
 type Candidate = {
     index: number;
     len: number;
-    kind: 'eval' | 'write' | 'html' | 'bash' | 'read' | 'grep' | 'edit';
+    kind: 'eval' | 'evalHtml' | 'write' | 'html' | 'bash' | 'read' | 'grep' | 'edit';
     path?: string;
     format?: 'plain' | 'hashline';
 };
@@ -38,6 +40,7 @@ export default function (_ctx: Context, _session: Session | null, opts: { text: 
     const { text } = opts;
     const candidates: Candidate[] = [];
 
+    for (const m of text.matchAll(EVAL_HTML_RE)) candidates.push({ index: m.index!, len: m[0].length, kind: 'evalHtml' });
     for (const m of text.matchAll(EVAL_RE)) candidates.push({ index: m.index!, len: m[0].length, kind: 'eval' });
     for (const m of text.matchAll(WRITE_RE)) {
         const path = m[1]!.trim();
@@ -82,6 +85,7 @@ export default function (_ctx: Context, _session: Session | null, opts: { text: 
         const call: types.agent.MarkerCall =
             c.kind === 'write' ? { kind: 'write', path: c.path!, content: '' }
             : c.kind === 'html' ? { kind: 'html', content: '' }
+            : c.kind === 'evalHtml' ? { kind: 'evalHtml', content: '' }
             : c.kind === 'bash' ? { kind: 'bash', content: '' }
             : c.kind === 'read' ? { kind: 'read', path: '', format: c.format }
             : c.kind === 'grep' ? { kind: 'grep', content: '', format: c.format }

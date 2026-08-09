@@ -6,7 +6,7 @@ export default async function (
     opts: { agent: types.agent.Agent; signal?: AbortSignal; onEvent?: (ev: any) => void },
 ) {
     const { agent } = opts;
-    const ep = ctx.fns.llm.resolveEndpoint({ model: agent.model });
+    const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
     if (ep.api === "mock") return ctx.fns.llm.streamMock(opts);
     if (ep.api === "anthropic") return ctx.fns.llm.streamAnthropic(opts);
     if (ep.api === "responses") return ctx.fns.llm.streamCodex(opts);

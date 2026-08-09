@@ -1,5 +1,5 @@
 export default async function (ctx: Context, _session: Session | null, _opts: { req: Request; params: Record<string, string> }) {
-    const defaultModel = ctx.fns.settings?.modelDefault?.({}) ?? ctx.env.MODEL ?? "";
+    const defaultModel = (await ctx.fns.settings?.modelDefault?.({})) ?? ctx.env.MODEL ?? "";
     const groups = await ctx.fns.llm.listModels({});
     const base = await ctx.fns.agent.getBasePromptParts({});
     const coreTokens = Math.ceil((base.core?.length || 0) / 4);

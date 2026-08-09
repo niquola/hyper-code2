@@ -2,8 +2,8 @@ import { describe, test, expect } from 'bun:test';
 import { mkTestCtx } from '../_testCtx.entry';
 
 async function mkAgent(ctx: any) {
-    const agent = ctx.fns.agent.start({ model: 'm', systemPrompt: '' });
-    ctx.fns.session.save({ agent });
+    const agent = await ctx.fns.agent.start({ model: 'm', systemPrompt: '' });
+    await ctx.fns.session.save({ agent });
     return agent;
 }
 
@@ -17,8 +17,8 @@ describe('GET /agent/:id/events.html', () => {
     test('returns events at offset and a tail with next offset', async () => {
         const ctx = await mkTestCtx();
         const a = await mkAgent(ctx);
-        ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: 'hi', html: '<div data-ev="user">hi</div>' } });
-        ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: 'two', html: '<div data-ev="user">two</div>' } });
+        await ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: 'hi', html: '<div data-ev="user">hi</div>' } });
+        await ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: 'two', html: '<div data-ev="user">two</div>' } });
 
         const res = await ctx.fns.procs.http.dispatch({ url: `/agent/${a.id}/events.html?offset=0` });
         const body = await res.text();
@@ -31,9 +31,9 @@ describe('GET /agent/:id/events.html', () => {
     test('returns only delta when offset is in the middle', async () => {
         const ctx = await mkTestCtx();
         const a = await mkAgent(ctx);
-        ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: 'a', html: '<div>a</div>' } });
-        ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: 'b', html: '<div>b</div>' } });
-        ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: 'c', html: '<div>c</div>' } });
+        await ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: 'a', html: '<div>a</div>' } });
+        await ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: 'b', html: '<div>b</div>' } });
+        await ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: 'c', html: '<div>c</div>' } });
 
         const res = await ctx.fns.procs.http.dispatch({ url: `/agent/${a.id}/events.html?offset=2` });
         const body = await res.text();

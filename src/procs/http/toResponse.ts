@@ -7,7 +7,7 @@
 //
 // An htmx request gets the page fragment instead of the whole document, plus
 // whatever chrome the host keeps in step with it — see `chrome` below.
-export default function (ctx: Context, session: Session | null, opts: { value: any }): Response {
+export default async function (ctx: Context, session: Session | null, opts: { value: any }): Promise<Response> {
     const v = opts.value;
     if (v instanceof Response) return v;
     if (typeof v === "string" && layoutOf(ctx)) {
@@ -23,14 +23,14 @@ export default function (ctx: Context, session: Session | null, opts: { value: a
     });
 }
 
-function page(ctx: Context, session: Session | null, opts: any, status = 200): Response {
+async function page(ctx: Context, session: Session | null, opts: any, status = 200): Promise<Response> {
     // A history restore (Back/Forward with no local cache) also arrives with
     // HX-Request, but htmx replaces the whole body with the answer — it must be
     // the full document, not a fragment.
     const partial = session?.req?.headers.get("hx-request") === "true"
         && session?.req?.headers.get("hx-history-restore-request") !== "true";
-    const dressed = { ...opts, main: pane(ctx, session, opts) };
-    const body = partial ? dressed.main + chrome(ctx, session) : layoutOf(ctx)!(ctx, session, dressed);
+    const dressed = { ...opts, main: await pane(ctx, session, opts) };
+    const body = partial ? dressed.main + chrome(ctx, session) : await layoutOf(ctx)!(ctx, session, dressed);
     return new Response(body, { status, headers: html() });
 }
 
@@ -49,11 +49,11 @@ function page(ctx: Context, session: Session | null, opts: any, status = 200): R
 // A handler that returns a `Response` of its own (the fragment a POST answers a
 // section with) never comes through here, which is right: that swaps into a
 // target inside the page, not over it.
-function pane(ctx: Context, session: Session | null, opts: any): string {
+async function pane(ctx: Context, session: Session | null, opts: any): Promise<string> {
     const ns = (session?.url?.pathname ?? "").split("/")[1];
     const own = ns ? (ctx.state.registry as any)?.[ns]?.pane : null;
     if (typeof own !== "function") return opts.main;
-    try { return own(ctx, session, { ...opts, path: session?.url?.pathname ?? "/" }) ?? opts.main; }
+    try { return (await own(ctx, session, { ...opts, path: session?.url?.pathname ?? "/" })) ?? opts.main; }
     catch (error: any) { console.warn(`[pane] ${ns}: ${String(error?.message ?? error)}`); return opts.main; }
 }
 

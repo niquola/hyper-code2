@@ -1,11 +1,11 @@
 // The app's HTML shell — replaces procs' default (`registry.ui.layout` wins over
 // `registry.procs.ui.layout` in http/toResponse). Called RAW by toResponse as
 // `layout(ctx, session, dressed)`; the request lives on the session.
-export default function (ctx: Context, session: Session | null, opts: { currentId?: string; title?: string; main: string; headExtra?: string }): string {
+export default async function (ctx: Context, session: Session | null, opts: { currentId?: string; title?: string; main: string; headExtra?: string }): Promise<string> {
     // Prefer db listing (authoritative), fall back to in-memory in tests without db.
     let agents: any[];
     try {
-        agents = ctx.fns.session.list({}).map((a: any) => ({ ...a, isStreaming: (ctx.state as any).agent?.[a.id]?.isStreaming ?? false }));
+        agents = (await ctx.fns.session.list({})).map((a: any) => ({ ...a, isStreaming: (ctx.state as any).agent?.[a.id]?.isStreaming ?? false }));
     } catch {
         const store: Record<string, any> = (ctx.state as any).agent ?? {};
         agents = Object.values(store).map((a: any) => {
@@ -19,7 +19,7 @@ export default function (ctx: Context, session: Session | null, opts: { currentI
             };
         });
     }
-    const openFiles = ctx.fns.files?.listOpen ? ctx.fns.files.listOpen({}) : [];
+    const openFiles = ctx.fns.files?.listOpen ? await ctx.fns.files.listOpen({}) : [];
     const currentPath = extractCurrentPath(opts.title);
     const sidebar = renderSidebar(agents, openFiles, opts.currentId, currentPath);
     if (session?.req?.headers.get("x-hyper-fragment") === "sidebar") return sidebar;

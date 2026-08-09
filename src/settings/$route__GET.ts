@@ -1,5 +1,5 @@
 export default async function (ctx: Context, _session: Session | null, _opts: { req: Request; params: Record<string, string> }) {
-    const s = ctx.fns.settings.status({});
+    const s = await ctx.fns.settings.status({});
     const kc = (ctx.state as any).settings?.kimi;
     const cx = (ctx.state as any).settings?.codex;
     const expHuman = (e: number | null) =>

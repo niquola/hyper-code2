@@ -129,6 +129,7 @@ declare global {
                 run: Injected<typeof import("./procs/db/run").default>;
                 select: Injected<typeof import("./procs/db/select").default>;
                 sql: Injected<typeof import("./procs/db/sql").default>;
+                toPg: Injected<typeof import("./procs/db/toPg").default>;
                 url: Injected<typeof import("./procs/db/url").default>;
             };
             dev: {

@@ -4,8 +4,8 @@ import { mkTestCtx } from "../_testCtx.entry";
 describe('agent POST route', () => {
     test('does not duplicate user message even if called twice', async () => {
         const ctx = await mkTestCtx();
-        const agent = ctx.fns.agent.start({ model: 'mock:test', systemPrompt: '' });
-        ctx.fns.session.save({ agent });
+        const agent = await ctx.fns.agent.start({ model: 'mock:test', systemPrompt: '' });
+        await ctx.fns.session.save({ agent });
         (ctx.state as any).agent = { [agent.id]: agent };
 
         const res = await ctx.fns.procs.http.dispatch({
@@ -15,7 +15,7 @@ describe('agent POST route', () => {
         });
         expect(res.status).toBe(200);
 
-        const userMsgs = ctx.fns.session.getMessages({ id: agent.id })
+        const userMsgs = (await ctx.fns.session.getMessages({ id: agent.id }))
             .filter((m: any) => m.role === 'user' && m.content === 'hello once');
         expect(userMsgs.length).toBe(1);
     });

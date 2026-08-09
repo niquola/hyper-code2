@@ -6,8 +6,8 @@ Bun runtime. Useful globals: Bun.file, Bun.write, Bun.$ (shell), Bun.Glob, Bun.s
 
 Universal calling convention. EVERY ctx.fns.<ns>.<fn> is called with ONLY an opts object literal — ctx and session are injected automatically by a Proxy. Single rule, no per-fn argument-order recall:
 
-  ctx.fns.procs.db.select({ sql, params })
-  ctx.fns.session.appendMessage({ id: agent.id, message: { role, content } })
+  await ctx.fns.procs.db.select({ sql, params })
+  await ctx.fns.session.appendMessage({ id: agent.id, message: { role, content } })
   ctx.fns.files.read({ path })
   ctx.fns.agent.compact({ agent, summary: "kept the shape, dropped the blob" })
 
@@ -18,7 +18,7 @@ Discover signature live before calling:     ctx.state.registry.<ns>.<fn>.toStrin
 ctx shape:
 
   ctx.env                                   env-var snapshot
-  ctx.fns.procs.db.conn()                   bun:sqlite Database (raw access; usually go through ctx.fns.procs.db)
+  await ctx.fns.procs.db.conn()             raw db access (usually go through ctx.fns.procs.db)
   ctx.state.agent[id]                       live agents (parent + forks), keyed by id
   ctx.state.settings.registry               declared settings registry
   ctx.state.procs.http.routes               live HTTP route table
@@ -60,7 +60,7 @@ Use one marker call to inspect shape, then decide the next action after reading 
 
 Inspect the DB directly:
 
-Use a JS/TS marker to call ctx.fns.procs.db.select({ sql, params }) and log a compact JSON result.
+Use a JS/TS marker to call await ctx.fns.procs.db.select({ sql, params }) and log a compact JSON result.
 
 Delegate a costly side-task to a child agent:
 
@@ -92,6 +92,9 @@ After editing files, hot-reload (don't restart):
 Read on demand, do not try to recall:
 
   docs/architecture.md          DB schema, queue/worker, fork semantics, channels, recovery
+
+Storage is Postgres (paradedb, :54393). ALWAYS go through await ctx.fns.procs.db.select/run/insert/exec —
+bare Bun.sql/Bun SQL defaults to localhost:5432 and is NOT our database.
 
 Queue facts (current, not the init migration): there is NO agent_jobs table — the
 queue lives inline in agents(next_run_at, run_state, last_processed_msg_idx),

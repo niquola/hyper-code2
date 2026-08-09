@@ -6,9 +6,9 @@ import wakeWorker from './wakeWorker';
 // Insert an agents row directly so we don't depend on agent.start (which would
 // also call session.save and set next_run_at = NULL). We want full control of
 // next_run_at to drive the worker.
-function seedReadyAgent(ctx: any, id: string, nextRunAt: number) {
+async function seedReadyAgent(ctx: any, id: string, nextRunAt: number) {
     const ts = Date.now();
-    ctx.fns.procs.db.run({
+    await ctx.fns.procs.db.run({
         sql: `INSERT INTO agents (id, model, system_prompt, scratchpad, created_at, updated_at, next_run_at, run_state)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         params: [id, 'mock:test', '', '{}', ts, ts, nextRunAt, 'idle'],
@@ -29,7 +29,7 @@ describe('agent.workerLoop', () => {
         ctx.fns.agent.wakeWorker = wakeWorker;
 
         const past = Date.now() - 100;
-        for (const id of ['p1', 'p2', 'p3']) seedReadyAgent(ctx, id, past);
+        for (const id of ['p1', 'p2', 'p3']) await seedReadyAgent(ctx, id, past);
 
         // Each run() takes ~100ms. Serial worker would land 3×100ms = ~300ms
         // of intervals end-to-end with no overlap. Parallel worker fires all
@@ -75,7 +75,7 @@ describe('agent.workerLoop', () => {
         ctx.fns.agent.wakeWorker = wakeWorker;
 
         const past = Date.now() - 100;
-        seedReadyAgent(ctx, 'lonely', past);
+        await seedReadyAgent(ctx, 'lonely', past);
 
         // Track how many times run() actually fires for this agent.
         let runCount = 0;
@@ -110,7 +110,7 @@ describe('agent.workerLoop', () => {
 
         const past = Date.now() - 100;
         const ids = Array.from({ length: 20 }, (_, i) => `m${i}`);
-        for (const id of ids) seedReadyAgent(ctx, id, past);
+        for (const id of ids) await seedReadyAgent(ctx, id, past);
 
         const intervals: { id: string; start: number; end: number }[] = [];
         ctx.fns.agent.run = async (_c: any, _s: any, opts: any) => {
@@ -170,13 +170,13 @@ describe('agent.workerLoop', () => {
         ctx.fns.agent.wakeWorker = wakeWorker;
 
         const past = Date.now() - 100;
-        seedReadyAgent(ctx, 'aborter', past);
+        await seedReadyAgent(ctx, 'aborter', past);
         // Append a real user message so we have a frontier > -1.
-        ctx.fns.session.appendMessage({ id: 'aborter', message: { role: 'user', content: 'hi' } });
-        const beforeCursor = ctx.fns.procs.db.select({
+        await ctx.fns.session.appendMessage({ id: 'aborter', message: { role: 'user', content: 'hi' } });
+        const beforeCursor = (await ctx.fns.procs.db.select({
             sql: 'SELECT last_processed_msg_idx FROM agents WHERE id = ?',
             params: ['aborter'],
-        })[0].last_processed_msg_idx;
+        }))[0].last_processed_msg_idx;
 
         ctx.fns.agent.run = async () => { throw new Error('aborted by user'); };
 
@@ -186,10 +186,10 @@ describe('agent.workerLoop', () => {
         wakeWorker(ctx, null);
         await loopPromise;
 
-        const row = ctx.fns.procs.db.select({
+        const row = (await ctx.fns.procs.db.select({
             sql: 'SELECT run_state, next_run_at, last_processed_msg_idx FROM agents WHERE id = ?',
             params: ['aborter'],
-        })[0];
+        }))[0];
         expect(row.run_state).toBe('idle');
         expect(row.next_run_at).toBeNull();                       // not rescheduled
         expect(row.last_processed_msg_idx).toBe(beforeCursor);    // cursor preserved

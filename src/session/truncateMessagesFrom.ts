@@ -11,14 +11,14 @@
 // Walks back if `from` lands inside a marker pair so we never leave half a pair:
 // assistant §eval / §write:<path> / §bash / §html → user §result:* / §error:*.
 // Marker format lives in one place — ctx.fns.agent.markerKind.
-export default function (ctx: Context, _session: Session | null, opts: { id: string; from: number }): { ok: boolean; from?: number; reason?: string } {
+export default async function (ctx: Context, _session: Session | null, opts: { id: string; from: number }): Promise<{ ok: boolean; from?: number; reason?: string }> {
     const { id, from } = opts;
     if (!Number.isInteger(from) || from < 0) return { ok: false, reason: "invalid idx" };
 
-    const rows = ctx.fns.procs.db.select({
+    const rows = (await ctx.fns.procs.db.select({
         sql: "SELECT idx, role, content FROM messages WHERE agent_id = ? ORDER BY idx",
         params: [id],
-    }) as any[];
+    })) as any[];
     // First to-be-deleted row at or after `from` (robust to idx gaps).
     let p = rows.findIndex((r: any) => Number(r.idx) >= from);
     if (p < 0) return { ok: false, reason: "invalid idx" };
@@ -27,23 +27,23 @@ export default function (ctx: Context, _session: Session | null, opts: { id: str
     while (p > 0) {
         const cur = rows[p];
         const prev = rows[p - 1];
-        const curIsResult = cur.role === "user" && ctx.fns.agent.markerKind({ content: cur.content }) === "result";
-        const prevIsInvocation = ctx.fns.agent.markerKind({ content: prev.content }) === "invocation";
+        const curIsResult = cur.role === "user" && (await ctx.fns.agent.markerKind({ content: cur.content })) === "result";
+        const prevIsInvocation = (await ctx.fns.agent.markerKind({ content: prev.content })) === "invocation";
         if (curIsResult || prevIsInvocation) p -= 1;
         else break;
     }
     const effectiveFrom = Number(rows[p].idx);
 
-    ctx.fns.procs.db.run({ sql: "DELETE FROM messages WHERE agent_id = ? AND idx >= ?", params: [id, effectiveFrom] });
+    await ctx.fns.procs.db.run({ sql: "DELETE FROM messages WHERE agent_id = ? AND idx >= ?", params: [id, effectiveFrom] });
 
     // Truncate events at the matching visual boundary: the earliest event that
     // belongs to a message >= effectiveFrom. Everything after it (later
     // tool_call / thinking / error events that carry no messageIdx) shares a
     // higher event idx and is removed too.
-    const evRows = ctx.fns.procs.db.select({
+    const evRows = (await ctx.fns.procs.db.select({
         sql: "SELECT idx, payload FROM events WHERE agent_id = ? ORDER BY idx",
         params: [id],
-    }) as any[];
+    })) as any[];
     let boundaryEventIdx: number | null = null;
     for (const e of evRows) {
         let mi: any;
@@ -51,7 +51,7 @@ export default function (ctx: Context, _session: Session | null, opts: { id: str
         if (mi != null && Number(mi) >= effectiveFrom) { boundaryEventIdx = Number(e.idx); break; }
     }
     if (boundaryEventIdx != null) {
-        ctx.fns.procs.db.run({ sql: "DELETE FROM events WHERE agent_id = ? AND idx >= ?", params: [id, boundaryEventIdx] });
+        await ctx.fns.procs.db.run({ sql: "DELETE FROM events WHERE agent_id = ? AND idx >= ?", params: [id, boundaryEventIdx] });
     }
 
     return { ok: true, from: effectiveFrom };

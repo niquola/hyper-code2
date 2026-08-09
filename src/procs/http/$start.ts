@@ -54,11 +54,11 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
                     // four bytes and the status.
                     const wantsHtml = (req.headers.get("accept") ?? "").includes("text/html");
                     return stamp(wantsHtml
-                        ? rctx.fns.procs.http.toResponse({ value: rctx.fns.procs.ui.notFound({ url: url.pathname }) })
+                        ? await rctx.fns.procs.http.toResponse({ value: rctx.fns.procs.ui.notFound({ url: url.pathname }) })
                         : new Response("Not Found", { status: 404 }));
                 }
                 const raw = await m.handler(rctx, rctx.session, { req, params: m.params });
-                const res = rctx.fns.procs.http.toResponse({ value: raw });
+                const res = await rctx.fns.procs.http.toResponse({ value: raw });
                 log(rctx, logFile, req.method, url.pathname + url.search, res.status, performance.now() - t0);
                 return stamp(res);
             } catch (e: any) {

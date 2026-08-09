@@ -10,8 +10,8 @@ describe('GET /agent/:id', () => {
 
     test('loads agent from session storage when missing from runtime state', async () => {
         const ctx = await mkTestCtx();
-        const agent = ctx.fns.agent.start({ model: 'db-model', systemPrompt: '' });
-        ctx.fns.session.save({ agent });
+        const agent = await ctx.fns.agent.start({ model: 'db-model', systemPrompt: '' });
+        await ctx.fns.session.save({ agent });
         delete (ctx.state as any).agent?.[agent.id]; // force the session.load path
 
         const res = await ctx.fns.procs.http.dispatch({ url: '/agent/' + agent.id });

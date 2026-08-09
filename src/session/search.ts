@@ -1,21 +1,24 @@
-export default function (ctx: Context, _session: Session | null, opts: { query: string; limit?: number }): Array<{
+export default async function (ctx: Context, _session: Session | null, opts: { query: string; limit?: number }): Promise<Array<{
     agentId: string;
     idx: number;
     role: string;
     content: string;
     ts: number;
-}> {
+}>> {
     const q = String(opts.query ?? "").trim();
     if (!q) return [];
-    return ctx.fns.procs.db.select({
+    // ILIKE replaces sqlite's `LIKE ... COLLATE NOCASE`; camelCase alias must be
+    // quoted (pg folds unquoted identifiers to lowercase); ts is BIGINT → string.
+    const rows = (await ctx.fns.procs.db.select({
         sql: `
-        SELECT agent_id AS agentId, idx, role, content, ts
+        SELECT agent_id AS "agentId", idx, role, content, ts
         FROM messages
         WHERE content IS NOT NULL
-          AND content LIKE $pattern COLLATE NOCASE
+          AND content ILIKE ?
         ORDER BY ts DESC
-        LIMIT $limit
+        LIMIT ?
     `,
-        params: { $pattern: `%${q}%`, $limit: opts.limit ?? 50 },
-    }) as any[];
+        params: [`%${q}%`, opts.limit ?? 50],
+    })) as any[];
+    return rows.map((r: any) => ({ ...r, ts: Number(r.ts) }));
 }

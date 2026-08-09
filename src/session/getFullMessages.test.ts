@@ -12,9 +12,9 @@ function agent(id: string, messages: any[], extra: any = {}) {
 describe("session.getFullMessages", () => {
   test("chains parent messages for child", async () => {
     const ctx: any = await mkTestCtx();
-    ctx.fns.session.save({ agent: agent("parent", [{ role: "user", content: "Hello" }, { role: "assistant", content: "Hi" }, { role: "user", content: "What is 2+2?" }]) });
-    ctx.fns.session.save({ agent: agent("child", [{ role: "user", content: "Child question" }, { role: "assistant", content: "Child answer" }], { parentId: "parent", forkOffset: 3 }) });
-    const full = ctx.fns.session.getFullMessages({ id: "child" });
+    await ctx.fns.session.save({ agent: agent("parent", [{ role: "user", content: "Hello" }, { role: "assistant", content: "Hi" }, { role: "user", content: "What is 2+2?" }]) });
+    await ctx.fns.session.save({ agent: agent("child", [{ role: "user", content: "Child question" }, { role: "assistant", content: "Child answer" }], { parentId: "parent", forkOffset: 3 }) });
+    const full = await ctx.fns.session.getFullMessages({ id: "child" });
     expect(full.length).toBe(5);
     expect(full[0].content).toBe("Hello");
     expect(full[2].content).toBe("What is 2+2?");
@@ -24,14 +24,14 @@ describe("session.getFullMessages", () => {
 
   test("respects offset for mid-conversation fork", async () => {
     const ctx: any = await mkTestCtx();
-    ctx.fns.session.save({ agent: agent("parent", [
+    await ctx.fns.session.save({ agent: agent("parent", [
       { role: "user", content: "msg1" },
       { role: "user", content: "msg2" },
       { role: "user", content: "msg3" },
       { role: "user", content: "msg4" },
     ]) });
-    ctx.fns.session.save({ agent: agent("child", [{ role: "user", content: "child msg" }], { parentId: "parent", forkOffset: 2 }) });
-    const full = ctx.fns.session.getFullMessages({ id: "child" });
+    await ctx.fns.session.save({ agent: agent("child", [{ role: "user", content: "child msg" }], { parentId: "parent", forkOffset: 2 }) });
+    const full = await ctx.fns.session.getFullMessages({ id: "child" });
     expect(full.length).toBe(3);
     expect(full[0].content).toBe("msg1");
     expect(full[1].content).toBe("msg2");
@@ -40,10 +40,10 @@ describe("session.getFullMessages", () => {
 
   test("chains grandparent -> parent -> child", async () => {
     const ctx: any = await mkTestCtx();
-    ctx.fns.session.save({ agent: agent("gp", [{ role: "user", content: "gp msg" }]) });
-    ctx.fns.session.save({ agent: agent("parent", [{ role: "user", content: "parent msg" }], { parentId: "gp", forkOffset: 1 }) });
-    ctx.fns.session.save({ agent: agent("child", [{ role: "user", content: "child msg" }], { parentId: "parent", forkOffset: 2 }) });
-    const full = ctx.fns.session.getFullMessages({ id: "child" });
+    await ctx.fns.session.save({ agent: agent("gp", [{ role: "user", content: "gp msg" }]) });
+    await ctx.fns.session.save({ agent: agent("parent", [{ role: "user", content: "parent msg" }], { parentId: "gp", forkOffset: 1 }) });
+    await ctx.fns.session.save({ agent: agent("child", [{ role: "user", content: "child msg" }], { parentId: "parent", forkOffset: 2 }) });
+    const full = await ctx.fns.session.getFullMessages({ id: "child" });
     expect(full.length).toBe(3);
     expect(full[0].content).toBe("gp msg");
     expect(full[1].content).toBe("parent msg");
@@ -52,9 +52,9 @@ describe("session.getFullMessages", () => {
 
   test("getMessages returns only own messages", async () => {
     const ctx: any = await mkTestCtx();
-    ctx.fns.session.save({ agent: agent("parent", [{ role: "user", content: "parent msg" }]) });
-    ctx.fns.session.save({ agent: agent("child", [{ role: "user", content: "child msg" }], { parentId: "parent", forkOffset: 1 }) });
-    const own = ctx.fns.session.getMessages({ id: "child" });
+    await ctx.fns.session.save({ agent: agent("parent", [{ role: "user", content: "parent msg" }]) });
+    await ctx.fns.session.save({ agent: agent("child", [{ role: "user", content: "child msg" }], { parentId: "parent", forkOffset: 1 }) });
+    const own = await ctx.fns.session.getMessages({ id: "child" });
     expect(own.length).toBe(1);
     expect(own[0].content).toBe("child msg");
   });

@@ -2,5 +2,5 @@
 const up_sql = "CREATE TABLE IF NOT EXISTS kv (\n    key   TEXT PRIMARY KEY,\n    value TEXT NOT NULL\n);\n";
 
 export default {
-    up: (ctx: Context) => { ctx.fns.procs.db.exec({ sql: up_sql }); },
+    up: async (ctx: Context) => { await ctx.fns.procs.db.exec({ sql: up_sql }); },
 };

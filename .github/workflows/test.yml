@@ -18,7 +18,22 @@ jobs:
   test:
     name: bun test + tsc
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
+
+    services:
+      postgres:
+        image: paradedb/paradedb:latest-pg18
+        env:
+          POSTGRES_USER: hyper
+          POSTGRES_PASSWORD: hyper
+          POSTGRES_DB: hyper
+        ports:
+          - 54393:5432
+        options: >-
+          --health-cmd "pg_isready -U hyper"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
@@ -43,4 +58,4 @@ jobs:
         run: bunx tsc --noEmit
 
       - name: Run tests
-        run: bun test --timeout 5000
+        run: bun test --timeout 15000

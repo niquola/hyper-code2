@@ -1,8 +1,10 @@
-// Insert a row from an object → { id }. Columns/placeholders built from keys.
+// Insert a row from an object → { id, changes }. Columns/placeholders built
+// from keys; RETURNING lifts the generated id when the table has one.
 //   ctx.fns.procs.db.insert({ into: "todos", values: { title: "x" } })
-export default function (ctx: Context, _session: Session | null, opts: { into: string; values: Record<string, any> }) {
+export default async function (ctx: Context, _session: Session | null, opts: { into: string; values: Record<string, any> }) {
     const keys = Object.keys(opts.values);
-    const sql = `INSERT INTO ${opts.into} (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")})`;
-    const r = ctx.fns.procs.db.run({ sql, params: keys.map((k) => opts.values[k]) });
-    return { id: r.lastInsertRowid, changes: r.changes };
+    const sql = `INSERT INTO ${opts.into} (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")}) RETURNING *`;
+    const r = await ctx.fns.procs.db.run({ sql, params: keys.map((k) => opts.values[k]) });
+    const row: any = r.rows[0] ?? {};
+    return { id: row.id ?? 0, changes: r.changes || r.rows.length };
 }

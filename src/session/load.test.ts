@@ -4,28 +4,29 @@ import { mkTestCtx } from "../_testCtx.entry";
 describe("session.load", () => {
     test("returns null when id unknown", async () => {
         const ctx: any = await mkTestCtx();
-        expect(ctx.fns.session.load({ id: "nope" })).toBeNull();
+        expect(await ctx.fns.session.load({ id: "nope" })).toBeNull();
     });
 
     test("round-trip: save → load reconstructs agent shape", async () => {
         const ctx: any = await mkTestCtx();
-        const original = ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
+        const original = await ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
         original.scratchpad.note = 'remember';
-        ctx.fns.session.save({ agent: original });
-        ctx.fns.session.replaceMessages({ id: original.id, messages: [
+        await ctx.fns.session.save({ agent: original });
+        await ctx.fns.session.replaceMessages({ id: original.id, messages: [
             { role: 'user', content: 'a' },
             { role: 'assistant', content: '§eval\nconsole.log(1);' },
             { role: 'user', content: '§result:eval\n1' },
         ] });
-        ctx.fns.session.replaceEvents({ id: original.id, events: [
+        await ctx.fns.session.replaceEvents({ id: original.id, events: [
             { type: 'user', text: 'a' },
             { type: 'tool_call', name: 'eval', args: { code: 'console.log(1);' }, result: '1' },
         ] });
 
-        // fresh ctx, same db — simulate restart
+        // fresh ctx, same db — simulate restart by sharing the pg pool (the
+        // pg_temp schema follows the connection).
         const ctx2: any = await mkTestCtx();
-        (ctx2.state as any).procs.db.connection = ctx.fns.procs.db.conn();
-        const loaded = ctx2.fns.session.load({ id: original.id });
+        (ctx2.state as any).procs.db.sql = await ctx.fns.procs.db.conn();
+        const loaded = await ctx2.fns.session.load({ id: original.id });
         expect(loaded).not.toBeNull();
         expect(loaded!.id).toBe(original.id);
         expect(loaded!.model).toBe("m");

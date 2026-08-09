@@ -10,7 +10,7 @@ export default async function (
     usage: any;
 }> {
     const { agent } = opts;
-    const ep = ctx.fns.llm.resolveEndpoint({ model: agent.model });
+    const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
 
     // buildLlmRequest handles the claude-code anti-fraud header (kept in
     // system) and moves the rest of the instruction body into messages

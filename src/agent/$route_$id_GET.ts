@@ -2,7 +2,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const id = opts.params.id!;
     let agent = (ctx.state as any).agent?.[id];
     if (!agent) {
-        agent = ctx.fns.session?.load?.({ id }) ?? null;
+        agent = (await ctx.fns.session?.load?.({ id })) ?? null;
         if (agent) {
             (ctx.state as any).agent ??= {};
             (ctx.state as any).agent[id] = agent;
@@ -10,15 +10,15 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     }
     if (!agent) return new Response('Not Found', { status: 404 });
 
-    const events = ctx.fns.session.getEvents({ id });
-    const maxIdx = ctx.fns.session.getMaxEventIdx({ id });
+    const events = await ctx.fns.session.getEvents({ id });
+    const maxIdx = await ctx.fns.session.getMaxEventIdx({ id });
     const inheritedCount = agent.parentId
-        ? ctx.fns.session.getFullMessages({ id }).length - ctx.fns.session.getMessages({ id }).length
+        ? (await ctx.fns.session.getFullMessages({ id })).length - (await ctx.fns.session.getMessages({ id })).length
         : 0;
-    const stateRow = (ctx.fns.procs.db.select({
+    const stateRow = ((await ctx.fns.procs.db.select({
         sql: 'SELECT run_state, next_run_at FROM agents WHERE id = ?',
         params: [id],
-    }) as any[])[0];
+    })) as any[])[0];
     const isStreaming = stateRow?.run_state === 'running' || !!stateRow?.next_run_at;
     const init = {
         agentId: id,
@@ -36,13 +36,15 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
     const initialUsageText = formatUsage(lastAssistant?.usage ?? null);
 
+    const statusBarHtml = await ctx.fns.agent.renderStatusBar({ agentId: id });
+
     const main = `
 <header class="px-6 py-3 border-b border-gray-200 flex items-center gap-3 text-sm">
   <span class="font-semibold text-gray-700">${esc(id)}</span>
   ${agent.parentId ? `<span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">fork · inherited ${inheritedCount} msgs</span>` : ''}
   <span class="text-xs text-gray-400 font-mono">${esc(agent.model)}</span>
   <span id="context-usage" class="text-xs text-gray-500 font-mono">${esc(initialUsageText)}</span>
-  ${ctx.fns.agent.renderStatusBar({ agentId: id })}
+  ${statusBarHtml}
   <div class="ml-auto flex gap-2">
     <form method="POST" action="/agent/${encodeURIComponent(id)}/stop" class="inline">
       <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">stop</button>

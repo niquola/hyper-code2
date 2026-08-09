@@ -4,15 +4,15 @@ import { mkTestCtx } from "../_testCtx.entry";
 describe("session.search", () => {
     test("matches substring in user messages across all agents", async () => {
         const ctx: any = await mkTestCtx();
-        const a = ctx.fns.agent.start({ model: "m" });
+        const a = await ctx.fns.agent.start({ model: "m" });
         a.messages.push({ role: "user", content: "how to deploy the telescope" });
-        ctx.fns.session.save({ agent: a });
+        await ctx.fns.session.save({ agent: a });
 
-        const b = ctx.fns.agent.start({ model: "m" });
+        const b = await ctx.fns.agent.start({ model: "m" });
         b.messages.push({ role: "user", content: "what is the weather" });
-        ctx.fns.session.save({ agent: b });
+        await ctx.fns.session.save({ agent: b });
 
-        const hits = ctx.fns.session.search({ query: "telescope" });
+        const hits = await ctx.fns.session.search({ query: "telescope" });
         expect(hits).toHaveLength(1);
         expect(hits[0]!.agentId).toBe(a.id);
         expect(hits[0]!.content).toContain("telescope");
@@ -21,22 +21,22 @@ describe("session.search", () => {
 
     test("matches assistant and tool content too, case-insensitive", async () => {
         const ctx: any = await mkTestCtx();
-        const a = ctx.fns.agent.start({ model: "m" });
+        const a = await ctx.fns.agent.start({ model: "m" });
         a.messages.push(
             { role: "user", content: "hi" },
             { role: "assistant", content: "The ANSWER is forty-two" },
             { role: "tool", tool_call_id: "c1", content: "42" },
         );
-        ctx.fns.session.save({ agent: a });
-        const hits = ctx.fns.session.search({ query: "answer" });
+        await ctx.fns.session.save({ agent: a });
+        const hits = await ctx.fns.session.search({ query: "answer" });
         expect(hits.map((h: any) => h.role)).toContain("assistant");
     });
 
     test("empty query or no matches → []", async () => {
         const ctx: any = await mkTestCtx();
-        const a = ctx.fns.agent.start({ model: "m" });
+        const a = await ctx.fns.agent.start({ model: "m" });
         a.messages.push({ role: "user", content: "hello" });
-        ctx.fns.session.save({ agent: a });
-        expect(ctx.fns.session.search({ query: "xyzzy" })).toEqual([]);
+        await ctx.fns.session.save({ agent: a });
+        expect(await ctx.fns.session.search({ query: "xyzzy" })).toEqual([]);
     });
 });

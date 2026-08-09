@@ -17,7 +17,7 @@ export default async function (
 
     if (!opts.userMessageAlreadyAppended) {
         await ctx.fns.session.appendUserMessage({ id: agent.id, text: userText });
-        ctx.fns.session.syncAgentState({ agent });
+        await ctx.fns.session.syncAgentState({ agent });
     }
 
     while (true) {
@@ -32,13 +32,13 @@ export default async function (
             if (!text || !String(text).trim()) {
                 return { text: text ?? '', usage };
             }
-            const append = ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: text } });
-            ctx.fns.session.syncAgentState({ agent });
+            const append = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: text } });
+            await ctx.fns.session.syncAgentState({ agent });
             const html = await ctx.fns.markdown.render({ source: prose || text || '' });
             await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
                 text: prose || text || '', html, usage, messageIdx: append.idx,
             } });
-            ctx.fns.session.syncAgentState({ agent });
+            await ctx.fns.session.syncAgentState({ agent });
             return { text, usage };
         }
 
@@ -46,13 +46,13 @@ export default async function (
         // Splitting prose from markers gives the model clean per-call pairing
         // on later turns: [assistant: prose?] → (assistant<marker> → user<result>)+.
         if (prose.trim()) {
-            const proseAppend = ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: prose } });
-            ctx.fns.session.syncAgentState({ agent });
+            const proseAppend = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: prose } });
+            await ctx.fns.session.syncAgentState({ agent });
             const proseHtml = await ctx.fns.markdown.render({ source: prose });
             await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
                 text: prose, html: proseHtml, usage, messageIdx: proseAppend.idx,
             } });
-            ctx.fns.session.syncAgentState({ agent });
+            await ctx.fns.session.syncAgentState({ agent });
         }
 
         for (const call of calls) {
@@ -66,10 +66,10 @@ export default async function (
                 await ctx.fns.session.appendErrorEvent({ id: agent.id, error: e.hint });
             }
             const errText = errors.map(e => ctx.fns.agent.formatMarkerError({ error: e })).join('\n\n');
-            ctx.fns.session.appendMessage({ id: agent.id, message: {
+            await ctx.fns.session.appendMessage({ id: agent.id, message: {
                 role: 'user', content: errText, excluded_from_cursor: true,
             } });
-            ctx.fns.session.syncAgentState({ agent });
+            await ctx.fns.session.syncAgentState({ agent });
         }
     }
 }

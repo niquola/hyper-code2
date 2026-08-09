@@ -3,7 +3,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const id = opts.params.id!;
     let agent = (ctx.state as any).agent?.[id];
     if (!agent) {
-        agent = ctx.fns.session?.load?.({ id }) ?? null;
+        agent = (await ctx.fns.session?.load?.({ id })) ?? null;
         if (agent) {
             (ctx.state as any).agent ??= {};
             (ctx.state as any).agent[id] = agent;
@@ -17,10 +17,10 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const url = new URL(req.url);
     const explicitSeconds = url.searchParams.get('debounceSeconds');
     // Priority: ?debounceSeconds query > per-agent setting > declared agent.debounceMs > 5s.
-    const perAgent = ctx.fns.settings?.getNumber?.({
+    const perAgent = await ctx.fns.settings?.getNumber?.({
         module: 'ui', scopeType: 'agent', scopeId: agent.id, key: 'debounceMs',
     });
-    const declared = ctx.fns.settings?.getNumber?.({
+    const declared = await ctx.fns.settings?.getNumber?.({
         module: 'agent', scopeType: 'global', key: 'debounceMs',
     });
     const debounceMs = explicitSeconds != null
@@ -29,13 +29,13 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const sendAt = Date.now() + debounceMs;
 
     const userAppend = await ctx.fns.session.appendUserMessage({ id: agent.id, text });
-    ctx.fns.session.syncAgentState({ agent });
+    await ctx.fns.session.syncAgentState({ agent });
 
     // Schedule (or push back) the next run on the agent row itself.
-    // MAX(...) keeps the latest message bumping the debounce window forward.
-    ctx.fns.procs.db.run({
+    // GREATEST(...) keeps the latest message bumping the debounce window forward.
+    await ctx.fns.procs.db.run({
         sql: `UPDATE agents
-            SET next_run_at = MAX(COALESCE(next_run_at, 0), ?),
+            SET next_run_at = GREATEST(COALESCE(next_run_at, 0), ?),
                 updated_at  = ?
           WHERE id = ?`,
         params: [sendAt, Date.now(), agent.id],

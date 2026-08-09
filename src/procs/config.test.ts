@@ -18,8 +18,11 @@ test("config.validate: required + type errors", () => {
 });
 
 test("config.resolve: env enters through config (DATABASE_URL → url)", () => {
+    // testCtx no longer pins DATABASE_URL (the url stays the real Postgres) —
+    // set it explicitly on a fork to show env entering through config.
+    const c = ctx.fns.procs.env.fork({ mode: "test", env: { DATABASE_URL: "postgres://cfg:cfg@localhost:5432/cfg" } });
     const schema: ConfigSchema = { url: { type: "string", required: true, env: "DATABASE_URL" } };
-    expect(ctx.fns.procs.config.resolve({ module: "db", schema }).url).toBe(":memory:"); // testCtx set DATABASE_URL
+    expect(c.fns.procs.config.resolve({ module: "db", schema }).url).toBe("postgres://cfg:cfg@localhost:5432/cfg");
 });
 
 test("config.resolve: invalid config throws", () => {

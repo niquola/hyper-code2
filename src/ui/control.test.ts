@@ -35,7 +35,7 @@ describe('ui control helpers', () => {
 
   test('sendToAgent queues run and emits navigate when requested', async () => {
     const { ctx, emitted } = await mkCtx();
-    const agent = ctx.fns.agent.start({ model: 'x:test', systemPrompt: '' });
+    const agent = await ctx.fns.agent.start({ model: 'x:test', systemPrompt: '' });
     const res = await ctx.fns.ui.sendToAgent({ agentId: agent.id, text: 'hello', open: true });
     expect(res.agentId).toBe(agent.id);
     expect(emitted[0]).toEqual({ type: 'ui.navigate', path: '/agent/test' });

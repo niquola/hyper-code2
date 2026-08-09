@@ -1,10 +1,10 @@
-export default function (ctx: Context, _session: Session | null, opts: { agentId: string; fallback?: number }): number {
+export default async function (ctx: Context, _session: Session | null, opts: { agentId: string; fallback?: number }): Promise<number> {
     const fallback = opts.fallback ?? 5000;
-    return ctx.fns.settings?.getNumber?.({
+    return (await ctx.fns.settings?.getNumber?.({
         module: 'ui',
         scopeType: 'agent',
         scopeId: opts.agentId,
         key: 'debounceMs',
         fallback,
-    }) ?? fallback;
+    })) ?? fallback;
 }

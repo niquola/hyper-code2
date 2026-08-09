@@ -29,9 +29,10 @@ function mkCtx() {
 }
 
 describe('agent.nextId', () => {
-    test('generates a, b, ... z, aa, ab', () => {
+    test('generates a, b, ... z, aa, ab', async () => {
         const ctx = mkCtx();
-        const ids = Array.from({ length: 28 }, () => nextId(ctx, null));
+        const ids: string[] = [];
+        for (let i = 0; i < 28; i++) ids.push(await nextId(ctx, null));
         expect(ids.slice(0, 5)).toEqual(['a', 'b', 'c', 'd', 'e']);
         expect(ids[25]).toBe('z');
         expect(ids[26]).toBe('aa');

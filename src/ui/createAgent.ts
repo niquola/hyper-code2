@@ -4,15 +4,15 @@ export default async function (
     opts: { model?: string; systemPrompt?: string; open?: boolean; startText?: string } = {},
 ) {
     // Priority: explicit opts.model > declared setting (DB → env → default).
-    const fromSettings = ctx.fns?.settings?.getString?.({
+    const fromSettings = await ctx.fns?.settings?.getString?.({
         module: 'llm', scopeType: 'global', key: 'defaultModel',
     });
     const model = (opts.model ?? fromSettings ?? 'minimax/minimax-m2.7').trim();
-    const agent = ctx.fns.agent.start({
+    const agent = await ctx.fns.agent.start({
         model,
         systemPrompt: opts.systemPrompt ?? '',
     });
-    try { ctx.fns.session?.save?.({ agent }); } catch (e: any) { console.error('[session.save]', e?.message); }
+    try { await ctx.fns.session?.save?.({ agent }); } catch (e: any) { console.error('[session.save]', e?.message); }
     if (opts.open !== false) ctx.fns.procs.events.emit({ event: { type: 'ui.navigate', path: '/agent/' + encodeURIComponent(agent.id) } });
     if (opts.startText?.trim()) {
         const text = opts.startText.trim();

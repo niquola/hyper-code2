@@ -17,8 +17,8 @@ function parseEnv(raw: string, type?: string): any {
     return raw;
 }
 
-export default function (ctx: Context, _session: Session | null, opts: GetOpts): any {
-    const row = (ctx.fns.procs.db.select({
+export default async function (ctx: Context, _session: Session | null, opts: GetOpts): Promise<any> {
+    const row = (await ctx.fns.procs.db.select({
         sql: `SELECT value
            FROM settings
           WHERE module = ?

@@ -19,7 +19,7 @@ import { testCtx } from "./$test";
 export async function mkTestCtx(opts: { db?: string | false; env?: Record<string, string> } = {}): Promise<any> {
     const ctx: any = await testCtx({
         env: {
-            DATABASE_URL: typeof opts.db === "string" ? opts.db : ":memory:",
+            ...(typeof opts.db === "string" ? { DATABASE_URL: opts.db } : {}),
             ...opts.env,
         },
     });
@@ -31,7 +31,7 @@ export async function mkTestCtx(opts: { db?: string | false; env?: Record<string
     ctx.env = {
         NODE_ENV: "test",
         LOG_LEVEL: "warn",
-        DATABASE_URL: typeof opts.db === "string" ? opts.db : ":memory:",
+        ...(typeof opts.db === "string" ? { DATABASE_URL: opts.db } : {}),
         ...opts.env,
     };
 

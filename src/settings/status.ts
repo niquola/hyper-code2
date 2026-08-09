@@ -2,7 +2,7 @@
 // Pure read — never refreshes a token. Used by the settings page.
 import { readFileSync } from "node:fs";
 
-export default function (ctx: Context, _session: Session | null, _opts?: {}): {
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<{
     openai: { set: boolean };
     anthropic: { set: boolean };
     kimi: { set: boolean };
@@ -10,7 +10,7 @@ export default function (ctx: Context, _session: Session | null, _opts?: {}): {
     openrouter: { set: boolean };
     kimiCoding: { loggedIn: boolean; expSec: number | null; loginPending: boolean };
     codex: { loggedIn: boolean; email: string | null; expSec: number | null; loginPending: boolean };
-} {
+}> {
     const env = ctx.env;
     const home = env.HOME ?? process.env.HOME ?? "";
 

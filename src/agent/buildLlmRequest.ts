@@ -23,10 +23,10 @@ export default async function (
     const { agent } = opts;
     const fullPrompt = await ctx.fns.agent.fullSystemPrompt({ agent });
     const base = agent.parentId
-        ? ctx.fns.session.getFullMessages({ id: agent.id })
+        ? await ctx.fns.session.getFullMessages({ id: agent.id })
         : (agent.messages ?? []);
 
-    const ep = ctx.fns.llm.resolveEndpoint({ model: agent.model });
+    const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
     const claudeCodeHeader = "You are Claude Code, Anthropic's official CLI for Claude.";
 
     let system = '';

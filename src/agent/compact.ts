@@ -21,13 +21,13 @@ function isToolResult(m: any): boolean {
     return c.startsWith("§result:") || c.startsWith("§error:");
 }
 
-export default function (
+export default async function (
     ctx: Context,
     _session: Session | null,
     opts: { agent: types.agent.Agent; summary: string; message?: number },
-): { replaced: boolean; from?: number; before?: number; after?: number; resultIdx?: number } {
+): Promise<{ replaced: boolean; from?: number; before?: number; after?: number; resultIdx?: number }> {
     const { agent, summary: summaryRaw, message: from } = opts;
-    ctx.fns?.session?.syncAgentState?.({ agent });
+    await ctx.fns?.session?.syncAgentState?.({ agent });
 
     if (Number.isInteger(from)) {
         const idx = from as number;
@@ -46,8 +46,8 @@ export default function (
         const note = `[compacted from #${effectiveFrom}, ${dropped.length} msg(s)] ${summaryRaw}`;
         const next = agent.messages.slice(0, effectiveFrom);
         next.push({ role: "user", content: note });
-        ctx.fns?.session?.replaceMessages?.({ id: agent.id, messages: next });
-        ctx.fns?.session?.syncAgentState?.({ agent });
+        await ctx.fns?.session?.replaceMessages?.({ id: agent.id, messages: next });
+        await ctx.fns?.session?.syncAgentState?.({ agent });
         return { replaced: true, from: effectiveFrom, before, after: note.length };
     }
 
@@ -60,8 +60,8 @@ export default function (
         const newContent = `[compacted] ${summary}`;
         const next = agent.messages.slice();
         next[i] = { ...m, content: newContent };
-        ctx.fns?.session?.replaceMessages?.({ id: agent.id, messages: next });
-        ctx.fns?.session?.syncAgentState?.({ agent });
+        await ctx.fns?.session?.replaceMessages?.({ id: agent.id, messages: next });
+        await ctx.fns?.session?.syncAgentState?.({ agent });
         return { replaced: true, resultIdx: i, before, after: newContent.length };
     }
     return { replaced: false };

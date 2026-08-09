@@ -20,39 +20,39 @@ async function setup() {
 describe("agent.delegateTask", () => {
     test("forkContext true links child to parent transcript context", async () => {
         const ctx = await setup();
-        const parent = ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
-        ctx.fns.session.save({ agent: parent });
-        ctx.fns.session.appendMessage({ id: parent.id, message: { role: "user", content: "parent msg" } });
+        const parent = await ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
+        await ctx.fns.session.save({ agent: parent });
+        await ctx.fns.session.appendMessage({ id: parent.id, message: { role: "user", content: "parent msg" } });
         const res = await delegateTask(ctx, null, { parent, task: "check", forkContext: true, responseFormat: "json" });
         const child = ctx.state.agent[res.childId];
         expect(child.parentId).toBe(parent.id);
-        expect(ctx.fns.session.getFullMessages({ id: child.id })[0].content).toBe("parent msg");
+        expect((await ctx.fns.session.getFullMessages({ id: child.id }))[0].content).toBe("parent msg");
     });
 
     test("forkContext false creates isolated child", async () => {
         const ctx = await setup();
-        const parent = ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
-        ctx.fns.session.save({ agent: parent });
-        ctx.fns.session.appendMessage({ id: parent.id, message: { role: "user", content: "parent msg" } });
+        const parent = await ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
+        await ctx.fns.session.save({ agent: parent });
+        await ctx.fns.session.appendMessage({ id: parent.id, message: { role: "user", content: "parent msg" } });
         const res = await delegateTask(ctx, null, { parent, task: "check", forkContext: false });
         const child = ctx.state.agent[res.childId];
         expect(child.parentId).toBeNull();
-        expect(ctx.fns.session.getFullMessages({ id: child.id }).map((m: any) => m.content)).not.toContain("parent msg");
+        expect((await ctx.fns.session.getFullMessages({ id: child.id })).map((m: any) => m.content)).not.toContain("parent msg");
         expect(child.scratchpad.delegateTask.parentId).toBe(parent.id);
     });
 
     test("await mode returns childId summary and result", async () => {
         const ctx = await setup();
-        const parent = ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
-        ctx.fns.session.save({ agent: parent });
+        const parent = await ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
+        await ctx.fns.session.save({ agent: parent });
         const res = await delegateTask(ctx, null, { parent, task: "do it", responseFormat: "json" });
         expect(res).toEqual({ childId: res.childId, summary: "done", result: { ok: true, inherited: false } });
     });
 
     test("stores task metadata in child scratchpad", async () => {
         const ctx = await setup();
-        const parent = ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
-        ctx.fns.session.save({ agent: parent });
+        const parent = await ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
+        await ctx.fns.session.save({ agent: parent });
         const res = await delegateTask(ctx, null, { parent, task: "lint files", instructions: "be strict", responseFormat: { kind: "report", fields: ["files", "issues"] } });
         const child = ctx.state.agent[res.childId];
         expect(child.scratchpad.delegateTask).toMatchObject({
@@ -67,16 +67,16 @@ describe("agent.delegateTask", () => {
 
     test("throws if child completes without finishTask", async () => {
         const ctx = await setup();
-        const parent = ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
-        ctx.fns.session.save({ agent: parent });
+        const parent = await ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
+        await ctx.fns.session.save({ agent: parent });
         ctx.fns.agent.run = async () => ({ ok: true });
         await expect(delegateTask(ctx, null, { parent, task: "bad child" })).rejects.toThrow("delegateTask: child completed without finishTask");
     });
 
     test("builds wrapped delegated prompt", async () => {
         const ctx = await setup();
-        const parent = ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
-        ctx.fns.session.save({ agent: parent });
+        const parent = await ctx.fns.agent.start({ model: "m", systemPrompt: "sp" });
+        await ctx.fns.session.save({ agent: parent });
         const res = await delegateTask(ctx, null, { parent, task: "inspect repo", instructions: "only source files", responseFormat: "report" });
         const child = ctx.state.agent[res.childId];
         expect(child.scratchpad.__lastPrompt).toContain("You are executing a delegated task for a parent agent.");

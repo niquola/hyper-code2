@@ -1,12 +1,12 @@
 // Parse agent.model "provider:modelId" → {url, apiKey, modelId, provider, api}.
 // "modelId" without prefix defaults to provider "lmstudio".
-export default function (ctx: Context, _session: Session | null, opts: { model: string }): {
+export default async function (ctx: Context, _session: Session | null, opts: { model: string }): Promise<{
     url: string;
     apiKey: string | null;
     modelId: string;
     provider: string;
     api: "openai" | "anthropic" | "responses" | "mock";
-} {
+}> {
     const model = opts.model;
     const m = /^([a-z][\w\-]*):(.+)$/.exec(model);
     const provider = m ? m[1]! : "lmstudio";
@@ -16,8 +16,8 @@ export default function (ctx: Context, _session: Session | null, opts: { model: 
 
     // baseUrl + apiKey come from the provider's resolveBaseUrl/resolveApiKey,
     // which themselves consult declared settings (src/llm/$setting_*.ts).
-    const baseUrl = p.resolveBaseUrl(ctx);
-    const apiKey = p.resolveApiKey ? p.resolveApiKey(ctx) : null;
+    const baseUrl = await p.resolveBaseUrl(ctx);
+    const apiKey = p.resolveApiKey ? await p.resolveApiKey(ctx) : null;
     const url = p.api === "anthropic" ? `${baseUrl}/v1/messages`
         : p.api === "responses" ? `${baseUrl}/responses`
             : `${baseUrl}/chat/completions`;
@@ -26,14 +26,14 @@ export default function (ctx: Context, _session: Session | null, opts: { model: 
 
 type ProviderConfig = {
     api: "openai" | "anthropic" | "responses" | "mock";
-    resolveBaseUrl: (ctx: Context) => string;
-    resolveApiKey?: (ctx: Context) => string | null;
+    resolveBaseUrl: (ctx: Context) => string | Promise<string>;
+    resolveApiKey?: (ctx: Context) => string | null | Promise<string | null>;
 };
 
 // Read a string-typed declared setting (module=llm, scope=global). Returns undefined
 // when no declaration / no DB row / no env var / no default.
-const declaredString = (key: string) => (ctx: Context): string | null => {
-    const v = ctx.fns?.settings?.getString?.({ module: 'llm', scopeType: 'global', key });
+const declaredString = (key: string) => async (ctx: Context): Promise<string | null> => {
+    const v = await ctx.fns?.settings?.getString?.({ module: 'llm', scopeType: 'global', key });
     return (typeof v === 'string' && v) ? v : null;
 };
 
@@ -50,7 +50,7 @@ const PROVIDERS: Record<string, ProviderConfig> = {
     lmstudio: {
         api: "openai",
         // src/llm/$setting_lmstudioBaseUrl.ts handles env LMSTUDIO_URL → default.
-        resolveBaseUrl: (ctx) => (declaredString('lmstudioBaseUrl')(ctx) ?? 'http://localhost:1234') + '/v1',
+        resolveBaseUrl: async (ctx) => ((await declaredString('lmstudioBaseUrl')(ctx)) ?? 'http://localhost:1234') + '/v1',
     },
     kimi: {
         // Moonshot-AI OpenAI-compat (NOT the kimi.com/coding subscription — use kimi-coding: for that)

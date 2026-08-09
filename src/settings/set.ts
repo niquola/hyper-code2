@@ -7,9 +7,9 @@ type SetOpts = {
     isSecret?: boolean;
 };
 
-export default function (ctx: Context, _session: Session | null, opts: SetOpts): { ok: true } {
+export default async function (ctx: Context, _session: Session | null, opts: SetOpts): Promise<{ ok: true }> {
     const now = Date.now();
-    ctx.fns.procs.db.run({
+    await ctx.fns.procs.db.run({
         sql: `INSERT INTO settings (module, scope_type, scope_id, key, value, is_secret, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(module, scope_type, scope_id, key)

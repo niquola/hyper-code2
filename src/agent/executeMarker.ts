@@ -8,15 +8,24 @@ export default async function (
     const usage = opts.usage;
 
     const markerText = ctx.fns.agent.serializeMarkerCall({ call });
-    const append = ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: markerText } });
-    ctx.fns.session.syncAgentState({ agent });
+    const append = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: markerText } });
+    await ctx.fns.session.syncAgentState({ agent });
 
     if (call.kind === 'html') {
         const html = ctx.fns.agent.sanitizeHtmlBody({ html: call.content });
         await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
             text: '', html, usage, messageIdx: append.idx,
         } });
-        ctx.fns.session.syncAgentState({ agent });
+        await ctx.fns.session.syncAgentState({ agent });
+        return;
+    }
+
+    if (call.kind === 'evalHtml') {
+        const html = ctx.fns.agent.sanitizeHtmlBody({ html: await ctx.fns.repl.eval({ code: call.content, agent }) });
+        await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
+            text: '', html, usage, messageIdx: append.idx,
+        } });
+        await ctx.fns.session.syncAgentState({ agent });
         return;
     }
 
@@ -103,8 +112,8 @@ export default async function (
     } });
 
     const resultText = ctx.fns.agent.formatMarkerResult({ call, output, isError });
-    ctx.fns.session.appendMessage({ id: agent.id, message: {
+    await ctx.fns.session.appendMessage({ id: agent.id, message: {
         role: 'user', content: resultText, excluded_from_cursor: true,
     } });
-    ctx.fns.session.syncAgentState({ agent });
+    await ctx.fns.session.syncAgentState({ agent });
 }

@@ -1,10 +1,10 @@
-export default function (ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }): void {
+export default async function (ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }): Promise<void> {
     const { agent } = opts;
     const now = Date.now();
-    ctx.fns.procs.db.run({
+    await ctx.fns.procs.db.run({
         sql: `
         INSERT INTO agents (id, model, system_prompt, scratchpad, parent_id, fork_offset, created_at, updated_at)
-        VALUES ($id, $model, $sp, $scratchpad, $parentId, $forkOffset, COALESCE((SELECT created_at FROM agents WHERE id = $id), $ts), $ts)
+        VALUES (?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM agents WHERE id = ?), ?), ?)
         ON CONFLICT(id) DO UPDATE SET
             model = excluded.model,
             system_prompt = excluded.system_prompt,
@@ -13,20 +13,24 @@ export default function (ctx: Context, _session: Session | null, opts: { agent: 
             fork_offset = excluded.fork_offset,
             updated_at = excluded.updated_at
     `,
-        params: {
-            $id: agent.id,
-            $model: agent.model,
-            $sp: agent.systemPrompt,
-            $scratchpad: JSON.stringify(agent.scratchpad ?? {}),
-            $parentId: agent.parentId ?? null,
-            $forkOffset: agent.forkOffset ?? null,
-            $ts: now,
-        },
+        params: [
+            agent.id,
+            agent.model,
+            agent.systemPrompt,
+            JSON.stringify(agent.scratchpad ?? {}),
+            agent.parentId ?? null,
+            agent.forkOffset ?? null,
+            agent.id,
+            now,
+            now,
+        ],
     });
 
-    ctx.fns.procs.db.run({ sql: 'DELETE FROM messages WHERE agent_id = ?', params: [agent.id] });
-    (agent.messages ?? []).forEach((message: any, idx: number) => {
-        ctx.fns.procs.db.run({
+    await ctx.fns.procs.db.run({ sql: 'DELETE FROM messages WHERE agent_id = ?', params: [agent.id] });
+    const messages: any[] = agent.messages ?? [];
+    for (let idx = 0; idx < messages.length; idx++) {
+        const message: any = messages[idx];
+        await ctx.fns.procs.db.run({
             sql: 'INSERT INTO messages (agent_id, idx, role, content, ts) VALUES (?, ?, ?, ?, ?)',
             params: [
                 agent.id,
@@ -36,10 +40,12 @@ export default function (ctx: Context, _session: Session | null, opts: { agent: 
                 now + idx,
             ],
         });
-    });
+    }
 
-    ctx.fns.procs.db.run({ sql: 'DELETE FROM events WHERE agent_id = ?', params: [agent.id] });
-    (agent.events ?? []).forEach((event: any, idx: number) => {
-        ctx.fns.procs.db.run({ sql: 'INSERT INTO events (agent_id, idx, type, payload, ts) VALUES (?, ?, ?, ?, ?)', params: [agent.id, idx, event.type, JSON.stringify(event), now + idx] });
-    });
+    await ctx.fns.procs.db.run({ sql: 'DELETE FROM events WHERE agent_id = ?', params: [agent.id] });
+    const events: any[] = agent.events ?? [];
+    for (let idx = 0; idx < events.length; idx++) {
+        const event: any = events[idx];
+        await ctx.fns.procs.db.run({ sql: 'INSERT INTO events (agent_id, idx, type, payload, ts) VALUES (?, ?, ?, ?, ?)', params: [agent.id, idx, event.type, JSON.stringify(event), now + idx] });
+    }
 }

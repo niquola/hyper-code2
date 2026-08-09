@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test";
 import stop from './stop';
 
 describe('agent.stop', () => {
-  test('aborts run and clears next_run_at when clearQueue=true', () => {
+  test('aborts run and clears next_run_at when clearQueue=true', async () => {
     const calls: any[] = [];
     const agent: any = {
       id: 'a1',
@@ -20,7 +20,7 @@ describe('agent.stop', () => {
         },
       },
     };
-    const res = stop(ctx, null, { agent, clearQueue: true });
+    const res = await stop(ctx, null, { agent, clearQueue: true });
     expect(res.ok).toBe(true);
     expect(calls[0]).toEqual(['abort', 'stopped_by_user']);
     expect(calls[1][0]).toBe('db.run');
@@ -28,7 +28,7 @@ describe('agent.stop', () => {
     expect(calls[2]).toEqual(['appendErrorEvent', 'a1', 'stopped by user; queue cleared']);
   });
 
-  test('without clearQueue keeps next_run_at', () => {
+  test('without clearQueue keeps next_run_at', async () => {
     const calls: any[] = [];
     const agent: any = {
       id: 'a1',
@@ -43,7 +43,7 @@ describe('agent.stop', () => {
         session: { appendErrorEvent: () => {}, syncAgentState: () => {} },
       },
     };
-    stop(ctx, null, { agent, clearQueue: false });
+    await stop(ctx, null, { agent, clearQueue: false });
     expect(calls[0]).toMatch(/next_run_at = next_run_at/);
   });
 });

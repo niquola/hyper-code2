@@ -1,7 +1,7 @@
 import { unlinkSync } from "node:fs";
 
 // Wipes ~/.codex/auth.json and any in-flight login state.
-export default function (ctx: Context, _session: Session | null, _opts?: {}): { ok: true } {
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<{ ok: true }> {
     const home = ctx.env.HOME ?? process.env.HOME ?? "";
     try { unlinkSync(`${home}/.codex/auth.json`); } catch { /* already gone */ }
     const s = (ctx.state as any).settings;

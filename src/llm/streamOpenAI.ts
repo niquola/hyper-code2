@@ -14,7 +14,7 @@ export default async function (
     if (sys) messages.push({ role: "system", content: sys });
     messages.push(...convo);
 
-    const ep = ctx.fns.llm.resolveEndpoint({ model: agent.model });
+    const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
 
     const body: any = {
         model: ep.modelId,

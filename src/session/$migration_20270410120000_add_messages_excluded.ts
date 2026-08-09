@@ -2,5 +2,5 @@
 const up_sql = "ALTER TABLE messages ADD COLUMN excluded_from_llm INTEGER NOT NULL DEFAULT 0;\n";
 
 export default {
-    up: (ctx: Context) => { ctx.fns.procs.db.exec({ sql: up_sql }); },
+    up: async (ctx: Context) => { await ctx.fns.procs.db.exec({ sql: up_sql }); },
 };

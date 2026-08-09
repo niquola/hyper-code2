@@ -19,10 +19,10 @@ function isAbortError(error: any) {
     return msg.includes('aborted') || msg.includes('AbortError');
 }
 
-function loadAgent(ctx: Context, id: string): any {
+async function loadAgent(ctx: Context, id: string): Promise<any> {
     let a = (ctx.state as any).agent?.[id];
     if (a) return a;
-    a = ctx.fns.session?.load?.({ id }) ?? null;
+    a = (await ctx.fns.session?.load?.({ id })) ?? null;
     if (a) {
         (ctx.state as any).agent ??= {};
         (ctx.state as any).agent[id] = a;
@@ -48,8 +48,8 @@ function waitForWork(ctx: Context, timeoutMs: number): Promise<void> {
 }
 
 // Atomically claim ONE pending agent, returning its id (or null if none).
-function claimOne(ctx: Context, now: number): string | null {
-    const claimed = ctx.fns.procs.db.select({
+async function claimOne(ctx: Context, now: number): Promise<string | null> {
+    const claimed = await ctx.fns.procs.db.select({
         sql: `UPDATE agents
             SET run_state      = 'running',
                 run_started_at = ?,
@@ -73,10 +73,10 @@ function claimOne(ctx: Context, now: number): string | null {
 // Run one agent end-to-end. Mirrors what the old single-agent loop body did:
 // frontier snapshot → run() → finally: advance cursor / reschedule / mark idle.
 async function runOne(ctx: Context, agentId: string): Promise<void> {
-    const agent = loadAgent(ctx, agentId);
+    const agent = await loadAgent(ctx, agentId);
     if (!agent) {
         const ts = Date.now();
-        ctx.fns.procs.db.run({
+        await ctx.fns.procs.db.run({
             sql: `UPDATE agents SET run_state = 'idle', last_error = ?, updated_at = ? WHERE id = ?`,
             params: ['agent not found at run-time', ts, agentId],
         });
@@ -87,10 +87,10 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
     // and "did new messages arrive during the run" must mean new real user
     // messages — synthetic §result:* / §error:* user-rows are
     // excluded_from_cursor=1, assistant emissions are not 'user' role.
-    const frontier = (ctx.fns.procs.db.select({
+    const frontier = ((await ctx.fns.procs.db.select({
         sql: "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
         params: [agentId],
-    }) as any[])[0];
+    })) as any[])[0];
     const frontierIdx = Number(frontier?.max_idx ?? -1);
 
     agent.isStreaming = true;
@@ -110,10 +110,10 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
         const ts = Date.now();
         const advanceCursor = !aborted && !errorText;
 
-        const after = (ctx.fns.procs.db.select({
+        const after = ((await ctx.fns.procs.db.select({
             sql: "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
             params: [agentId],
-        }) as any[])[0];
+        })) as any[])[0];
         const afterIdx = Number(after?.max_idx ?? -1);
 
         // On abort/error keep the cursor untouched so the same messages get
@@ -121,13 +121,13 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
         // otherwise a permanently-broken LLM call burns the worker in a loop.
         const cursorIdx = advanceCursor
             ? frontierIdx
-            : Number((ctx.fns.procs.db.select({
+            : Number(((await ctx.fns.procs.db.select({
                 sql: 'SELECT last_processed_msg_idx FROM agents WHERE id = ?',
                 params: [agentId],
-            }) as any[])[0]?.last_processed_msg_idx ?? -1);
+            })) as any[])[0]?.last_processed_msg_idx ?? -1);
         const stillPending = advanceCursor && afterIdx > cursorIdx;
 
-        ctx.fns.procs.db.run({
+        await ctx.fns.procs.db.run({
             sql: `UPDATE agents
                 SET run_state = 'idle',
                     run_started_at = NULL,
@@ -141,7 +141,7 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
 
         agent.abortController = null;
         agent.isStreaming = false;
-        try { ctx.fns.session.syncAgentState({ agent }); } catch {}
+        try { await ctx.fns.session.syncAgentState({ agent }); } catch {}
 
         // If we just rescheduled (stillPending) or unblocked some other agent's
         // queue, kick the worker so the loop notices without waiting for a poll.
@@ -162,7 +162,7 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         // provider (429 / connection errors) and SQLite serialising writes.
         let drained = 0;
         while (true) {
-            const id = claimOne(ctx, Date.now());
+            const id = await claimOne(ctx, Date.now());
             if (!id) break;
             drained++;
             const p = runOne(ctx, id).finally(() => inflight.delete(p));
@@ -172,10 +172,10 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         if (inflight.size === 0) {
             // No work in flight. Sleep until either a wake signal lands or
             // the soonest scheduled `next_run_at` is due.
-            const next = (ctx.fns.procs.db.select({
+            const next = ((await ctx.fns.procs.db.select({
                 sql: 'SELECT MIN(next_run_at) AS next FROM agents WHERE run_state = ? AND next_run_at IS NOT NULL AND archived_at IS NULL',
                 params: ['idle'],
-            }) as any[])[0];
+            })) as any[])[0];
             const nextMs = next?.next ? Number(next.next) - Date.now() : MAX_IDLE_MS;
             const wait = Math.max(50, Math.min(MAX_IDLE_MS, nextMs));
             await waitForWork(ctx, wait);
@@ -187,4 +187,9 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         }
         // else: drained > 0 — loop back immediately to look for more.
     }
+
+    // Graceful shutdown: don't return while runOne finalizers still have
+    // in-flight DB writes — callers (and test afterAll pool close) rely on
+    // the loop promise resolving only after all claimed work has settled.
+    if (inflight.size > 0) await Promise.allSettled([...inflight]);
 }

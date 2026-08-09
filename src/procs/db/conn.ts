@@ -1,19 +1,29 @@
-// Lazily open the sqlite connection and cache it in this module's own state —
-// ctx.state.procs.db.connection, like every module's state. Because state
-// is per-ctx, a forked test env (env.fork) gets its OWN isolated connection —
-// dev's file db and a test's :memory: db never touch.
-import { Database } from "bun:sqlite";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+// Lazily open the Postgres pool (Bun.SQL) and cache it in this module's own
+// state — ctx.state.procs.db.sql, like every module's state. Because state is
+// per-ctx, a forked test env (env.fork) gets its OWN isolated pool.
+//
+// hyper-code2: under NODE_ENV=test the pool is capped at ONE connection and its
+// search_path is pinned to pg_temp — every unqualified CREATE TABLE lands in the
+// connection's temporary schema, so each test ctx gets a private, self-cleaning
+// database. Test pools register on globalThis for the preload afterAll to close
+// (idle pooled connections would otherwise exhaust max_connections across the
+// suite).
+import { SQL } from "bun";
 
-export default function (ctx: Context, _session: Session | null, _opts?: {}): Database {
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<SQL> {
     const st = ((ctx.state.procs ??= {} as any).db ??= {});
-    if (st.connection) return st.connection;
+    if (st.sql) return st.sql;
     const url = ctx.fns.procs.db.url();
-    if (url !== ":memory:" && url.includes("/")) mkdirSync(dirname(url), { recursive: true });
-    st.connection = new Database(url);
-    // hyper-code2: file-backed DBs run WAL — concurrent agent runs write from
-    // several promises and WAL keeps readers unblocked.
-    if (url !== ":memory:") st.connection.exec("PRAGMA journal_mode = WAL");
-    return st.connection;
+    st.url = url;
+    const isTest = ctx.env.NODE_ENV === "test";
+    // prepare:false — Bun 1.3.14 loses queued queries under concurrent
+    // parameterized queries on a saturated pool (server idles in ClientRead,
+    // client promises never resolve). The simple protocol has no such bug.
+    const sql = new SQL(url, { max: isTest ? 1 : Number(ctx.env.PG_POOL_MAX) || 8, prepare: false });
+    if (isTest) {
+        await sql.unsafe("SET search_path TO pg_temp");
+        (((globalThis as any).__hyperTestPools ??= new Set()) as Set<SQL>).add(sql);
+    }
+    st.sql = sql;
+    return sql;
 }

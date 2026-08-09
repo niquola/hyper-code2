@@ -10,7 +10,7 @@ type DeclaredItem = {
     source: 'db' | 'env' | 'default';
 };
 
-export default function (ctx: Context, _session: Session | null, _opts?: {}): DeclaredItem[] {
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<DeclaredItem[]> {
     const registry: Map<string, any> | undefined = (ctx.state as any).settings?.registry;
     if (!registry) return [];
 
@@ -22,7 +22,7 @@ export default function (ctx: Context, _session: Session | null, _opts?: {}): De
         const key = regKey.slice(dotIdx + 1);
 
         // Detect provenance.
-        const dbRow = (ctx.fns.procs.db.select({
+        const dbRow = (await ctx.fns.procs.db.select({
             sql: "SELECT value FROM settings WHERE module = ? AND scope_type = 'global' AND scope_id = '' AND key = ?",
             params: [module, key],
         }) as Array<{ value: string }>)[0];

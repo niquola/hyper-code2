@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 // Persist KEY=value pairs to .env (project root) and mirror them on
 // `ctx.env` so the running process picks them up immediately.
 // Empty value removes the line.
-export default function (ctx: Context, _session: Session | null, opts: { entries: Record<string, string> }): void {
+export default async function (ctx: Context, _session: Session | null, opts: { entries: Record<string, string> }): Promise<void> {
     const entries = opts.entries;
     for (const key of Object.keys(entries)) {
         if (!/^[A-Z][A-Z0-9_]*$/.test(key)) throw new Error(`bad env key: ${key}`);

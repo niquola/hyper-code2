@@ -51,8 +51,8 @@ function renderRow(item: any): string {
 </tr>`;
 }
 
-export default function (ctx: Context, _session: Session | null, _opts?: {}): string {
-    const items = ctx.fns.settings.declared({});
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string> {
+    const items = await ctx.fns.settings.declared({});
     const byModule = new Map<string, any[]>();
     for (const it of items) {
         if (!byModule.has(it.module)) byModule.set(it.module, []);

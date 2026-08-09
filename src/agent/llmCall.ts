@@ -19,7 +19,7 @@ export default async function (
     if (!user) throw new Error('llmCall: user is required');
     if (!model) throw new Error('llmCall: model is required');
 
-    const ep = ctx.fns.llm.resolveEndpoint({ model });
+    const ep = await ctx.fns.llm.resolveEndpoint({ model });
 
     if (ep.api === 'responses') {
         const apiKey = await ctx.fns.llm.refreshCodex({}) ?? ep.apiKey;

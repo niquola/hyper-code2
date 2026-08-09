@@ -34,43 +34,43 @@ async function setup() {
     return ctx;
 }
 
-function mkAgent(ctx: any) {
-    const a = ctx.fns.agent.start({ model: 'mock:test' });
-    ctx.fns.session.save({ agent: a });
+async function mkAgent(ctx: any) {
+    const a = await ctx.fns.agent.start({ model: 'mock:test' });
+    await ctx.fns.session.save({ agent: a });
     return a;
 }
 
 describe('agent.executeMarker', () => {
     test('eval: persists §eval message + tool_call event + §result:eval feedback', async () => {
         const ctx = await setup();
-        const a = mkAgent(ctx);
+        const a = await mkAgent(ctx);
 
         await executeMarker(ctx, null, { agent: a, call: { kind: 'eval', content: '1 + 1' }, usage: {} });
 
-        const msgs = ctx.fns.session.getMessages({ id: a.id });
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
         expect(msgs.map((m: any) => m.role)).toEqual(['assistant', 'user']);
         expect(msgs[0]!.content).toBe('§eval\n1 + 1');
         expect(msgs[1]!.content).toBe('§result:eval\neval-result-of:1 + 1');
 
-        const events = ctx.fns.session.getEvents({ id: a.id });
+        const events = await ctx.fns.session.getEvents({ id: a.id });
         expect(events[0]!.name).toBe('eval');
         expect(events[0]!.isError).toBe(false);
     });
 
     test('read plain: emits §result:read:path', async () => {
         const ctx = await setup();
-        const a = mkAgent(ctx);
+        const a = await mkAgent(ctx);
 
         await executeMarker(ctx, null, { agent: a, call: { kind: 'read', path: 'src/x.ts', format: 'plain' }, usage: {} });
 
-        const msgs = ctx.fns.session.getMessages({ id: a.id });
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
         expect(msgs[0]!.content).toBe('§read\nsrc/x.ts');
         expect(msgs[1]!.content).toBe('§result:read:src/x.ts\na\nb\nc\nd\ne');
     });
 
     test('read plain supports structured range body', async () => {
         const ctx = await setup();
-        const a = mkAgent(ctx);
+        const a = await mkAgent(ctx);
 
         await executeMarker(ctx, null, {
             agent: a,
@@ -78,24 +78,24 @@ describe('agent.executeMarker', () => {
             usage: {},
         });
 
-        const msgs = ctx.fns.session.getMessages({ id: a.id });
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
         expect(msgs[1]!.content).toBe('§result:read:path: src/x.ts\nstartLine: 2\nendLine: 4\nb\nc\nd');
     });
 
     test('read hashline: emits §result:read:hashline:path', async () => {
         const ctx = await setup();
-        const a = mkAgent(ctx);
+        const a = await mkAgent(ctx);
 
         await executeMarker(ctx, null, { agent: a, call: { kind: 'read', path: 'src/x.ts', format: 'hashline' }, usage: {} });
 
-        const msgs = ctx.fns.session.getMessages({ id: a.id });
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
         expect(msgs[0]!.content).toBe('§read:hashline\nsrc/x.ts');
         expect(msgs[1]!.content).toBe('§result:read:hashline:src/x.ts\nREADHASH:src/x.ts:::');
     });
 
     test('read hashline supports structured range body', async () => {
         const ctx = await setup();
-        const a = mkAgent(ctx);
+        const a = await mkAgent(ctx);
 
         await executeMarker(ctx, null, {
             agent: a,
@@ -103,39 +103,39 @@ describe('agent.executeMarker', () => {
             usage: {},
         });
 
-        const msgs = ctx.fns.session.getMessages({ id: a.id });
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
         expect(msgs[1]!.content).toBe('§result:read:hashline:path: src/x.ts\nmaxLines: 2\nREADHASH:src/x.ts:::2');
     });
 
     test('grep plain: emits line-based rows', async () => {
         const ctx = await setup();
-        const a = mkAgent(ctx);
+        const a = await mkAgent(ctx);
 
         await executeMarker(ctx, null, { agent: a, call: { kind: 'grep', format: 'plain', content: 'pattern: foo' }, usage: {} });
 
-        const msgs = ctx.fns.session.getMessages({ id: a.id });
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
         expect(msgs[0]!.content).toBe('§grep\npattern: foo');
         expect(msgs[1]!.content).toBe('§result:grep\na.ts:2:3|foo');
     });
 
     test('grep hashline: emits anchor-based rows', async () => {
         const ctx = await setup();
-        const a = mkAgent(ctx);
+        const a = await mkAgent(ctx);
 
         await executeMarker(ctx, null, { agent: a, call: { kind: 'grep', format: 'hashline', content: 'pattern: foo' }, usage: {} });
 
-        const msgs = ctx.fns.session.getMessages({ id: a.id });
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
         expect(msgs[0]!.content).toBe('§grep:hashline\npattern: foo');
         expect(msgs[1]!.content).toBe('§result:grep:hashline\na.ts:2aa:3|foo');
     });
 
     test('edit hashline: emits edit result', async () => {
         const ctx = await setup();
-        const a = mkAgent(ctx);
+        const a = await mkAgent(ctx);
 
         await executeMarker(ctx, null, { agent: a, call: { kind: 'edit', format: 'hashline', content: '@a.ts\n= 1aa\n|x' }, usage: {} });
 
-        const msgs = ctx.fns.session.getMessages({ id: a.id });
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
         expect(msgs[0]!.content).toBe('§edit:hashline\n@a.ts\n= 1aa\n|x');
         expect(msgs[1]!.content).toBe('§result:edit:hashline\nedited a.ts (12 bytes)');
     });
@@ -143,23 +143,40 @@ describe('agent.executeMarker', () => {
     test('edit hashline error bubbles through', async () => {
         const ctx = await setup();
         ctx.fns.files.editHashline = async () => { throw new Error("stale anchor"); };
-        const a = mkAgent(ctx);
+        const a = await mkAgent(ctx);
 
         await executeMarker(ctx, null, { agent: a, call: { kind: 'edit', format: 'hashline', content: '@a.ts\n= 1aa\n|x' }, usage: {} });
 
-        const msgs = ctx.fns.session.getMessages({ id: a.id });
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
         expect(msgs[1]!.content).toBe('§result:edit:hashline:error\nError: stale anchor');
-        const events = ctx.fns.session.getEvents({ id: a.id });
+        const events = await ctx.fns.session.getEvents({ id: a.id });
         expect(events[0]!.isError).toBe(true);
+    });
+
+    test('evalHtml: success persists assistant message + assistant event with eval output as HTML, NO §result feedback', async () => {
+        const ctx = await setup();
+        const a = await mkAgent(ctx);
+
+        ctx.fns.repl.eval = async () => '<div class="ok">hello</div>';
+        await executeMarker(ctx, null, { agent: a, call: { kind: 'evalHtml', content: 'return "<div class=\\"ok\\">hello</div>"' }, usage: {} });
+
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
+        expect(msgs.map((m: any) => m.role)).toEqual(['assistant']);
+        expect(msgs[0]!.content).toBe('§eval:html\nreturn "<div class=\\"ok\\">hello</div>"');
+
+        const events = await ctx.fns.session.getEvents({ id: a.id });
+        expect(events).toHaveLength(1);
+        expect(events[0]!.type).toBe('assistant');
+        expect(events[0]!.html).toBe('<div class="ok">hello</div>');
     });
 
     test('html: success persists assistant message + assistant event with the HTML body, NO §result feedback', async () => {
         const ctx = await setup();
-        const a = mkAgent(ctx);
+        const a = await mkAgent(ctx);
 
         await executeMarker(ctx, null, { agent: a, call: { kind: 'html', content: '<p class="x">hi</p>' }, usage: {} });
 
-        const msgs = ctx.fns.session.getMessages({ id: a.id });
+        const msgs = await ctx.fns.session.getMessages({ id: a.id });
         expect(msgs.map((m: any) => m.role)).toEqual(['assistant']);
         expect(msgs[0]!.content).toBe('§html\n<p class="x">hi</p>');
     });

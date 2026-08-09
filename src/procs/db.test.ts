@@ -1,17 +1,27 @@
-// FUNCTIONAL test: src/db.test.ts ↔ src/db/ namespace.
+// FUNCTIONAL test: src/db.test.ts ↔ src/db/ namespace — Postgres via Bun.SQL,
+// fully async. Under NODE_ENV=test the pool is one connection pinned to
+// pg_temp, so plain CREATE TABLE lands in a private, self-cleaning schema.
 import { test, expect } from "bun:test";
 import { testCtx } from "../$test";
 
 const ctx = await testCtx();
 
-test("db: test env resolves to :memory:", () => {
-    expect(ctx.fns.procs.db.url()).toBe(":memory:");
+test("db: test env resolves to a Postgres url", () => {
+    expect(ctx.fns.procs.db.url()).toStartWith("postgres://");
 });
 
-test("db: exec / run / query round-trip", () => {
-    ctx.fns.procs.db.exec({ sql: "CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)" });
-    expect(ctx.fns.procs.db.run({ sql: "INSERT INTO t (v) VALUES (?)", params: ["hello"] }).changes).toBe(1);
-    expect(ctx.fns.procs.db.select({ sql: "SELECT v FROM t" })).toEqual([{ v: "hello" }]);
+test("db: exec / run / select round-trip", async () => {
+    await ctx.fns.procs.db.exec({ sql: "CREATE TABLE t (id SERIAL PRIMARY KEY, v TEXT)" });
+    const r = await ctx.fns.procs.db.run({ sql: "INSERT INTO t (v) VALUES (?)", params: ["hello"] });
+    expect(r.changes).toBe(1);
+    expect(r.lastInsertRowid).toBe(0); // no rowid in pg — use db.insert / RETURNING
+    expect(await ctx.fns.procs.db.select({ sql: "SELECT v FROM t" })).toEqual([{ v: "hello" }]);
+});
+
+test("db.run: RETURNING rows come through", async () => {
+    const r = await ctx.fns.procs.db.run({ sql: "INSERT INTO t (v) VALUES (?) RETURNING id", params: ["again"] });
+    expect(r.rows.length).toBe(1);
+    expect(Number((r.rows[0] as any).id)).toBeGreaterThan(0);
 });
 
 test("db.sql: compiles the query DSL (parameterized)", () => {
@@ -26,19 +36,21 @@ test("db.sql: operator object — multiple ops AND-join, {} is a no-op", () => {
         .toEqual({ sql: "SELECT * FROM t", params: [] });
 });
 
-test("db.insert + db.q: round-trip through the DSL", () => {
-    ctx.fns.procs.db.exec({ sql: "CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT, done INTEGER)" });
-    ctx.fns.procs.db.insert({ into: "notes", values: { body: "hi", done: 0 } });
-    ctx.fns.procs.db.insert({ into: "notes", values: { body: "yo", done: 1 } });
-    expect(ctx.fns.procs.db.q({ select: "body", from: "notes", where: { done: 0 } })).toEqual([{ body: "hi" }]);
+test("db.insert + db.q: round-trip through the DSL", async () => {
+    await ctx.fns.procs.db.exec({ sql: "CREATE TABLE notes (id SERIAL PRIMARY KEY, body TEXT, done INTEGER)" });
+    const first = await ctx.fns.procs.db.insert({ into: "notes", values: { body: "hi", done: 0 } });
+    expect(Number(first.id)).toBe(1);
+    expect(first.changes).toBe(1);
+    await ctx.fns.procs.db.insert({ into: "notes", values: { body: "yo", done: 1 } });
+    expect(await ctx.fns.procs.db.q({ select: "body", from: "notes", where: { done: 0 } })).toEqual([{ body: "hi" }]);
 });
 
-test("db lives in ctx → env.fork gives an isolated connection", () => {
+test("db lives in ctx → env.fork gives an isolated pool (own pg_temp schema)", async () => {
     const a = ctx.fns.procs.env.fork({ mode: "test" });
     const b = ctx.fns.procs.env.fork({ mode: "test" });
-    a.fns.procs.db.exec({ sql: "CREATE TABLE x (n INTEGER)" });
-    a.fns.procs.db.run({ sql: "INSERT INTO x VALUES (1)" });
-    b.fns.procs.db.exec({ sql: "CREATE TABLE x (n INTEGER)" });          // b has its OWN :memory:
-    expect(b.fns.procs.db.select({ sql: "SELECT count(*) c FROM x" })).toEqual([{ c: 0 }]);
-    expect(a.fns.procs.db.select({ sql: "SELECT count(*) c FROM x" })).toEqual([{ c: 1 }]);
+    await a.fns.procs.db.exec({ sql: "CREATE TABLE x (n INTEGER)" });
+    await a.fns.procs.db.run({ sql: "INSERT INTO x VALUES (1)" });
+    await b.fns.procs.db.exec({ sql: "CREATE TABLE x (n INTEGER)" });   // b has its OWN pg_temp
+    expect(await b.fns.procs.db.select({ sql: "SELECT count(*)::int AS c FROM x" })).toEqual([{ c: 0 }]);
+    expect(await a.fns.procs.db.select({ sql: "SELECT count(*)::int AS c FROM x" })).toEqual([{ c: 1 }]);
 });

@@ -14,7 +14,7 @@ export default async function (
     usage: { prompt_tokens: number; completion_tokens: number };
 }> {
     const { agent } = opts;
-    const ep = ctx.fns.llm.resolveEndpoint({ model: agent.model });
+    const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
     const apiKey = await ctx.fns.llm.refreshCodex({}) ?? ep.apiKey;
     if (!apiKey) throw new Error("codex: no access_token (run /settings → login)");
     const accountId = extractAccountId(apiKey);

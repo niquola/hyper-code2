@@ -17,9 +17,9 @@ const mkCtx = () => {
 };
 
 describe("agent.start", () => {
-    test("creates agent with default shape", () => {
+    test("creates agent with default shape", async () => {
         const ctx = mkCtx();
-        const agent = start(ctx, null, { model: "minimax/minimax-m2.7" });
+        const agent = await start(ctx, null, { model: "minimax/minimax-m2.7" });
         expect(agent.id).toBe('a');
         expect(agent.model).toBe("minimax/minimax-m2.7");
         expect(agent.systemPrompt).toBe("");
@@ -29,27 +29,27 @@ describe("agent.start", () => {
         expect(agent.isStreaming).toBe(false);
     });
 
-    test("stores agent in ctx.state.agent[id]", () => {
+    test("stores agent in ctx.state.agent[id]", async () => {
         const ctx = mkCtx();
-        const agent = start(ctx, null, { model: "x", systemPrompt: "hi" });
+        const agent = await start(ctx, null, { model: "x", systemPrompt: "hi" });
         expect((ctx.state as any).agent[agent.id]).toBe(agent);
         expect(agent.systemPrompt).toBe("hi");
     });
 
-    test("multiple agents coexist", () => {
+    test("multiple agents coexist", async () => {
         const ctx = mkCtx();
         (ctx as any).fns.agent.nextId
             .mockReturnValueOnce('a')
             .mockReturnValueOnce('b');
-        const a = start(ctx, null, { model: "x" });
-        const b = start(ctx, null, { model: "y" });
+        const a = await start(ctx, null, { model: "x" });
+        const b = await start(ctx, null, { model: "y" });
         expect(a.id).not.toBe(b.id);
         expect(Object.keys((ctx.state as any).agent)).toHaveLength(2);
     });
 
-    test("persists and emits create event", () => {
+    test("persists and emits create event", async () => {
         const ctx = mkCtx() as any;
-        const agent = start(ctx, null, { model: "codex:gpt-5.4" });
+        const agent = await start(ctx, null, { model: "codex:gpt-5.4" });
         expect(ctx.fns.agent.nextId).toHaveBeenCalledTimes(1);
         expect(ctx.fns.session.save).toHaveBeenCalledTimes(1);
         expect(ctx.fns.session.save).toHaveBeenCalledWith({ agent });

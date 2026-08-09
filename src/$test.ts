@@ -28,7 +28,9 @@ export async function testCtx(opts?: { root?: string; workdir?: string; env?: Re
     if (opts?.workdir) ctx.env.WORKDIR = opts.workdir;
     Object.assign(ctx.env, opts?.env ?? {});
     ctx.env.NODE_ENV = "test";
-    ctx.env.DATABASE_URL = ":memory:"; // test db, via config (env enters through config)
+    // Test db isolation: NODE_ENV=test makes procs.db.conn open a ONE-connection
+    // pool pinned to pg_temp (per-ctx temporary schema, self-cleaning). The URL
+    // stays the real Postgres (config default / DATABASE_URL).
     // Boot chatter is `log.debug` and the default level is info, so a test run is
     // quiet without anyone muzzling console.log. LOG_LEVEL=debug shows it all.
     ctx.env.LOG_LEVEL ??= "warn";

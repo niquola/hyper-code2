@@ -13,10 +13,10 @@ function encode(n: number): string {
     return out;
 }
 
-export default function (ctx: Context, _session: Session | null, _opts?: {}): string {
-    const row = (ctx.fns.procs.db.select({ sql: 'SELECT value FROM kv WHERE key = ?', params: ['agent:idCounter'] }) as any[])[0];
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string> {
+    const row = ((await ctx.fns.procs.db.select({ sql: 'SELECT value FROM kv WHERE key = ?', params: ['agent:idCounter'] })) as any[])[0];
     const next = Number(row?.value ?? 0) + 1;
-    ctx.fns.procs.db.run({
+    await ctx.fns.procs.db.run({
         sql: 'INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
         params: ['agent:idCounter', String(next)],
     });

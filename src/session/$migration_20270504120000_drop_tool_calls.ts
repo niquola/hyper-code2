@@ -3,6 +3,6 @@ const up_sql = "-- Markers protocol is the only protocol now. Wipe legacy tool-c
 const down_sql = "ALTER TABLE messages ADD COLUMN tool_calls TEXT;\nALTER TABLE messages ADD COLUMN tool_call_id TEXT;\nALTER TABLE agents ADD COLUMN tools TEXT NOT NULL DEFAULT '[]';\n";
 
 export default {
-    up: (ctx: Context) => { ctx.fns.procs.db.exec({ sql: up_sql }); },
-    down: (ctx: Context) => { ctx.fns.procs.db.exec({ sql: down_sql }); },
+    up: async (ctx: Context) => { await ctx.fns.procs.db.exec({ sql: up_sql }); },
+    down: async (ctx: Context) => { await ctx.fns.procs.db.exec({ sql: down_sql }); },
 };

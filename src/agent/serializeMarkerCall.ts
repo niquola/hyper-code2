@@ -3,6 +3,7 @@ export default function (_ctx: Context, _session: Session | null, opts: { call: 
     const { call } = opts;
     if (call.kind === 'write') return `§write:${call.path}\n${call.content}`;
     if (call.kind === 'html') return `§html\n${call.content}`;
+    if (call.kind === 'evalHtml') return `§eval:html\n${call.content}`;
     if (call.kind === 'bash') return `§bash\n${call.content}`;
     if (call.kind === 'read') return `§read${call.format && call.format !== 'plain' ? ':' + call.format : ''}\n${call.path}`;
     if (call.kind === 'grep') return `§grep${call.format && call.format !== 'plain' ? ':' + call.format : ''}\n${call.content}`;

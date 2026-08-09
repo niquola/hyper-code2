@@ -1,7 +1,7 @@
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
     const form = await opts.req.formData();
     const model = (form.get("model") as string)?.trim()
-        || ctx.fns.settings?.modelDefault?.({})
+        || (await ctx.fns.settings?.modelDefault?.({}))
         || ctx.env.MODEL
         || "minimax/minimax-m2.7";
 
@@ -18,6 +18,6 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const systemPromptRaw = (form.get("systemPrompt") as string)?.trim() || "";
     const systemPrompt = [presetText, systemPromptRaw].filter(Boolean).join("\n\n");
 
-    const agent = ctx.fns.agent.start({ model, systemPrompt });
+    const agent = await ctx.fns.agent.start({ model, systemPrompt });
     return new Response(null, { status: 303, headers: { location: `/agent/${encodeURIComponent(agent.id)}` } });
 }

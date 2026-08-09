@@ -17,7 +17,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         if (typeof resetTarget === 'string' && resetTarget) {
             const dotIdx = resetTarget.indexOf('.');
             if (dotIdx > 0) {
-                ctx.fns.settings.remove({
+                await ctx.fns.settings.remove({
                     module: resetTarget.slice(0, dotIdx),
                     scopeType: 'global',
                     key: resetTarget.slice(dotIdx + 1),
@@ -47,10 +47,10 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
                 }
 
                 // Skip writes that match what get() resolves to right now — keeps DB sparse.
-                const current = ctx.fns.settings.get({ module, scopeType: 'global', key });
+                const current = await ctx.fns.settings.get({ module, scopeType: 'global', key });
                 if (Object.is(current, value)) continue;
 
-                ctx.fns.settings.set({
+                await ctx.fns.settings.set({
                     module, scopeType: 'global', key, value,
                     isSecret: descriptor.type === 'secret',
                 });
@@ -58,7 +58,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         }
     }
 
-    return new Response(ctx.fns.settings.renderDeclaredForm({}), {
+    return new Response(await ctx.fns.settings.renderDeclaredForm({}), {
         headers: { 'content-type': 'text/html; charset=utf-8' },
     });
 }

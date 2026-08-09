@@ -41,7 +41,7 @@
   "procs": {
     "prod": {
       "procs/log": {},
-      "procs/db": { "url": ".hyper/_runtime/sessions" },
+      "procs/db": { "url": "postgres://hyper:hyper@localhost:54393/hyper" },
       "procs/migrate": {},
       "procs/repl": {},
       "agent": {},

@@ -14,6 +14,11 @@ describe('agent.parseMarkers', () => {
         expect(r.prose).toBe('');
         expect(r.calls).toEqual([{ kind: 'eval', content: '2 + 2' }]);
     });
+    test('§eval:html captures code body', () => {
+        const r = parseMarkers('§eval:html\nreturn "<div>ok</div>"\n');
+        expect(r.prose).toBe('');
+        expect(r.calls).toEqual([{ kind: 'evalHtml', content: 'return "<div>ok</div>"' }]);
+    });
 
     test('prose preamble before marker', () => {
         const r = parseMarkers('Let me check.\n§eval\nawait Bun.file("x").text()');

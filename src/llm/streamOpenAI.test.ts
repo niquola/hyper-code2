@@ -38,7 +38,7 @@ describe.skipIf(!process.env.LIVE_LLM)("agent.stream — stateless /v1/chat/comp
 
     test("plain text reply", async () => {
         const ctx = mkCtx();
-        const agent = start(ctx, null, {
+        const agent = await start(ctx, null, {
             model: process.env.MODEL!,
             systemPrompt: "Reply in one short sentence.",
         });
@@ -50,7 +50,7 @@ describe.skipIf(!process.env.LIVE_LLM)("agent.stream — stateless /v1/chat/comp
 
     test("emits text_delta via onEvent callback", async () => {
         const ctx = mkCtx();
-        const agent = start(ctx, null, {
+        const agent = await start(ctx, null, {
             model: process.env.MODEL!,
             systemPrompt: "Reply in one short sentence.",
         });

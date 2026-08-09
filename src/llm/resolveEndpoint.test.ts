@@ -21,7 +21,7 @@ function makeRegistry() {
 const mkCtx = (env: Record<string, string> = {}) => {
     const ctx: any = { env, state: { settings: { registry: makeRegistry() } } };
     ctx.fns = {
-        procs: { db: { select: () => [] } },   // no DB rows in unit-test
+        procs: { db: { select: async () => [] } },   // no DB rows in unit-test
         settings: {
             getString: (opts: any) => getString(ctx, null, opts),
             get: (opts: any) => get(ctx, null, opts),
@@ -31,45 +31,45 @@ const mkCtx = (env: Record<string, string> = {}) => {
 };
 
 describe("ai.resolveEndpoint", () => {
-    test("no prefix → lmstudio default", () => {
-        const r = resolve(mkCtx(), null, { model: "minimax/minimax-m2.7" });
+    test("no prefix → lmstudio default", async () => {
+        const r = await resolve(mkCtx(), null, { model: "minimax/minimax-m2.7" });
         expect(r.provider).toBe("lmstudio");
         expect(r.modelId).toBe("minimax/minimax-m2.7");
         expect(r.url).toBe("http://localhost:1234/v1/chat/completions");
         expect(r.apiKey).toBeNull();
     });
 
-    test("LMSTUDIO_URL env override", () => {
-        const r = resolve(mkCtx({ LMSTUDIO_URL: "http://other:5000" }), null, { model: "foo" });
+    test("LMSTUDIO_URL env override", async () => {
+        const r = await resolve(mkCtx({ LMSTUDIO_URL: "http://other:5000" }), null, { model: "foo" });
         expect(r.url).toBe("http://other:5000/v1/chat/completions");
     });
 
-    test("kimi: prefix → moonshot endpoint + KIMI_API_KEY", () => {
-        const r = resolve(mkCtx({ KIMI_API_KEY: "sk-kimi" }), null, { model: "kimi:kimi-k2-turbo-preview" });
+    test("kimi: prefix → moonshot endpoint + KIMI_API_KEY", async () => {
+        const r = await resolve(mkCtx({ KIMI_API_KEY: "sk-kimi" }), null, { model: "kimi:kimi-k2-turbo-preview" });
         expect(r.provider).toBe("kimi");
         expect(r.modelId).toBe("kimi-k2-turbo-preview");
         expect(r.url).toBe("https://api.moonshot.ai/v1/chat/completions");
         expect(r.apiKey).toBe("sk-kimi");
     });
 
-    test("openai: prefix", () => {
-        const r = resolve(mkCtx({ OPENAI_API_KEY: "sk-oai" }), null, { model: "openai:gpt-4o-mini" });
+    test("openai: prefix", async () => {
+        const r = await resolve(mkCtx({ OPENAI_API_KEY: "sk-oai" }), null, { model: "openai:gpt-4o-mini" });
         expect(r.modelId).toBe("gpt-4o-mini");
         expect(r.url).toBe("https://api.openai.com/v1/chat/completions");
         expect(r.apiKey).toBe("sk-oai");
     });
 
-    test("unknown provider throws", () => {
-        expect(() => resolve(mkCtx(), null, { model: "zzz:model" })).toThrow(/unknown provider/);
+    test("unknown provider throws", async () => {
+        await expect(resolve(mkCtx(), null, { model: "zzz:model" })).rejects.toThrow(/unknown provider/);
     });
 
-    test("modelId with colon preserved", () => {
-        const r = resolve(mkCtx(), null, { model: "kimi:some/model:with:colons" });
+    test("modelId with colon preserved", async () => {
+        const r = await resolve(mkCtx(), null, { model: "kimi:some/model:with:colons" });
         expect(r.modelId).toBe("some/model:with:colons");
     });
 
-    test("claude-code: prefix → anthropic /v1/messages, apiKey null (refreshed lazily)", () => {
-        const r = resolve(mkCtx(), null, { model: "claude-code:claude-opus-4-7" });
+    test("claude-code: prefix → anthropic /v1/messages, apiKey null (refreshed lazily)", async () => {
+        const r = await resolve(mkCtx(), null, { model: "claude-code:claude-opus-4-7" });
         expect(r.provider).toBe("claude-code");
         expect(r.api).toBe("anthropic");
         expect(r.modelId).toBe("claude-opus-4-7");

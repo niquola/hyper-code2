@@ -1,5 +1,4 @@
-// ctx.state.procs.db — the open connection, cached per ctx. A forked world
-// (env.fork) gets its own, which is what keeps a test's :memory: db and dev's
-// file db from ever touching.
-import type { Database } from "bun:sqlite";
-export type State = { connection?: Database };
+// ctx.state.procs.db — the live Bun.SQL pool and its url, cached per ctx. A
+// forked world (env.fork) gets its own, so a test never shares the dev pool.
+import type { SQL } from "bun";
+export type State = { sql?: SQL; url?: string };

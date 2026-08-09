@@ -1,8 +1,9 @@
 export default async function (ctx: Context, _session: Session | null, _opts: { req: Request; params: Record<string, string> }) {
-    const store: Record<string, any> = (ctx.state as any).agent ?? {};
-    const ids = Object.keys(store);
-    if (ids.length > 0) {
-        return new Response(null, { status: 302, headers: { location: `/agent/${encodeURIComponent(ids[0]!)}` } });
+    // DB-first: the store is the source of truth (an agent inserted after boot
+    // is real even if nothing rehydrated it into ctx.state yet).
+    const latest = (await ctx.fns.session.list({}))[0];
+    if (latest) {
+        return new Response(null, { status: 302, headers: { location: `/agent/${encodeURIComponent(latest.id)}` } });
     }
     return {
         head: '<script src="/ui/control.js"></script>',

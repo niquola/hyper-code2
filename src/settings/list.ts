@@ -4,7 +4,7 @@ type ListOpts = {
     scopeId?: string | null;
 };
 
-export default function (ctx: Context, _session: Session | null, opts: ListOpts = {}): Array<{
+export default async function (ctx: Context, _session: Session | null, opts: ListOpts = {}): Promise<Array<{
     module: string;
     scopeType: string;
     scopeId: string;
@@ -12,7 +12,7 @@ export default function (ctx: Context, _session: Session | null, opts: ListOpts 
     value: any;
     isSecret: boolean;
     updatedAt: number;
-}> {
+}>> {
     const where: string[] = [];
     const params: any[] = [];
 
@@ -29,7 +29,7 @@ export default function (ctx: Context, _session: Session | null, opts: ListOpts 
         params.push(opts.scopeId ?? '');
     }
 
-    const rows = ctx.fns.procs.db.select({
+    const rows = await ctx.fns.procs.db.select({
         sql: `SELECT module, scope_type, scope_id, key, value, is_secret, updated_at
            FROM settings${where.length ? ' WHERE ' + where.join(' AND ') : ''}
           ORDER BY module, scope_type, scope_id, key`,

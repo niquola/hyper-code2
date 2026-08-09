@@ -27,7 +27,7 @@ describe("layout sidebar refresh", () => {
         });
         const rctx: any = reqCtx(ctx, { req });
 
-        const html = rctx.fns.ui.layout({ title: "new agent", main: "<div>body</div>" }) as string;
+        const html = await rctx.fns.ui.layout({ title: "new agent", main: "<div>body</div>" }) as string;
 
         expect(html).toContain("<aside");
         expect(html).toContain("x");
@@ -38,7 +38,7 @@ describe("layout sidebar refresh", () => {
         const ctx = await mkCtx();
         const rctx: any = reqCtx(ctx, { req: new Request("http://localhost/agent/new") });
 
-        const html = rctx.fns.ui.layout({ title: "new agent", main: "<div>body</div>" }) as string;
+        const html = await rctx.fns.ui.layout({ title: "new agent", main: "<div>body</div>" }) as string;
 
         expect(html).toContain("<html");
         expect(html).toContain("<aside");

@@ -20,6 +20,10 @@ describe('agent.serializeMarkerCall', () => {
         expect(serializeMarkerCall({ kind: 'html', content: '<div>x</div>' })).toBe('§html\n<div>x</div>');
     });
 
+    test('evalHtml', () => {
+        expect(serializeMarkerCall({ kind: 'evalHtml', content: 'return "<b>x</b>"' })).toBe('§eval:html\nreturn "<b>x</b>"');
+    });
+
     test('read plain', () => {
         expect(serializeMarkerCall({ kind: 'read', path: 'src/foo.ts', format: 'plain' }))
             .toBe('§read\nsrc/foo.ts');
