@@ -2,6 +2,7 @@ export default async function (
     ctx: Context,
     opts: { path: string; startLine?: number; endLine?: number; maxLines?: number },
 ): Promise<types.files.ReadHashlineResult> {
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     const content = await ctx.fns.files.read(ctx, { path: opts.path });
     const normalized = content.replaceAll("\r\n", "\n");
     const all = normalized.split("\n");
@@ -16,12 +17,15 @@ export default async function (
         lines.push(ctx.fns.files.formatHashline(ctx, { line: i, text: all[i - 1] ?? "" }));
     }
 
+    // Don't return huge content blobs — return only the slice metadata
+    const contentTooLarge = content.length > MAX_FILE_SIZE;
+
     return {
         path: opts.path,
-        content,
+        content: contentTooLarge ? "" : content,
         lines,
         text: lines.map(x => `${x.anchor}|${x.text}`).join("\n"),
-        truncated: startLine !== 1 || endLine !== totalLines,
+        truncated: startLine !== 1 || endLine !== totalLines || contentTooLarge,
         startLine,
         endLine,
         totalLines,
