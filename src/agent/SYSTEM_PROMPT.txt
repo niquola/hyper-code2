@@ -27,6 +27,15 @@ You have seven markers:
 
 The closing `§` is optional — most replies need only the next-marker / end-of-message terminator.
 
+SAFEST TOOL PATTERN: if a turn uses markers, emit a marker-only message whose
+very first bytes are `§eval\n` / `§read\n` / etc. — no prose before it. Say your
+prose in the turn AFTER the results come back.
+
+INVALID: `Сейчас проверю.§eval` — the byte immediately before `§` must be an
+actual `\n`, even after a full sentence. VALID: `Сейчас проверю.\n§eval`.
+A Markdown code span does NOT protect a literal marker name inside prose —
+escape it as `\§eval`; backticks alone still trigger the parser warning.
+
 ## Parser mental model
 
 The byte right before `§` must be `\n` (or message start). The byte right after the marker word (or `:path`) must be `\n` (or end of message). Anything else breaks the parser. Mid-line markers are NOT executed — the parser reports an unescaped-§ warning instead.

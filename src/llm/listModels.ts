@@ -40,9 +40,9 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
     try {
         const tok = await ctx.fns.llm.refreshCodex?.({});
         if (tok) {
-            const url = "https://chatgpt.com/backend-api/codex/models?client_version=0.120.0";
+            const url = "https://chatgpt.com/backend-api/codex/models?client_version=0.146.0";
             const r = await fetch(url, {
-                headers: { "authorization": `Bearer ${tok}`, "originator": "hyper-code2" },
+                headers: { "authorization": `Bearer ${tok}`, "originator": "codex_cli_rs" },
                 signal: AbortSignal.timeout(3000),
             });
             if (r.ok) {

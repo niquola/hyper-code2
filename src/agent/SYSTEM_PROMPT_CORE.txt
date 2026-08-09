@@ -72,8 +72,12 @@ Architecture conventions. The codebase is procedural with one thing per file:
   src/<mod>/<Name>.ts (capitalized)       → types.<mod>.<Name>      export type — auto-global via genTypes
   src/<mod>/$setting_<key>.ts             → declared setting        export default { type, default, env, ... }
   src/<mod>/$route_<path>_<METHOD>.ts     → HTTP handler            _ = /, $param = :param
-  src/<mod>/$migrate_<ts>_<name>.up.sql   → SQLite migration        paired .down.sql
+  src/<mod>/$migration_<ts>_<name>.ts     → SQLite migration        export default { up(ctx), down?(ctx) }
   src/<mod>/$script_<name>.js             → browser asset           served as /<mod>/<name>.js
+
+.hyper/<mod>/<fn>.ts is an ADDITIONAL runtime function root with the same grammar,
+scanned AFTER src/ (overrides by name): .hyper/skill/uptime.ts → ctx.fns.skill.uptime.
+After creating one: await ctx.fns.procs.dev.genTypes({}) + await ctx.fns.procs.repl.load({ name: "skill" }).
 
 No cross-imports between project files — call via ctx.fns. import statements are only for bun, node:*, npm.
 
@@ -83,11 +87,18 @@ After editing files, hot-reload (don't restart):
   await ctx.fns.procs.repl.load({ name: "<mod>.<fn>" })   reload a single function
   await ctx.fns.procs.dev.genTypes({})                    after add/remove file — regenerates ctx_ns.d.ts
   await ctx.fns.procs.http.loadRoutes({})                 after touching $route_*.ts
-  await ctx.fns.procs.migrate.up({})                      after dropping a $migrate_*.up.sql
+  await ctx.fns.procs.migrate.up({})                      after dropping a $migration_*.ts
 
 Read on demand, do not try to recall:
 
   docs/architecture.md          DB schema, queue/worker, fork semantics, channels, recovery
+
+Queue facts (current, not the init migration): there is NO agent_jobs table — the
+queue lives inline in agents(next_run_at, run_state, last_processed_msg_idx),
+claimed by workerLoop via atomic UPDATE…RETURNING. Marker results are synthetic
+user messages with excluded_from_cursor=1. The messages schema evolved past the
+init migration (tool_calls dropped, exclusion flags added) — check
+PRAGMA table_info(messages), don't trust the first migration.
   CLAUDE.md                     project conventions, REPL workflow, what NOT to do
   source files themselves       authoritative
 

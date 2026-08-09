@@ -40,6 +40,7 @@ declare global {
             workerLoop: Injected<typeof import("./agent/workerLoop").default>;
         };
         dev: {
+            ping: Injected<typeof import("./dev/ping").default>;
             readLog: Injected<typeof import("./dev/readLog").default>;
             test: Injected<typeof import("./dev/test").default>;
             testSummary: Injected<typeof import("./dev/testSummary").default>;
@@ -338,6 +339,7 @@ declare global {
         skill: {
             hello: Injected<typeof import("./skill/hello").default>;
             inspect: Injected<typeof import("./skill/inspect").default>;
+            uptime: Injected<typeof import("../.hyper/skill/uptime").default>;
             wordCount: Injected<typeof import("./skill/wordCount").default>;
         };
         tools: {

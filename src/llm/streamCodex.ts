@@ -37,7 +37,8 @@ export default async function (
     const headers = {
         "authorization": `Bearer ${apiKey}`,
         "chatgpt-account-id": accountId,
-        "originator": "hyper-code2",
+        "originator": "codex_cli_rs",
+        "version": "0.146.0",
         "OpenAI-Beta": "responses=experimental",
         "accept": "text/event-stream",
         "content-type": "application/json",
