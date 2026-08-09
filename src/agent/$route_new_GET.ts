@@ -37,7 +37,7 @@ export default async function (ctx: Context, _session: Session | null, _opts: { 
     `).join("");
 
     const main = `<div class="flex-1 overflow-y-auto">
-<form method="POST" action="/agent/new" class="max-w-2xl mx-auto px-6 py-8 space-y-5">
+<form method="POST" action="/agent/new" hx-boost="false" class="max-w-2xl mx-auto px-6 py-8 space-y-5">
   <h1 class="text-xl font-semibold text-gray-800">New agent</h1>
 
   <label class="block">

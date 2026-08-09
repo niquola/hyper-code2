@@ -46,9 +46,14 @@ ${opts.headExtra ?? ""}
     <div id="chat-resize" style="position:absolute;top:0;bottom:0;right:0;z-index:10;width:9px;transform:translateX(50%);cursor:col-resize" title="drag to resize"></div>
     ${chat}
   </aside>
-  <section class="flex-1 min-w-0 flex flex-col">
+  <!-- The whole right side navigates into #main (workspace pattern): links and
+       forms inside pages swap the page pane only, so the chat column and its
+       long-poll are never redrawn. hx-history-elt scopes back/forward refetch
+       to #main too. Anything that must re-render the chat (switching agents,
+       creating/deleting one) opts out with hx-boost="false". -->
+  <section class="flex-1 min-w-0 flex flex-col" hx-boost="true" hx-target="#main" hx-swap="innerHTML" hx-push-url="true">
     ${ctx.fns.ui.topbar({ path })}
-    <main id="main" class="flex-1 min-w-0 min-h-0 overflow-y-auto flex flex-col bg-white">${opts.main}</main>
+    <main id="main" hx-history-elt class="flex-1 min-w-0 min-h-0 overflow-y-auto flex flex-col bg-white">${opts.main}</main>
   </section>
 </div>
 ${ctx.fns.ui.navMenu({})}

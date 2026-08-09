@@ -53,6 +53,7 @@ async function claimOne(ctx: Context, now: number): Promise<string | null> {
         sql: `UPDATE agents
             SET run_state      = 'running',
                 run_started_at = ?,
+                next_run_at    = NULL,
                 last_error     = NULL,
                 updated_at     = ?
           WHERE id IN (
@@ -110,42 +111,41 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
         const ts = Date.now();
         const advanceCursor = !aborted && !errorText;
 
-        const after = ((await ctx.fns.procs.db.select({
-            sql: "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
-            params: [agentId],
-        })) as any[])[0];
-        const afterIdx = Number(after?.max_idx ?? -1);
-
-        // On abort/error keep the cursor untouched so the same messages get
-        // retried on the next user-triggered pass — but don't auto-retry,
-        // otherwise a permanently-broken LLM call burns the worker in a loop.
-        const cursorIdx = advanceCursor
-            ? frontierIdx
-            : Number(((await ctx.fns.procs.db.select({
-                sql: 'SELECT last_processed_msg_idx FROM agents WHERE id = ?',
-                params: [agentId],
-            })) as any[])[0]?.last_processed_msg_idx ?? -1);
-        const stillPending = advanceCursor && afterIdx > cursorIdx;
-
-        await ctx.fns.procs.db.run({
+        // ONE atomic finalize — the read-compute-write it replaces had a race:
+        // a POST landing between "read afterIdx" and "UPDATE … next_run_at=NULL"
+        // had its fresh schedule wiped, and the message never ran. Claiming
+        // consumes next_run_at (claimOne sets it NULL), so any value present
+        // here was set by a concurrent POST and must survive; pending work with
+        // no schedule gets one. Cursor advances only on success; on abort/error
+        // it stays put so the same messages retry on the next user-triggered
+        // pass (no auto-retry — a permanently-broken LLM call would burn the
+        // worker in a loop).
+        const finalized = await ctx.fns.procs.db.run({
             sql: `UPDATE agents
                 SET run_state = 'idle',
                     run_started_at = NULL,
-                    last_processed_msg_idx = ?,
-                    next_run_at = ?,
+                    last_processed_msg_idx = CASE WHEN ? = 1 THEN ? ELSE last_processed_msg_idx END,
+                    next_run_at = CASE
+                        WHEN ? = 1 AND (SELECT COALESCE(MAX(idx), -1) FROM messages m
+                               WHERE m.agent_id = agents.id AND m.role = 'user' AND m.excluded_from_cursor = 0) > ?
+                        THEN COALESCE(next_run_at, ?)
+                        ELSE next_run_at
+                    END,
                     last_error = ?,
                     updated_at = ?
-              WHERE id = ?`,
-            params: [cursorIdx, stillPending ? ts + 100 : null, errorText, ts, agentId],
+              WHERE id = ?
+              RETURNING next_run_at`,
+            params: [advanceCursor ? 1 : 0, frontierIdx, advanceCursor ? 1 : 0, frontierIdx, ts + 100, errorText, ts, agentId],
         });
 
         agent.abortController = null;
         agent.isStreaming = false;
         try { await ctx.fns.session.syncAgentState({ agent }); } catch {}
 
-        // If we just rescheduled (stillPending) or unblocked some other agent's
-        // queue, kick the worker so the loop notices without waiting for a poll.
-        try { ctx.fns.agent.wakeWorker?.({}); } catch {}
+        // If the agent left finalize with a schedule (pending work or a
+        // concurrent POST), kick the worker so the loop notices immediately.
+        const rescheduled = (finalized.rows[0] as any)?.next_run_at != null;
+        if (rescheduled) { try { ctx.fns.agent.wakeWorker?.({}); } catch {} }
     }
 }
 

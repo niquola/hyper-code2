@@ -182,3 +182,35 @@ describe('agent queue (state on agents row)', () => {
         expect(row.last_processed_msg_idx).toBe(2);
     });
 });
+
+    test('race: POST landing mid-run is not lost by finalize (atomic reschedule)', async () => {
+        const ctx = await mkTestCtx();
+        const runs: number[] = [];
+        // agent.run stub: the FIRST run simulates a user POST arriving while the
+        // worker is busy — a new user message + a fresh next_run_at (what
+        // $route_$id_POST does). The old finalize read afterIdx, then wrote
+        // next_run_at = NULL over the fresh schedule → the message never ran.
+        ctx.fns.agent.run = async (c: any, _s: any, opts: any) => {
+            runs.push(Date.now());
+            if (runs.length === 1) {
+                await ctx.fns.session.appendUserMessage({ id: opts.agent.id, text: 'landed mid-run' });
+                await ctx.fns.procs.db.run({
+                    sql: 'UPDATE agents SET next_run_at = GREATEST(COALESCE(next_run_at, 0), ?) WHERE id = ?',
+                    params: [Date.now() + 50, opts.agent.id],
+                });
+            }
+        };
+
+        const a = await ctx.fns.agent.start({ model: 'm' });
+        await ctx.fns.session.save({ agent: a });
+        await ctx.fns.session.appendUserMessage({ id: a.id, text: 'first' });
+        await ctx.fns.procs.db.run({ sql: 'UPDATE agents SET next_run_at = ? WHERE id = ?', params: [Date.now(), a.id] });
+
+        await drainUntilIdle(ctx);
+
+        expect(runs.length).toBe(2);   // the mid-run message triggered a second pass
+        const row = (await ctx.fns.procs.db.select({ sql: 'SELECT run_state, next_run_at, last_processed_msg_idx FROM agents WHERE id = ?', params: [a.id] }))[0];
+        expect(row.run_state).toBe('idle');
+        expect(row.next_run_at).toBeNull();
+        expect(Number(row.last_processed_msg_idx)).toBe(1);  // both user messages consumed
+    });

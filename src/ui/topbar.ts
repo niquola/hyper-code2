@@ -23,8 +23,7 @@ export default function (ctx: Context, _session: Session | null, opts: { path: s
             : "border-transparent text-gray-500 hover:text-gray-800"}">${esc(label)}</a>`;
     };
 
-    return `<nav hx-boost="true" hx-target="#main" hx-swap="innerHTML" hx-push-url="true"
-       class="h-10 shrink-0 border-b border-gray-300 bg-gray-100 flex items-end px-3 gap-1">
+    return `<nav class="h-10 shrink-0 border-b border-gray-300 bg-gray-100 flex items-end px-3 gap-1">
   ${[...builtins, ...moduleTabs].map(tab).join("\n  ")}
   <button title="Menu — ⌘K" onclick="window.__navOpen && window.__navOpen()"
           class="ml-auto mb-1 px-2 py-1 text-xs rounded border border-gray-300 bg-white text-gray-500 hover:text-gray-900">⌘K</button>

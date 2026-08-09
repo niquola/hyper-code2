@@ -37,9 +37,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     <h1 class="text-xl font-semibold font-mono">${esc(id)}</h1>
     <span class="text-xs px-2 py-0.5 rounded-full border ${row.run_state === 'running' ? 'border-green-300 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-500'}">${esc(row.run_state ?? 'idle')}</span>
     <div class="ml-auto flex gap-2">
-      <form method="POST" action="/agent/${encodeURIComponent(id)}/fork"><button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">fork</button></form>
-      <form method="POST" action="/agent/${encodeURIComponent(id)}/archive"><button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">archive</button></form>
-      <form method="POST" action="/agent/${encodeURIComponent(id)}/delete" onsubmit="return confirm('delete this agent?')"><button class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">delete</button></form>
+      <form method="POST" action="/agent/${encodeURIComponent(id)}/fork" hx-boost="false"><button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">fork</button></form>
+      <form method="POST" action="/agent/${encodeURIComponent(id)}/archive" hx-boost="false"><button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">archive</button></form>
+      <form method="POST" action="/agent/${encodeURIComponent(id)}/delete" hx-boost="false" onsubmit="return confirm('delete this agent?')"><button class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">delete</button></form>
     </div>
   </div>
   <div class="space-y-1.5 mb-6">
@@ -47,8 +47,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     ${fact('created', esc(dt(row.created_at)))}
     ${fact('updated', esc(dt(row.updated_at)))}
     ${fact('messages', `${Number(row.msgs ?? 0)} total · ${Number(row.turns ?? 0)} user turns`)}
-    ${row.parent_id ? fact('forked from', `<a class="text-blue-700 hover:underline font-mono" href="/agent/${encodeURIComponent(row.parent_id)}">${esc(row.parent_id)}</a> @ msg ${Number(row.fork_offset ?? 0)}`) : ''}
-    ${children.length ? fact('forks', children.map((c: any) => `<a class="text-blue-700 hover:underline font-mono mr-2" href="/agent/${encodeURIComponent(c.id)}">${esc(c.id)}</a>`).join('')) : ''}
+    ${row.parent_id ? fact('forked from', `<a class="text-blue-700 hover:underline font-mono" hx-boost="false" href="/agent/${encodeURIComponent(row.parent_id)}">${esc(row.parent_id)}</a> @ msg ${Number(row.fork_offset ?? 0)}`) : ''}
+    ${children.length ? fact('forks', children.map((c: any) => `<a class="text-blue-700 hover:underline font-mono mr-2" hx-boost="false" href="/agent/${encodeURIComponent(c.id)}">${esc(c.id)}</a>`).join('')) : ''}
     ${scratchKeys.length ? fact('scratchpad', esc(scratchKeys.join(', '))) : ''}
     ${fact('search', `<a class="text-blue-700 hover:underline" href="/search?agent=${encodeURIComponent(id)}">BM25 in this transcript →</a>`)}
   </div>

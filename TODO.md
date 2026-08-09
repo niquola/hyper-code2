@@ -37,6 +37,12 @@ Why this matters:
 ---
 
 ### 3. Harden `workerLoop` / `run` crash recovery and idempotency
+
+> **2026-08-09:** the finalize race is FIXED — claimOne consumes `next_run_at`
+> atomically, runOne's finally is one atomic UPDATE (CASE-guarded cursor +
+> reschedule that preserves a concurrent POST's schedule), regression test in
+> `src/agent/queue.test.ts`. Remaining: stale-run lease timeout, crash-mid-cycle
+> e2e tests.
 The queue-driven execution path is the heart of the runtime and should be more defensive around partial failures.
 
 Suggested actions:
