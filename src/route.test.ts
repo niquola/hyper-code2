@@ -11,13 +11,13 @@ describe("GET /", () => {
         expect(html.toLowerCase()).toContain("no agents");
     });
 
-    test("agents exist — redirects 302 to /agent/<first-id>", async () => {
+    test("agents exist — redirects 302 to /agent/<latest-id>", async () => {
         const ctx = await mkTestCtx();
-        (ctx.state as any).agent = {
-            aaa: { id: "aaa", model: "m", events: [], isStreaming: false },
-        };
+        // DB-first: the route reads session.list, so the agent must be persisted.
+        const agent = await ctx.fns.agent.start({ model: "mock:echo" });
+        await ctx.fns.session.save({ agent });
         const res = await ctx.fns.procs.http.dispatch({ url: "/" });
         expect(res.status).toBe(302);
-        expect(res.headers.get("location")).toBe("/agent/aaa");
+        expect(res.headers.get("location")).toBe(`/agent/${agent.id}`);
     });
 });

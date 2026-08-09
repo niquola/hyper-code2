@@ -79,9 +79,14 @@ bun script/repl.ts -f /tmp/play.js                     # from file; stdin works 
 
 ## Database & migrations
 
-- `ctx.fns.procs.db.*`: `select({sql, params})` → rows, `run({sql, params})` → `{changes, lastInsertRowid}`, `insert({into, values})` → `{id, changes}`, `exec({sql})` (multi-statement DDL), `conn()` → raw bun:sqlite Database. File-backed DBs get WAL.
-- DB path from `package.json procs.prod."procs/db".url` = `.hyper/_runtime/sessions` (env `DATABASE_URL` overrides; tests get `:memory:`).
-- Migrations: `mod/$migration_<id>.ts` default-exporting `{ up(ctx), down?(ctx) }`, tracked in `_migrations(id)`. Ids are `YYYYMMDDHHmmss_name`; the pre-procs `name` column is renamed to `id` automatically.
+- **Storage is Postgres** (paradedb via `~/.hyper/docker-compose.yml`, container `hyper-db`, port **54393**, db/user/pass `hyper`). Start with `cd ~/.hyper && docker compose up -d`.
+- `ctx.fns.procs.db.*` — ALL ASYNC: `select({sql, params})` → rows, `run({sql, params})` → `{changes, lastInsertRowid: 0, rows}` (use RETURNING + `.rows` or `insert` for ids), `insert({into, values})` → `{id, changes}`, `exec({sql})` (multi-statement DDL, no params), `conn()` → Bun.SQL pool. `?` placeholders are translated to `$n` internally — keep writing `?`.
+- NEVER use bare `Bun.sql`/`new SQL()` in app code — it defaults to localhost:5432, not our db.
+- URL from `package.json procs.prod."procs/db".url` (env `DATABASE_URL` overrides). Pool `prepare: false` (Bun 1.3.14 pipelining bug — don't remove).
+- Postgres dialect notes: ms-timestamps are BIGINT (come back as strings — wrap in `Number()`), `COUNT(*)` is bigint-string too, camelCase aliases need quotes (`AS "createdAt"`), `GREATEST` not scalar `MAX`, `ILIKE` not `COLLATE NOCASE`.
+- Tests: each test ctx gets a private **pg_temp** schema on a one-connection pool (self-cleaning); pools are closed per-file by `src/_testPreload.entry.ts` (bunfig `[test].preload`). `max_connections=1000` on the container. CI runs a paradedb service.
+- Migrations: `mod/$migration_<id>.ts` default-exporting `{ up(ctx), down?(ctx) }` (async), tracked in `_migrations(id)`. Ids are `YYYYMMDDHHmmss_name`.
+- One-shot sqlite→pg data copy: `script/migrate-sqlite-to-pg.ts` (already run; old file kept at `.hyper/_runtime/sessions`).
 
 ## Agent (unchanged core design)
 

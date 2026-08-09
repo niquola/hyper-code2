@@ -136,7 +136,7 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
                     last_error = ?,
                     updated_at = ?
               WHERE id = ?`,
-            params: [cursorIdx, stillPending ? ts + 5_000 : null, errorText, ts, agentId],
+            params: [cursorIdx, stillPending ? ts + 100 : null, errorText, ts, agentId],
         });
 
         agent.abortController = null;
