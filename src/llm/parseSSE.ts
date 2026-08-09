@@ -10,6 +10,7 @@
 // Frames with no `data:` line (comments, keepalives) are skipped.
 export default async function* (
     _ctx: Context,
+    _session: Session | null,
     opts: { body: ReadableStream<Uint8Array> },
 ): AsyncGenerator<{ event: string | null; data: string }> {
     const decoder = new TextDecoder();

@@ -1,4 +1,4 @@
-export default function (_ctx: Context, opts: { line: number; text: string }): string {
+export default function (_ctx: Context, _session: Session | null, opts: { line: number; text: string }): string {
     const input = `${opts.line}:${opts.text}`;
     const n = Bun.hash(input);
     const s = n.toString(36);

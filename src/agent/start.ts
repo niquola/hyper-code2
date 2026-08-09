@@ -1,8 +1,9 @@
 export default function (
     ctx: Context,
+    _session: Session | null,
     opts: { model: string; systemPrompt?: string; parentId?: string | null; forkOffset?: number | null },
 ): types.agent.Agent {
-    const id = ctx.fns.agent.nextId(ctx);
+    const id = ctx.fns.agent.nextId({});
     const agent: types.agent.Agent = {
         id,
         model: opts.model,
@@ -22,7 +23,7 @@ export default function (
     };
     (ctx.state as any).agent ??= {};
     (ctx.state as any).agent[id] = agent;
-    ctx.fns.session?.save?.(ctx, { agent });
-    ctx.fns.events?.emitAgentsChanged?.(ctx, { agentId: agent.id, reason: "create" });
+    ctx.fns.session?.save?.({ agent });
+    ctx.fns.events?.emitAgentsChanged?.({ agentId: agent.id, reason: "create" });
     return agent;
 }

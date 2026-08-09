@@ -1,6 +1,6 @@
 // Parse agent.model "provider:modelId" → {url, apiKey, modelId, provider, api}.
 // "modelId" without prefix defaults to provider "lmstudio".
-export default function (ctx: Context, opts: { model: string }): {
+export default function (ctx: Context, _session: Session | null, opts: { model: string }): {
     url: string;
     apiKey: string | null;
     modelId: string;
@@ -33,7 +33,7 @@ type ProviderConfig = {
 // Read a string-typed declared setting (module=llm, scope=global). Returns undefined
 // when no declaration / no DB row / no env var / no default.
 const declaredString = (key: string) => (ctx: Context): string | null => {
-    const v = ctx.fns?.settings?.getString?.(ctx, { module: 'llm', scopeType: 'global', key });
+    const v = ctx.fns?.settings?.getString?.({ module: 'llm', scopeType: 'global', key });
     return (typeof v === 'string' && v) ? v : null;
 };
 

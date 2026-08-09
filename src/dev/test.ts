@@ -1,4 +1,4 @@
-export default async function (ctx: Context, opts: { files?: string[]; verbose?: boolean; maxFailures?: number; agent?: any } = {}) {
+export default async function (ctx: Context, _session: Session | null, opts: { files?: string[]; verbose?: boolean; maxFailures?: number; agent?: any } = {}) {
     const files = Array.isArray(opts.files) && opts.files.length > 0 ? opts.files : ['src'];
     const maxFailures = Number.isInteger(opts.maxFailures) ? Math.max(1, opts.maxFailures as number) : 3;
     await Bun.write('.hyper/_runtime/logs/.keep', '');

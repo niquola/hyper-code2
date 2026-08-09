@@ -16,19 +16,20 @@ function sseResponse(...chunks: string[]): Response {
 const fakeJwt = "h." +
     Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "acc1" } })).toString("base64url") +
     ".s";
+// Plain-object ctx (not the injecting Proxy) — fns entries are invoked with
+// opts only, so shared real fns are wrapped as (opts) => raw(ctx, null, opts).
 function mkCtx(): Context {
-    return {
-        state: {}, env: {},
-        fns: {
-            agent: { buildLlmRequest: async () => ({ system: "sys", messages: [{ role: "user", content: "hi" }] }) },
-            llm: {
-                resolveEndpoint: () => ({ url: "http://mock/codex", modelId: "gpt-x", apiKey: "", provider: "codex", api: "responses" }),
-                refreshCodex: async () => fakeJwt,
-                toCodexInput,
-                parseSSE,
-            },
+    const ctx: any = { state: {}, env: {} };
+    ctx.fns = {
+        agent: { buildLlmRequest: async () => ({ system: "sys", messages: [{ role: "user", content: "hi" }] }) },
+        llm: {
+            resolveEndpoint: () => ({ url: "http://mock/codex", modelId: "gpt-x", apiKey: "", provider: "codex", api: "responses" }),
+            refreshCodex: async () => fakeJwt,
+            toCodexInput: (opts: any) => toCodexInput(ctx, null, opts),
+            parseSSE: (opts: any) => parseSSE(ctx, null, opts),
         },
-    } as unknown as Context;
+    };
+    return ctx as unknown as Context;
 }
 const agent = () => ({ id: "a1", model: "codex:gpt-x", systemPrompt: "", messages: [], scratchpad: {} } as any);
 
@@ -44,7 +45,7 @@ describe("streamCodex — offline (mocked fetch + shared parseSSE)", () => {
             "data: [DONE]\n\n",
         )) as any;
         const deltas: string[] = [];
-        const res = await stream(mkCtx(), { agent: agent(), onEvent: (ev) => { if (ev.type === "text_delta") deltas.push(ev.delta); } });
+        const res = await stream(mkCtx(), null, { agent: agent(), onEvent: (ev) => { if (ev.type === "text_delta") deltas.push(ev.delta); } });
         expect(res.text).toBe("Hello");
         expect(res.finishReason).toBe("stop"); // mapStop("completed") → "stop"
         expect(res.usage.prompt_tokens).toBe(7);
@@ -57,7 +58,7 @@ describe("streamCodex — offline (mocked fetch + shared parseSSE)", () => {
             'data: {"type":"response.reasoning_summary_text.delta","delta":"think"}\n\n',
             'data: {"type":"response.output_text.delta","delta":"out"}\n\n',
         )) as any;
-        const res = await stream(mkCtx(), { agent: agent() });
+        const res = await stream(mkCtx(), null, { agent: agent() });
         expect(res.text).toBe("out");
         expect(res.thinking).toBe("think");
     });

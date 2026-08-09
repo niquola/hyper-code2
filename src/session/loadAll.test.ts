@@ -1,39 +1,25 @@
 import { test, expect, describe } from "bun:test";
-import loadFns from "../loadFns";
-import connect from "../db/connect";
-import migrate from "../db/migrate";
-import save from "./save";
-import appendUserMessage from "./appendUserMessage";
-import loadAll from "./loadAll";
-import start from "../agent/start";
-import nextId from "../agent/nextId";
-
-const mkCtx = async () => {
-    const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;
-    await loadFns(ctx);
-    connect(ctx, { path: ":memory:" });
-    await migrate(ctx);
-    return ctx;
-};
+import { mkTestCtx } from "../_testCtx.entry";
 
 describe("session.loadAll", () => {
     test("empty db → {loaded: 0}", async () => {
-        const ctx = await mkCtx();
-        expect(loadAll(ctx).loaded).toBe(0);
+        const ctx: any = await mkTestCtx();
+        expect(ctx.fns.session.loadAll().loaded).toBe(0);
     });
 
     test("rehydrates every saved agent into ctx.state.agent", async () => {
-        const ctx = await mkCtx();
-        const a = start(ctx, { model: "m1" });
-        save(ctx, { agent: a });
-        appendUserMessage(ctx, { id: a.id, text: 'hi' });
-        const b = start(ctx, { model: "m2", systemPrompt: "sp" });
-        save(ctx, { agent: b });
+        const ctx: any = await mkTestCtx();
+        ctx.fns.agent.renderEventHtml = async (_c: any, _s: any, _o: any) => '';
+        const a = ctx.fns.agent.start({ model: "m1" });
+        ctx.fns.session.save({ agent: a });
+        await ctx.fns.session.appendUserMessage({ id: a.id, text: 'hi' });
+        const b = ctx.fns.agent.start({ model: "m2", systemPrompt: "sp" });
+        ctx.fns.session.save({ agent: b });
 
         // fresh ctx, same db — simulate restart
-        const ctx2 = await mkCtx();
-        (ctx2.state as any).db = (ctx.state as any).db;
-        const res = loadAll(ctx2);
+        const ctx2: any = await mkTestCtx();
+        (ctx2.state as any).procs.db.connection = ctx.fns.procs.db.conn();
+        const res = ctx2.fns.session.loadAll();
         expect(res.loaded).toBe(2);
         expect((ctx2.state as any).agent[a.id].messages).toEqual([{ role: "user", content: "hi" }]);
         expect((ctx2.state as any).agent[b.id].systemPrompt).toBe("sp");

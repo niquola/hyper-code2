@@ -1,10 +1,10 @@
-export default function (ctx: Context, opts: { agentId: string }): string {
+export default function (ctx: Context, _session: Session | null, opts: { agentId: string }): string {
     const { agentId } = opts;
     const now = Date.now();
-    const row = ctx.fns.db.select<any>(ctx, {
+    const row = (ctx.fns.procs.db.select({
         sql: 'SELECT run_state, run_started_at, next_run_at FROM agents WHERE id = ?',
         params: [agentId],
-    })[0];
+    }) as any[])[0];
 
     let label: string;
     let cls: string;

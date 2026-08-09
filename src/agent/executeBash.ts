@@ -7,6 +7,7 @@
 // - exit !=0:  return "[exit N]\n<stderr>\nstdout:\n<stdout>", isError=true
 export default async function (
     _ctx: Context,
+    _session: Session | null,
     opts: { code: string },
 ): Promise<{ output: string; isError: boolean }> {
     const { code } = opts;

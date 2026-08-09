@@ -1,37 +1,24 @@
 import { test, expect, describe } from "bun:test";
-import loadFns from "../loadFns";
-import connect from "../db/connect";
-import migrate from "../db/migrate";
-import save from "./save";
-import appendUserMessage from "./appendUserMessage";
-import list from "./list";
-import start from "../agent/start";
-import nextId from "../agent/nextId";
-
-const mkCtx = async () => {
-    const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;
-    await loadFns(ctx);
-    connect(ctx, { path: ":memory:" });
-    await migrate(ctx);
-    return ctx;
-};
+import { mkTestCtx } from "../_testCtx.entry";
 
 describe("session.list", () => {
     test("empty → []", async () => {
-        expect(list(await mkCtx())).toEqual([]);
+        const ctx: any = await mkTestCtx();
+        expect(ctx.fns.session.list()).toEqual([]);
     });
 
     test("returns lightweight summaries ordered by updated_at desc", async () => {
-        const ctx = await mkCtx();
-        const a = start(ctx, { model: "m1" });
-        save(ctx, { agent: a });
-        appendUserMessage(ctx, { id: a.id, text: 'first msg' });
+        const ctx: any = await mkTestCtx();
+        ctx.fns.agent.renderEventHtml = async (_c: any, _s: any, _o: any) => '';
+        const a = ctx.fns.agent.start({ model: "m1" });
+        ctx.fns.session.save({ agent: a });
+        await ctx.fns.session.appendUserMessage({ id: a.id, text: 'first msg' });
 
         await new Promise(r => setTimeout(r, 5));
-        const b = start(ctx, { model: "m2" });
-        save(ctx, { agent: b });
+        const b = ctx.fns.agent.start({ model: "m2" });
+        ctx.fns.session.save({ agent: b });
 
-        const rows = list(ctx);
+        const rows = ctx.fns.session.list();
         expect(rows).toHaveLength(2);
         expect(rows[0]!.id).toBe(b.id);         // newest first
         expect(rows[1]!.id).toBe(a.id);

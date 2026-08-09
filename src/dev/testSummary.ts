@@ -1,4 +1,5 @@
-export default async function (_ctx: Context, run: 'last' | { path: string }, opts: { agent?: any } = {}) {
+export default async function (_ctx: Context, _session: Session | null, opts: { run: 'last' | { path: string }; agent?: any }) {
+    const run = opts.run;
     const meta = run === 'last' ? opts.agent?.scratchpad?.dev?.lastTestRun : null;
     const path = run === 'last' ? meta?.logPath : run.path;
     if (!path) throw new Error('no test run available');

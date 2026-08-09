@@ -1,34 +1,31 @@
 import { test, expect, describe } from "bun:test";
-import open from "./open";
-import close from "./close";
-import listOpen from "./listOpen";
-
-const mkCtx = () => ({ state: {}, env: {}, fns: {} as any, routes: {} }) as unknown as Context;
+import { mkTestCtx } from "../_testCtx.entry";
 
 describe("files.open / close / listOpen", () => {
-    test("open adds path and is idempotent", () => {
-        const ctx = mkCtx();
-        open(ctx, { path: "README.md" });
-        open(ctx, { path: "README.md" });
-        open(ctx, { path: "src/$main.ts" });
-        expect(listOpen(ctx)).toEqual(["README.md", "src/$main.ts"]);
+    test("open adds path and is idempotent", async () => {
+        const ctx = await mkTestCtx();
+        ctx.fns.files.open({ path: "README.md" });
+        ctx.fns.files.open({ path: "README.md" });
+        ctx.fns.files.open({ path: "src/$main.ts" });
+        expect(ctx.fns.files.listOpen({})).toEqual(["README.md", "src/$main.ts"]);
     });
 
-    test("close removes path", () => {
-        const ctx = mkCtx();
-        open(ctx, { path: "a" });
-        open(ctx, { path: "b" });
-        close(ctx, { path: "a" });
-        expect(listOpen(ctx)).toEqual(["b"]);
+    test("close removes path", async () => {
+        const ctx = await mkTestCtx();
+        ctx.fns.files.open({ path: "a" });
+        ctx.fns.files.open({ path: "b" });
+        ctx.fns.files.close({ path: "a" });
+        expect(ctx.fns.files.listOpen({})).toEqual(["b"]);
     });
 
-    test("empty path is ignored by open", () => {
-        const ctx = mkCtx();
-        open(ctx, { path: "" });
-        expect(listOpen(ctx)).toEqual([]);
+    test("empty path is ignored by open", async () => {
+        const ctx = await mkTestCtx();
+        ctx.fns.files.open({ path: "" });
+        expect(ctx.fns.files.listOpen({})).toEqual([]);
     });
 
-    test("listOpen on fresh ctx returns []", () => {
-        expect(listOpen(mkCtx())).toEqual([]);
+    test("listOpen on fresh ctx returns []", async () => {
+        const ctx = await mkTestCtx();
+        expect(ctx.fns.files.listOpen({})).toEqual([]);
     });
 });

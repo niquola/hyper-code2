@@ -3,10 +3,10 @@ function splitLinesKeepEmpty(s: string): string[] {
 }
 
 function validateAnchor(ctx: Context, base: string[], anchor: string): number {
-    const { line, hash } = ctx.fns.files.parseAnchor(ctx, { anchor });
+    const { line, hash } = ctx.fns.files.parseAnchor({ anchor });
     const actual = base[line - 1];
     if (actual == null) throw new Error(`anchor out of range: ${anchor}`);
-    const actualHash = ctx.fns.files.lineHash(ctx, { line, text: actual });
+    const actualHash = ctx.fns.files.lineHash({ line, text: actual });
     if (actualHash !== hash) {
         throw new Error(`stale anchor ${anchor}: expected ${hash}, got ${actualHash} on line ${line}`);
     }
@@ -23,10 +23,11 @@ function overlaps(a: { start: number; end: number }, b: { start: number; end: nu
 
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: { input: string },
 ): Promise<{ path: string; bytes: number; diff: string; content: string }> {
-    const parsed = ctx.fns.files.parseHashlineEdit(ctx, { input: opts.input });
-    const before = await ctx.fns.files.read(ctx, { path: parsed.path });
+    const parsed = ctx.fns.files.parseHashlineEdit({ input: opts.input });
+    const before = await ctx.fns.files.read({ path: parsed.path });
     const hadTrailingNl = before.endsWith("\n");
     const base = splitLinesKeepEmpty(before);
 
@@ -101,10 +102,10 @@ export default async function (
 
     let content = out.join("\n");
     if (hadTrailingNl && !content.endsWith("\n")) content += "\n";
-    const diff = await ctx.fns.markdown.highlight(ctx, {
+    const diff = await ctx.fns.markdown.highlight({
         code: `--- ${parsed.path}\n+++ ${parsed.path}\n${before}\n---\n${content}`,
         lang: "diff",
     }).catch(() => "");
-    const res = await ctx.fns.files.write(ctx, { path: parsed.path, content });
+    const res = await ctx.fns.files.write({ path: parsed.path, content });
     return { path: parsed.path, bytes: res.bytes, diff, content };
 }

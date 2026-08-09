@@ -1,9 +1,9 @@
 // Two operations available to the agent for shrinking transcript context:
-// 1. compact(ctx, { agent, summary: "summary string" })
+// 1. compact({ agent, summary: "summary string" })
 //    Find the most recent §result:* / §error:* synthetic user-message
 //    and replace its content with a "[compacted] <summary>" note. Loses the
 //    verbose tool output but keeps the call→result chain intact for the LLM.
-// 2. compact(ctx, { agent, message: <idx>, summary: "..." })
+// 2. compact({ agent, message: <idx>, summary: "..." })
 //    Drop messages[<idx>..] and replace with one synthetic user note. If
 //    <idx> lands inside a marker pair, walks back over the pair so we never
 //    leave half a pair stranded — same invariant as truncateMessagesFrom.
@@ -23,10 +23,11 @@ function isToolResult(m: any): boolean {
 
 export default function (
     ctx: Context,
+    _session: Session | null,
     opts: { agent: types.agent.Agent; summary: string; message?: number },
 ): { replaced: boolean; from?: number; before?: number; after?: number; resultIdx?: number } {
     const { agent, summary: summaryRaw, message: from } = opts;
-    ctx.fns?.session?.syncAgentState?.(ctx, { agent });
+    ctx.fns?.session?.syncAgentState?.({ agent });
 
     if (Number.isInteger(from)) {
         const idx = from as number;
@@ -45,8 +46,8 @@ export default function (
         const note = `[compacted from #${effectiveFrom}, ${dropped.length} msg(s)] ${summaryRaw}`;
         const next = agent.messages.slice(0, effectiveFrom);
         next.push({ role: "user", content: note });
-        ctx.fns?.session?.replaceMessages?.(ctx, { id: agent.id, messages: next });
-        ctx.fns?.session?.syncAgentState?.(ctx, { agent });
+        ctx.fns?.session?.replaceMessages?.({ id: agent.id, messages: next });
+        ctx.fns?.session?.syncAgentState?.({ agent });
         return { replaced: true, from: effectiveFrom, before, after: note.length };
     }
 
@@ -59,8 +60,8 @@ export default function (
         const newContent = `[compacted] ${summary}`;
         const next = agent.messages.slice();
         next[i] = { ...m, content: newContent };
-        ctx.fns?.session?.replaceMessages?.(ctx, { id: agent.id, messages: next });
-        ctx.fns?.session?.syncAgentState?.(ctx, { agent });
+        ctx.fns?.session?.replaceMessages?.({ id: agent.id, messages: next });
+        ctx.fns?.session?.syncAgentState?.({ agent });
         return { replaced: true, resultIdx: i, before, after: newContent.length };
     }
     return { replaced: false };

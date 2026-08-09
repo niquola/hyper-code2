@@ -12,7 +12,7 @@
 //   2. Roles must alternate. Dropping a message can leave two same-role
 //      neighbours adjacent, which is also rejected.
 //      → we coalesce consecutive same-role messages into one (joined by \n\n).
-export default function (_ctx: Context, opts: { messages: any[] }): any[] {
+export default function (_ctx: Context, _session: Session | null, opts: { messages: any[] }): any[] {
     const out: { role: "user" | "assistant"; content: { type: "text"; text: string }[] }[] = [];
     for (const m of opts.messages) {
         const role = m?.role;

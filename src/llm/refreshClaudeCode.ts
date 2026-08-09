@@ -23,7 +23,7 @@ type Creds = {
     };
 };
 
-export default async function (ctx: Context): Promise<string | null> {
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string | null> {
     if (ctx.env.CLAUDE_CODE_ACCESS_TOKEN) return ctx.env.CLAUDE_CODE_ACCESS_TOKEN;
 
     const user = ctx.env.USER ?? process.env.USER ?? "";

@@ -5,8 +5,8 @@ type RemoveOpts = {
     key: string;
 };
 
-export default function (ctx: Context, opts: RemoveOpts): { ok: true } {
-    ctx.fns.db.exec(ctx, {
+export default function (ctx: Context, _session: Session | null, opts: RemoveOpts): { ok: true } {
+    ctx.fns.procs.db.run({
         sql: `DELETE FROM settings
           WHERE module = ?
             AND scope_type = ?

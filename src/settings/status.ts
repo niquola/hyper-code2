@@ -2,7 +2,7 @@
 // Pure read — never refreshes a token. Used by the settings page.
 import { readFileSync } from "node:fs";
 
-export default function (ctx: Context): {
+export default function (ctx: Context, _session: Session | null, _opts?: {}): {
     openai: { set: boolean };
     anthropic: { set: boolean };
     kimi: { set: boolean };

@@ -1,6 +1,7 @@
 // Stream from an Anthropic Messages API endpoint (anthropic.com, kimi.com/coding, etc).
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: { agent: types.agent.Agent; signal?: AbortSignal; onEvent?: (ev: any) => void },
 ): Promise<{
     text: string;
@@ -9,17 +10,17 @@ export default async function (
     usage: any;
 }> {
     const { agent } = opts;
-    const ep = ctx.fns.llm.resolveEndpoint(ctx, { model: agent.model });
+    const ep = ctx.fns.llm.resolveEndpoint({ model: agent.model });
 
     // buildLlmRequest handles the claude-code anti-fraud header (kept in
     // system) and moves the rest of the instruction body into messages
     // (option A — "system-as-messages").
-    const { system, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, { agent });
+    const { system, messages: convo } = await ctx.fns.agent.buildLlmRequest({ agent });
 
     const body: any = {
         model: ep.modelId,
         system,
-        messages: ctx.fns.llm.toAnthropicMessages(ctx, { messages: convo }),
+        messages: ctx.fns.llm.toAnthropicMessages({ messages: convo }),
         stream: true,
         max_tokens: 8192,
     };
@@ -33,10 +34,10 @@ export default async function (
     //   claude-code   → macOS keychain "Claude Code-credentials"
     let apiKey = ep.apiKey;
     if (ep.provider === "kimi-coding") {
-        const fresh = await ctx.fns.llm.refreshKimiCode(ctx);
+        const fresh = await ctx.fns.llm.refreshKimiCode({});
         if (fresh) apiKey = fresh;
     } else if (ep.provider === "claude-code") {
-        const fresh = await ctx.fns.llm.refreshClaudeCode(ctx);
+        const fresh = await ctx.fns.llm.refreshClaudeCode({});
         if (fresh) apiKey = fresh;
     }
     if (apiKey) {
@@ -74,7 +75,7 @@ export default async function (
     let finishReason: string | null = null;
     let usage: any = { prompt_tokens: 0, completion_tokens: 0 };
 
-    for await (const { event, data } of ctx.fns.llm.parseSSE(ctx, { body: res.body })) {
+    for await (const { event, data } of ctx.fns.llm.parseSSE({ body: res.body })) {
         let msg: any;
         try { msg = JSON.parse(data); } catch { continue; }
         const type = event ?? "message";

@@ -16,13 +16,13 @@ describe("markdown.mermaid", () => {
     });
 
     test("render returns mermaid html wrapper", async () => {
-        const html = await mermaid({} as Context, { source: "flowchart LR\nA --> B" });
+        const html = await mermaid({} as Context, null, { source: "flowchart LR\nA --> B" });
         expect(html).toContain("class=\"mermaid-diagram\"");
         expect(html).toContain("<svg");
     }, 20000);
 
     test("render strips google font imports", async () => {
-        const html = await mermaid({} as Context, { source: "flowchart LR\nA --> B" });
+        const html = await mermaid({} as Context, null, { source: "flowchart LR\nA --> B" });
         expect(html).not.toContain("fonts.googleapis.com");
         expect(html).not.toContain("@import");
     }, 20000);

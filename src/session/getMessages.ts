@@ -1,13 +1,14 @@
 export default function (
     ctx: Context,
+    _session: Session | null,
     opts: { id: string; includeExcluded?: boolean },
 ): any[] {
     const { id } = opts;
     const includeExcluded = opts.includeExcluded === true;
-    const rows = ctx.fns.db.select<any>(ctx, {
+    const rows = ctx.fns.procs.db.select({
         sql: 'SELECT * FROM messages WHERE agent_id = ? AND (? = 1 OR COALESCE(excluded_from_llm, 0) = 0) ORDER BY idx',
         params: [id, includeExcluded ? 1 : 0],
-    });
+    }) as any[];
 
     return rows.map((r: any) => {
         const m: any = { role: r.role };

@@ -5,7 +5,7 @@
 //
 // Callers add their own role check where they have one (an invocation only ever
 // appears on an assistant message, a result only on a synthetic user message).
-export default function (_ctx: Context, opts: { content: any }): "invocation" | "result" | null {
+export default function (_ctx: Context, _session: Session | null, opts: { content: any }): "invocation" | "result" | null {
     const c = String(opts.content ?? "");
     if (c.startsWith("§eval\n") || c === "§eval"
         || c.startsWith("§write:")

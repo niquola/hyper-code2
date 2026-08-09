@@ -13,7 +13,7 @@ async function preprocessMermaid(ctx: Context, text: string): Promise<string> {
     for (const m of matches.reverse()) {
         const code = m[1]?.trim() ?? "";
         try {
-            const html = await ctx.fns.markdown.mermaid(ctx, { source: code });
+            const html = await ctx.fns.markdown.mermaid({ source: code });
             out = out.slice(0, m.index!) + html + out.slice(m.index! + m[0]!.length);
         } catch {
             continue;
@@ -22,7 +22,7 @@ async function preprocessMermaid(ctx: Context, text: string): Promise<string> {
     return out;
 }
 
-export default async function (ctx: Context, opts: { source: string }): Promise<string> {
+export default async function (ctx: Context, _session: Session | null, opts: { source: string }): Promise<string> {
     let source = opts.source;
     if (source.includes("```mermaid")) source = await preprocessMermaid(ctx, source);
     let html = Bun.markdown.html(source);
@@ -30,7 +30,7 @@ export default async function (ctx: Context, opts: { source: string }): Promise<
     const replacements: Array<{ full: string; pretty: string }> = [];
     for (const m of html.matchAll(re)) {
         const [full, lang, raw] = m;
-        const pretty = await ctx.fns.markdown.highlight(ctx, { code: decode(raw!), lang: lang! });
+        const pretty = await ctx.fns.markdown.highlight({ code: decode(raw!), lang: lang! });
         replacements.push({ full: full!, pretty });
     }
     for (const { full, pretty } of replacements) html = html.replace(full, pretty);

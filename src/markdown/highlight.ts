@@ -18,7 +18,7 @@ export async function getHL(): Promise<Highlighter> {
     return _hl;
 }
 
-export default async function (_ctx: Context, opts: { code: string; lang: string }): Promise<string> {
+export default async function (_ctx: Context, _session: Session | null, opts: { code: string; lang: string }): Promise<string> {
     const safeCode = String(opts.code ?? "");
     const safeLang = String(opts.lang ?? "text");
     const hl = await getHL();

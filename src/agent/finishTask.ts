@@ -1,5 +1,6 @@
 export default function (
     ctx: Context,
+    _session: Session | null,
 // Mark a delegated task as finished and notify the parent if awaiting
  /**
   * Completes a delegated task, stores the result, and wakes the parent if in await mode.
@@ -20,8 +21,8 @@ export default function (
     meta.status = "finished";
     meta.result = finished;
     agent.scratchpad.delegateTask = meta;
-    ctx.fns.session.updateScratchpad(ctx, { id: agent.id, scratchpad: agent.scratchpad, ts: finished.finishedAt });
-    ctx.fns.session.syncAgentState?.(ctx, { agent });
+    ctx.fns.session.updateScratchpad({ id: agent.id, scratchpad: agent.scratchpad, ts: finished.finishedAt });
+    ctx.fns.session.syncAgentState?.({ agent });
     const waiters = (((ctx.state as any).delegateTaskWaiters) ??= new Map());
     const waiter = meta.mode === "await" ? waiters.get(agent.id) : null;
     if (waiter?.resolve) {

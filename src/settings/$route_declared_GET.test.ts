@@ -1,32 +1,32 @@
 import { describe, test, expect } from 'bun:test';
 import { mkTestCtx } from '../_testCtx.entry';
-import getRoute from './$route_declared_GET';
-import postRoute from './$route_declared_POST';
 
 describe('GET/POST /settings/declared', () => {
     test('GET renders form with all declared settings', async () => {
         const ctx = await mkTestCtx();
-        const out: any = await getRoute(ctx);
-        expect(out.title).toBe('settings');
-        expect(out.main).toContain('declared settings');
-        expect(out.main).toContain('lmstudioBaseUrl');
-        expect(out.main).toContain('defaultModel');
-        expect(out.main).toContain('debounceMs');
-        expect(out.main).toContain('hx-post="/settings/declared"');
+        const res = await ctx.fns.procs.http.dispatch({ url: '/settings/declared' });
+        expect(res.status).toBe(200);
+        const body = await res.text();
+        expect(body).toContain('declared settings');
+        expect(body).toContain('lmstudioBaseUrl');
+        expect(body).toContain('defaultModel');
+        expect(body).toContain('debounceMs');
+        expect(body).toContain('hx-post="/settings/declared"');
     });
 
     test('source badges in GET output match resolution chain', async () => {
         const ctx = await mkTestCtx();
         ctx.env.LMSTUDIO_URL = 'http://env-host:1234';
-        ctx.fns.settings.set(ctx, {
+        ctx.fns.settings.set({
             module: 'llm', scopeType: 'global', key: 'defaultModel', value: 'kimi:k2',
         });
 
-        const out: any = await getRoute(ctx);
+        const res = await ctx.fns.procs.http.dispatch({ url: '/settings/declared' });
+        const body = await res.text();
         // env-sourced
-        expect(out.main).toMatch(/env: LMSTUDIO_URL/);
+        expect(body).toMatch(/env: LMSTUDIO_URL/);
         // db-sourced
-        expect(out.main).toMatch(/>db</);
+        expect(body).toMatch(/>db</);
     });
 
     test('POST writes form values via settings.set', async () => {
@@ -34,34 +34,32 @@ describe('GET/POST /settings/declared', () => {
         const fd = new FormData();
         fd.set('llm.defaultModel', 'openai:gpt-4o-mini');
         fd.set('agent.debounceMs', '1500');
-        const req = new Request('http://x/settings/declared', { method: 'POST', body: fd });
 
-        const res = await postRoute(ctx, null, req);
+        const res = await ctx.fns.procs.http.dispatch({ method: 'POST', url: '/settings/declared', body: fd });
         expect(res.status).toBe(200);
         const body = await res.text();
         expect(body).toContain('settings-form');
 
-        expect(ctx.fns.settings.get(ctx, { module: 'llm', scopeType: 'global', key: 'defaultModel' }))
+        expect(ctx.fns.settings.get({ module: 'llm', scopeType: 'global', key: 'defaultModel' }))
             .toBe('openai:gpt-4o-mini');
-        expect(ctx.fns.settings.get(ctx, { module: 'agent', scopeType: 'global', key: 'debounceMs' }))
+        expect(ctx.fns.settings.get({ module: 'agent', scopeType: 'global', key: 'debounceMs' }))
             .toBe(1500);
     });
 
     test('POST with reset=<key> removes the row', async () => {
         const ctx = await mkTestCtx();
-        ctx.fns.settings.set(ctx, {
+        ctx.fns.settings.set({
             module: 'llm', scopeType: 'global', key: 'defaultModel', value: 'kimi:k2',
         });
-        expect(ctx.fns.settings.get(ctx, { module: 'llm', scopeType: 'global', key: 'defaultModel' }))
+        expect(ctx.fns.settings.get({ module: 'llm', scopeType: 'global', key: 'defaultModel' }))
             .toBe('kimi:k2');
 
         const fd = new FormData();
         fd.set('reset', 'llm.defaultModel');
-        const req = new Request('http://x/settings/declared', { method: 'POST', body: fd });
-        await postRoute(ctx, null, req);
+        await ctx.fns.procs.http.dispatch({ method: 'POST', url: '/settings/declared', body: fd });
 
         // Now falls back to declared default.
-        expect(ctx.fns.settings.get(ctx, { module: 'llm', scopeType: 'global', key: 'defaultModel' }))
+        expect(ctx.fns.settings.get({ module: 'llm', scopeType: 'global', key: 'defaultModel' }))
             .toBe('minimax/minimax-m2.7');
     });
 
@@ -69,11 +67,10 @@ describe('GET/POST /settings/declared', () => {
         const ctx = await mkTestCtx();
         const fd = new FormData();
         fd.set('llm.defaultModel', 'made-up-model-not-in-options');
-        const req = new Request('http://x/settings/declared', { method: 'POST', body: fd });
-        await postRoute(ctx, null, req);
+        await ctx.fns.procs.http.dispatch({ method: 'POST', url: '/settings/declared', body: fd });
 
         // Bad enum was rejected — value stays at default.
-        expect(ctx.fns.settings.get(ctx, { module: 'llm', scopeType: 'global', key: 'defaultModel' }))
+        expect(ctx.fns.settings.get({ module: 'llm', scopeType: 'global', key: 'defaultModel' }))
             .toBe('minimax/minimax-m2.7');
     });
 
@@ -81,10 +78,9 @@ describe('GET/POST /settings/declared', () => {
         const ctx = await mkTestCtx();
         const fd = new FormData();
         fd.set('agent.debounceMs', 'not-a-number');
-        const req = new Request('http://x/settings/declared', { method: 'POST', body: fd });
-        await postRoute(ctx, null, req);
+        await ctx.fns.procs.http.dispatch({ method: 'POST', url: '/settings/declared', body: fd });
 
-        expect(ctx.fns.settings.get(ctx, { module: 'agent', scopeType: 'global', key: 'debounceMs' }))
+        expect(ctx.fns.settings.get({ module: 'agent', scopeType: 'global', key: 'debounceMs' }))
             .toBe(1000);
     });
 });

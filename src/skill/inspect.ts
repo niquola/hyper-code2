@@ -1,4 +1,5 @@
-export default async function (ctx: Context, target?: any) {
+export default async function (_ctx: Context, _session: Session | null, opts: { target?: any } = {}) {
+    const target = opts.target;
     return {
         type: typeof target,
         constructor: target?.constructor?.name,

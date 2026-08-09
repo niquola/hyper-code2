@@ -1,5 +1,6 @@
 export default async function (
   _ctx: Context,
+  _session: Session | null,
   opts?: types.tools.DiceOpts
 ) {
   const count = opts?.count ?? 1;

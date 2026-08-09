@@ -1,17 +1,10 @@
 import { test, expect, describe } from "bun:test";
-import loadFns from "../loadFns";
-import stat from "./stat";
-
-const mkCtx = async () => {
-    const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;
-    await loadFns(ctx);
-    return ctx;
-};
+import { mkTestCtx } from "../_testCtx.entry";
 
 describe("files.stat", () => {
     test("returns metadata for an existing file", async () => {
-        const ctx = await mkCtx();
-        const s = await stat(ctx, { path: "README.md" });
+        const ctx = await mkTestCtx();
+        const s = await ctx.fns.files.stat({ path: "README.md" });
         expect(s).not.toBeNull();
         expect(s!.isDir).toBe(false);
         expect(s!.size).toBeGreaterThan(0);
@@ -19,14 +12,14 @@ describe("files.stat", () => {
     });
 
     test("returns metadata for a directory (isDir=true)", async () => {
-        const ctx = await mkCtx();
-        const s = await stat(ctx, { path: "src" });
+        const ctx = await mkTestCtx();
+        const s = await ctx.fns.files.stat({ path: "src" });
         expect(s).not.toBeNull();
         expect(s!.isDir).toBe(true);
     });
 
     test("returns null for missing path", async () => {
-        const ctx = await mkCtx();
-        expect(await stat(ctx, { path: ".hyper/nope-" + Math.random().toString(36).slice(2) })).toBeNull();
+        const ctx = await mkTestCtx();
+        expect(await ctx.fns.files.stat({ path: ".hyper/nope-" + Math.random().toString(36).slice(2) })).toBeNull();
     });
 });

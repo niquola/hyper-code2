@@ -1,5 +1,6 @@
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: { agent: types.agent.Agent; file: string; task: string; maxChars?: number; model?: string },
 ): Promise<{ file: string; summary: string; usage: any }> {
     const { agent } = opts;
@@ -11,10 +12,10 @@ export default async function (
     if (!file) throw new Error('readAndSummarize: file is required');
     if (!task) throw new Error('readAndSummarize: task is required');
 
-    const exists = await ctx.fns.files.exists(ctx, { path: file });
+    const exists = await ctx.fns.files.exists({ path: file });
     if (!exists) throw new Error('readAndSummarize: file not found: ' + file);
 
-    const text = await ctx.fns.files.read(ctx, { path: file });
+    const text = await ctx.fns.files.read({ path: file });
     const content = typeof text === 'string' ? text : String(text ?? '');
     const sliced = content.length > maxChars ? content.slice(0, maxChars) : content;
 
@@ -38,7 +39,7 @@ export default async function (
         content.length > sliced.length ? '[truncated; original chars=' + content.length + ']' : '',
     ].filter(Boolean).join('\n');
 
-    const result = await ctx.fns.agent.llmCall(ctx, {
+    const result = await ctx.fns.agent.llmCall({
         agent,
         system,
         user,

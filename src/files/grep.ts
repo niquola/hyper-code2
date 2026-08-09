@@ -1,9 +1,10 @@
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: { pattern: string; path?: string; glob?: string; caseSensitive?: boolean; max?: number },
 ): Promise<types.files.GrepMatch[]> {
     const base = opts.path ?? "";
-    const absBase = ctx.fns.files.resolveSafe(ctx, { path: base });
+    const absBase = ctx.fns.files.resolveSafe({ path: base });
     const glob = opts.glob ?? "**/*";
     const flags = opts.caseSensitive ? "g" : "gi";
     const re = new RegExp(opts.pattern, flags);
@@ -12,7 +13,7 @@ export default async function (
         const path = base ? `${base}/${rel}` : rel;
         let text = "";
         try {
-            text = await ctx.fns.files.read(ctx, { path });
+            text = await ctx.fns.files.read({ path });
         } catch {
             continue;
         }

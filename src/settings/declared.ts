@@ -1,5 +1,5 @@
 // Lists every declared setting (from $setting_*.ts files registered into
-// ctx.state.settingsRegistry) with its current resolved value and source.
+// ctx.state.settings.registry) with its current resolved value and source.
 // Used by the /settings/declared UI route — DB is consulted to detect overrides
 // but is never written from here.
 type DeclaredItem = {
@@ -10,8 +10,8 @@ type DeclaredItem = {
     source: 'db' | 'env' | 'default';
 };
 
-export default function (ctx: Context): DeclaredItem[] {
-    const registry: Map<string, any> | undefined = (ctx.state as any).settingsRegistry;
+export default function (ctx: Context, _session: Session | null, _opts?: {}): DeclaredItem[] {
+    const registry: Map<string, any> | undefined = (ctx.state as any).settings?.registry;
     if (!registry) return [];
 
     const out: DeclaredItem[] = [];
@@ -22,10 +22,10 @@ export default function (ctx: Context): DeclaredItem[] {
         const key = regKey.slice(dotIdx + 1);
 
         // Detect provenance.
-        const dbRow = ctx.fns.db.select<{ value: string }>(ctx, {
+        const dbRow = (ctx.fns.procs.db.select({
             sql: "SELECT value FROM settings WHERE module = ? AND scope_type = 'global' AND scope_id = '' AND key = ?",
             params: [module, key],
-        })[0];
+        }) as Array<{ value: string }>)[0];
 
         let source: 'db' | 'env' | 'default';
         let currentValue: any;

@@ -1,7 +1,7 @@
 // Emit <script src="..."> tag for a module script registered via the
 // $script_<name>.js convention. Target is dotted: "agent.chat" → /agent/chat.js.
 // Root-level "<name>" → /<name>.js.
-export default function (_ctx: Context, opts: { target: string; defer?: boolean; module?: boolean }): string {
+export default function (_ctx: Context, _session: Session | null, opts: { target: string; defer?: boolean; module?: boolean }): string {
     const target = opts.target;
     const segs = target.split(".");
     const name = segs.pop()!;

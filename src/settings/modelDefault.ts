@@ -1,5 +1,5 @@
-export default function (ctx: Context): string {
-    return ctx.fns.settings?.getString?.(ctx, {
+export default function (ctx: Context, _session: Session | null, _opts?: {}): string {
+    return ctx.fns.settings?.getString?.({
         module: 'llm',
         scopeType: 'global',
         key: 'defaultModel',

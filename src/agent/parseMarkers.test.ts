@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import parseMarkersFn from './parseMarkers';
-const parseMarkers = (text: string) => parseMarkersFn(null as any, { text });
+const parseMarkers = (text: string) => parseMarkersFn(null as any, null, { text });
 
 describe('agent.parseMarkers', () => {
     test('plain prose with no markers → empty calls', () => {

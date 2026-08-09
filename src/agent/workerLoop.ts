@@ -22,7 +22,7 @@ function isAbortError(error: any) {
 function loadAgent(ctx: Context, id: string): any {
     let a = (ctx.state as any).agent?.[id];
     if (a) return a;
-    a = ctx.fns.session?.load?.(ctx, { id }) ?? null;
+    a = ctx.fns.session?.load?.({ id }) ?? null;
     if (a) {
         (ctx.state as any).agent ??= {};
         (ctx.state as any).agent[id] = a;
@@ -49,7 +49,7 @@ function waitForWork(ctx: Context, timeoutMs: number): Promise<void> {
 
 // Atomically claim ONE pending agent, returning its id (or null if none).
 function claimOne(ctx: Context, now: number): string | null {
-    const claimed = ctx.fns.db.select<any>(ctx, {
+    const claimed = ctx.fns.procs.db.select({
         sql: `UPDATE agents
             SET run_state      = 'running',
                 run_started_at = ?,
@@ -66,7 +66,7 @@ function claimOne(ctx: Context, now: number): string | null {
           )
           RETURNING id`,
         params: [now, now, now],
-    });
+    }) as any[];
     return claimed.length === 0 ? null : (claimed[0]!.id as string);
 }
 
@@ -76,7 +76,7 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
     const agent = loadAgent(ctx, agentId);
     if (!agent) {
         const ts = Date.now();
-        ctx.fns.db.exec(ctx, {
+        ctx.fns.procs.db.run({
             sql: `UPDATE agents SET run_state = 'idle', last_error = ?, updated_at = ? WHERE id = ?`,
             params: ['agent not found at run-time', ts, agentId],
         });
@@ -87,10 +87,10 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
     // and "did new messages arrive during the run" must mean new real user
     // messages — synthetic §result:* / §error:* user-rows are
     // excluded_from_cursor=1, assistant emissions are not 'user' role.
-    const frontier = ctx.fns.db.select<any>(ctx, {
+    const frontier = (ctx.fns.procs.db.select({
         sql: "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
         params: [agentId],
-    })[0];
+    }) as any[])[0];
     const frontierIdx = Number(frontier?.max_idx ?? -1);
 
     agent.isStreaming = true;
@@ -98,22 +98,22 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
     let aborted = false;
 
     try {
-        await ctx.fns.agent.run(ctx, { agent, userText: '', userMessageAlreadyAppended: true });
+        await ctx.fns.agent.run({ agent, userText: '', userMessageAlreadyAppended: true });
     } catch (e: any) {
         if (isAbortError(e)) {
             aborted = true;
         } else {
             errorText = e?.message ?? String(e);
-            try { await ctx.fns.session.appendErrorEvent(ctx, { id: agentId, error: errorText ?? 'unknown error', ts: Date.now() }); } catch {}
+            try { await ctx.fns.session.appendErrorEvent({ id: agentId, error: errorText ?? 'unknown error', ts: Date.now() }); } catch {}
         }
     } finally {
         const ts = Date.now();
         const advanceCursor = !aborted && !errorText;
 
-        const after = ctx.fns.db.select<any>(ctx, {
+        const after = (ctx.fns.procs.db.select({
             sql: "SELECT COALESCE(MAX(idx), -1) AS max_idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
             params: [agentId],
-        })[0];
+        }) as any[])[0];
         const afterIdx = Number(after?.max_idx ?? -1);
 
         // On abort/error keep the cursor untouched so the same messages get
@@ -121,13 +121,13 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
         // otherwise a permanently-broken LLM call burns the worker in a loop.
         const cursorIdx = advanceCursor
             ? frontierIdx
-            : Number(ctx.fns.db.select<any>(ctx, {
+            : Number((ctx.fns.procs.db.select({
                 sql: 'SELECT last_processed_msg_idx FROM agents WHERE id = ?',
                 params: [agentId],
-            })[0]?.last_processed_msg_idx ?? -1);
+            }) as any[])[0]?.last_processed_msg_idx ?? -1);
         const stillPending = advanceCursor && afterIdx > cursorIdx;
 
-        ctx.fns.db.exec(ctx, {
+        ctx.fns.procs.db.run({
             sql: `UPDATE agents
                 SET run_state = 'idle',
                     run_started_at = NULL,
@@ -141,15 +141,15 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
 
         agent.abortController = null;
         agent.isStreaming = false;
-        try { ctx.fns.session.syncAgentState(ctx, { agent }); } catch {}
+        try { ctx.fns.session.syncAgentState({ agent }); } catch {}
 
         // If we just rescheduled (stillPending) or unblocked some other agent's
         // queue, kick the worker so the loop notices without waiting for a poll.
-        try { ctx.fns.agent.wakeWorker?.(ctx); } catch {}
+        try { ctx.fns.agent.wakeWorker?.({}); } catch {}
     }
 }
 
-export default async function (ctx: Context): Promise<void> {
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<void> {
     if ((ctx.state as any).workerLoopRunning) return;
     (ctx.state as any).workerLoopRunning = true;
 
@@ -172,10 +172,10 @@ export default async function (ctx: Context): Promise<void> {
         if (inflight.size === 0) {
             // No work in flight. Sleep until either a wake signal lands or
             // the soonest scheduled `next_run_at` is due.
-            const next = ctx.fns.db.select<any>(ctx, {
+            const next = (ctx.fns.procs.db.select({
                 sql: 'SELECT MIN(next_run_at) AS next FROM agents WHERE run_state = ? AND next_run_at IS NOT NULL AND archived_at IS NULL',
                 params: ['idle'],
-            })[0];
+            }) as any[])[0];
             const nextMs = next?.next ? Number(next.next) - Date.now() : MAX_IDLE_MS;
             const wait = Math.max(50, Math.min(MAX_IDLE_MS, nextMs));
             await waitForWork(ctx, wait);

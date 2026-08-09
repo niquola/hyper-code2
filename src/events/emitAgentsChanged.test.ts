@@ -1,15 +1,12 @@
 import { describe, test, expect } from "bun:test";
-import emitAgentsChanged from "./emitAgentsChanged";
-import subscribe from "./subscribe";
-
-const mkCtx = () => ({ state: {}, env: {}, fns: { events: { subscribe, emit: (_ctx: any, opts: { event: any }) => { const s = (_ctx.state.events ??= { subs: new Set() }); for (const fn of s.subs) fn(opts.event); } } } }) as unknown as Context;
+import { mkTestCtx } from "../_testCtx.entry";
 
 describe("events.emitAgentsChanged", () => {
-  test("emits agents.changed event", () => {
-    const ctx = mkCtx();
+  test("emits agents.changed event", async () => {
+    const ctx = await mkTestCtx();
     const got: any[] = [];
-    subscribe(ctx, { handler: e => got.push(e) });
-    emitAgentsChanged(ctx, { agentId: "a1", reason: "fork" });
+    ctx.fns.procs.events.subscribe({ handler: (e: any) => got.push(e) });
+    ctx.fns.events.emitAgentsChanged({ agentId: "a1", reason: "fork" });
     expect(got).toEqual([{ type: "agents.changed", agentId: "a1", reason: "fork" }]);
   });
 });

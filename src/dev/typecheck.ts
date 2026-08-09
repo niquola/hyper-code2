@@ -1,4 +1,4 @@
-export default async function (ctx: Context, opts: { files?: string[]; verbose?: boolean; agent?: any } = {}) {
+export default async function (ctx: Context, _session: Session | null, opts: { files?: string[]; verbose?: boolean; agent?: any } = {}) {
     await Bun.write('.hyper/_runtime/logs/.keep', '');
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
     const logPath = '.hyper/_runtime/logs/typecheck-' + ts + '.log';

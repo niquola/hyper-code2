@@ -6,8 +6,8 @@ type GetStringOpts = {
     fallback?: string;
 };
 
-export default function (ctx: Context, opts: GetStringOpts): string | undefined {
-    const value = ctx.fns.settings.get(ctx, opts);
+export default function (ctx: Context, _session: Session | null, opts: GetStringOpts): string | undefined {
+    const value = ctx.fns.settings.get(opts);
     if (typeof value === 'string') return value;
     return opts.fallback;
 }

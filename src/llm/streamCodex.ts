@@ -5,6 +5,7 @@
 // stream.ts can swap providers transparently.
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: { agent: types.agent.Agent; signal?: AbortSignal; onEvent?: (ev: any) => void },
 ): Promise<{
     text: string;
@@ -13,13 +14,13 @@ export default async function (
     usage: { prompt_tokens: number; completion_tokens: number };
 }> {
     const { agent } = opts;
-    const ep = ctx.fns.llm.resolveEndpoint(ctx, { model: agent.model });
-    const apiKey = await ctx.fns.llm.refreshCodex(ctx) ?? ep.apiKey;
+    const ep = ctx.fns.llm.resolveEndpoint({ model: agent.model });
+    const apiKey = await ctx.fns.llm.refreshCodex({}) ?? ep.apiKey;
     if (!apiKey) throw new Error("codex: no access_token (run /settings → login)");
     const accountId = extractAccountId(apiKey);
 
-    const { system: instructions, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, { agent });
-    const { input } = ctx.fns.llm.toCodexInput(ctx, { messages: convo as any });
+    const { system: instructions, messages: convo } = await ctx.fns.agent.buildLlmRequest({ agent });
+    const { input } = ctx.fns.llm.toCodexInput({ messages: convo as any });
 
     const body: any = {
         model: ep.modelId,
@@ -72,7 +73,7 @@ export default async function (
     let finishReason: string | null = null;
     const usage = { prompt_tokens: 0, completion_tokens: 0 };
 
-    for await (const { data } of ctx.fns.llm.parseSSE(ctx, { body: res.body })) {
+    for await (const { data } of ctx.fns.llm.parseSSE({ body: res.body })) {
         if (!data || data === "[DONE]") continue;
         let ev: any;
         try { ev = JSON.parse(data); } catch { continue; }

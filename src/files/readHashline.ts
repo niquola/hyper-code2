@@ -1,9 +1,10 @@
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: { path: string; startLine?: number; endLine?: number; maxLines?: number },
 ): Promise<types.files.ReadHashlineResult> {
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-    const content = await ctx.fns.files.read(ctx, { path: opts.path });
+    const content = await ctx.fns.files.read({ path: opts.path });
     const normalized = content.replaceAll("\r\n", "\n");
     const all = normalized.split("\n");
     const totalLines = all.length;
@@ -14,7 +15,7 @@ export default async function (
 
     const lines: types.files.ReadAnchorLine[] = [];
     for (let i = startLine; i <= endLine; i++) {
-        lines.push(ctx.fns.files.formatHashline(ctx, { line: i, text: all[i - 1] ?? "" }));
+        lines.push(ctx.fns.files.formatHashline({ line: i, text: all[i - 1] ?? "" }));
     }
 
     // Don't return huge content blobs — return only the slice metadata

@@ -20,6 +20,7 @@ const KNOWN_KEYS = new Set(["path", "startLine", "endLine", "maxLines"]);
 
 export default function (
     _ctx: Context,
+    _session: Session | null,
     opts: { body: string },
 ): { path: string; startLine?: number; endLine?: number; maxLines?: number } {
     const body = String(opts.body ?? "").trim();

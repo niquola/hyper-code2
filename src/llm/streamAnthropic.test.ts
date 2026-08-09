@@ -12,18 +12,19 @@ function sseResponse(...chunks: string[]): Response {
     });
     return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
 }
+// Plain-object ctx (not the injecting Proxy) — fns entries are invoked with
+// opts only, so shared real fns are wrapped as (opts) => raw(ctx, null, opts).
 function mkCtx(): Context {
-    return {
-        state: {}, env: {},
-        fns: {
-            agent: { buildLlmRequest: async () => ({ system: "sys", messages: [{ role: "user", content: "hi" }] }) },
-            llm: {
-                resolveEndpoint: () => ({ url: "http://mock/v1/messages", modelId: "claude-x", apiKey: "k", provider: "anthropic", api: "anthropic" }),
-                parseSSE,
-                toAnthropicMessages,
-            },
+    const ctx: any = { state: {}, env: {} };
+    ctx.fns = {
+        agent: { buildLlmRequest: async () => ({ system: "sys", messages: [{ role: "user", content: "hi" }] }) },
+        llm: {
+            resolveEndpoint: () => ({ url: "http://mock/v1/messages", modelId: "claude-x", apiKey: "k", provider: "anthropic", api: "anthropic" }),
+            parseSSE: (opts: any) => parseSSE(ctx, null, opts),
+            toAnthropicMessages: (opts: any) => toAnthropicMessages(ctx, null, opts),
         },
-    } as unknown as Context;
+    };
+    return ctx as unknown as Context;
 }
 const agent = () => ({ id: "a1", model: "anthropic:claude-x", systemPrompt: "", messages: [], scratchpad: {} } as any);
 
@@ -39,7 +40,7 @@ describe("streamAnthropic — offline (mocked fetch + shared parseSSE)", () => {
             'event: message_delta\ndata: {"delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":5}}\n\n',
         )) as any;
         const deltas: string[] = [];
-        const res = await stream(mkCtx(), { agent: agent(), onEvent: (ev) => { if (ev.type === "text_delta") deltas.push(ev.delta); } });
+        const res = await stream(mkCtx(), null, { agent: agent(), onEvent: (ev) => { if (ev.type === "text_delta") deltas.push(ev.delta); } });
         expect(res.text).toBe("Hello");
         expect(res.finishReason).toBe("stop"); // end_turn → stop
         expect(res.usage.prompt_tokens).toBe(10);
@@ -52,7 +53,7 @@ describe("streamAnthropic — offline (mocked fetch + shared parseSSE)", () => {
             'event:content_block_delta\ndata:{"delta":{"type":"thinking_delta","thinking":"hmm"}}\n\n',
             'event:content_block_delta\ndata:{"delta":{"type":"text_delta","text":"yo"}}\n\n',
         )) as any;
-        const res = await stream(mkCtx(), { agent: agent() });
+        const res = await stream(mkCtx(), null, { agent: agent() });
         expect(res.text).toBe("yo");
         expect(res.thinking).toBe("hmm");
     });

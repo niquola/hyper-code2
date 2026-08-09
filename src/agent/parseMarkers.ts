@@ -30,7 +30,7 @@ type Candidate = {
     format?: 'plain' | 'hashline';
 };
 
-export default function (_ctx: Context, opts: { text: string }): {
+export default function (_ctx: Context, _session: Session | null, opts: { text: string }): {
     prose: string;
     calls: types.agent.MarkerCall[];
     errors: types.agent.MarkerParseError[];

@@ -4,11 +4,11 @@ const SKIP_NAMES = new Set(["node_modules", ".git", ".DS_Store"]);
 
 // List a directory's immediate children, relative to workspace root.
 // Dirs first, alphabetical. Skips node_modules / .git / .DS_Store.
-export default async function (ctx: Context, opts: { path?: string } = {}): Promise<Array<{
+export default async function (ctx: Context, _session: Session | null, opts: { path?: string } = {}): Promise<Array<{
     name: string;
     isDir: boolean;
 }>> {
-    const abs = ctx.fns.files.resolveSafe(ctx, { path: opts.path ?? "" });
+    const abs = ctx.fns.files.resolveSafe({ path: opts.path ?? "" });
     const entries = await readdir(abs, { withFileTypes: true });
     return entries
         .filter(e => !SKIP_NAMES.has(e.name))

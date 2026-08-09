@@ -8,16 +8,16 @@ function parseForType(raw: string, type?: string): any {
     return raw;
 }
 
-export default async function (ctx: Context, _session: any, req: Request) {
-    const fd = await req.formData();
-    const registry: Map<string, any> | undefined = (ctx.state as any).settingsRegistry;
+export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+    const fd = await opts.req.formData();
+    const registry: Map<string, any> | undefined = (ctx.state as any).settings?.registry;
 
     if (registry) {
         const resetTarget = fd.get('reset');
         if (typeof resetTarget === 'string' && resetTarget) {
             const dotIdx = resetTarget.indexOf('.');
             if (dotIdx > 0) {
-                ctx.fns.settings.remove(ctx, {
+                ctx.fns.settings.remove({
                     module: resetTarget.slice(0, dotIdx),
                     scopeType: 'global',
                     key: resetTarget.slice(dotIdx + 1),
@@ -47,10 +47,10 @@ export default async function (ctx: Context, _session: any, req: Request) {
                 }
 
                 // Skip writes that match what get() resolves to right now — keeps DB sparse.
-                const current = ctx.fns.settings.get(ctx, { module, scopeType: 'global', key });
+                const current = ctx.fns.settings.get({ module, scopeType: 'global', key });
                 if (Object.is(current, value)) continue;
 
-                ctx.fns.settings.set(ctx, {
+                ctx.fns.settings.set({
                     module, scopeType: 'global', key, value,
                     isSecret: descriptor.type === 'secret',
                 });
@@ -58,7 +58,7 @@ export default async function (ctx: Context, _session: any, req: Request) {
         }
     }
 
-    return new Response(ctx.fns.settings.renderDeclaredForm(ctx), {
+    return new Response(ctx.fns.settings.renderDeclaredForm({}), {
         headers: { 'content-type': 'text/html; charset=utf-8' },
     });
 }

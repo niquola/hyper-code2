@@ -3,7 +3,7 @@ import renderEventHtmlFn from "./renderEventHtml";
 
 const ctx = {} as Context;
 const renderEventHtml = (c: any, event: any, opts: { agentId?: string } = {}) =>
-    renderEventHtmlFn(c, { event, agentId: opts.agentId });
+    renderEventHtmlFn(c, null, { event, agentId: opts.agentId });
 
 describe("agent.renderEventHtml", () => {
   test("renders tool_call as details (inline, no overlay)", async () => {

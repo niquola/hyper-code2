@@ -5,7 +5,7 @@ const ctx = {} as Context;
 
 describe("llm.toAnthropicMessages", () => {
     test("user/assistant text round-trip", () => {
-        expect(convert(ctx, { messages: [
+        expect(convert(ctx, null, { messages: [
             { role: "user", content: "hi" },
             { role: "assistant", content: "hello" },
         ] })).toEqual([
@@ -15,7 +15,7 @@ describe("llm.toAnthropicMessages", () => {
     });
 
     test("system messages are dropped (caller passes them as top-level 'system')", () => {
-        expect(convert(ctx, { messages: [
+        expect(convert(ctx, null, { messages: [
             { role: "system", content: "sp" },
             { role: "user", content: "hi" },
         ] })).toEqual([
@@ -24,7 +24,7 @@ describe("llm.toAnthropicMessages", () => {
     });
 
     test("markers content (§eval, §result:eval) is just text — no special handling", () => {
-        expect(convert(ctx, { messages: [
+        expect(convert(ctx, null, { messages: [
             { role: "assistant", content: "§eval\nconsole.log(1);" },
             { role: "user", content: "§result:eval\n1" },
         ] })).toEqual([
@@ -37,7 +37,7 @@ describe("llm.toAnthropicMessages", () => {
     // non-empty"). A null / "" / whitespace content row (e.g. a reentrant
     // run() that appended undefined userText) must never reach the wire.
     test("drops null-content message (the bx[79] poison row)", () => {
-        expect(convert(ctx, { messages: [
+        expect(convert(ctx, null, { messages: [
             { role: "assistant", content: "ask" },
             { role: "user", content: null },     // NULL-content user row
             { role: "assistant", content: "answer" },
@@ -48,7 +48,7 @@ describe("llm.toAnthropicMessages", () => {
     });
 
     test("drops empty-string and whitespace-only content (then coalesces the now-adjacent users)", () => {
-        expect(convert(ctx, { messages: [
+        expect(convert(ctx, null, { messages: [
             { role: "user", content: "hi" },
             { role: "assistant", content: "" },
             { role: "assistant", content: "   \n  " },
@@ -60,7 +60,7 @@ describe("llm.toAnthropicMessages", () => {
     });
 
     test("coalesces consecutive same-role messages (keeps roles alternating after drops)", () => {
-        expect(convert(ctx, { messages: [
+        expect(convert(ctx, null, { messages: [
             { role: "user", content: "a" },
             { role: "user", content: "b" },
             { role: "assistant", content: "c" },
@@ -71,7 +71,7 @@ describe("llm.toAnthropicMessages", () => {
     });
 
     test("INVARIANT: never emits an empty text block, whatever the input", () => {
-        const out = convert(ctx, { messages: [
+        const out = convert(ctx, null, { messages: [
             { role: "user" },                     // missing content
             { role: "user", content: undefined },
             { role: "assistant", content: null },

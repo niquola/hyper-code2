@@ -1,10 +1,10 @@
-export default async function (ctx: Context, opts: { code: string; agent?: any }) {
+export default async function (ctx: Context, _session: Session | null, opts: { code: string; agent?: any }) {
     const code = (opts.code ?? '').trim();
     if (!code) throw new Error('empty code');
     const id = 'uieval_' + Bun.randomUUIDv7().replace(/[^a-zA-Z0-9_]/g, '');
     const pending = ((ctx.state as any).uiEval ??= { pending: new Map() });
     const entry: any = { id, status: 'pending', code, createdAt: Date.now() };
     pending.pending.set(id, entry);
-    ctx.fns.events.emit(ctx, { event: { type: 'ui.eval', id, code } });
+    ctx.fns.procs.events.emit({ event: { type: 'ui.eval', id, code } });
     return { id, dispatched: true };
 }

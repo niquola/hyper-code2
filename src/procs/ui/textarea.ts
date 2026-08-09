@@ -1,0 +1,10 @@
+// A multi-line input — a note, a comment. `name` submits with a form; `field`
+// only marks it for UI/test/client code. Usually they are the same, but a GET
+// form must not serialize a huge editor just because it is on screen.
+export default function (ctx: Context, _session: Session | null, opts: {name?: string; field?: string; value?: string; placeholder?: string; rows?: number; class?: string; ariaLabel?: string; maxlength?: number }): string {
+    const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
+    const field = opts.field ?? opts.name;
+    return `<textarea ${opts.name ? `name="${esc(opts.name)}" ` : ""}${ctx.fns.procs.ui.attr({ field })}${opts.ariaLabel ? ` aria-label="${esc(opts.ariaLabel)}"` : ""} rows="${opts.rows ?? 3}"${opts.maxlength != null ? ` maxlength="${opts.maxlength}"` : ""}
+  placeholder="${esc(opts.placeholder ?? "")}"
+  class="textarea textarea-sm w-full resize-y ${opts.class ?? ""}">${esc(opts.value ?? "")}</textarea>`;
+}

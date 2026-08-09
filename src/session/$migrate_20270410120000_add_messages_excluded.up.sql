@@ -1,1 +1,0 @@
-ALTER TABLE messages ADD COLUMN excluded_from_llm INTEGER NOT NULL DEFAULT 0;

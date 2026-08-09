@@ -8,7 +8,7 @@ import { dirname } from "node:path";
 const OAUTH_HOST = "https://auth.kimi.com";
 const CLIENT_ID = "17e5f671-d194-4dfb-9706-5516cb48c098";
 
-export default async function (ctx: Context): Promise<{
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<{
     user_code: string;
     verification_uri: string;
     verification_uri_complete?: string;

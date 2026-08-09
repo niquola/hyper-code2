@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test";
 import markerKind from "./markerKind";
 
 const ctx = {} as Context;
-const k = (content: any) => markerKind(ctx, { content });
+const k = (content: any) => markerKind(ctx, null, { content });
 
 describe("agent.markerKind", () => {
     test("classifies assistant invocations", () => {

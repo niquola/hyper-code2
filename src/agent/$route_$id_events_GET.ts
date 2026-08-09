@@ -1,8 +1,8 @@
-export default async function (ctx: Context, _session: any, req: any) {
-    const id = req.params.id;
+export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+    const id = opts.params.id!;
     let agent = (ctx.state as any).agent?.[id];
     if (!agent) {
-        agent = ctx.fns.session?.load?.(ctx, { id }) ?? null;
+        agent = ctx.fns.session?.load?.({ id }) ?? null;
         if (agent) {
             (ctx.state as any).agent ??= {};
             (ctx.state as any).agent[id] = agent;
@@ -10,17 +10,17 @@ export default async function (ctx: Context, _session: any, req: any) {
     }
     if (!agent) return Response.json({ error: 'not found' }, { status: 404 });
 
-    const url = new URL(req.url);
+    const url = new URL(opts.req.url);
     const offset = Number(url.searchParams.get('offset') ?? '0') || 0;
-    const events = ctx.fns.session.getEvents(ctx, { id, fromIdx: offset });
-    const maxIdx = ctx.fns.session.getMaxEventIdx(ctx, { id });
+    const events = ctx.fns.session.getEvents({ id, fromIdx: offset });
+    const maxIdx = ctx.fns.session.getMaxEventIdx({ id });
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
     const usage = lastAssistant?.usage ?? null;
 
-    const row = ctx.fns.db.select<any>(ctx, {
+    const row = (ctx.fns.procs.db.select({
         sql: 'SELECT run_state, next_run_at FROM agents WHERE id = ?',
         params: [id],
-    })[0];
+    }) as any[])[0];
     const isStreaming = row?.run_state === 'running' || !!row?.next_run_at;
 
     return Response.json({

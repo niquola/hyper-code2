@@ -8,7 +8,7 @@ import wakeWorker from './wakeWorker';
 // next_run_at to drive the worker.
 function seedReadyAgent(ctx: any, id: string, nextRunAt: number) {
     const ts = Date.now();
-    ctx.fns.db.exec(ctx, {
+    ctx.fns.procs.db.run({
         sql: `INSERT INTO agents (id, model, system_prompt, scratchpad, created_at, updated_at, next_run_at, run_state)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         params: [id, 'mock:test', '', '{}', ts, ts, nextRunAt, 'idle'],
@@ -35,13 +35,13 @@ describe('agent.workerLoop', () => {
         // of intervals end-to-end with no overlap. Parallel worker fires all
         // three at once; intervals overlap heavily.
         const intervals: { id: string; start: number; end: number }[] = [];
-        ctx.fns.agent.run = async (_c: any, opts: any) => {
+        ctx.fns.agent.run = async (_c: any, _s: any, opts: any) => {
             const start = Date.now();
             await Bun.sleep(100);
             intervals.push({ id: opts.agent.id, start, end: Date.now() });
         };
 
-        const loopPromise = workerLoop(ctx);
+        const loopPromise = workerLoop(ctx, null);
 
         // Wait until run() fired for every agent.
         const deadline = Date.now() + 2_000;
@@ -49,7 +49,7 @@ describe('agent.workerLoop', () => {
 
         // Stop the loop and let it observe the flag flip on the next wake.
         (ctx.state as any).workerLoopRunning = false;
-        wakeWorker(ctx);
+        wakeWorker(ctx, null);
         await loopPromise;
 
         expect(intervals).toHaveLength(3);
@@ -89,15 +89,15 @@ describe('agent.workerLoop', () => {
         // exactly one of them; the other observes claimed.length === 0 and
         // sleeps. (Second invocation also returns immediately because of the
         // workerLoopRunning guard, so this also tests that guard.)
-        const a = workerLoop(ctx);
-        const b = workerLoop(ctx);
+        const a = workerLoop(ctx, null);
+        const b = workerLoop(ctx, null);
 
         const deadline = Date.now() + 2_000;
         while (runCount < 1 && Date.now() < deadline) await Bun.sleep(10);
         await Bun.sleep(150); // give a possible second claim time to (not) happen
 
         (ctx.state as any).workerLoopRunning = false;
-        wakeWorker(ctx);
+        wakeWorker(ctx, null);
         await Promise.all([a, b]);
 
         expect(runCount).toBe(1);
@@ -113,20 +113,20 @@ describe('agent.workerLoop', () => {
         for (const id of ids) seedReadyAgent(ctx, id, past);
 
         const intervals: { id: string; start: number; end: number }[] = [];
-        ctx.fns.agent.run = async (_c: any, opts: any) => {
+        ctx.fns.agent.run = async (_c: any, _s: any, opts: any) => {
             const start = Date.now();
             await Bun.sleep(100);
             intervals.push({ id: opts.agent.id, start, end: Date.now() });
         };
 
         const t0 = Date.now();
-        const loopPromise = workerLoop(ctx);
+        const loopPromise = workerLoop(ctx, null);
 
         const deadline = Date.now() + 5_000;
         while (intervals.length < ids.length && Date.now() < deadline) await Bun.sleep(10);
 
         (ctx.state as any).workerLoopRunning = false;
-        wakeWorker(ctx);
+        wakeWorker(ctx, null);
         await loopPromise;
         const wall = Date.now() - t0;
 
@@ -144,18 +144,18 @@ describe('agent.workerLoop', () => {
         // Set the wake flag BEFORE anyone is waiting. Old behaviour:
         // wakeWorker walks an empty Set, drops the wake on the floor, and
         // the next waitForWork sleeps until the safety poll fires.
-        wakeWorker(ctx);
+        wakeWorker(ctx, null);
 
         // Run a run-less workerLoop turn: no claimable agents, so it would
         // immediately fall into waitForWork. With edge-triggered wake the
         // flag short-circuits the wait and the loop exits when we flip
         // workerLoopRunning=false right after.
         const t0 = Date.now();
-        const loopPromise = workerLoop(ctx);
+        const loopPromise = workerLoop(ctx, null);
         // give the loop a chance to enter waitForWork once
         await Bun.sleep(20);
         (ctx.state as any).workerLoopRunning = false;
-        wakeWorker(ctx);
+        wakeWorker(ctx, null);
         await loopPromise;
         const wall = Date.now() - t0;
 
@@ -172,21 +172,21 @@ describe('agent.workerLoop', () => {
         const past = Date.now() - 100;
         seedReadyAgent(ctx, 'aborter', past);
         // Append a real user message so we have a frontier > -1.
-        ctx.fns.session.appendMessage(ctx, { id: 'aborter', message: { role: 'user', content: 'hi' } });
-        const beforeCursor = ctx.fns.db.select(ctx, {
+        ctx.fns.session.appendMessage({ id: 'aborter', message: { role: 'user', content: 'hi' } });
+        const beforeCursor = ctx.fns.procs.db.select({
             sql: 'SELECT last_processed_msg_idx FROM agents WHERE id = ?',
             params: ['aborter'],
         })[0].last_processed_msg_idx;
 
         ctx.fns.agent.run = async () => { throw new Error('aborted by user'); };
 
-        const loopPromise = workerLoop(ctx);
+        const loopPromise = workerLoop(ctx, null);
         await Bun.sleep(150);
         (ctx.state as any).workerLoopRunning = false;
-        wakeWorker(ctx);
+        wakeWorker(ctx, null);
         await loopPromise;
 
-        const row = ctx.fns.db.select(ctx, {
+        const row = ctx.fns.procs.db.select({
             sql: 'SELECT run_state, next_run_at, last_processed_msg_idx FROM agents WHERE id = ?',
             params: ['aborter'],
         })[0];

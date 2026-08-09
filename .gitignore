@@ -34,6 +34,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .DS_Store
 
 # Runtime state
+.runtime/
 .hyper/_runtime
 .hyper/_test_*
 .hyper/_tmp_*

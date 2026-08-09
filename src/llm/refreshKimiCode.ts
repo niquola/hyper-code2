@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 const DEFAULT_OAUTH_HOST = "https://auth.kimi.com";
 const CLIENT_ID = "17e5f671-d194-4dfb-9706-5516cb48c098";
 
-export default async function (ctx: Context): Promise<string | null> {
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string | null> {
     if (ctx.env.KIMI_CODING_API_KEY) return ctx.env.KIMI_CODING_API_KEY;
     const home = ctx.env.HOME ?? process.env.HOME ?? "";
     const path = `${home}/.kimi/credentials/kimi-code.json`;

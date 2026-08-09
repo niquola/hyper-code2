@@ -4,7 +4,7 @@ type ListOpts = {
     scopeId?: string | null;
 };
 
-export default function (ctx: Context, opts: ListOpts = {}): Array<{
+export default function (ctx: Context, _session: Session | null, opts: ListOpts = {}): Array<{
     module: string;
     scopeType: string;
     scopeId: string;
@@ -29,7 +29,7 @@ export default function (ctx: Context, opts: ListOpts = {}): Array<{
         params.push(opts.scopeId ?? '');
     }
 
-    const rows = ctx.fns.db.select<any>(ctx, {
+    const rows = ctx.fns.procs.db.select({
         sql: `SELECT module, scope_type, scope_id, key, value, is_secret, updated_at
            FROM settings${where.length ? ' WHERE ' + where.join(' AND ') : ''}
           ORDER BY module, scope_type, scope_id, key`,

@@ -6,25 +6,25 @@ const ctx = {} as Context;
 
 describe("files.resolveSafe", () => {
     test("empty string → cwd root", () => {
-        expect(resolveSafe(ctx, { path: "" })).toBe(process.cwd());
+        expect(resolveSafe(ctx, null, { path: "" })).toBe(process.cwd());
     });
 
     test("normal relative path resolves inside cwd", () => {
-        expect(resolveSafe(ctx, { path: "src/agent" })).toBe(process.cwd() + "/src/agent");
+        expect(resolveSafe(ctx, null, { path: "src/agent" })).toBe(process.cwd() + "/src/agent");
     });
 
     // Workspace confinement was removed by request — resolveSafe is now just a
     // relative→absolute resolver; out-of-cwd paths resolve, not throw.
     test("parent traversal resolves (no longer rejected)", () => {
-        expect(resolveSafe(ctx, { path: "../other" })).toBe(resolve(process.cwd(), "../other"));
-        expect(resolveSafe(ctx, { path: "src/../../outside" })).toBe(resolve(process.cwd(), "../outside"));
+        expect(resolveSafe(ctx, null, { path: "../other" })).toBe(resolve(process.cwd(), "../other"));
+        expect(resolveSafe(ctx, null, { path: "src/../../outside" })).toBe(resolve(process.cwd(), "../outside"));
     });
 
     test("absolute path outside cwd passes through (no throw)", () => {
-        expect(resolveSafe(ctx, { path: "/etc/passwd" })).toBe("/etc/passwd");
+        expect(resolveSafe(ctx, null, { path: "/etc/passwd" })).toBe("/etc/passwd");
     });
 
     test("absolute path inside cwd is OK", () => {
-        expect(resolveSafe(ctx, { path: process.cwd() + "/src" })).toBe(process.cwd() + "/src");
+        expect(resolveSafe(ctx, null, { path: process.cwd() + "/src" })).toBe(process.cwd() + "/src");
     });
 });

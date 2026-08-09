@@ -39,6 +39,6 @@ const PRESETS: Record<PromptPresetId, { label: string; text: string }> = {
   },
 };
 
-export default async function (_ctx: Context) {
+export default async function (_ctx: Context, _session: Session | null, _opts?: {}) {
   return PRESETS;
 }

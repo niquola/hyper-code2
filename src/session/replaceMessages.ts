@@ -1,9 +1,9 @@
-export default function (ctx: Context, opts: { id: string; messages: any[]; ts?: number }): { count: number } {
+export default function (ctx: Context, _session: Session | null, opts: { id: string; messages: any[]; ts?: number }): { count: number } {
     const { id, messages } = opts;
     const ts = opts.ts ?? Date.now();
-    ctx.fns.db.exec(ctx, { sql: 'DELETE FROM messages WHERE agent_id = ?', params: [id] });
+    ctx.fns.procs.db.run({ sql: 'DELETE FROM messages WHERE agent_id = ?', params: [id] });
     messages.forEach((m: any, i: number) => {
-        ctx.fns.db.exec(ctx, {
+        ctx.fns.procs.db.run({
             sql: `
             INSERT INTO messages (agent_id, idx, role, content, ts, excluded_from_llm, excluded_from_cursor)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -19,6 +19,6 @@ export default function (ctx: Context, opts: { id: string; messages: any[]; ts?:
             ],
         });
     });
-    ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET updated_at = ? WHERE id = ?', params: [ts, id] });
+    ctx.fns.procs.db.run({ sql: 'UPDATE agents SET updated_at = ? WHERE id = ?', params: [ts, id] });
     return { count: messages.length };
 }

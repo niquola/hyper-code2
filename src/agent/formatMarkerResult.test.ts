@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'bun:test';
 import formatMarkerResultFn from './formatMarkerResult';
 const formatMarkerResult = (call: any, output: string, isError: boolean) =>
-    formatMarkerResultFn(null as any, { call, output, isError });
+    formatMarkerResultFn(null as any, null, { call, output, isError });
 
 describe('agent.formatMarkerResult', () => {
     test('eval success', () => {

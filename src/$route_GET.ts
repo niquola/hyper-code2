@@ -1,4 +1,4 @@
-export default async function (ctx: Context, _session: any, _req: Request) {
+export default async function (ctx: Context, _session: Session | null, _opts: { req: Request; params: Record<string, string> }) {
     const store: Record<string, any> = (ctx.state as any).agent ?? {};
     const ids = Object.keys(store);
     if (ids.length > 0) {

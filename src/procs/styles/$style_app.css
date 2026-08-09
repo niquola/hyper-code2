@@ -1,0 +1,373 @@
+/* The workspace's stylesheet, compiled by Tailwind (styles.build) against every
+ * class in the scan and served at GET /styles/app.css. A `$style_<name>.css`
+ * anywhere in the scan is compiled the same way — this is just the base one.
+ *
+ * A $style file carries theme tokens and custom rules only — styles.build wraps
+ * it with the Tailwind import, the typography plugin and the content sources, so
+ * it compiles the same whether it lives in the workspace or in the project.
+ *
+ * The design system is daisyUI (styles.build adds the plugin): its component
+ * classes — `btn`, `card`, `alert`, `table` — and its theme, which is what
+ * `light`/`dark` switch. Build screens out of those.
+ *
+ * The colours below are NOT a second palette. They are the names the markup used
+ * before daisyUI, each defined as whatever daisyUI calls the same thing, so the
+ * ~1700 places that still say `bg-bg-content` follow the theme instead of a
+ * hardcoded grey. Nothing new should use them — reach for `bg-base-100`,
+ * `text-base-content`, `border-base-300`, `text-error` directly.
+ *
+ * The sizes further down are ours on purpose: daisyUI's defaults are built for
+ * marketing pages, and a clinical table needs to be denser than that.
+ * The component rules below are the handful of things utilities cannot say. */
+@theme {
+  --color-bg-primary: var(--color-base-200);
+  --color-bg-tertiary: var(--color-base-200);
+  --color-bg-quaternary: var(--color-base-300);
+  --color-bg-tint-hover: var(--color-base-300);
+  --color-bg-content: var(--color-base-100);
+  --color-bg-selected: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  --color-border-separator: var(--color-base-300);
+  --color-border-input: var(--color-base-300);
+  --color-border-focus: var(--color-primary);
+  --color-border-subtle: var(--color-base-300);
+  --color-text-primary: var(--color-base-content);
+  --color-text-heading: var(--color-base-content);
+  --color-text-muted: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+  --color-text-tertiary: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  --color-text-placeholder: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  --color-text-inverse: var(--color-primary-content);
+  --color-text-link: var(--color-primary);
+  --color-brand: var(--color-primary);
+  --color-brand-hover: color-mix(in oklab, var(--color-primary) 90%, black);
+  --color-brand-disabled: color-mix(in oklab, var(--color-primary) 50%, transparent);
+  --color-accent-soft: color-mix(in oklab, var(--color-primary) 8%, transparent);
+  --color-focus-ring: var(--color-primary);
+  --color-status-running: var(--color-success);
+  --color-status-warning: var(--color-warning);
+  --color-status-error: var(--color-error);
+  --color-state-info-bg: color-mix(in oklab, var(--color-info) 10%, transparent);
+  --color-state-info-border: color-mix(in oklab, var(--color-info) 30%, transparent);
+  --color-state-info-fg: var(--color-info);
+  --color-state-success-bg: color-mix(in oklab, var(--color-success) 10%, transparent);
+  --color-state-success-border: color-mix(in oklab, var(--color-success) 30%, transparent);
+  --color-state-success-fg: var(--color-success);
+  --color-state-warning-bg: color-mix(in oklab, var(--color-warning) 10%, transparent);
+  --color-state-warning-border: color-mix(in oklab, var(--color-warning) 30%, transparent);
+  --color-state-warning-fg: var(--color-warning);
+  --color-state-danger-bg: color-mix(in oklab, var(--color-error) 10%, transparent);
+  --color-state-danger-border: color-mix(in oklab, var(--color-error) 30%, transparent);
+  --color-state-danger-fg: var(--color-error);
+  --color-state-neutral-bg: color-mix(in oklab, var(--color-neutral) 10%, transparent);
+  --color-state-neutral-border: color-mix(in oklab, var(--color-neutral) 30%, transparent);
+  --color-state-neutral-fg: var(--color-neutral);
+
+  --text-micro: 0.5625rem;
+  --text-micro--line-height: 0.75rem;
+  --text-3xs: 0.625rem;
+  --text-3xs--line-height: 0.875rem;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-ui: 0.8125rem;
+  --text-ui--line-height: 1.25rem;
+  --text-ui-lg: 0.9375rem;
+  --text-ui-lg--line-height: 1.5rem;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.75rem;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+
+  --shadow-popover: 0 2px 10px rgba(0, 0, 0, 0.08);
+  --shadow-xs: 0 1px 2px rgba(28, 25, 23, 0.04);
+  --shadow-md: 0 1px 2px rgba(28, 25, 23, 0.03), 0 12px 28px -16px rgba(28, 25, 23, 0.1);
+  --shadow-lg: 0 1px 2px rgba(28, 25, 23, 0.03), 0 14px 24px -14px rgba(28, 25, 23, 0.16);
+  --shadow-accent: 0 2px 6px -1px rgba(52, 97, 168, 0.4);
+
+  --tracking-eyebrow: 0.22em;
+  --tracking-label: 0.04em;
+}
+
+/* Three surfaces, not two. daisyUI's light theme puts base-200 two percent off
+ * white, which on a bright screen is white — so the harness and the product and
+ * the cards on it were all one colour with hairlines drawn between them.
+ *
+ *   base-200   the HARNESS — the chat column, the tab strip, the chrome
+ *   canvas     the PRODUCT's page, a shade lighter, so it reads as the thing
+ *              being built rather than as more of the frame around it
+ *   base-100   what stands on the page: a card, white, with a light border and
+ *              a shadow to lift it off
+ *
+ * After the plugin's own block on purpose — same specificity, later wins. */
+:root,
+[data-theme="light"] {
+  --color-base-200: oklch(96.8% 0.001 240);
+  --color-base-300: oklch(92.5% 0.003 240);
+}
+
+@theme {
+  --color-canvas: oklch(98.8% 0.001 240);
+}
+
+body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+
+/* the chat's compose box: one focus ring around textarea + control row */
+.ui-compose-box {
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  border-radius: 8px;
+  transition: border-color 0.22s, box-shadow 0.22s;
+}
+.ui-compose-box:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-primary) 10%, transparent);
+}
+/* The composer's send button is daisyUI's `btn btn-circle btn-primary` — only
+ * the arrow's stroke is ours. Its disabled look is the component's, which is the
+ * point: the old hand-rolled one dimmed the accent to 50%, and a half-strength
+ * accent still reads as a live button, so an empty composer looked sendable. */
+#send svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.ui-overlay-shadow { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08); z-index: 600; }
+
+/* the tool pill's panel: a top-layer popover anchored under its own trigger */
+/* Anchored under its pill — but never off the screen. The pill is a message in a
+ * transcript that scrolls, so an anchor half an hour up the conversation put the
+ * panel's own header (and the × that closes it) above the viewport: the panel
+ * was open, covering the window, and there was nothing to press. Clamped, the
+ * header is always reachable wherever the pill has drifted to. */
+.tool-actions-tooltip {
+  position: fixed; left: anchor(left); top: clamp(1rem, anchor(bottom), calc(100dvh - 8rem)); right: auto; bottom: auto;
+  margin: 0.375rem 0 0; z-index: 50; overflow: visible;
+  width: min(28rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem);
+  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+}
+.tool-actions-tooltip.tool-actions-tooltip-large {
+  top: 1rem; height: calc(100dvh - 2rem); width: min(42rem, calc(100vw - 2rem));
+  position-try-fallbacks: flip-inline;
+}
+.tool-actions-scroll { max-height: inherit; }
+
+/* the chat's disclosure rows: tool calls, thinking, "show full <section>" */
+details > summary { list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+.tool-output-full[open] + .tool-output-preview { display: none; }
+.tool-actions-anchor:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.tool-icon-running { border-color: color-mix(in oklab, var(--color-base-content) 70%, transparent); color: var(--color-base-content); animation: tool-icon-pulse 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) infinite; }
+@keyframes tool-icon-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(28, 25, 23, 0.28); }
+  70% { box-shadow: 0 0 0 5px rgba(28, 25, 23, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(28, 25, 23, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .tool-icon-running { animation: none; } }
+.ui-panel-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 0 16px; height: 52px; flex-shrink: 0;
+  background: var(--color-base-200); border-bottom: 1px solid var(--color-base-300);
+}
+.ui-pane-header { flex-shrink: 0; border-bottom: 1px solid var(--color-base-300); background: var(--color-base-200); display: flex; align-items: center; min-height: 52px; }
+
+/* the plugin tab strip (src/ui/tabs.ts) */
+.ui-tabbar { display: flex; align-items: stretch; align-self: stretch; gap: 1px; height: 100%; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.ui-tabbar::-webkit-scrollbar { display: none; }
+.ui-tab {
+  display: inline-flex; flex: 0 0 auto; align-items: center; gap: 0;
+  height: 100%; padding: 0; position: relative;
+  font-size: 12px; font-weight: 500; color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  white-space: nowrap; transition: color 0.15s;
+}
+/* One hover for the whole tab, × included: the close is part of the tab, not a
+ * button parked beside it. It keeps a stronger hover of its own on top, which is
+ * what says the two are different targets. */
+.ui-tab:hover, .ui-tab.is-active { color: var(--color-base-content); }
+.ui-tab:hover { background: var(--color-base-300); }
+.ui-tab--closable { padding-right: 6px; }
+.ui-tab--closable .ui-tab__link { padding-right: 3px; }
+.ui-tab.is-active::after {
+  content: ""; position: absolute; left: 6px; right: 6px; bottom: -1px;
+  height: 2px; background: var(--color-base-content); border-radius: 1px;
+}
+/* the patient the open app is about, under the strip */
+.ui-scope {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  height: 40px; padding: 0 16px; font-size: 13px;
+  background: var(--color-base-100); border-bottom: 1px solid var(--color-base-300);
+}
+.ui-scope__avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 9999px;
+  background: color-mix(in oklab, var(--color-primary) 10%, transparent); color: var(--color-primary);
+  font-size: 10px; font-weight: 600; letter-spacing: 0.02em;
+}
+.ui-tab__link { display: inline-flex; align-items: center; gap: 6px; height: 100%; padding: 0 9px; }
+/* Always there, not on hover: a tab you can close should say so before you go
+   looking for the way. */
+.ui-tab__close {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; margin-left: 2px; border: 0; border-radius: 4px;
+  background: transparent; color: color-mix(in oklab, var(--color-base-content) 60%, transparent); font-size: 11px; cursor: pointer;
+}
+.ui-tab__close:hover { background: color-mix(in oklab, var(--color-base-content) 18%, transparent); color: var(--color-base-content); }
+.ui-tab__icon { font-size: 16px; color: color-mix(in oklab, var(--color-base-content) 60%, transparent); flex-shrink: 0; }
+.ui-tab:hover .ui-tab__icon, .ui-tab.is-active .ui-tab__icon { color: var(--color-base-content); }
+.ui-tab__label { display: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+.ui-tab.is-active .ui-tab__label, .ui-tab--named .ui-tab__label { display: inline; }
+/* Apps, then the hosts it runs in: a rule instead of a caption. */
+.ui-tab-sep { align-self: center; width: 1px; height: 18px; margin: 0 6px; background: var(--color-base-300); flex: 0 0 auto; }
+
+/* the workspace pointing at things in the page (src/page/client.js) */
+#page-pointer, #page-ring, #page-caption {
+  position: fixed; z-index: 900; pointer-events: none;
+  transition: opacity .25s ease, left .5s cubic-bezier(.22,.61,.36,1), top .5s cubic-bezier(.22,.61,.36,1);
+}
+#page-pointer { filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+#page-ring {
+  border: 2px solid var(--color-primary); border-radius: 6px;
+  background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  transition: opacity .25s ease, left .5s cubic-bezier(.22,.61,.36,1), top .5s cubic-bezier(.22,.61,.36,1), width .5s, height .5s;
+}
+#page-caption {
+  max-width: 22rem; padding: 8px 12px; border-radius: 8px;
+  background: var(--color-base-content); color: #fff;
+  font-size: 13px; line-height: 1.35; box-shadow: 0 6px 20px -8px rgba(0,0,0,.5);
+}
+
+/* the tour: a hole in the dimming, and the panel that drives it.
+ * The panel is the only control surface — a tour that moves on its own is what
+ * this replaces — so it is the one thing here that takes clicks, and it sits
+ * over the app rather than over the whole window: the harness's tab strip and
+ * the chat stay reachable while somebody is being shown around. */
+#page-dim { position: fixed; inset: 0; z-index: 880; pointer-events: none; }
+/* …clipped to the app when what is lit up is in the app: the same seam the map
+ * sheet uses (--chat-w, --app-top), so the harness is never greyed out. */
+#page-dim[data-scope="app"] { clip-path: inset(var(--app-top, 3rem) 0 0 var(--chat-w, 24rem)); }
+#page-spot {
+  position: fixed; pointer-events: none; border-radius: 10px;
+  outline: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 9999px color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  transition: opacity .3s ease, left .4s cubic-bezier(.22,.61,.36,1), top .4s cubic-bezier(.22,.61,.36,1), width .4s, height .4s;
+}
+/* A step that names no control is about the page: its heading is outlined and
+ * nothing is dimmed. */
+#page-dim[data-mark="page"] #page-spot { box-shadow: none; }
+#page-tour {
+  position: fixed; z-index: 950; right: 1.25rem; bottom: 1.25rem; width: 22rem; max-width: calc(100vw - 2.5rem);
+  display: none; flex-direction: column; gap: .5rem; padding: 1rem;
+  border: 1px solid var(--color-base-300); border-radius: .75rem;
+  background: var(--color-base-100); color: var(--color-base-content);
+  box-shadow: 0 18px 40px -12px rgba(0,0,0,.45);
+}
+#page-tour[data-open] { display: flex; }
+.page-tour__head { display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: color-mix(in oklab, var(--color-base-content) 55%, transparent); }
+.page-tour__head button { cursor: pointer; font-size: 13px; line-height: 1; padding: 2px 4px; border-radius: 4px; }
+.page-tour__head button:hover { background: var(--color-base-200); }
+.page-tour__text { font-size: 14px; line-height: 1.45; }
+.page-tour__where { font-size: 12px; color: color-mix(in oklab, var(--color-base-content) 60%, transparent); }
+.page-tour__foot { display: flex; align-items: center; gap: .5rem; }
+.page-tour__go { flex: 1; cursor: pointer; padding: .4rem .75rem; border-radius: .5rem; font-size: 13px; font-weight: 500;
+  background: var(--color-primary); color: var(--color-primary-content); }
+.page-tour__go:disabled { opacity: .6; cursor: default; }
+.page-tour__ghost { cursor: pointer; padding: .4rem .6rem; border-radius: .5rem; font-size: 12px;
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent); }
+.page-tour__ghost:hover:not(:disabled) { background: var(--color-base-200); }
+.page-tour__ghost:disabled { opacity: .35; cursor: default; }
+.page-tour__end { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.page-tour__dots { display: inline-flex; gap: 4px; }
+.page-tour__dots i { width: 6px; height: 6px; border-radius: 999px; background: var(--color-base-300); }
+.page-tour__dots i[data-status="done"] { background: color-mix(in oklab, var(--color-primary) 45%, transparent); }
+.page-tour__dots i[data-status="now"] { background: var(--color-primary); width: 16px; }
+/* The guided countdown, across the foot of the panel: what a step's remaining
+ * time looks like. It is empty (and so invisible) in the manual mode, where
+ * nothing moves on its own — the width is animated from the player. */
+.page-tour__timer { margin: .75rem -1rem -1rem; height: 3px; border-radius: 0 0 var(--radius-box, 1rem) var(--radius-box, 1rem); overflow: hidden; }
+.page-tour__timer i { display: block; width: 0; height: 100%; background: var(--color-primary); }
+
+/* rendered agent markdown */
+/* Code in a transcript is drawn as a WHITE bordered chip rather than a grey fill.
+ * The chat column is grey — it is harness, not product — and a grey-on-grey chip
+ * is an invisible chip; on the white of a rendered file it would be invisible the
+ * other way round. A border is what makes one rule right on both surfaces. */
+.md-preview pre { padding: 0.5rem 0.75rem; border-radius: 0.375rem; overflow-x: auto; margin: 1rem 0; background: var(--color-base-100); border: 1px solid var(--color-base-300); color: var(--color-base-content); }
+.md-preview div + pre { margin-top: 0; }
+.md-preview pre code { font-size: 0.8125rem; background: transparent; padding: 0; }
+.md-preview :not(pre) > code { font-size: 0.8125rem; font-weight: 500; background: var(--color-base-100); border: 1px solid var(--color-base-300); padding: 0.0625rem 0.3125rem; border-radius: 0.25rem; color: var(--color-base-content); }
+.md-preview code::before, .md-preview code::after { content: none; }
+.md-preview blockquote { border-left: 4px solid color-mix(in oklab, var(--color-primary) 30%, transparent); background: color-mix(in oklab, var(--color-primary) 5%, transparent); border-radius: 0 0.25rem 0.25rem 0; padding: 0.5rem 1rem; font-style: normal; }
+.md-preview h1 { padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-base-300); }
+.md-preview a { color: var(--color-primary); text-decoration: none; }
+.md-preview a:hover { text-decoration: underline; }
+.md-preview img { border-radius: 0.25rem; }
+.md-preview table { border-collapse: collapse; }
+.md-preview th { background: var(--color-base-300); }
+.md-preview td, .md-preview th { border: 1px solid var(--color-base-300); padding: 0.375rem 0.75rem; font-size: 0.8125rem; }
+
+/* server-highlighted code blocks (ui.code, Shiki github-light) */
+.ui-code pre { margin: 0; padding: 0.75rem 1rem; background: var(--color-base-200) !important; }
+.ui-code code { font-size: 0.6875rem; line-height: 1.5; }
+
+/* focus & hover the components share — inputs ring, actions outline */
+.ui-input { transition: border-color .15s, box-shadow .15s; }
+.ui-input:focus, .ui-input:focus-visible { border-color: var(--color-primary); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 10%, transparent); outline: none; }
+.ui-focusable:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; border-radius: 4px; }
+.ui-input-group { transition: border-color .15s, box-shadow .15s; }
+.ui-input-group:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 10%, transparent); }
+.ui-radio-card { transition: border-color .15s, background .15s, box-shadow .15s; }
+.ui-radio-card:has(input:focus-visible) { box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 10%, transparent); border-color: var(--color-primary); }
+.ui-radio-card:has(input:checked) {
+  border-color: var(--color-primary);
+  background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  color: var(--color-primary);
+  font-weight: 500;
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+
+/* modal dialog (ui.dialog) — HTML popover, dimmed backdrop */
+.ui-dialog { margin: auto; padding: 0; width: min(32rem, calc(100vw - 2rem)); border: 1px solid var(--color-base-300); border-radius: 10px; background: var(--color-base-100); box-shadow: 0 14px 24px -14px rgba(28,25,23,.16); }
+.ui-dialog::backdrop { background: rgba(0,0,0,.3); }
+
+/* the map of everything (workspace/src/ui/map.ts) — a sheet over the APP, with
+ * the app dimmed behind it. Not over the window: what surrounds the app is the
+ * harness — the chat on the left, the tab strip on top — and covering those says
+ * the whole workspace is busy when only the product has something to show. They
+ * also stay usable: the strip is how you leave this. So the sheet is inset into
+ * the app's own box, from two numbers the layout already carries:
+ *
+ *   --chat-w  the chat column's width, written on the root by its own resizer
+ *             (workspace/src/chat/client.js) — drag the column and this follows
+ *   --app-top the tab strip's height (workspace/src/ui/tabs.ts, `h-12`)
+ *
+ * The dim is clipped to the same box rather than tinted with a gradient: two
+ * edges cannot be expressed as one gradient, and `clip-path` says exactly the
+ * rectangle the sheet belongs to.
+ *
+ * A popover is `display: none` until it opens, and an author `display` would beat
+ * that UA rule and leave the sheet on screen for good: the layout goes on
+ * `:popover-open` for that reason. */
+:root { --app-top: 3rem; }
+.ui-sheet { position: fixed; top: calc(var(--app-top) + 1rem); right: 1rem; bottom: 1rem; left: calc(var(--chat-w, 24rem) + 1rem); width: auto; height: auto; max-width: none; max-height: none; margin: 0; padding: 0; overflow: hidden; flex-direction: column; border: 1px solid var(--color-base-300); border-radius: 14px; background: var(--color-base-100); box-shadow: 0 24px 60px -20px rgba(28,25,23,.35); }
+.ui-sheet:popover-open { display: flex; }
+.ui-sheet::backdrop { background: rgba(0,0,0,.4); clip-path: inset(var(--app-top, 3rem) 0 0 var(--chat-w, 24rem)); }
+@media (max-width: 640px) { .ui-sheet { inset: 0.5rem; } .ui-sheet::backdrop { clip-path: none; } }
+
+/* tooltip (ui.tooltip) — CSS bubble on hover/focus */
+.ui-tooltip { position: relative; display: inline-flex; }
+.ui-tooltip__bubble { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 6px; white-space: nowrap; padding: 4px 8px; border-radius: 6px; background: var(--color-base-content); color: #fff; font-size: 11px; line-height: 1.2; opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 60; }
+.ui-tooltip:hover .ui-tooltip__bubble, .ui-tooltip:focus-visible .ui-tooltip__bubble, .ui-tooltip:focus-within .ui-tooltip__bubble { opacity: 1; }
+
+/* skeleton shimmer (ui.skeleton) */
+.ui-skeleton { position: relative; overflow: hidden; }
+.ui-skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent); animation: ui-shimmer 1.4s infinite; }
+@keyframes ui-shimmer { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .ui-skeleton::after { animation: none; } }
+
+/* tree caret (ui.tree) */
+.ui-tree__caret { transition: transform .12s; }
+details[open] > summary .ui-tree__caret { transform: rotate(90deg); }
+summary { list-style: none; }
+summary::-webkit-details-marker { display: none; }
+
+/* combobox results reveal when populated (ui.combobox) */
+.ui-combobox__results:not(:empty) { display: block; }

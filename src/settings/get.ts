@@ -17,8 +17,8 @@ function parseEnv(raw: string, type?: string): any {
     return raw;
 }
 
-export default function (ctx: Context, opts: GetOpts): any {
-    const row = ctx.fns.db.select<{ value: string }>(ctx, {
+export default function (ctx: Context, _session: Session | null, opts: GetOpts): any {
+    const row = (ctx.fns.procs.db.select({
         sql: `SELECT value
            FROM settings
           WHERE module = ?
@@ -26,13 +26,13 @@ export default function (ctx: Context, opts: GetOpts): any {
             AND scope_id = ?
             AND key = ?`,
         params: [opts.module, opts.scopeType, opts.scopeId ?? '', opts.key],
-    })[0];
+    }) as Array<{ value: string }>)[0];
     if (row) return JSON.parse(row.value);
 
     // Declared default — only consulted for scope='global'. Per-instance scopes
     // (per-agent / per-provider) by definition can't be pre-declared.
     if ((opts.scopeType ?? 'global') === 'global') {
-        const desc = (ctx.state as any).settingsRegistry?.get(`${opts.module}.${opts.key}`);
+        const desc = (ctx.state as any).settings?.registry?.get(`${opts.module}.${opts.key}`);
         if (desc) {
             if (desc.env && ctx.env[desc.env] != null) {
                 return parseEnv(String(ctx.env[desc.env]), desc.type);

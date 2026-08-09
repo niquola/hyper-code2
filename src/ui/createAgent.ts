@@ -1,25 +1,26 @@
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: { model?: string; systemPrompt?: string; open?: boolean; startText?: string } = {},
 ) {
     // Priority: explicit opts.model > declared setting (DB → env → default).
-    const fromSettings = ctx.fns?.settings?.getString?.(ctx, {
+    const fromSettings = ctx.fns?.settings?.getString?.({
         module: 'llm', scopeType: 'global', key: 'defaultModel',
     });
     const model = (opts.model ?? fromSettings ?? 'minimax/minimax-m2.7').trim();
-    const agent = ctx.fns.agent.start(ctx, {
+    const agent = ctx.fns.agent.start({
         model,
         systemPrompt: opts.systemPrompt ?? '',
     });
-    try { ctx.fns.session?.save?.(ctx, { agent }); } catch (e: any) { console.error('[session.save]', e?.message); }
-    if (opts.open !== false) ctx.fns.events.emit(ctx, { event: { type: 'ui.navigate', path: '/agent/' + encodeURIComponent(agent.id) } });
+    try { ctx.fns.session?.save?.({ agent }); } catch (e: any) { console.error('[session.save]', e?.message); }
+    if (opts.open !== false) ctx.fns.procs.events.emit({ event: { type: 'ui.navigate', path: '/agent/' + encodeURIComponent(agent.id) } });
     if (opts.startText?.trim()) {
         const text = opts.startText.trim();
         const offset = agent.events.length;
         agent.events.push({ type: 'user', text });
         agent.isStreaming = true;
         queueMicrotask(async () => {
-            try { await ctx.fns.agent.run(ctx, { agent, userText: text }); }
+            try { await ctx.fns.agent.run({ agent, userText: text }); }
             catch (e: any) { agent.events.push({ type: 'error', error: e.message }); }
             finally { agent.isStreaming = false; }
         });

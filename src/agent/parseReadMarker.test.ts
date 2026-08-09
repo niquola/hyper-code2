@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import parseReadMarkerFn from './parseReadMarker';
-const parseReadMarker = (body: string) => parseReadMarkerFn(null as any, { body });
+const parseReadMarker = (body: string) => parseReadMarkerFn(null as any, null, { body });
 
 describe('agent.parseReadMarker', () => {
     test('plain body path shorthand', () => {

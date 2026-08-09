@@ -11,17 +11,19 @@ describe('agent.stop', () => {
     };
     const ctx: any = {
       fns: {
-        db: { exec: (_c: any, opts: { sql: string; params?: any[] }) => { calls.push(['db.exec', opts.sql.replace(/\s+/g, ' ').trim(), opts.params]); return { changes: 1, lastInsertRowid: 0 }; } },
+        procs: {
+          db: { run: (opts: { sql: string; params?: any[] }) => { calls.push(['db.run', opts.sql.replace(/\s+/g, ' ').trim(), opts.params]); return { changes: 1, lastInsertRowid: 0 }; } },
+        },
         session: {
-          appendErrorEvent: (_c: any, opts: { id: string; error: string }) => calls.push(['appendErrorEvent', opts.id, opts.error]),
+          appendErrorEvent: (opts: { id: string; error: string }) => calls.push(['appendErrorEvent', opts.id, opts.error]),
           syncAgentState: () => {},
         },
       },
     };
-    const res = stop(ctx, { agent, clearQueue: true });
+    const res = stop(ctx, null, { agent, clearQueue: true });
     expect(res.ok).toBe(true);
     expect(calls[0]).toEqual(['abort', 'stopped_by_user']);
-    expect(calls[1][0]).toBe('db.exec');
+    expect(calls[1][0]).toBe('db.run');
     expect(calls[1][1]).toMatch(/UPDATE agents .*run_state = 'idle'.*next_run_at = NULL/);
     expect(calls[2]).toEqual(['appendErrorEvent', 'a1', 'stopped by user; queue cleared']);
   });
@@ -35,11 +37,13 @@ describe('agent.stop', () => {
     };
     const ctx: any = {
       fns: {
-        db: { exec: (_c: any, opts: { sql: string; params?: any[] }) => { calls.push(opts.sql.replace(/\s+/g, ' ').trim()); return { changes: 1, lastInsertRowid: 0 }; } },
+        procs: {
+          db: { run: (opts: { sql: string; params?: any[] }) => { calls.push(opts.sql.replace(/\s+/g, ' ').trim()); return { changes: 1, lastInsertRowid: 0 }; } },
+        },
         session: { appendErrorEvent: () => {}, syncAgentState: () => {} },
       },
     };
-    stop(ctx, { agent, clearQueue: false });
+    stop(ctx, null, { agent, clearQueue: false });
     expect(calls[0]).toMatch(/next_run_at = next_run_at/);
   });
 });

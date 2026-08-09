@@ -1,61 +1,24 @@
 import { test, expect, describe } from 'bun:test';
-import route from './$route_$id_GET';
-import layout from '../$layout';
-import script from '../ui/script';
-import renderEventHtml from './renderEventHtml';
-import renderStatusBar from './renderStatusBar';
-
-const mkCtx = (agents: Record<string, any> = {}) => ({
-    state: { agent: agents },
-    env: {},
-    fns: {
-        ui: { script },
-        agent: { renderEventHtml, renderStatusBar },
-        db: { select: () => [{ n: 0 }] },
-        session: {
-            syncAgentState: (_ctx: Context, agent: any) => agent,
-            getFullMessages: (_ctx: Context, _id: string) => [],
-            getMessages: (_ctx: Context, _id: string) => [],
-            getEvents: (_ctx: Context, _id: string) => [],
-            getMaxEventIdx: (_ctx: Context, _id: string) => -1,
-            load: (_ctx: Context, _id: string) => null,
-        },
-    },
-    layout,
-} as unknown as Context);
-
-function req(id: string): any {
-    const r = new Request('http://x/agent/' + id);
-    (r as any).params = { id };
-    return r;
-}
-
-async function render(ctx: Context, id: string): Promise<string> {
-    const out: any = await route(ctx, null, req(id));
-    if (out instanceof Response) throw new Error('expected {main}, got Response ' + out.status);
-    return layout(ctx, out);
-}
+import { mkTestCtx } from '../_testCtx.entry';
 
 describe('GET /agent/:id', () => {
     test('404 when agent does not exist', async () => {
-        const res = await route(mkCtx(), null, req('nope'));
-        expect(res instanceof Response).toBe(true);
-        expect((res as Response).status).toBe(404);
+        const ctx = await mkTestCtx();
+        const res = await ctx.fns.procs.http.dispatch({ url: '/agent/nope' });
+        expect(res.status).toBe(404);
     });
 
     test('loads agent from session storage when missing from runtime state', async () => {
-        const loaded = { id: 'db', model: 'db-model', messages: [], events: [], isStreaming: false };
-        const ctx = mkCtx();
-        let requestedId = '';
-        (ctx.fns as any).session.load = (_ctx: Context, opts: { id: string }) => {
-            requestedId = opts.id;
-            return opts.id === 'db' ? loaded : null;
-        };
+        const ctx = await mkTestCtx();
+        const agent = ctx.fns.agent.start({ model: 'db-model', systemPrompt: '' });
+        ctx.fns.session.save({ agent });
+        delete (ctx.state as any).agent?.[agent.id]; // force the session.load path
 
-        const html = await render(ctx, 'db');
-        expect(requestedId).toBe('db');
-        expect((ctx.state as any).agent.db).toBe(loaded);
-        expect(html).toContain('db');
+        const res = await ctx.fns.procs.http.dispatch({ url: '/agent/' + agent.id });
+        expect(res.status).toBe(200);
+        const html = await res.text();
+        expect((ctx.state as any).agent[agent.id]).toBeTruthy();
+        expect(html).toContain(agent.id);
         expect(html).toContain('db-model');
     });
 });

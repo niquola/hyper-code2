@@ -1,42 +1,31 @@
 import { test, expect, describe, afterAll } from "bun:test";
-import loadFns from "../loadFns";
-import write from "./write";
-import remove from "./remove";
-import exists from "./exists";
-import open from "./open";
-import listOpen from "./listOpen";
+import { mkTestCtx } from "../_testCtx.entry";
 
 const TEST_DIR = ".test-tmp/remove";
-
-const mkCtx = async () => {
-    const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;
-    await loadFns(ctx);
-    return ctx;
-};
 
 afterAll(async () => { await Bun.$`rm -rf ${TEST_DIR}`.quiet(); });
 
 describe("files.remove", () => {
     test("deletes a file", async () => {
-        const ctx = await mkCtx();
+        const ctx = await mkTestCtx();
         const path = `${TEST_DIR}/tmp.txt`;
-        await write(ctx, { path, content: "x" });
-        await remove(ctx, { path });
-        expect(await exists(ctx, { path })).toBe(false);
+        await ctx.fns.files.write({ path, content: "x" });
+        await ctx.fns.files.remove({ path });
+        expect(await ctx.fns.files.exists({ path })).toBe(false);
     });
 
     test("no-op on missing path", async () => {
-        const ctx = await mkCtx();
-        await remove(ctx, { path: `${TEST_DIR}/ghost-${Math.random()}` });
+        const ctx = await mkTestCtx();
+        await ctx.fns.files.remove({ path: `${TEST_DIR}/ghost-${Math.random()}` });
     });
 
     test("also removes from open tabs", async () => {
-        const ctx = await mkCtx();
+        const ctx = await mkTestCtx();
         const path = `${TEST_DIR}/closing.txt`;
-        await write(ctx, { path, content: "x" });
-        open(ctx, { path });
-        expect(listOpen(ctx)).toContain(path);
-        await remove(ctx, { path });
-        expect(listOpen(ctx)).not.toContain(path);
+        await ctx.fns.files.write({ path, content: "x" });
+        ctx.fns.files.open({ path });
+        expect(ctx.fns.files.listOpen({})).toContain(path);
+        await ctx.fns.files.remove({ path });
+        expect(ctx.fns.files.listOpen({})).not.toContain(path);
     });
 });

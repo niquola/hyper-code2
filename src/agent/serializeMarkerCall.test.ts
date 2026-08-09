@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import serializeMarkerCallFn from './serializeMarkerCall';
-const serializeMarkerCall = (call: any) => serializeMarkerCallFn(null as any, { call });
+const serializeMarkerCall = (call: any) => serializeMarkerCallFn(null as any, null, { call });
 
 describe('agent.serializeMarkerCall', () => {
     test('eval', () => {

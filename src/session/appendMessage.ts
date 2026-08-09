@@ -1,12 +1,13 @@
 export default function (
     ctx: Context,
+    _session: Session | null,
     opts: { id: string; message: any; ts?: number },
 ): { idx: number } {
     const { id, message } = opts;
     const ts = opts.ts ?? Date.now();
-    const row = ctx.fns.db.select<any>(ctx, { sql: 'SELECT COALESCE(MAX(idx), -1) AS n FROM messages WHERE agent_id = ?', params: [id] })[0];
+    const row = (ctx.fns.procs.db.select({ sql: 'SELECT COALESCE(MAX(idx), -1) AS n FROM messages WHERE agent_id = ?', params: [id] }) as any[])[0];
     const idx = Number(row?.n ?? -1) + 1;
-    ctx.fns.db.exec(ctx, {
+    ctx.fns.procs.db.run({
         sql: 'INSERT INTO messages (agent_id, idx, role, content, ts, excluded_from_llm, excluded_from_cursor) VALUES (?, ?, ?, ?, ?, ?, ?)',
         params: [
             id,
@@ -18,6 +19,6 @@ export default function (
             message.excluded_from_cursor ? 1 : 0,
         ],
     });
-    ctx.fns.db.exec(ctx, { sql: 'UPDATE agents SET updated_at = ? WHERE id = ?', params: [ts, id] });
+    ctx.fns.procs.db.run({ sql: 'UPDATE agents SET updated_at = ? WHERE id = ?', params: [ts, id] });
     return { idx };
 }

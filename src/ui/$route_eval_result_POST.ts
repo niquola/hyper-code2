@@ -1,7 +1,7 @@
 type EvalResultBody = { id: string; ok?: boolean; value?: unknown; error?: unknown };
 
-export default async function (ctx: Context, _session: any, req: Request) {
-    const raw: unknown = await req.json().catch(() => null);
+export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+    const raw: unknown = await opts.req.json().catch(() => null);
     const body = raw as EvalResultBody | null;
     if (!body || typeof body.id !== 'string') return Response.json({ error: 'invalid payload' }, { status: 400 });
     const pending = ((ctx.state as any).uiEval ??= { pending: new Map() });

@@ -15,7 +15,7 @@ function streamOf(...chunks: string[]): ReadableStream<Uint8Array> {
 
 async function collect(body: ReadableStream<Uint8Array>) {
     const out: { event: string | null; data: string }[] = [];
-    for await (const f of parseSSE(ctx, { body })) out.push(f);
+    for await (const f of parseSSE(ctx, null, { body })) out.push(f);
     return out;
 }
 

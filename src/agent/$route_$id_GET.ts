@@ -1,8 +1,8 @@
-export default async function (ctx: Context, _session: any, req: any) {
-    const id = req.params.id;
+export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+    const id = opts.params.id!;
     let agent = (ctx.state as any).agent?.[id];
     if (!agent) {
-        agent = ctx.fns.session?.load?.(ctx, { id }) ?? null;
+        agent = ctx.fns.session?.load?.({ id }) ?? null;
         if (agent) {
             (ctx.state as any).agent ??= {};
             (ctx.state as any).agent[id] = agent;
@@ -10,15 +10,15 @@ export default async function (ctx: Context, _session: any, req: any) {
     }
     if (!agent) return new Response('Not Found', { status: 404 });
 
-    const events = ctx.fns.session.getEvents(ctx, { id });
-    const maxIdx = ctx.fns.session.getMaxEventIdx(ctx, { id });
+    const events = ctx.fns.session.getEvents({ id });
+    const maxIdx = ctx.fns.session.getMaxEventIdx({ id });
     const inheritedCount = agent.parentId
-        ? ctx.fns.session.getFullMessages(ctx, { id }).length - ctx.fns.session.getMessages(ctx, { id }).length
+        ? ctx.fns.session.getFullMessages({ id }).length - ctx.fns.session.getMessages({ id }).length
         : 0;
-    const stateRow = ctx.fns.db.select<any>(ctx, {
+    const stateRow = (ctx.fns.procs.db.select({
         sql: 'SELECT run_state, next_run_at FROM agents WHERE id = ?',
         params: [id],
-    })[0];
+    }) as any[])[0];
     const isStreaming = stateRow?.run_state === 'running' || !!stateRow?.next_run_at;
     const init = {
         agentId: id,
@@ -30,7 +30,7 @@ export default async function (ctx: Context, _session: any, req: any) {
 
     const eventsHtml = (await Promise.all(events.map(async (ev: any) => {
         const cached = ev.eventHtml ?? (ev.type !== 'assistant' ? ev.html : undefined);
-        return cached ?? await ctx.fns.agent.renderEventHtml(ctx, { event: ev, agentId: id });
+        return cached ?? await ctx.fns.agent.renderEventHtml({ event: ev, agentId: id });
     }))).join('\n');
 
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
@@ -42,7 +42,7 @@ export default async function (ctx: Context, _session: any, req: any) {
   ${agent.parentId ? `<span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">fork · inherited ${inheritedCount} msgs</span>` : ''}
   <span class="text-xs text-gray-400 font-mono">${esc(agent.model)}</span>
   <span id="context-usage" class="text-xs text-gray-500 font-mono">${esc(initialUsageText)}</span>
-  ${ctx.fns.agent.renderStatusBar(ctx, { agentId: id })}
+  ${ctx.fns.agent.renderStatusBar({ agentId: id })}
   <div class="ml-auto flex gap-2">
     <form method="POST" action="/agent/${encodeURIComponent(id)}/stop" class="inline">
       <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">stop</button>
@@ -71,7 +71,7 @@ export default async function (ctx: Context, _session: any, req: any) {
     class="flex-1 px-3 py-2 border border-gray-300 rounded font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
 </form>
 <script>window.__init = ${initJson};</script>
-${ctx.fns.ui.script(ctx, { target: 'agent.chat' })}`;
+${ctx.fns.ui.script({ target: 'agent.chat' })}`;
 
     return { currentId: id, title: id, main };
 }

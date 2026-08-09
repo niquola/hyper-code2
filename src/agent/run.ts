@@ -8,6 +8,7 @@
 // file is intentionally small — orchestration only.
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: { agent: types.agent.Agent; userText: string; userMessageAlreadyAppended?: boolean },
 ) {
     const { agent, userText } = opts;
@@ -15,14 +16,14 @@ export default async function (
     agent.abortController = ac;
 
     if (!opts.userMessageAlreadyAppended) {
-        await ctx.fns.session.appendUserMessage(ctx, { id: agent.id, text: userText });
-        ctx.fns.session.syncAgentState(ctx, { agent });
+        await ctx.fns.session.appendUserMessage({ id: agent.id, text: userText });
+        ctx.fns.session.syncAgentState({ agent });
     }
 
     while (true) {
-        const { text, usage } = await ctx.fns.llm.stream(ctx, { agent, signal: ac.signal });
+        const { text, usage } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
 
-        const { prose, calls, errors } = ctx.fns.agent.parseMarkers(ctx, { text: String(text ?? '') });
+        const { prose, calls, errors } = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
 
         // No markers and no parser errors — close the turn cleanly.
         if (calls.length === 0 && errors.length === 0) {
@@ -31,13 +32,13 @@ export default async function (
             if (!text || !String(text).trim()) {
                 return { text: text ?? '', usage };
             }
-            const append = ctx.fns.session.appendAssistantMessage(ctx, { id: agent.id, msg: { content: text } });
-            ctx.fns.session.syncAgentState(ctx, { agent });
-            const html = await ctx.fns.markdown.render(ctx, { source: prose || text || '' });
-            await ctx.fns.session.appendAssistantEvent(ctx, { id: agent.id, payload: {
+            const append = ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: text } });
+            ctx.fns.session.syncAgentState({ agent });
+            const html = await ctx.fns.markdown.render({ source: prose || text || '' });
+            await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
                 text: prose || text || '', html, usage, messageIdx: append.idx,
             } });
-            ctx.fns.session.syncAgentState(ctx, { agent });
+            ctx.fns.session.syncAgentState({ agent });
             return { text, usage };
         }
 
@@ -45,30 +46,30 @@ export default async function (
         // Splitting prose from markers gives the model clean per-call pairing
         // on later turns: [assistant: prose?] → (assistant<marker> → user<result>)+.
         if (prose.trim()) {
-            const proseAppend = ctx.fns.session.appendAssistantMessage(ctx, { id: agent.id, msg: { content: prose } });
-            ctx.fns.session.syncAgentState(ctx, { agent });
-            const proseHtml = await ctx.fns.markdown.render(ctx, { source: prose });
-            await ctx.fns.session.appendAssistantEvent(ctx, { id: agent.id, payload: {
+            const proseAppend = ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: prose } });
+            ctx.fns.session.syncAgentState({ agent });
+            const proseHtml = await ctx.fns.markdown.render({ source: prose });
+            await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
                 text: prose, html: proseHtml, usage, messageIdx: proseAppend.idx,
             } });
-            ctx.fns.session.syncAgentState(ctx, { agent });
+            ctx.fns.session.syncAgentState({ agent });
         }
 
         for (const call of calls) {
-            await ctx.fns.agent.executeMarker(ctx, { agent, call, usage });
+            await ctx.fns.agent.executeMarker({ agent, call, usage });
         }
 
         // Parser errors (misplaced markers etc) tail the chain as a single
         // user message so the model can self-correct on the next turn.
         if (errors.length > 0) {
             for (const e of errors) {
-                await ctx.fns.session.appendErrorEvent(ctx, { id: agent.id, error: e.hint });
+                await ctx.fns.session.appendErrorEvent({ id: agent.id, error: e.hint });
             }
-            const errText = errors.map(e => ctx.fns.agent.formatMarkerError(ctx, { error: e })).join('\n\n');
-            ctx.fns.session.appendMessage(ctx, { id: agent.id, message: {
+            const errText = errors.map(e => ctx.fns.agent.formatMarkerError({ error: e })).join('\n\n');
+            ctx.fns.session.appendMessage({ id: agent.id, message: {
                 role: 'user', content: errText, excluded_from_cursor: true,
             } });
-            ctx.fns.session.syncAgentState(ctx, { agent });
+            ctx.fns.session.syncAgentState({ agent });
         }
     }
 }

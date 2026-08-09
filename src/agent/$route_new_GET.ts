@@ -1,10 +1,10 @@
-export default async function (ctx: Context) {
-    const defaultModel = ctx.fns.settings?.modelDefault?.(ctx) ?? ctx.env.MODEL ?? "";
-    const groups = await ctx.fns.llm.listModels(ctx);
-    const base = await ctx.fns.agent.getBasePromptParts(ctx);
+export default async function (ctx: Context, _session: Session | null, _opts: { req: Request; params: Record<string, string> }) {
+    const defaultModel = ctx.fns.settings?.modelDefault?.({}) ?? ctx.env.MODEL ?? "";
+    const groups = await ctx.fns.llm.listModels({});
+    const base = await ctx.fns.agent.getBasePromptParts({});
     const coreTokens = Math.ceil((base.core?.length || 0) / 4);
     const wireTokens = Math.ceil((base.wire?.length || 0) / 4);
-    const presets = await ctx.fns.agent.listPromptPresets(ctx);
+    const presets = await ctx.fns.agent.listPromptPresets({});
     const presetsWithTokens = Object.entries(presets).map(([id, preset]: [string, any]) => ({
       id,
       ...preset,

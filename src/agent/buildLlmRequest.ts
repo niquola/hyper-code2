@@ -17,15 +17,16 @@
 //   streamer. messages is [bootstrap-user, bootstrap-ack, ...transcript].
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: { agent: types.agent.Agent },
 ): Promise<{ system: string; messages: any[] }> {
     const { agent } = opts;
-    const fullPrompt = await ctx.fns.agent.fullSystemPrompt(ctx, { agent });
+    const fullPrompt = await ctx.fns.agent.fullSystemPrompt({ agent });
     const base = agent.parentId
-        ? ctx.fns.session.getFullMessages(ctx, { id: agent.id })
+        ? ctx.fns.session.getFullMessages({ id: agent.id })
         : (agent.messages ?? []);
 
-    const ep = ctx.fns.llm.resolveEndpoint(ctx, { model: agent.model });
+    const ep = ctx.fns.llm.resolveEndpoint({ model: agent.model });
     const claudeCodeHeader = "You are Claude Code, Anthropic's official CLI for Claude.";
 
     let system = '';

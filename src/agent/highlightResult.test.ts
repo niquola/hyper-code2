@@ -1,13 +1,14 @@
 import { describe, test, expect } from 'bun:test';
 import highlightResultFn from './highlightResult';
-const highlightResult = (ctx: any, output: string) => highlightResultFn(ctx, { output });
+const highlightResult = (ctx: any, output: string) => highlightResultFn(ctx, null, { output });
 
 function mkCtx() {
     const calls: { code: string; lang: string }[] = [];
+    // Plain-object ctx (no injecting Proxy) — the stub receives opts directly.
     const ctx: any = {
         fns: {
             markdown: {
-                highlight: async (_c: any, opts: { code: string; lang: string }) => {
+                highlight: async (opts: { code: string; lang: string }) => {
                     calls.push({ code: opts.code, lang: opts.lang });
                     return `<${opts.lang}>${opts.code}</${opts.lang}>`;
                 },

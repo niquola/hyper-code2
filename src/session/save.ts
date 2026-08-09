@@ -1,7 +1,7 @@
-export default function (ctx: Context, opts: { agent: types.agent.Agent }): void {
+export default function (ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }): void {
     const { agent } = opts;
     const now = Date.now();
-    ctx.fns.db.exec(ctx, {
+    ctx.fns.procs.db.run({
         sql: `
         INSERT INTO agents (id, model, system_prompt, scratchpad, parent_id, fork_offset, created_at, updated_at)
         VALUES ($id, $model, $sp, $scratchpad, $parentId, $forkOffset, COALESCE((SELECT created_at FROM agents WHERE id = $id), $ts), $ts)
@@ -24,9 +24,9 @@ export default function (ctx: Context, opts: { agent: types.agent.Agent }): void
         },
     });
 
-    ctx.fns.db.exec(ctx, { sql: 'DELETE FROM messages WHERE agent_id = ?', params: [agent.id] });
+    ctx.fns.procs.db.run({ sql: 'DELETE FROM messages WHERE agent_id = ?', params: [agent.id] });
     (agent.messages ?? []).forEach((message: any, idx: number) => {
-        ctx.fns.db.exec(ctx, {
+        ctx.fns.procs.db.run({
             sql: 'INSERT INTO messages (agent_id, idx, role, content, ts) VALUES (?, ?, ?, ?, ?)',
             params: [
                 agent.id,
@@ -38,8 +38,8 @@ export default function (ctx: Context, opts: { agent: types.agent.Agent }): void
         });
     });
 
-    ctx.fns.db.exec(ctx, { sql: 'DELETE FROM events WHERE agent_id = ?', params: [agent.id] });
+    ctx.fns.procs.db.run({ sql: 'DELETE FROM events WHERE agent_id = ?', params: [agent.id] });
     (agent.events ?? []).forEach((event: any, idx: number) => {
-        ctx.fns.db.exec(ctx, { sql: 'INSERT INTO events (agent_id, idx, type, payload, ts) VALUES (?, ?, ?, ?, ?)', params: [agent.id, idx, event.type, JSON.stringify(event), now + idx] });
+        ctx.fns.procs.db.run({ sql: 'INSERT INTO events (agent_id, idx, type, payload, ts) VALUES (?, ?, ?, ?, ?)', params: [agent.id, idx, event.type, JSON.stringify(event), now + idx] });
     });
 }

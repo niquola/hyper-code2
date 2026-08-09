@@ -1,4 +1,4 @@
-export default async function (_ctx: Context) {
+export default async function (_ctx: Context, _session: Session | null, _opts?: {}) {
     return [
         "(() => {",
         "  if (window.__hyperUiControlInstalled) return;",
@@ -77,19 +77,10 @@ export default async function (_ctx: Context) {
         "",
         "  window.__hyperUiApplyEvent = applyEvent;",
         "",
-        "  if (!window.__hyperUiControlPatched && window.EventSource) {",
-        "    window.__hyperUiControlPatched = true;",
-        "    const NativeEventSource = window.EventSource;",
-        "    window.EventSource = function (...args) {",
-        "      const es = new NativeEventSource(...args);",
-        "      es.addEventListener('message', (e) => {",
-        "        try { applyEvent(JSON.parse(e.data)); } catch {}",
-        "      });",
-        "      return es;",
-        "    };",
-        "    window.EventSource.prototype = NativeEventSource.prototype;",
-        "  }",
-        "",
+        "  // procs/events/client.js re-dispatches every SSE message as a",
+        "  // 'hyper-events' DOM event — that is our transport now (the old build",
+        "  // monkey-patched window.EventSource instead).",
+        "  document.addEventListener('hyper-events', (e) => applyEvent(e.detail));",
         "  document.addEventListener('hyper-ui-event', (e) => applyEvent(e.detail));",
         "})();",
     ].join('\n');

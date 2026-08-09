@@ -1,6 +1,6 @@
-export default function (ctx: Context, opts: { id: string }): types.agent.Agent | null {
+export default function (ctx: Context, _session: Session | null, opts: { id: string }): types.agent.Agent | null {
     const { id } = opts;
-    const rows = ctx.fns.db.select<any>(ctx, { sql: 'SELECT * FROM agents WHERE id = ? AND archived_at IS NULL', params: [id] });
+    const rows = ctx.fns.procs.db.select({ sql: 'SELECT * FROM agents WHERE id = ? AND archived_at IS NULL', params: [id] }) as any[];
     const row = rows[0];
     if (!row) return null;
 
@@ -19,5 +19,5 @@ export default function (ctx: Context, opts: { id: string }): types.agent.Agent 
         parentId: row.parent_id ?? null,
         forkOffset: row.fork_offset ?? null,
     };
-    return ctx.fns.session.syncAgentState(ctx, { agent });
+    return ctx.fns.session.syncAgentState({ agent });
 }

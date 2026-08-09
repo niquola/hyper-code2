@@ -2,6 +2,7 @@
 // Resolves with { woken: true | false }. Designed for long-poll handlers.
 export default function (
     ctx: Context,
+    _session: Session | null,
     opts: { agentId: string; timeoutMs: number; signal?: AbortSignal },
 ): Promise<{ woken: boolean }> {
     const { agentId, timeoutMs, signal } = opts;

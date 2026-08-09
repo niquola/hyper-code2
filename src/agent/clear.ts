@@ -1,4 +1,4 @@
-export default function (_ctx: Context, opts: { agent: types.agent.Agent }) {
+export default function (_ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }) {
     const { agent } = opts;
     try { agent.abortController?.abort(); } catch {}
     agent.abortController = null;

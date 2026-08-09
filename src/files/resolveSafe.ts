@@ -9,6 +9,6 @@ import { resolve } from "node:path";
 // and write anywhere the process has permission, including ../ siblings and
 // absolute paths like /tmp or /Users/.../.claude. This deliberately
 // de-sandboxes the agent's file tools; only run agents you trust on this build.
-export default function (_ctx: Context, opts: { path: string }): string {
+export default function (_ctx: Context, _session: Session | null, opts: { path: string }): string {
     return resolve(process.cwd(), opts.path || ".");
 }

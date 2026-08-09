@@ -1,5 +1,6 @@
 export default async function (
   _ctx: Context,
+  _session: Session | null,
   opts?: types.tools.PasswordOpts
 ) {
   const { length = 16, symbols = true, numbers = true, uppercase = true } = opts ?? {};

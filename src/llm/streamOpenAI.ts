@@ -1,5 +1,6 @@
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: { agent: types.agent.Agent; signal?: AbortSignal; onEvent?: (ev: any) => void },
 ): Promise<{
     text: string;
@@ -8,12 +9,12 @@ export default async function (
     usage: any;
 }> {
     const { agent } = opts;
-    const { system: sys, messages: convo } = await ctx.fns.agent.buildLlmRequest(ctx, { agent });
+    const { system: sys, messages: convo } = await ctx.fns.agent.buildLlmRequest({ agent });
     const messages: any[] = [];
     if (sys) messages.push({ role: "system", content: sys });
     messages.push(...convo);
 
-    const ep = ctx.fns.llm.resolveEndpoint(ctx, { model: agent.model });
+    const ep = ctx.fns.llm.resolveEndpoint({ model: agent.model });
 
     const body: any = {
         model: ep.modelId,
@@ -40,7 +41,7 @@ export default async function (
     let finishReason: string | null = null;
     let usage: any = undefined;
 
-    for await (const { data } of ctx.fns.llm.parseSSE(ctx, { body: res.body })) {
+    for await (const { data } of ctx.fns.llm.parseSSE({ body: res.body })) {
         if (data === "[DONE]") break;
         let parsed: any;
         try { parsed = JSON.parse(data); } catch { continue; }

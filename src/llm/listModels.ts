@@ -1,7 +1,7 @@
 // Return models grouped by provider-prefix.
 // LM Studio is queried live; remote providers return a small curated static list.
 // Missing/unreachable providers are omitted silently.
-export default async function (ctx: Context): Promise<Record<string, string[]>> {
+export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<Record<string, string[]>> {
     const out: Record<string, string[]> = {};
 
     // Local: LM Studio /v1/models
@@ -38,7 +38,7 @@ export default async function (ctx: Context): Promise<Record<string, string[]>> 
     // Codex (ChatGPT subscription) — only if user has a valid JWT.
     // Models pulled live from /codex/models (subscription-gated whitelist).
     try {
-        const tok = await ctx.fns.llm.refreshCodex?.(ctx);
+        const tok = await ctx.fns.llm.refreshCodex?.({});
         if (tok) {
             const url = "https://chatgpt.com/backend-api/codex/models?client_version=0.120.0";
             const r = await fetch(url, {
@@ -60,7 +60,7 @@ export default async function (ctx: Context): Promise<Record<string, string[]>> 
     // OAuth clients with 429 (per-model anti-fraud), so we only expose haiku
     // here. For sonnet/opus use the `anthropic:` provider with an API key.
     try {
-        const tok = await ctx.fns.llm.refreshClaudeCode?.(ctx);
+        const tok = await ctx.fns.llm.refreshClaudeCode?.({});
         if (tok) {
             out["claude-code"] = [
                 "claude-code:claude-haiku-4-5-20251001",

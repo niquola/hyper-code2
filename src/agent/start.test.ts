@@ -19,7 +19,7 @@ const mkCtx = () => {
 describe("agent.start", () => {
     test("creates agent with default shape", () => {
         const ctx = mkCtx();
-        const agent = start(ctx, { model: "minimax/minimax-m2.7" });
+        const agent = start(ctx, null, { model: "minimax/minimax-m2.7" });
         expect(agent.id).toBe('a');
         expect(agent.model).toBe("minimax/minimax-m2.7");
         expect(agent.systemPrompt).toBe("");
@@ -31,7 +31,7 @@ describe("agent.start", () => {
 
     test("stores agent in ctx.state.agent[id]", () => {
         const ctx = mkCtx();
-        const agent = start(ctx, { model: "x", systemPrompt: "hi" });
+        const agent = start(ctx, null, { model: "x", systemPrompt: "hi" });
         expect((ctx.state as any).agent[agent.id]).toBe(agent);
         expect(agent.systemPrompt).toBe("hi");
     });
@@ -41,19 +41,19 @@ describe("agent.start", () => {
         (ctx as any).fns.agent.nextId
             .mockReturnValueOnce('a')
             .mockReturnValueOnce('b');
-        const a = start(ctx, { model: "x" });
-        const b = start(ctx, { model: "y" });
+        const a = start(ctx, null, { model: "x" });
+        const b = start(ctx, null, { model: "y" });
         expect(a.id).not.toBe(b.id);
         expect(Object.keys((ctx.state as any).agent)).toHaveLength(2);
     });
 
     test("persists and emits create event", () => {
         const ctx = mkCtx() as any;
-        const agent = start(ctx, { model: "codex:gpt-5.4" });
+        const agent = start(ctx, null, { model: "codex:gpt-5.4" });
         expect(ctx.fns.agent.nextId).toHaveBeenCalledTimes(1);
         expect(ctx.fns.session.save).toHaveBeenCalledTimes(1);
-        expect(ctx.fns.session.save).toHaveBeenCalledWith(ctx, { agent });
+        expect(ctx.fns.session.save).toHaveBeenCalledWith({ agent });
         expect(ctx.fns.events.emitAgentsChanged).toHaveBeenCalledTimes(1);
-        expect(ctx.fns.events.emitAgentsChanged).toHaveBeenCalledWith(ctx, { agentId: agent.id, reason: "create" });
+        expect(ctx.fns.events.emitAgentsChanged).toHaveBeenCalledWith({ agentId: agent.id, reason: "create" });
     });
 });

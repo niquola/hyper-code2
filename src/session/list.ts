@@ -1,4 +1,4 @@
-export default function (ctx: Context): Array<{
+export default function (ctx: Context, _session: Session | null, _opts?: {}): Array<{
     id: string;
     model: string;
     title: string;
@@ -6,7 +6,7 @@ export default function (ctx: Context): Array<{
     createdAt: number;
     updatedAt: number;
 }> {
-    const rows = ctx.fns.db.select<any>(ctx, {
+    const rows = ctx.fns.procs.db.select({
         sql: `SELECT
             a.id,
             a.model,
@@ -17,7 +17,7 @@ export default function (ctx: Context): Array<{
         FROM agents a
         WHERE a.archived_at IS NULL
         ORDER BY a.updated_at DESC`,
-    });
+    }) as any[];
     return rows.map((r: any) => ({
         id: r.id,
         model: r.model,

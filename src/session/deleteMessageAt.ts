@@ -9,16 +9,16 @@
 // stay aligned with their events. The resulting idx gap is harmless (reads are
 // ORDER BY idx, appends use MAX(idx)+1). Marker format lives in one place —
 // ctx.fns.agent.markerKind.
-export default function (ctx: Context, opts: { id: string; idx: number }): { ok: boolean; reason?: string } {
+export default function (ctx: Context, _session: Session | null, opts: { id: string; idx: number }): { ok: boolean; reason?: string } {
     const { id, idx } = opts;
     if (!Number.isInteger(idx) || idx < 0) return { ok: false, reason: "invalid idx" };
 
-    const target = ctx.fns.db.select<any>(ctx, {
+    const target = (ctx.fns.procs.db.select({
         sql: "SELECT idx, role, content FROM messages WHERE agent_id = ? AND idx = ?",
         params: [id, idx],
-    })[0];
+    }) as any[])[0];
     if (!target) return { ok: false, reason: "not found" };
-    const kind = ctx.fns.agent.markerKind(ctx, { content: target.content });
+    const kind = ctx.fns.agent.markerKind({ content: target.content });
     if (target.role === "assistant" && kind === "invocation") {
         return { ok: false, reason: "cannot delete assistant marker message alone; use delete from here" };
     }
@@ -26,19 +26,19 @@ export default function (ctx: Context, opts: { id: string; idx: number }): { ok:
         return { ok: false, reason: "cannot delete tool-result message alone; use delete from here" };
     }
 
-    ctx.fns.db.exec(ctx, { sql: "DELETE FROM messages WHERE agent_id = ? AND idx = ?", params: [id, idx] });
+    ctx.fns.procs.db.run({ sql: "DELETE FROM messages WHERE agent_id = ? AND idx = ?", params: [id, idx] });
 
     // Remove the event(s) that render this exact message (user / assistant
     // bubbles carry messageIdx). Leaves surrounding events untouched.
-    const evRows = ctx.fns.db.select<any>(ctx, {
+    const evRows = ctx.fns.procs.db.select({
         sql: "SELECT idx, payload FROM events WHERE agent_id = ? ORDER BY idx",
         params: [id],
-    });
+    }) as any[];
     for (const e of evRows) {
         let mi: any;
         try { mi = JSON.parse(e.payload)?.messageIdx; } catch { mi = undefined; }
         if (mi != null && Number(mi) === idx) {
-            ctx.fns.db.exec(ctx, { sql: "DELETE FROM events WHERE agent_id = ? AND idx = ?", params: [id, Number(e.idx)] });
+            ctx.fns.procs.db.run({ sql: "DELETE FROM events WHERE agent_id = ? AND idx = ?", params: [id, Number(e.idx)] });
         }
     }
 

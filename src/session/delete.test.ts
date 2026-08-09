@@ -1,42 +1,27 @@
 import { test, expect, describe } from "bun:test";
-import loadFns from "../loadFns";
-import connect from "../db/connect";
-import migrate from "../db/migrate";
-import save from "./save";
-import appendUserMessage from "./appendUserMessage";
-import appendEvent from "./appendEvent";
-import del from "./delete";
-import start from "../agent/start";
-import nextId from "../agent/nextId";
-
-const mkCtx = async () => {
-    const ctx = { state: {}, env: {}, fns: {} as any, routes: {} } as unknown as Context;
-    await loadFns(ctx);
-    connect(ctx, { path: ":memory:" });
-    await migrate(ctx);
-    return ctx;
-};
+import { mkTestCtx } from "../_testCtx.entry";
 
 describe("session.delete", () => {
     test("removes agent row + messages + events", async () => {
-        const ctx = await mkCtx();
-        const agent = start(ctx, { model: "m" });
-        save(ctx, { agent });
-        appendUserMessage(ctx, { id: agent.id, text: 'hi' });
-        appendEvent(ctx, { id: agent.id, event: { type: 'user', text: 'hi' } });
+        const ctx: any = await mkTestCtx();
+        ctx.fns.agent.renderEventHtml = async (_c: any, _s: any, _o: any) => '';
+        const agent = ctx.fns.agent.start({ model: "m" });
+        ctx.fns.session.save({ agent });
+        await ctx.fns.session.appendUserMessage({ id: agent.id, text: 'hi' });
+        ctx.fns.session.appendEvent({ id: agent.id, event: { type: 'user', text: 'hi' } });
 
-        const r = del(ctx, { id: agent.id });
+        const r = ctx.fns.session.delete({ id: agent.id });
         expect(r.ok).toBe(true);
 
-        const db = (ctx.state as any).db;
+        const db = ctx.fns.procs.db.conn();
         expect((db.query("SELECT COUNT(*) AS n FROM agents").get() as any).n).toBe(0);
         expect((db.query("SELECT COUNT(*) AS n FROM messages").get() as any).n).toBe(0);
         expect((db.query("SELECT COUNT(*) AS n FROM events").get() as any).n).toBe(0);
     });
 
     test("deleting unknown id is a no-op that returns ok:false", async () => {
-        const ctx = await mkCtx();
-        const r = del(ctx, { id: "nope" });
+        const ctx: any = await mkTestCtx();
+        const r = ctx.fns.session.delete({ id: "nope" });
         expect(r.ok).toBe(false);
     });
 });

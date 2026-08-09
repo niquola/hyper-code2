@@ -1,5 +1,5 @@
 // Render a marker call back to its wire-format text.
-export default function (_ctx: Context, opts: { call: types.agent.MarkerCall }): string {
+export default function (_ctx: Context, _session: Session | null, opts: { call: types.agent.MarkerCall }): string {
     const { call } = opts;
     if (call.kind === 'write') return `§write:${call.path}\n${call.content}`;
     if (call.kind === 'html') return `§html\n${call.content}`;

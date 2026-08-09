@@ -5,7 +5,7 @@ import parseMarkers from './parseMarkers';
 import formatMarkerResult from './formatMarkerResult';
 import formatMarkerError from './formatMarkerError';
 
-const run = (ctx: any, agent: any, userText: string) => runFn(ctx, { agent, userText });
+const run = (ctx: any, agent: any, userText: string) => runFn(ctx, null, { agent, userText });
 
 async function setup() {
     const ctx = await mkTestCtx();
@@ -14,8 +14,7 @@ async function setup() {
     ctx.fns.agent.formatMarkerError = formatMarkerError;
     // Real eval — uses ctx.fns.repl.eval which mkTestCtx wires to a default fn.
     // Override per-test for richer behaviours.
-    ctx.fns.files = ctx.fns.files ?? {};
-    ctx.fns.files.write = async (_c: any, opts: { path: string; content: string }) => {
+    ctx.fns.files.write = async (_c: any, _s: any, opts: { path: string; content: string }) => {
         ((_c.state as any).__written ??= {})[opts.path] = opts.content;
         return { ok: true };
     };
@@ -27,13 +26,13 @@ describe('agent.run', () => {
         const ctx = await setup();
         ctx.fns.llm.stream = async () => ({ text: 'just a chat reply', toolCalls: [], thinking: '', usage: {} });
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         const res: any = await run(ctx, a, 'hi');
         expect(res.text).toBe('just a chat reply');
 
-        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
+        const msgs = ctx.fns.session.getMessages({ id: a.id });
         expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant']);
         expect(msgs[1].content).toBe('just a chat reply');
     });
@@ -47,14 +46,14 @@ describe('agent.run', () => {
             return { text: 'computed: 4', toolCalls: [], thinking: '', usage: {} };
         };
         // repl.eval is Jupyter-style: returns the captured log buffer as a string.
-        ctx.fns.repl.eval = async (_c: any, opts: { code: string }) => opts.code.includes('console.log(2 + 2)') ? '4' : '';
+        ctx.fns.repl.eval = async (_c: any, _s: any, opts: { code: string }) => opts.code.includes('console.log(2 + 2)') ? '4' : '';
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'add 2 and 2');
 
-        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
+        const msgs = ctx.fns.session.getMessages({ id: a.id });
         // user → assistant(§eval) → user(§result:eval) → assistant(prose)
         expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
         expect(msgs[1].content).toContain('§eval');
@@ -73,8 +72,8 @@ describe('agent.run', () => {
             return { text: 'done', toolCalls: [], thinking: '', usage: {} };
         };
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'create file');
 
@@ -92,8 +91,8 @@ describe('agent.run', () => {
             return { text: 'ok', toolCalls: [], thinking: '', usage: {} };
         };
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'write tricky');
         expect(ctx.state.__written['tricky.ts']).toBe(tricky);
@@ -112,12 +111,12 @@ describe('agent.run', () => {
         };
         ctx.fns.repl.eval = async () => '1';
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'two things');
 
-        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
+        const msgs = ctx.fns.session.getMessages({ id: a.id });
         // Chain: user(input) → assistant(prose) → assistant(§eval) →
         //        user(§result:eval) → assistant(§write) → user(§result:write) → assistant(done)
         expect(msgs.map((m: any) => m.role))
@@ -149,17 +148,17 @@ describe('agent.run', () => {
             return { text: 'computed: 4', toolCalls: [], thinking: '', usage: {} };
         };
         let evalCalls = 0;
-        ctx.fns.repl.eval = async (_c: any, opts: { code: string }) => {
+        ctx.fns.repl.eval = async (_c: any, _s: any, opts: { code: string }) => {
             evalCalls++;
             return opts.code.includes('console.log(2 + 2)') ? '4' : '';
         };
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'compute');
 
-        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
+        const msgs = ctx.fns.session.getMessages({ id: a.id });
         // Strict: turn 1's misplaced §eval did NOT run. Only turn 2's clean
         // §eval ran. So exactly one §result:eval lands.
         const results = msgs.filter((m: any) => String(m.content ?? '').startsWith('§result:eval'));
@@ -185,12 +184,12 @@ describe('agent.run', () => {
         };
         ctx.fns.repl.eval = async () => '1';
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'go');
 
-        const rows = ctx.fns.db.select(ctx, {
+        const rows = ctx.fns.procs.db.select({
             sql: 'SELECT idx, role, excluded_from_cursor, substr(content, 1, 30) as preview FROM messages WHERE agent_id = ? ORDER BY idx',
             params: [a.id],
         });
@@ -213,12 +212,12 @@ describe('agent.run', () => {
         };
         ctx.fns.repl.eval = async () => '1';
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'compute');
 
-        const rows = ctx.fns.db.select(ctx, {
+        const rows = ctx.fns.procs.db.select({
             sql: 'SELECT idx, role, content, excluded_from_cursor FROM messages WHERE agent_id = ? AND role = ? ORDER BY idx',
             params: [a.id, 'user'],
         });
@@ -238,12 +237,12 @@ describe('agent.run', () => {
             return { text: 'done', toolCalls: [], thinking: '', usage: {} };
         };
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'render a card');
 
-        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
+        const msgs = ctx.fns.session.getMessages({ id: a.id });
         // Chain: user → assistant(§html) → assistant(done)
         // No synthetic §result:html — html doesn't produce results.
         expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'assistant']);
@@ -252,7 +251,7 @@ describe('agent.run', () => {
         expect(msgs[2]!.content).toBe('done');
 
         // The UI event for the html marker carries the raw HTML, not the marker text.
-        const events = ctx.fns.session.getEvents(ctx, { id: a.id });
+        const events = ctx.fns.session.getEvents({ id: a.id });
         const htmlEvent = events.find((e: any) => e.html === '<div class="card">Hi</div>');
         expect(htmlEvent).toBeDefined();
         expect(htmlEvent.type).toBe('assistant');
@@ -272,13 +271,13 @@ describe('agent.run', () => {
             return { text: 'done', toolCalls: [], thinking: '', usage: {} };
         };
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
         a.scratchpad.user = { name: 'Иван' };
-        ctx.fns.session.save(ctx, { agent: a });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'render');
 
-        const events = ctx.fns.session.getEvents(ctx, { id: a.id });
+        const events = ctx.fns.session.getEvents({ id: a.id });
         const htmlEvent = events.find((e: any) => e.type === 'assistant' && e.html?.includes('class="card"'));
         expect(htmlEvent).toBeDefined();
         // Braces are LITERAL — no template engine. "Иван" never appears.
@@ -305,17 +304,17 @@ describe('agent.run', () => {
             if (turn === 1) return { text: `§html\n${dirty}`, toolCalls: [], thinking: '', usage: {} };
             return { text: 'done', toolCalls: [], thinking: '', usage: {} };
         };
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'render bad');
 
-        const events = ctx.fns.session.getEvents(ctx, { id: a.id });
+        const events = ctx.fns.session.getEvents({ id: a.id });
         const htmlEvent = events.find((e: any) => e.type === 'assistant' && e.html?.includes('<div>x</div>'));
         expect(htmlEvent).toBeDefined();
         expect(htmlEvent.html).toBe('<div>x</div>');
         // No §error:html feedback — nothing to fail anymore.
-        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
+        const msgs = ctx.fns.session.getMessages({ id: a.id });
         const errMsg = msgs.find((m: any) => String(m.content ?? '').startsWith('§error:html'));
         expect(errMsg).toBeUndefined();
     });
@@ -329,12 +328,12 @@ describe('agent.run', () => {
             return { text: 'ok', toolCalls: [], thinking: '', usage: {} };
         };
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'run a shell');
 
-        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
+        const msgs = ctx.fns.session.getMessages({ id: a.id });
         expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
         expect(msgs[1]!.content).toBe('§bash\necho hello-bash');
         expect(msgs[2]!.content).toContain('§result:bash');
@@ -351,11 +350,11 @@ describe('agent.run', () => {
             return { text: 'caught', toolCalls: [], thinking: '', usage: {} };
         };
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'fail bash');
-        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
+        const msgs = ctx.fns.session.getMessages({ id: a.id });
         expect(msgs[2]!.content).toContain('§result:bash:error');
         expect(msgs[2]!.content).toContain('[exit 7]');
     });
@@ -370,11 +369,11 @@ describe('agent.run', () => {
         };
         ctx.fns.repl.eval = async () => { throw new Error('boom'); };
 
-        const a = ctx.fns.agent.start(ctx, { model: 'mock:test' });
-        ctx.fns.session.save(ctx, { agent: a });
+        const a = ctx.fns.agent.start({ model: 'mock:test' });
+        ctx.fns.session.save({ agent: a });
 
         await run(ctx, a, 'fail');
-        const msgs = ctx.fns.session.getMessages(ctx, { id: a.id });
+        const msgs = ctx.fns.session.getMessages({ id: a.id });
         expect(msgs[2]!.content).toContain('§result:eval:error');
         expect(msgs[2]!.content).toContain('boom');
     });

@@ -1,6 +1,7 @@
 // Render a tool-call result as a synthetic user message.
 export default function (
     _ctx: Context,
+    _session: Session | null,
     opts: { call: types.agent.MarkerCall; output: string; isError: boolean },
 ): string {
     const { call, output, isError } = opts;

@@ -1,5 +1,5 @@
-export default async function (ctx: Context, opts: { message: string; level?: 'info' | 'warn' | 'error'; html?: string }) {
+export default async function (ctx: Context, _session: Session | null, opts: { message: string; level?: 'info' | 'warn' | 'error'; html?: string }) {
     const event = { type: 'ui.notify', level: opts.level ?? 'info', message: opts.message, html: opts.html ?? null };
-    ctx.fns.events.emit(ctx, { event });
+    ctx.fns.procs.events.emit({ event });
     return event;
 }

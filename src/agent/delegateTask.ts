@@ -1,5 +1,6 @@
 export default async function (
     ctx: Context,
+    _session: Session | null,
 /**
  * Delegate a task to a child agent.
  * In "await" mode, blocks until the child calls finishTask.
@@ -23,8 +24,8 @@ export default async function (
     const responseFormat = opts?.responseFormat ?? "text";
 
     const child = forkContext
-        ? ctx.fns.session.fork(ctx, { id: parentAgent.id })
-        : ctx.fns.agent.start(ctx, {
+        ? ctx.fns.session.fork({ id: parentAgent.id })
+        : ctx.fns.agent.start({
             model: parentAgent.model,
             systemPrompt: parentAgent.systemPrompt,
         });
@@ -39,14 +40,14 @@ export default async function (
         responseFormat,
         status: "running",
     };
-    ctx.fns.session.save(ctx, { agent: child });
-    ctx.fns.session.updateScratchpad(ctx, { id: child.id, scratchpad: child.scratchpad });
-    ctx.fns.session.syncAgentState?.(ctx, { agent: child });
+    ctx.fns.session.save({ agent: child });
+    ctx.fns.session.updateScratchpad({ id: child.id, scratchpad: child.scratchpad });
+    ctx.fns.session.syncAgentState?.({ agent: child });
 
-    const prompt = ctx.fns.agent.buildDelegatedTaskPrompt(ctx, { task, instructions, responseFormat });
+    const prompt = ctx.fns.agent.buildDelegatedTaskPrompt({ task, instructions, responseFormat });
 
     if (mode === "async") {
-        void ctx.fns.agent.run(ctx, { agent: child, userText: prompt });
+        void ctx.fns.agent.run({ agent: child, userText: prompt });
         return { childId: child.id, started: true };
     }
 
@@ -56,7 +57,7 @@ export default async function (
     });
 
     try {
-        await ctx.fns.agent.run(ctx, { agent: child, userText: prompt });
+        await ctx.fns.agent.run({ agent: child, userText: prompt });
         const meta = child.scratchpad?.delegateTask;
         if (meta?.status === "finished" && meta.result) {
             waiters.delete(child.id);

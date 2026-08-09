@@ -1,8 +1,9 @@
-export default async function (ctx: Context, _session: any, req: any) {
-    const id = req.params.id;
+export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+    const req = opts.req;
+    const id = opts.params.id!;
     let agent = (ctx.state as any).agent?.[id];
     if (!agent) {
-        agent = ctx.fns.session?.load?.(ctx, { id }) ?? null;
+        agent = ctx.fns.session?.load?.({ id }) ?? null;
         if (agent) {
             (ctx.state as any).agent ??= {};
             (ctx.state as any).agent[id] = agent;
@@ -16,10 +17,10 @@ export default async function (ctx: Context, _session: any, req: any) {
     const url = new URL(req.url);
     const explicitSeconds = url.searchParams.get('debounceSeconds');
     // Priority: ?debounceSeconds query > per-agent setting > declared agent.debounceMs > 5s.
-    const perAgent = ctx.fns.settings?.getNumber?.(ctx, {
+    const perAgent = ctx.fns.settings?.getNumber?.({
         module: 'ui', scopeType: 'agent', scopeId: agent.id, key: 'debounceMs',
     });
-    const declared = ctx.fns.settings?.getNumber?.(ctx, {
+    const declared = ctx.fns.settings?.getNumber?.({
         module: 'agent', scopeType: 'global', key: 'debounceMs',
     });
     const debounceMs = explicitSeconds != null
@@ -27,19 +28,19 @@ export default async function (ctx: Context, _session: any, req: any) {
         : (perAgent ?? declared ?? 5000);
     const sendAt = Date.now() + debounceMs;
 
-    const userAppend = await ctx.fns.session.appendUserMessage(ctx, { id: agent.id, text });
-    ctx.fns.session.syncAgentState(ctx, { agent });
+    const userAppend = await ctx.fns.session.appendUserMessage({ id: agent.id, text });
+    ctx.fns.session.syncAgentState({ agent });
 
     // Schedule (or push back) the next run on the agent row itself.
     // MAX(...) keeps the latest message bumping the debounce window forward.
-    ctx.fns.db.exec(ctx, {
+    ctx.fns.procs.db.run({
         sql: `UPDATE agents
             SET next_run_at = MAX(COALESCE(next_run_at, 0), ?),
                 updated_at  = ?
           WHERE id = ?`,
         params: [sendAt, Date.now(), agent.id],
     });
-    ctx.fns.agent.wakeWorker(ctx);
+    ctx.fns.agent.wakeWorker({});
 
     if ((req.headers?.get?.('hx-request') ?? '') === 'true') {
         return new Response(null, { status: 204 });

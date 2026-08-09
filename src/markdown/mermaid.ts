@@ -35,7 +35,7 @@ export function injectClassDefs(code: string): string {
     return code + "\n" + defs.join("\n");
 }
 
-export default async function (_ctx: Context, opts: { source: string }): Promise<string> {
+export default async function (_ctx: Context, _session: Session | null, opts: { source: string }): Promise<string> {
     const svg = await renderMermaid(injectClassDefs(opts.source), {
         bg: "#ffffff",
         fg: "#1D2331",

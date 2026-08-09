@@ -1,5 +1,6 @@
 export default async function (
     ctx: Context,
+    _session: Session | null,
     opts: {
         agent: types.agent.Agent;
         user: string;
@@ -18,10 +19,10 @@ export default async function (
     if (!user) throw new Error('llmCall: user is required');
     if (!model) throw new Error('llmCall: model is required');
 
-    const ep = ctx.fns.llm.resolveEndpoint(ctx, { model });
+    const ep = ctx.fns.llm.resolveEndpoint({ model });
 
     if (ep.api === 'responses') {
-        const apiKey = await ctx.fns.llm.refreshCodex(ctx) ?? ep.apiKey;
+        const apiKey = await ctx.fns.llm.refreshCodex({}) ?? ep.apiKey;
         if (!apiKey) throw new Error('codex: no access_token');
         const accountId = extractAccountId(apiKey);
 
