@@ -65,7 +65,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
 </div>
 <form id="form"
       class="flex gap-2 p-4 border-t border-gray-200"
-      hx-post="/agent/${encodeURIComponent(id)}?debounceSeconds=5"
+      hx-post="/agent/${encodeURIComponent(id)}?debounceSeconds=0.1"
       hx-trigger="submit"
       hx-swap="none"
       hx-on::after-request="this.elements.input.value=''; this.elements.input.focus();">

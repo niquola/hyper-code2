@@ -104,6 +104,10 @@ ${dir ? `<div class="text-gray-400 font-mono mt-0.5 truncate">${esc(dir)}</div>`
   <a href="/settings" title="settings" class="text-gray-500 hover:text-gray-900 text-base leading-none">⚙︎</a>
   <a href="/agent/new" class="ml-auto text-xs px-2 py-0.5 border border-gray-300 rounded bg-white hover:bg-gray-100">+ new</a>
 </div>
+<form method="GET" action="/search" class="px-3 py-2 border-b border-gray-200">
+  <input name="q" placeholder="search transcripts…"
+         class="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-gray-400"/>
+</form>
 <div class="flex-1 overflow-y-auto">
   ${agentRows}
   ${fileRows ? `<div class="border-t-4 border-gray-300"></div>${fileRows}` : ""}

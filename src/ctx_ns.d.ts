@@ -315,6 +315,7 @@ declare global {
             replaceMessages: Injected<typeof import("./session/replaceMessages").default>;
             save: Injected<typeof import("./session/save").default>;
             search: Injected<typeof import("./session/search").default>;
+            searchBm25: Injected<typeof import("./session/searchBm25").default>;
             syncAgentState: Injected<typeof import("./session/syncAgentState").default>;
             truncateMessagesFrom: Injected<typeof import("./session/truncateMessagesFrom").default>;
             updateScratchpad: Injected<typeof import("./session/updateScratchpad").default>;
@@ -434,6 +435,9 @@ declare global {
             namespace styles {
                 type State = import("./procs/styles/State").State;
             }
+        }
+        namespace session {
+            type Bm25Hit = import("./session/Bm25Hit").Bm25Hit;
         }
         namespace tools {
             type DiceOpts = import("./tools/DiceOpts").DiceOpts;
