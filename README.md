@@ -2,13 +2,13 @@
 
 [![test](https://github.com/niquola/hyper-code2/actions/workflows/test.yml/badge.svg)](https://github.com/niquola/hyper-code2/actions/workflows/test.yml)
 
-A self-extending AI agent server on Bun. Procedural TypeScript, ~1000 LOC, **markers protocol** instead of native tool-calls.
+A self-extending AI agent server on Bun, running on the [procs](https://github.com/niquola/procs) framework (vendored at `src/procs/`). Procedural TypeScript, **markers protocol** instead of native tool-calls, an injecting-Proxy `ctx.fns` and a tokened external REPL into the live process.
 
 The agent acts by emitting `§eval` / `§write:<path>` / `§bash` / `§html` markers in plain content. The runtime parses each marker, executes its body (JS/TS for eval, file write for write, `bash -c` for bash, TSX render for html), and feeds the result back as a synthetic user message on the next turn. No JSON tool schemas, no escape-in-escape, one wire format.
 
-**State is separated from functions.** Behaviour lives in files under `src/` / `.hyper/` and is loaded into `ctx.fns.<module>.<fn>`; runtime state lives on `ctx.state` (in-memory) and a SQLite DB (`agents`, `messages`, `events`, any table the agent chooses to add). Replacing a file + `ctx.fns.repl.load(ctx, "<module>")` swaps the function everywhere without touching state or restarting the process — routes, procedures, types, even the agent loop itself can be extended live.
+**State is separated from functions.** Behaviour lives in files under `src/` / `.hyper/` and is loaded into `ctx.fns.<module>.<fn>` — called as `ctx.fns.mod.fn({ ...opts })`, with `ctx` and the request `session` injected by a Proxy. Runtime state lives on `ctx.state` (in-memory) and a SQLite DB (`agents`, `messages`, `events`, any table the agent chooses to add). Replacing a file + `ctx.fns.procs.repl.load({ name: "<module>" })` (or just saving it — the dev watcher syncs) swaps the function everywhere without touching state or restarting the process — routes, procedures, types, even the agent loop itself can be extended live.
 
-**All sessions are in SQLite and fully agent-accessible.** Every turn's messages and UI events for every agent are rows in `.hyper/_runtime/sessions`. The agent reads its own + other agents' history with a one-liner: `§eval\nctx.fns.db.select(ctx, "SELECT … FROM messages …")`. Useful for recalling prior work, mining patterns, or building custom indexes.
+**All sessions are in SQLite and fully agent-accessible.** Every turn's messages and UI events for every agent are rows in `.hyper/_runtime/sessions`. The agent reads its own + other agents' history with a one-liner: `§eval\nctx.fns.procs.db.select({ sql: "SELECT … FROM messages …" })`. Useful for recalling prior work, mining patterns, or building custom indexes.
 
 ## What it is
 
@@ -25,10 +25,10 @@ Through `§eval` the agent can:
 
 - Compute anything via the Bun runtime — `Bun.file`, `Bun.write`, `Bun.$` shell, `bun:sqlite`, `Bun.sql`, `Bun.redis`, `Bun.s3`, `fetch`, `crypto`.
 - **Read its own source** (`Bun.file("src/agent/run.ts").text()`).
-- **Write new procedures** to `src/<module>/<fn>.ts` or `.hyper/<module>/<fn>.ts` and hot-reload them — no restart.
-- Add new HTTP routes on the fly (`$route_*.ts` → dynamic dispatch).
+- **Write new procedures** to `src/<module>/<fn>.ts` or `.hyper/<module>/<fn>.ts` and hot-reload them (`ctx.fns.procs.dev.sync({ rel })`) — no restart.
+- Add new HTTP routes on the fly (`$route_*.ts` → `ctx.fns.procs.http.loadRoutes({})`).
 - Mutate its own model, system prompt, scratchpad between turns.
-- Compact its own history (`ctx.fns.agent.compact(ctx, agent, …)`) when results grow too large.
+- Compact its own history (`ctx.fns.agent.compact({ agent, … })`) when results grow too large.
 
 Through `§html` the agent answers with **TSX**: full JS interpolation in `{expr}`, auto-escape, Tailwind classes inline, even `<form method="POST">` that sends the user's input straight back into the conversation. No template engine — JSX is the template engine.
 
@@ -79,83 +79,58 @@ flowchart LR
 
 **Settings.** Declared key/value store in `src/<mod>/$setting_<key>.ts`. Resolution chain: explicit caller input → DB row → declared `env` binding → declared `default` → caller fallback. Shipping declarations: `llm.defaultModel`, `agent.debounceMs`, `agent.protocol`, `provider.{baseUrl,apiKey}` for each LLM backend, plus per-provider api-key declarations.
 
-## Conventions (procedural, one thing per file)
+## Conventions (procs, one thing per file)
 
-- **`src/<mod>/<fn>.ts`** → `ctx.fns.<mod>.<fn>` when its default export is `async function (ctx, ...)`.
-- **`src/<mod>/$type_<Name>.ts`** → `types.<mod>.<Name>` global type via `genTypes`. No `import type` of project types anywhere.
-- **`src/<mod>/$setting_<key>.ts`** → declared setting (`{ type, default, env, options, … }`).
-- **`src/<mod>/$route_<path>_<METHOD>.ts`** → HTTP handler. `_` = `/`, `$param` = `:param`.
-- **`src/<mod>/$migrate_<ts>_<name>.up.sql`** + paired `.down.sql` → SQLite migration applied at startup.
-- **`src/<mod>/$script_<name>.js`** → browser asset, served as `/<mod>/<name>.js`.
+- **`src/<mod>/<fn>.ts`** (verb, lower-case) → `ctx.fns.<mod>.<fn>`; default export is an anonymous `(ctx, session, opts)` function, called with opts only: `ctx.fns.mod.fn({ ... })`.
+- **`src/<mod>/<Name>.ts`** (noun, capitalized) → `types.<mod>.<Name>` global type via `procs.dev.genTypes`. No `import type` of project types anywhere.
+- **`src/<mod>/$setting_<key>.ts`** → declared runtime setting (`{ type, default, env, options, … }`) → `ctx.state.settings.registry`.
+- **`src/<mod>/$route_<path>_<METHOD>.ts`** → HTTP handler `(ctx, session, { req, params })`. `_` = `/`, `$param` = `:param`.
+- **`src/<mod>/$migration_<id>.ts`** → SQLite migration (`{ up, down? }`), applied at startup in id order.
+- **`src/<mod>/$script_<name>.js`** → browser asset, bundled, served as `/<mod>/<name>.js`.
+- Plus the rest of the procs grammar: `$middleware`, `$config.ts`, `$start/$stop`, `$cli_*`, `$loader_*`, `$point_/$hook_` — see `CLAUDE.md`.
 
-No cross-imports between project files — call other procedures via `ctx.fns`. `import` only from `bun`, `node:*`, npm. `.hyper/` mirrors `src/` and loads after it; gitignored, runtime-writable.
+No cross-imports between project files — call other procedures via `ctx.fns`. `import` only from `bun`, `node:*`, npm. `.hyper/` mirrors `src/` and loads after it; gitignored, runtime-writable. The framework itself is `ctx.fns.procs.*` and can't be shadowed.
 
 ## Layout
 
 ```
 src/
-  $main.ts                        entry: loadFns → genTypes → db.connect → db.migrate → loadAll → loadRoutes → http.start → workerLoop
-  $route_GET.ts                   GET /  — Tailwind chat UI
-  $type_Context.ts                global Context type
-  ctx_ns.d.ts                     AUTO-GEN — never edit
+  $main.ts                        procs boot: makeCtx (injecting Proxy) → loadFns → genTypes → loadRoutes → lifecycle.start
+  $test.ts                        testCtx for bun tests (full registry, :memory: db, no server)
+  Context.ts / Session.ts         global framework types
+  ctx_ns.d.ts                     AUTO-GEN by procs.dev.genTypes — never edit
+  $route_GET.ts                   GET /  — redirect to the latest agent
 
-  agent/                          ctx.fns.agent.*
-    SYSTEM_PROMPT_CORE.txt        invariants + map of ctx.fns + doc pointers (~5 KB)
-    SYSTEM_PROMPT.txt             markers wire-format with full HTML/TSX examples (~10 KB)
-    fullSystemPrompt.ts           composes CORE + WIRE + per-agent + runtime
-    parseMarkers.ts               three regexes + lookbehind escape + permissive misplaced-marker detection
-    formatMarkerResult.ts         renders §result:eval / §result:write:<path> / §result:bash blocks
-    formatMarkerError.ts          renders §error:marker-misplaced warning blocks
+  procs/                          VENDORED framework — ctx.fns.procs.*
+    boot/ http/ repl/ db/ dev/ config/ log/ migrate/ events/ lifecycle/
+    auth/ cli/ modules/ project/ styles/ ui/ hooks/ generate/ env/
+    (local patches marked `hyper-code2:`: .hyper overlay root, _migrations
+     name→id compat, WAL on file DBs)
+
+  agent/                          ctx.fns.agent.* — the markers-protocol runtime
+    SYSTEM_PROMPT_CORE.txt        invariants + map of ctx.fns (teaches the new calling convention)
+    SYSTEM_PROMPT.txt             markers wire-format with full HTML/TSX examples
     run.ts                        turn loop — stream → parse → execute markers → feed results
-    workerLoop.ts / wakeWorker    single in-process drainer
-    waitForEvent / wakeWaiters    per-agent long-poll wake mechanism
-    compact.ts                    shrink the last result OR drop a tail with a synthetic note
-    delegateTask.ts / finishTask  parent ↔ child orchestration
-    llmCall.ts / readAndSummarize one-shot focused inference
-    renderEventHtml / renderStatusBar
+    workerLoop.ts / $start.ts     single in-process drainer, started by lifecycle
+    parseMarkers / executeMarker / compact / delegateTask / finishTask / …
     $route_*.ts                   /agent/:id (POST/GET), /events.html (long-poll), /statusbar, /fork, /archive ...
 
-  session/                        ctx.fns.session.*  ← DB-first persistence
-    appendMessage / replaceMessages / truncateMessagesFrom / deleteMessageAt
-    appendEvent + per-type helpers (assistant/user/thinking/toolCall/error)
-    getMessages / getEvents / getMaxEventIdx / getFullMessages
-    save / load / loadAll / list / search / archive / delete / fork / syncAgentState / updateScratchpad
-    $migrate_*.up.sql             schema evolution (idx, archived_at, forks, settings, kv, excluded_from_llm,
-                                  excluded_from_cursor, drop_tool_calls, …)
+  session/                        ctx.fns.session.* — DB-first persistence
+    append* / replace* / truncate* / get* / save / load / loadAll / fork / …
+    $migration_*.ts               schema evolution (ids preserved from the SQL era)
 
-  settings/                       ctx.fns.settings.*  ← DB-backed key-value with declared schema
-    get / set / remove / list / getNumber / getString
-    declared / renderDeclaredForm / modelDefault
-    $route_declared_GET.ts        UI form for tweaking settings live
+  llm/                            ctx.fns.llm.* — stream dispatch + OAuth refreshers + streamMock
+  settings/                       ctx.fns.settings.* — DB-backed runtime settings ($loader_setting.ts)
+  files/ ui/ markdown/ git/ dev/ events/ skill/ tools/
 
-  llm/                            ctx.fns.llm.*
-    stream.ts                     dispatch by provider → streamOpenAI / streamAnthropic / streamCodex / streamMock
-    streamAnthropic.ts            includes Claude Code subscription support (refreshClaudeCode + identity headers)
-    refreshClaudeCode.ts          reads/refreshes the Claude Code OAuth token from macOS keychain
-    refreshCodex.ts               same for the ChatGPT/Codex backend (~/.codex/auth.json)
-    refreshKimiCode.ts            same for kimi-coding (~/.kimi/credentials/kimi-code.json)
-    resolveEndpoint.ts            "<provider>:<modelId>" → {url, apiKey, api}
-    listModels.ts                 curated + live discovery for the new-agent form
-    $setting_*.ts                 per-provider apiKey / baseUrl declarations
-
-  files/                          ctx.fns.files.* — sandboxed under cwd, UI reflects changes
-  events/                         ctx.fns.events.* — server-side event bus
-  ui/                             ctx.fns.ui.* — drives the browser (eval, action, notify, openAgent, openFile)
-  markdown/                       ctx.fns.markdown.* — Bun.markdown.html + shiki
-  repl/                           ctx.fns.repl.* — eval, hot-reload, POST /repl
-  http/                           ctx.fns.http.* — Bun.serve + dynamic route dispatch
-  git/                            ctx.fns.git.* — run/status/commit/push/stage helpers
-
-.hyper/                           runtime-writable, gitignored
-  _runtime/port                   server writes current port here
+.runtime/                         port, repl-token (0600), signing key — gitignored
+.hyper/                           runtime-writable overlay, gitignored
   _runtime/sessions               SQLite DB
   <agent-generated>/              whatever the agent decides to add
 
-docs/
-  architecture.md                 DB schema, queue/worker model, fork semantics, channels, recovery
-
 script/
-  repl.ts                         CLI: sends JS to POST /repl, reads .hyper/_runtime/port
+  repl.ts                         external REPL client → POST /procs/repl (port+token from .runtime/)
+  cli.ts                          $cli_* commands runner
 
 CLAUDE.md                         project conventions consumed by tooling and any agent that asks
 ```
@@ -202,10 +177,10 @@ bun install
 #    - Kimi: KIMI_API_KEY=… or KIMI_CODING_API_KEY=… or kimi login
 
 # 3. run
-tmux new-session -d -s hyper 'bun src/$main.ts'
+tmux new-session -d -s hyper 'cd $(pwd) && bun run start'
 
 # 4. chat
-open http://localhost:3000/
+open http://localhost:3010/
 ```
 
 ## LLM providers & auth
@@ -230,30 +205,37 @@ All four subscription providers (`claude-code:`, `kimi-coding:`, `codex:`) read 
 
 ## REPL workflow
 
-Long-running server in tmux session `hyper`. The entrypoint connects the DB, applies migrations, loads sessions, starts the HTTP server, then enters `workerLoop`. Everything is iterable without restart.
+Long-running server in tmux session `hyper` (port 3010). Boot = procs lifecycle: log → db → migrate → repl → agent (loadAll + workerLoop) → http. Everything is iterable without restart.
+
+`POST /procs/repl` is **gated three ways**: a JWT this run signs (mirrored to `.runtime/repl-token`, 0600), loopback-only (no proxies), and 403 under `NODE_ENV=production`. `script/repl.ts` reads the port and token automatically — so any local process (including a coding agent outside this repo) can drive the live server.
 
 ```bash
 # start
-tmux new-session -d -s hyper 'bun src/$main.ts'
+tmux new-session -d -s hyper 'cd $(pwd) && bun run start'
 
 # evaluate code
 bun script/repl.ts 'console.log(1 + 1)'                            # quick eval (Jupyter-style)
-bun script/repl.ts 'console.log(Object.keys(ctx.fns))'             # introspect
+bun script/repl.ts 'Object.keys(ctx.fns)'                          # introspect (last expression returned)
 bun script/repl.ts -f /tmp/play.js                                 # from file
-echo 'console.log(ctx.state)' | bun script/repl.ts                 # stdin
+echo 'console.log(ctx.state.serverStart)' | bun script/repl.ts     # stdin
 
 # hot-reload
-bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent")'         # whole namespace
-bun script/repl.ts 'await ctx.fns.repl.load(ctx, "agent.run")'     # single fn
-bun script/repl.ts 'await ctx.genTypes(ctx)'                       # regen ctx_ns.d.ts
-bun script/repl.ts 'await ctx.fns.http.loadRoutes(ctx)'            # rescan routes
-bun script/repl.ts 'await ctx.fns.db.migrate(ctx)'                 # apply new migrations
+bun script/repl.ts 'await ctx.fns.procs.repl.load({ name: "agent" })'      # whole namespace
+bun script/repl.ts 'await ctx.fns.procs.repl.load({ name: "agent.run" })'  # single fn
+bun script/repl.ts 'await ctx.fns.procs.dev.sync({ rel: "agent/run.ts" })' # pick up an edited file (any kind)
+bun script/repl.ts 'await ctx.fns.procs.dev.genTypes({})'                  # regen ctx_ns.d.ts
+bun script/repl.ts 'await ctx.fns.procs.http.loadRoutes({})'               # rescan routes
+bun script/repl.ts 'await ctx.fns.procs.migrate.up({})'                    # apply new migrations
+
+# introspect functions (C-h f / M-.)
+bun script/repl.ts 'ctx.fns.procs.dev.doc({ name: "agent.run" })'
+bun script/repl.ts 'ctx.fns.procs.dev.where({ name: "session.appendMessage" })'
 
 # create a new agent + open it
-bun script/repl.ts 'await ctx.fns.ui.createAgent(ctx, { model: "claude-code:claude-haiku-4-5-20251001" })'
+bun script/repl.ts 'await ctx.fns.ui.createAgent({ model: "claude-code:claude-haiku-4-5-20251001" })'
 ```
 
-REPL `eval` is **Jupyter-style**: `console.log` and `print` are captured into a buffer that's returned as the result. `return` is for control flow only. TypeScript syntax is transpiled via `Bun.Transpiler` before `new Function`. Top-level `await` works.
+REPL `eval` is **Jupyter-style**: `console.log` and `print` are captured, and the last expression statement is returned as a value. TypeScript is transpiled via `Bun.Transpiler`; top-level `await` works. In dev the **watcher** syncs every saved file automatically (`WATCH=0` opts out).
 
 When you reload a function that holds a long-running promise (notably `workerLoop`), the new function lands in `ctx.fns` but the old promise keeps spinning in its closure. Restart the process for those — `tmux kill-session -t hyper && tmux new-session …`.
 
@@ -273,9 +255,9 @@ The shared test fixture is [`src/_testCtx.entry.ts`](src/_testCtx.entry.ts) — 
 Inspired by [proc-ts](https://github.com/niquola/proc-ts). Consequences:
 
 - **One file, one function, anonymous default export.** No classes, no base abstractions, no DI containers.
-- **No cross-imports of project files.** Call other procedures via `ctx.fns.<ns>.<fn>(ctx, …)`. This is what makes hot-reload actually work: swapping a file in `ctx.fns` updates every call site instantly.
-- **Types live next to code in `$type_*.ts` files.** Scanned into a single generated `ctx_ns.d.ts` with `declare global` — no imports of `Context`, `types.agent.Agent` at usage sites.
-- **`$`-prefixed filenames carry intent.** `$main.ts` is the entry; `$start.ts` is a conventional lifecycle fn; `$route_*.ts` is an HTTP route; `$type_*.ts` is a type; `$setting_*.ts` is a declared setting; `$migrate_*.up.sql` is a migration; `$script_*.js` is a browser asset. Everything else is a plain function.
+- **No cross-imports of project files.** Call other procedures via `ctx.fns.<ns>.<fn>({ … })` — names resolve at call time, which is what makes hot-reload actually work: swapping a file in the registry updates every call site instantly.
+- **Types live next to code as capitalized files** (`agent/Agent.ts` → `types.agent.Agent`). Scanned into a single generated `ctx_ns.d.ts` with `declare global` — no imports of `Context`, `types.agent.Agent` at usage sites.
+- **`$`-prefixed filenames carry intent.** `$main.ts` is the entry; `$start.ts`/`$stop.ts` are lifecycle; `$route_*.ts` is an HTTP route; `$setting_*.ts` is a declared setting; `$migration_*.ts` is a migration; `$script_*.js` is a browser asset; `$config.ts`, `$middleware`, `$cli_*`, `$loader_*` complete the grammar. Everything else is a plain function.
 
 Optimised for an LLM-agent-driven codebase where the agent reads, writes, and hot-reloads files by itself.
 
