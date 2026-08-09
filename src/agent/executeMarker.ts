@@ -96,6 +96,10 @@ export default async function (
         isError = true;
     }
 
+    // Oversized results go to agent.scratchpad.results — the transcript (and
+    // the tool_call event) carry a preview + pointer; §eval reads the rest.
+    output = await ctx.fns.agent.stashResult({ agent, output, kind: call.kind });
+
     const codeLang = call.kind === 'bash' ? 'bash' : 'ts';
     const argsHtml = await ctx.fns.markdown.highlight({ code: 'content' in call ? call.content : call.path, lang: codeLang });
     const resultHtml = await ctx.fns.agent.highlightResult({ output });

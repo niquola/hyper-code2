@@ -33,6 +33,7 @@ declare global {
             sanitizeHtmlBody: Injected<typeof import("./agent/sanitizeHtmlBody").default>;
             serializeMarkerCall: Injected<typeof import("./agent/serializeMarkerCall").default>;
             start: Injected<typeof import("./agent/start").default>;
+            stashResult: Injected<typeof import("./agent/stashResult").default>;
             stop: Injected<typeof import("./agent/stop").default>;
             waitForEvent: Injected<typeof import("./agent/waitForEvent").default>;
             wakeWaiters: Injected<typeof import("./agent/wakeWaiters").default>;

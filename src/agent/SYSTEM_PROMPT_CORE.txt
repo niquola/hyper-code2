@@ -93,6 +93,12 @@ Read on demand, do not try to recall:
 
   docs/architecture.md          DB schema, queue/worker, fork semantics, channels, recovery
 
+Big marker results are auto-stashed: the transcript shows a preview plus
+agent.scratchpad.results["rN"] holding the FULL text — read it with §eval
+(slice/filter/count it with code instead of asking for a re-run).
+If your reply is cut by the token limit, markers from it are NOT executed —
+you'll get §error:truncated; re-issue smaller (split §write into chunks).
+
 Storage is Postgres (paradedb, :54393). ALWAYS go through await ctx.fns.procs.db.select/run/insert/exec —
 bare Bun.sql/Bun SQL defaults to localhost:5432 and is NOT our database.
 

@@ -21,9 +21,24 @@ export default async function (
     }
 
     while (true) {
-        const { text, usage } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
+        const { text, usage, finishReason } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
 
         const { prose, calls, errors } = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
+
+        // A reply cut off by the token limit may end mid-marker — a §write with
+        // half a file, an §eval with half a statement. Executing that corrupts
+        // state, so NOTHING runs: the model is told to re-issue, smaller.
+        if (finishReason === 'length' && calls.length > 0) {
+            const hint = 'Your reply hit the token limit and was truncated mid-marker. NOTHING was executed. ' +
+                'Re-issue the marker(s) in a shorter form: split large §write bodies into several calls, ' +
+                'or produce big content via §eval + Bun.write in chunks.';
+            await ctx.fns.session.appendErrorEvent({ id: agent.id, error: 'reply truncated at token limit — markers not executed' });
+            await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                role: 'user', content: `§error:truncated\n${hint}`, excluded_from_cursor: true,
+            } });
+            await ctx.fns.session.syncAgentState({ agent });
+            continue;
+        }
 
         // No markers and no parser errors — close the turn cleanly.
         if (calls.length === 0 && errors.length === 0) {
