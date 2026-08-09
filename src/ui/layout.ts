@@ -1,28 +1,27 @@
 // The app's HTML shell — replaces procs' default (`registry.ui.layout` wins over
 // `registry.procs.ui.layout` in http/toResponse). Called RAW by toResponse as
 // `layout(ctx, session, dressed)`; the request lives on the session.
+//
+// Workspace-style frame: the agent chat is a persistent column on the LEFT
+// (the harness), pages render on the RIGHT under a module tab bar (the
+// product). Tab navigation is hx-boosted into #main only, so switching pages
+// never redraws the chat or drops its long-poll. Switching AGENTS is a full
+// page load on purpose (the chat column must re-render).
 export default async function (ctx: Context, session: Session | null, opts: { currentId?: string; title?: string; main: string; headExtra?: string }): Promise<string> {
-    // Prefer db listing (authoritative), fall back to in-memory in tests without db.
-    let agents: any[];
-    try {
-        agents = (await ctx.fns.session.list({})).map((a: any) => ({ ...a, isStreaming: (ctx.state as any).agent?.[a.id]?.isStreaming ?? false }));
-    } catch {
-        const store: Record<string, any> = (ctx.state as any).agent ?? {};
-        agents = Object.values(store).map((a: any) => {
-            const first = a.events?.find((e: any) => e.type === "user");
-            return {
-                id: a.id,
-                model: a.model,
-                turns: a.events.filter((e: any) => e.type === "user").length,
-                isStreaming: a.isStreaming,
-                title: first?.text?.slice(0, 40) ?? "(empty)",
-            };
-        });
+    const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
+    const path = session?.url?.pathname ?? "/";
+    if (opts.currentId) (ctx.state as any).uiCurrentAgent = opts.currentId;
+    let currentId = opts.currentId ?? (ctx.state as any).uiCurrentAgent;
+    if (!currentId) {
+        try { currentId = (await ctx.fns.session.list({}))[0]?.id; } catch { /* no db in bare test ctxs */ }
     }
-    const openFiles = ctx.fns.files?.listOpen ? await ctx.fns.files.listOpen({}) : [];
-    const currentPath = extractCurrentPath(opts.title);
-    const sidebar = renderSidebar(agents, openFiles, opts.currentId, currentPath);
-    if (session?.req?.headers.get("x-hyper-fragment") === "sidebar") return sidebar;
+
+    const chat = currentId
+        ? await ctx.fns.ui.chatColumn({ agentId: currentId })
+        : `<div class="flex-1 flex items-center justify-center text-gray-400 text-sm">
+             <a href="/agent/new" class="px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-100">+ new agent</a>
+           </div>`;
+
     const pageTitle = opts.title ? `${opts.title} · hyper-code2` : "hyper-code2";
     return `<!doctype html>
 <html>
@@ -41,86 +40,40 @@ ${opts.headExtra ?? ""}
 <script src="/ui/control.js" defer></script>
 <script src="/procs/events/client.js" defer></script>
 </head>
-<body class="bg-white text-gray-900 text-sm h-screen"${opts.currentId ? ` data-agent-id="${esc(opts.currentId)}"` : ''}>
+<body class="bg-gray-100 text-gray-900 text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div class="flex h-screen">
-  ${sidebar}
-  <main class="flex-1 flex flex-col overflow-hidden">${opts.main}</main>
+  <aside id="chat-panel" class="shrink-0 border-r border-gray-300 flex flex-col bg-gray-50 relative" style="width:var(--chat-w,26rem)">
+    <div id="chat-resize" style="position:absolute;top:0;bottom:0;right:0;z-index:10;width:9px;transform:translateX(50%);cursor:col-resize" title="drag to resize"></div>
+    ${chat}
+  </aside>
+  <section class="flex-1 min-w-0 flex flex-col">
+    ${ctx.fns.ui.topbar({ path })}
+    <main id="main" class="flex-1 min-w-0 min-h-0 overflow-y-auto flex flex-col bg-white">${opts.main}</main>
+  </section>
 </div>
+${ctx.fns.ui.navMenu({})}
 <script>
-window.__hyperRefreshSidebar = async function () {
-  try {
-    const res = await fetch(location.href, { headers: { 'x-hyper-fragment': 'sidebar' } });
-    if (!res.ok) return;
-    const html = await res.text();
-    const wrap = document.createElement('div');
-    wrap.innerHTML = html;
-    const next = wrap.querySelector('aside');
-    const cur = document.querySelector('aside');
-    if (next && cur) cur.replaceWith(next);
-  } catch {}
-};
-setInterval(() => window.__hyperRefreshSidebar(), 10000);
+(function () {
+  // Chat column resize, persisted.
+  const saved = localStorage.getItem("chat-w");
+  if (saved) document.documentElement.style.setProperty("--chat-w", saved);
+  const grip = document.getElementById("chat-resize");
+  if (grip) grip.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const move = (ev) => {
+      const w = Math.min(Math.max(ev.clientX, 280), window.innerWidth * 0.7) + "px";
+      document.documentElement.style.setProperty("--chat-w", w);
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      localStorage.setItem("chat-w", getComputedStyle(document.documentElement).getPropertyValue("--chat-w"));
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  });
+})();
 </script>
 </body>
 </html>`;
-}
-
-function renderSidebar(agents: any[], openFiles: string[], currentId?: string, currentPath?: string): string {
-    const agentRows = agents.length === 0
-        ? `<div class="px-4 py-3 text-xs text-gray-400">no agents yet</div>`
-        : agents.map(a => {
-            const active = a.id === currentId;
-            return `<div class="group flex items-stretch border-b border-gray-200 text-xs hover:bg-gray-100 ${active ? "bg-white font-semibold" : ""}">
-<a href="/agent/${encodeURIComponent(a.id)}" class="flex-1 min-w-0 px-4 py-2">
-<div class="truncate">${esc(a.title)}</div>
-<div class="text-gray-400 font-mono mt-0.5">${esc(a.id)} · ${a.turns} turns${a.isStreaming ? " · ●" : ""}</div>
-</a>
-<form method="POST" action="/agent/${encodeURIComponent(a.id)}/archive" class="shrink-0 flex">
-  <button type="submit" title="archive" class="px-2 text-gray-400 hover:text-amber-600 opacity-0 group-hover:opacity-100">⤓</button>
-</form>
-<form method="POST" action="/agent/${encodeURIComponent(a.id)}/delete" class="shrink-0 flex" onsubmit="return confirm('delete this agent?')">
-  <button type="submit" title="delete" class="px-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100">×</button>
-</form>
-</div>`;
-        }).join("");
-    const fileRows = openFiles.map(p => {
-        const active = p === currentPath;
-        const name = p.split("/").pop() ?? p;
-        const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
-        return `<div class="group flex items-stretch border-b border-gray-200 text-xs hover:bg-gray-100 ${active ? "bg-white font-semibold" : ""}">
-<a href="/files?path=${encodeURIComponent(p)}" class="flex-1 min-w-0 px-4 py-2" title="${esc(p)}">
-<div class="truncate">${esc(name)}</div>
-${dir ? `<div class="text-gray-400 font-mono mt-0.5 truncate">${esc(dir)}</div>` : ""}
-</a>
-<form method="POST" action="/files/close?path=${encodeURIComponent(p)}" class="shrink-0 flex">
-  <button type="submit" title="close" class="px-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100">×</button>
-</form>
-</div>`;
-    }).join("");
-    return `<aside class="w-64 shrink-0 border-r border-gray-200 flex flex-col bg-gray-50">
-<div class="px-4 py-3 flex items-center gap-3 border-b border-gray-200">
-  <a href="/" class="font-semibold text-gray-700 hover:text-gray-900">agents</a>
-  <a href="/files" title="files" class="text-gray-500 hover:text-gray-900 text-base leading-none">📁</a>
-  <a href="/settings" title="settings" class="text-gray-500 hover:text-gray-900 text-base leading-none">⚙︎</a>
-  <a href="/agent/new" class="ml-auto text-xs px-2 py-0.5 border border-gray-300 rounded bg-white hover:bg-gray-100">+ new</a>
-</div>
-<form method="GET" action="/search" class="px-3 py-2 border-b border-gray-200">
-  <input name="q" placeholder="search transcripts…"
-         class="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-gray-400"/>
-</form>
-<div class="flex-1 overflow-y-auto">
-  ${agentRows}
-  ${fileRows ? `<div class="border-t-4 border-gray-300"></div>${fileRows}` : ""}
-</div>
-</aside>`;
-}
-
-function extractCurrentPath(title?: string): string | undefined {
-    if (!title) return undefined;
-    if (title === "files" || title === "hyper-code2") return undefined;
-    return title;
-}
-
-function esc(s: any): string {
-    return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]!));
 }

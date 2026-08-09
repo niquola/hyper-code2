@@ -119,6 +119,12 @@ Vendored `src/procs/` is upstream code: keep local patches minimal and marked wi
 - Don't rename `ctx.fns.agent.run` / `workerLoop` carelessly.
 - Don't edit `src/ctx_ns.d.ts` (generated) or add files under `src/procs/` for app features.
 
+## UI frame (workspace-style)
+
+- Layout (`src/ui/layout.ts`): the agent chat is a persistent LEFT column (`ui.chatColumn({agentId})`, resizable, sticky current agent via `ctx.state.uiCurrentAgent`); pages render on the RIGHT under the module tab bar (`ui.topbar`). Tab links are hx-boosted into `#main` only — the chat and its long-poll survive page switches; switching AGENTS is a full load on purpose.
+- `GET /agent/:id` is the agent's overview/passport page (right pane) and sets the current agent.
+- ⌘K palette (`ui.navMenu` island + `nav.items` + `GET /nav/items`): agents, built-in pages, and every mounted module's top-level GET pages. Module tabs come from procs modules metadata (`m.tab`), uniskill-style: mount a module → it shows up in nav.
+
 ## UI script routes
 
 - `$script_*.js` files are served as bundled browser assets by `procs/http/$loader_script.ts`, not as fns. After changing one, `ctx.fns.procs.http.loadRoutes({})` (or dev.sync) and verify the actually served HTTP output (e.g. `/agent/chat.js`), including `.hyper` overrides — not just the file on disk.

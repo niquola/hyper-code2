@@ -99,6 +99,9 @@ declare global {
             mermaid: Injected<typeof import("./markdown/mermaid").default>;
             render: Injected<typeof import("./markdown/render").default>;
         };
+        nav: {
+            items: Injected<typeof import("./nav/items").default>;
+        };
         procs: {
             auth: {
                 authenticate: Injected<typeof import("./procs/auth/authenticate").default>;
@@ -350,16 +353,19 @@ declare global {
         };
         ui: {
             action: Injected<typeof import("./ui/action").default>;
+            chatColumn: Injected<typeof import("./ui/chatColumn").default>;
             controlScript: Injected<typeof import("./ui/controlScript").default>;
             createAgent: Injected<typeof import("./ui/createAgent").default>;
             eval: Injected<typeof import("./ui/eval").default>;
             layout: Injected<typeof import("./ui/layout").default>;
+            navMenu: Injected<typeof import("./ui/navMenu").default>;
             notify: Injected<typeof import("./ui/notify").default>;
             openAgent: Injected<typeof import("./ui/openAgent").default>;
             openFile: Injected<typeof import("./ui/openFile").default>;
             pending: Injected<typeof import("./ui/pending").default>;
             script: Injected<typeof import("./ui/script").default>;
             sendToAgent: Injected<typeof import("./ui/sendToAgent").default>;
+            topbar: Injected<typeof import("./ui/topbar").default>;
         };
     }
 
@@ -383,6 +389,9 @@ declare global {
         }
         namespace git {
             type Result = import("./git/Result").Result;
+        }
+        namespace nav {
+            type Item = import("./nav/Item").Item;
         }
         namespace procs {
             namespace auth {

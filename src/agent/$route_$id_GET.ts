@@ -1,3 +1,6 @@
+// GET /agent/:id — the agent's overview page in the RIGHT pane. The chat
+// itself lives in the layout's left column (ui.chatColumn); this route's job is
+// to make :id the current agent (opts → layout sticky) and show its passport.
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
     const id = opts.params.id!;
     let agent = (ctx.state as any).agent?.[id];
@@ -9,92 +12,49 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         }
     }
     if (!agent) return new Response('Not Found', { status: 404 });
+    const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
 
-    const events = await ctx.fns.session.getEvents({ id });
-    const maxIdx = await ctx.fns.session.getMaxEventIdx({ id });
-    const inheritedCount = agent.parentId
-        ? (await ctx.fns.session.getFullMessages({ id })).length - (await ctx.fns.session.getMessages({ id })).length
-        : 0;
-    const stateRow = ((await ctx.fns.procs.db.select({
-        sql: 'SELECT run_state, next_run_at FROM agents WHERE id = ?',
+    const row = ((await ctx.fns.procs.db.select({
+        sql: `SELECT model, created_at, updated_at, parent_id, fork_offset, run_state,
+                     (SELECT COUNT(*) FROM messages WHERE agent_id = agents.id) AS msgs,
+                     (SELECT COUNT(*) FROM messages WHERE agent_id = agents.id AND role = 'user' AND excluded_from_cursor = 0) AS turns
+                FROM agents WHERE id = ?`,
         params: [id],
-    })) as any[])[0];
-    const isStreaming = stateRow?.run_state === 'running' || !!stateRow?.next_run_at;
-    const init = {
-        agentId: id,
-        inheritedCount,
-        offset: maxIdx + 1,
-        isStreaming,
-    };
-    const initJson = JSON.stringify(init).replace(/</g, '\u003c');
+    })) as any[])[0] ?? {};
+    const children = (await ctx.fns.procs.db.select({
+        sql: 'SELECT id FROM agents WHERE parent_id = ? AND archived_at IS NULL',
+        params: [id],
+    })) as any[];
+    const scratchKeys = Object.keys(agent.scratchpad ?? {});
+    const prompt = String(agent.systemPrompt ?? '').slice(0, 2000);
 
-    const eventsHtml = (await Promise.all(events.map(async (ev: any) => {
-        const cached = ev.eventHtml ?? (ev.type !== 'assistant' ? ev.html : undefined);
-        return cached ?? await ctx.fns.agent.renderEventHtml({ event: ev, agentId: id });
-    }))).join('\n');
-
-    const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
-    const initialUsageText = formatUsage(lastAssistant?.usage ?? null);
-
-    const statusBarHtml = await ctx.fns.agent.renderStatusBar({ agentId: id });
+    const dt = (v: any) => v ? new Date(Number(v)).toLocaleString() : '—';
+    const fact = (k: string, v: string) => `<div class="flex gap-2 text-sm"><span class="w-28 shrink-0 text-gray-400">${k}</span><span class="min-w-0 break-all">${v}</span></div>`;
 
     const main = `
-<header class="px-6 py-3 border-b border-gray-200 flex items-center gap-3 text-sm">
-  <span class="font-semibold text-gray-700">${esc(id)}</span>
-  ${agent.parentId ? `<span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">fork · inherited ${inheritedCount} msgs</span>` : ''}
-  <span class="text-xs text-gray-400 font-mono">${esc(agent.model)}</span>
-  <span id="context-usage" class="text-xs text-gray-500 font-mono">${esc(initialUsageText)}</span>
-  ${statusBarHtml}
-  <div class="ml-auto flex gap-2">
-    <form method="POST" action="/agent/${encodeURIComponent(id)}/stop" class="inline">
-      <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">stop</button>
-    </form>
-    <form method="POST" action="/agent/${encodeURIComponent(id)}/fork" class="inline">
-      <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">fork</button>
-    </form>
-    <form method="POST" action="/agent/${encodeURIComponent(id)}/archive" class="inline">
-      <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">archive</button>
-    </form>
-    <form method="POST" action="/agent/${encodeURIComponent(id)}/delete" class="inline" onsubmit="return confirm('delete this agent?')">
-      <button class="text-xs px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50">delete</button>
-    </form>
+<div class="p-8 max-w-3xl">
+  <div class="flex items-center gap-3 mb-6">
+    <h1 class="text-xl font-semibold font-mono">${esc(id)}</h1>
+    <span class="text-xs px-2 py-0.5 rounded-full border ${row.run_state === 'running' ? 'border-green-300 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-500'}">${esc(row.run_state ?? 'idle')}</span>
+    <div class="ml-auto flex gap-2">
+      <form method="POST" action="/agent/${encodeURIComponent(id)}/fork"><button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">fork</button></form>
+      <form method="POST" action="/agent/${encodeURIComponent(id)}/archive"><button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">archive</button></form>
+      <form method="POST" action="/agent/${encodeURIComponent(id)}/delete" onsubmit="return confirm('delete this agent?')"><button class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">delete</button></form>
+    </div>
   </div>
-</header>
-<div id="messages" class="flex-1 overflow-y-auto px-6 py-4 space-y-2">${eventsHtml}
-<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}" hx-trigger="load" hx-swap="outerHTML"></div>
-</div>
-<form id="form"
-      class="flex gap-2 p-4 border-t border-gray-200"
-      hx-post="/agent/${encodeURIComponent(id)}?debounceSeconds=0.1"
-      hx-trigger="submit"
-      hx-swap="none"
-      hx-on::after-request="this.elements.input.value=''; this.elements.input.focus();">
-  <textarea id="input" name="text" rows="2" placeholder="type — Enter to send"
-    class="flex-1 px-3 py-2 border border-gray-300 rounded font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
-</form>
-<script>window.__init = ${initJson};</script>
-${ctx.fns.ui.script({ target: 'agent.chat' })}`;
+  <div class="space-y-1.5 mb-6">
+    ${fact('model', `<span class="font-mono">${esc(agent.model)}</span>`)}
+    ${fact('created', esc(dt(row.created_at)))}
+    ${fact('updated', esc(dt(row.updated_at)))}
+    ${fact('messages', `${Number(row.msgs ?? 0)} total · ${Number(row.turns ?? 0)} user turns`)}
+    ${row.parent_id ? fact('forked from', `<a class="text-blue-700 hover:underline font-mono" href="/agent/${encodeURIComponent(row.parent_id)}">${esc(row.parent_id)}</a> @ msg ${Number(row.fork_offset ?? 0)}`) : ''}
+    ${children.length ? fact('forks', children.map((c: any) => `<a class="text-blue-700 hover:underline font-mono mr-2" href="/agent/${encodeURIComponent(c.id)}">${esc(c.id)}</a>`).join('')) : ''}
+    ${scratchKeys.length ? fact('scratchpad', esc(scratchKeys.join(', '))) : ''}
+    ${fact('search', `<a class="text-blue-700 hover:underline" href="/search?agent=${encodeURIComponent(id)}">BM25 in this transcript →</a>`)}
+  </div>
+  ${prompt ? `<div class="text-xs text-gray-400 mb-1">system prompt (custom part)</div>
+  <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-4 whitespace-pre-wrap max-h-80 overflow-y-auto">${esc(prompt)}</pre>` : ''}
+</div>`;
 
     return { currentId: id, title: id, main };
-}
-
-function esc(s: any): string {
-    return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
-}
-
-function fmtTok(n: any): string {
-    if (n == null) return '—';
-    const num = Number(n);
-    if (num < 1000) return String(num);
-    return (Math.round(num / 100) / 10).toString().replace(/\.0$/, '') + 'k';
-}
-
-function formatUsage(usage: any): string {
-    if (!usage) return 'ctx: —';
-    const inTok = usage.prompt_tokens ?? usage.input_tokens ?? usage.promptTokens ?? usage.inputTokens;
-    const total = usage.total_tokens ?? usage.totalTokens;
-    if (inTok != null && total != null) return 'ctx: ' + fmtTok(inTok) + ' · total: ' + fmtTok(total);
-    if (inTok != null) return 'ctx: ' + fmtTok(inTok);
-    if (total != null) return 'ctx total: ' + fmtTok(total);
-    return 'ctx: —';
 }
