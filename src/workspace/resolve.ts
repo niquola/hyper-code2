@@ -5,5 +5,5 @@ export default function (
     session: Session | null,
     opts: { path?: string },
 ): string {
-    return resolve(session?.workspaceDir ?? process.cwd(), opts.path || ".");
+    return resolve(session?.agent?.workspaceDir ?? process.cwd(), opts.path || ".");
 }

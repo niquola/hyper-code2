@@ -10,12 +10,8 @@ export default async function (
     // A derived context gives this marker chain an agent-scoped workspace.
     // Never mutate process.cwd(): agents execute concurrently.
     const executionCtx: any = Object.create(ctx);
-    executionCtx.session = {
-        ...(ctx.session ?? {}),
-        kind: "agent-marker",
-        agentId: agent.id,
-        workspaceDir: agent.workspaceDir || process.cwd(),
-    };
+    executionCtx.session = ctx.fns.session.forAgent({ agent });
+    executionCtx.session.kind = "agent-marker";
     ctx = executionCtx;
 
     const markerText = ctx.fns.agent.serializeMarkerCall({ call });

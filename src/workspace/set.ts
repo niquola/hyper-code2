@@ -1,15 +1,16 @@
 export default async function (
     ctx: Context,
     session: Session | null,
-    opts: { agent: types.agent.Agent; dir: string },
+    opts: { dir: string; agent?: types.agent.Agent },
 ): Promise<string> {
+    const agent = opts.agent ?? session?.agent;
+    if (!agent) throw new Error("workspace.set requires an agent session");
     const dir = await ctx.fns.workspace.normalize({ dir: opts.dir });
     await ctx.fns.procs.db.run({
         sql: "UPDATE agents SET workspace_dir = ?, updated_at = ? WHERE id = ?",
-        params: [dir, Date.now(), opts.agent.id],
+        params: [dir, Date.now(), agent.id],
     });
-    opts.agent.workspaceDir = dir;
-    if (session?.agentId === opts.agent.id) session.workspaceDir = dir;
-    await ctx.fns.events.emitAgentsChanged({ agentId: opts.agent.id, reason: "workspace" });
+    agent.workspaceDir = dir;
+    await ctx.fns.events.emitAgentsChanged({ agentId: agent.id, reason: "workspace" });
     return dir;
 }

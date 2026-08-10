@@ -10,5 +10,5 @@ import { resolve } from "node:path";
 // absolute paths like /tmp or /Users/.../.claude. This deliberately
 // de-sandboxes the agent's file tools; only run agents you trust on this build.
 export default function (_ctx: Context, session: Session | null, opts: { path: string }): string {
-    return resolve(session?.workspaceDir ?? process.cwd(), opts.path || ".");
+    return resolve(session?.agent?.workspaceDir ?? process.cwd(), opts.path || ".");
 }

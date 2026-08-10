@@ -13,7 +13,7 @@ export default async function (
     const { code } = opts;
     const proc = Bun.spawn({
         cmd: ['bash', '-c', code],
-        cwd: session?.workspaceDir ?? process.cwd(),
+        cwd: session?.agent?.workspaceDir ?? process.cwd(),
         stdout: 'pipe',
         stderr: 'pipe',
     });

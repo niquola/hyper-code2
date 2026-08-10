@@ -12,6 +12,9 @@ export default async function (
     opts: { agent: types.agent.Agent; userText: string; userMessageAlreadyAppended?: boolean },
 ) {
     const { agent, userText } = opts;
+    const agentCtx: any = Object.create(ctx);
+    agentCtx.session = ctx.fns.session.forAgent({ agent });
+    ctx = agentCtx;
     const ac = new AbortController();
     agent.abortController = ac;
 

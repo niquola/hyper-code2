@@ -7,5 +7,7 @@ export type Session = {
     trace?: { id: string; started: number; route?: string };
     params?: Record<string, string>;
     kind?: string;
+    agentId?: string;
+    agent?: types.agent.Agent;
     [key: string]: any;
 };

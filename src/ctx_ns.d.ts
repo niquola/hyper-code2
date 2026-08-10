@@ -322,6 +322,7 @@ declare global {
             archive: Injected<typeof import("./session/archive").default>;
             delete: Injected<typeof import("./session/delete").default>;
             deleteMessageAt: Injected<typeof import("./session/deleteMessageAt").default>;
+            forAgent: Injected<typeof import("./session/forAgent").default>;
             fork: Injected<typeof import("./session/fork").default>;
             getEvents: Injected<typeof import("./session/getEvents").default>;
             getFullMessages: Injected<typeof import("./session/getFullMessages").default>;

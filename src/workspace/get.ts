@@ -4,7 +4,7 @@ export default function (
     _opts?: {},
 ): { dir: string; agentId?: string } {
     return {
-        dir: session?.workspaceDir ?? process.cwd(),
-        agentId: session?.agentId,
+        dir: session?.agent?.workspaceDir ?? process.cwd(),
+        agentId: session?.agent?.id,
     };
 } 

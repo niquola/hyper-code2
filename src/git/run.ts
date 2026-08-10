@@ -10,7 +10,7 @@ export default async function (
 ): Promise<types.git.Result> {
     const args = opts.args;
     const proc = Bun.spawn(["git", ...args], {
-        cwd: opts.dir ?? session?.workspaceDir ?? process.cwd(),
+        cwd: opts.dir ?? session?.agent?.workspaceDir ?? process.cwd(),
         stdout: "pipe",
         stderr: "pipe",
     });

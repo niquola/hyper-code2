@@ -91,3 +91,21 @@ describe('NUL bytes in marker output', () => {
         expect(res).not.toContain('\u0000');
     });
 });
+
+describe('eval parse-error diagnosis', () => {
+    test('trailing prose in the body is named in the error with the close hint', async () => {
+        const ctx = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:echo' });
+        await ctx.fns.session.save({ agent });
+        // real eval (mkTestCtx stubs it — restore the app wrapper over procs.repl.eval)
+        const rawEval = (await import('../repl/eval')).default;
+        ctx.state.registry.repl.eval = rawEval;
+        await ctx.fns.agent.executeMarker({ agent, call: { kind: 'eval',
+            content: 'console.log("updated tests");  crap appended? use explicit close next.' } });
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        const res = String(msgs[msgs.length - 1]!.content);
+        expect(res).toContain('not code');
+        expect(res).toContain('crap appended');
+        expect(res).toContain('bare \u00a7 line'.replace('\u00a7', String.fromCharCode(0xa7)));
+    });
+});

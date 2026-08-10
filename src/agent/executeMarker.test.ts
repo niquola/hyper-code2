@@ -196,7 +196,8 @@ describe('agent.executeMarker', () => {
             usage: {},
         });
 
-        expect(seenSession.workspaceDir).toBe("/tmp/agent-workspace");
+        expect(seenSession.agent).toBe(a);
+        expect(seenSession.agent.workspaceDir).toBe("/tmp/agent-workspace");
         expect(seenSession.agentId).toBe(a.id);
     });
 

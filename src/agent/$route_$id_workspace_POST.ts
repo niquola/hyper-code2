@@ -9,7 +9,9 @@ export default async function (
 
     const form = await opts.req.formData();
     try {
-        await ctx.fns.workspace.set({ agent, dir: String(form.get("workspaceDir") ?? "") });
+        const agentCtx: any = Object.create(ctx);
+        agentCtx.session = ctx.fns.session.forAgent({ agent });
+        await agentCtx.fns.workspace.set({ dir: String(form.get("workspaceDir") ?? "") });
     } catch (error: any) {
         return new Response(error?.message ?? "Invalid workspace", { status: 400 });
     }
