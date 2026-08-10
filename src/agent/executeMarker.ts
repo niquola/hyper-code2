@@ -3,7 +3,7 @@ export default async function (
     ctx: Context,
     _session: Session | null,
     opts: { agent: types.agent.Agent; call: types.agent.MarkerCall; usage?: any },
-): Promise<{ isError: boolean }> {
+): Promise<{ isError: boolean; markerIdx?: number; resultIdx?: number }> {
     const { agent, call } = opts;
     const usage = opts.usage;
 
@@ -138,9 +138,9 @@ export default async function (
     } });
 
     const resultText = ctx.fns.agent.formatMarkerResult({ call, output, isError });
-    await ctx.fns.session.appendMessage({ id: agent.id, message: {
+    const resAppend = await ctx.fns.session.appendMessage({ id: agent.id, message: {
         role: 'user', content: resultText, excluded_from_cursor: true,
     } });
     await ctx.fns.session.syncAgentState({ agent });
-    return { isError };
+    return { isError, markerIdx: append.idx, resultIdx: resAppend.idx };
 }

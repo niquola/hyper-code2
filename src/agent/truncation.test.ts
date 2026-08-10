@@ -52,9 +52,11 @@ describe('token-limit truncation guard', () => {
         await ctx.fns.agent.run({ agent, userText: 'go' });
 
         expect(evals).toBe(0);                                      // nothing executed
-        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        // the note is collapsed from the LLM view after the clean close — audit keeps it
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id, includeExcluded: true });
         const err = msgs.find((m: any) => String(m.content).startsWith('§error:truncated'));
         expect(err).toBeDefined();
+        expect(err.excluded_from_llm).toBe(true);
         const flag = (await ctx.fns.procs.db.select({
             sql: "SELECT excluded_from_cursor FROM messages WHERE agent_id = ? AND content LIKE '§error:truncated%'",
             params: [agent.id],
@@ -129,5 +131,39 @@ describe('fail-fast marker chain', () => {
         const msgs = await ctx.fns.session.getMessages({ id: agent.id });
         const skipped = msgs.find((m: any) => String(m.content).includes('skipped: earlier'));
         expect(skipped).toBeDefined();
+    });
+});
+
+describe('corrected failures collapse out of the LLM view', () => {
+    test('failed eval pair is excluded after a successful retry; UI gets the badge', async () => {
+        const ctx = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:echo' });
+        await ctx.fns.session.save({ agent });
+        let evals = 0;
+        ctx.state.registry.repl.eval = async () => {
+            if (++evals === 1) throw new Error('boom-first');
+            return 'fine';
+        };
+        let call = 0;
+        ctx.state.registry.llm.stream = async () => (++call === 1
+            ? { text: '\u00a7eval\nbad()', usage: {}, finishReason: 'stop' }
+            : call === 2
+                ? { text: '\u00a7eval\ngood()', usage: {}, finishReason: 'stop' }
+                : { text: 'done.', usage: {}, finishReason: 'stop' });
+
+        await ctx.fns.agent.run({ agent, userText: 'go' });
+
+        const llmView = await ctx.fns.session.getMessages({ id: agent.id });
+        const audit = await ctx.fns.session.getMessages({ id: agent.id, includeExcluded: true });
+        expect(JSON.stringify(llmView)).not.toContain('boom-first');   // collapsed from LLM view
+        expect(JSON.stringify(audit)).toContain('boom-first');         // audit intact
+        expect(JSON.stringify(llmView)).toContain('fine');             // the fix stays
+
+        const evs = await ctx.fns.session.getEvents({ id: agent.id });
+        const collapsed = evs.find((e: any) => e.excludedFromLlm);
+        expect(collapsed).toBeDefined();
+        const html = await ctx.fns.agent.renderEventHtml({ event: collapsed, agentId: agent.id });
+        expect(html).toContain('вне контекста');
+        expect(html).toContain('opacity-50');
     });
 });

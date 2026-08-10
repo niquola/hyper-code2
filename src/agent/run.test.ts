@@ -164,8 +164,10 @@ describe('agent.run', () => {
         const results = msgs.filter((m: any) => String(m.content ?? '').startsWith('§result:eval'));
         expect(results).toHaveLength(1);
         expect(evalCalls).toBe(1);
-        // The warning was fed back: a user message containing §error:marker-unescaped.
-        const warn = msgs.find((m: any) => String(m.content ?? '').includes('§error:marker-unescaped'));
+        // The warning was fed back — and collapsed from the LLM view after the
+        // clean follow-up (audit keeps it).
+        const audit = await ctx.fns.session.getMessages({ id: a.id, includeExcluded: true });
+        const warn = audit.find((m: any) => String(m.content ?? '').includes('§error:marker-unescaped'));
         expect(warn).toBeDefined();
         expect(warn.content).toContain('Warning');
         expect(warn.content).toContain('reserved for marker execution');

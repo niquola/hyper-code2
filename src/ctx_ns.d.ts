@@ -321,6 +321,7 @@ declare global {
             appendToolCallEvent: Injected<typeof import("./session/appendToolCallEvent").default>;
             appendUserMessage: Injected<typeof import("./session/appendUserMessage").default>;
             archive: Injected<typeof import("./session/archive").default>;
+            collapseFailures: Injected<typeof import("./session/collapseFailures").default>;
             delete: Injected<typeof import("./session/delete").default>;
             deleteMessageAt: Injected<typeof import("./session/deleteMessageAt").default>;
             forAgent: Injected<typeof import("./session/forAgent").default>;

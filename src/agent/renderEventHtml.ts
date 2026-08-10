@@ -59,6 +59,14 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
     const agentId = String(opts.agentId ?? ev?.agentId ?? '');
     if (!ev || typeof ev !== "object") return "";
 
+    if (ev.excludedFromLlm) {
+        // Collapsed out of the LLM's view after a successful correction — the
+        // audit stays visible, dimmed, with an out-of-context chip. Recurse
+        // through the registry for the normal rendering of the same event.
+        const inner: string = await (_ctx as any).fns.agent.renderEventHtml({ event: { ...ev, excludedFromLlm: false }, agentId });
+        return '<div class="relative opacity-50"><span class="absolute -top-2 right-2 z-10 text-[10px] px-1.5 py-0.5 rounded-full border border-gray-300 bg-gray-100 text-gray-500">вне контекста</span>' + inner + '</div>';
+    }
+
     if (ev.type === "user") {
         const idx = ev.messageIdx ?? ev.idx ?? 0;
         return '<div class="group relative flex justify-end">'

@@ -35,6 +35,14 @@ export default async function (
     const MAX_TURNS = 60;
     let turns = 0;
 
+    // Corrected-failure collapse (audit stays; LLM view forgets): failed marker
+    // attempts wait here per kind until a call of the SAME kind succeeds, then
+    // the failed pair is flagged excluded_from_llm. Protocol notes (truncation,
+    // misplaced-marker warnings) collapse once the turn that follows them is
+    // clean. Near-tail flags are prefix-cache-cheap.
+    const pendingFailures: Record<string, number[]> = {};
+    let protocolNoteIdxs: number[] = [];
+
     while (true) {
         if (++turns > MAX_TURNS) {
             await ctx.fns.session.appendErrorEvent({ id: agent.id, error: `run hit the ${MAX_TURNS}-turn cap — closing; send a message to continue` });
@@ -68,9 +76,10 @@ export default async function (
                 'Re-issue the marker(s) in a shorter form: split large §write bodies into several calls, ' +
                 'or produce big content via §eval + Bun.write in chunks.';
             await ctx.fns.session.appendErrorEvent({ id: agent.id, error: 'reply truncated at token limit — markers not executed' });
-            await ctx.fns.session.appendMessage({ id: agent.id, message: {
+            const tn = await ctx.fns.session.appendMessage({ id: agent.id, message: {
                 role: 'user', content: `§error:truncated\n${hint}`, excluded_from_cursor: true,
             } });
+            protocolNoteIdxs.push(tn.idx);
             await ctx.fns.session.syncAgentState({ agent });
             continue;
         }
@@ -81,6 +90,10 @@ export default async function (
             // and have no informational value to either UI or LLM.
             if (!text || !String(text).trim()) {
                 return { text: text ?? '', usage, consumedUserIdx };
+            }
+            if (protocolNoteIdxs.length) {
+                await ctx.fns.session.collapseFailures({ id: agent.id, messageIdxs: protocolNoteIdxs });
+                protocolNoteIdxs = [];
             }
             const append = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: text } });
             await ctx.fns.session.syncAgentState({ agent });
@@ -111,15 +124,26 @@ export default async function (
         let failedAt: string | null = null;
         for (const call of calls) {
             if (failedAt) {
-                await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                const sk = await ctx.fns.session.appendMessage({ id: agent.id, message: {
                     role: 'user',
                     content: `§result:${call.kind}:skipped\nskipped: earlier §${failedAt} in this reply failed — re-issue this marker if it still applies.`,
                     excluded_from_cursor: true,
                 } });
+                (pendingFailures[call.kind] ??= []).push(sk.idx);
                 continue;
             }
             const r = await ctx.fns.agent.executeMarker({ agent, call, usage });
-            if ((r as any)?.isError) failedAt = call.kind;
+            if ((r as any)?.isError) {
+                failedAt = call.kind;
+                (pendingFailures[call.kind] ??= []).push(...[(r as any).markerIdx, (r as any).resultIdx].filter((n: any) => n != null));
+            } else {
+                const fixed = [...(pendingFailures[call.kind] ?? []), ...(protocolNoteIdxs.length ? protocolNoteIdxs : [])];
+                if (fixed.length) {
+                    await ctx.fns.session.collapseFailures({ id: agent.id, messageIdxs: fixed });
+                    delete pendingFailures[call.kind];
+                    protocolNoteIdxs = [];
+                }
+            }
         }
         if (failedAt) await ctx.fns.session.syncAgentState({ agent });
 
@@ -142,9 +166,10 @@ export default async function (
                 await ctx.fns.session.appendErrorEvent({ id: agent.id, error: e.hint });
             }
             const errText = errors.map(e => ctx.fns.agent.formatMarkerError({ error: e })).join('\n\n');
-            await ctx.fns.session.appendMessage({ id: agent.id, message: {
+            const wn = await ctx.fns.session.appendMessage({ id: agent.id, message: {
                 role: 'user', content: errText, excluded_from_cursor: true,
             } });
+            protocolNoteIdxs.push(wn.idx);
             await ctx.fns.session.syncAgentState({ agent });
         }
     }
