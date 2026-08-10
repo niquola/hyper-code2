@@ -1,5 +1,16 @@
 export default async function (ctx: Context, _session: Session | null, _opts: { req: Request; params: Record<string, string> }) {
     const defaultModel = (await ctx.fns.settings?.modelDefault?.({})) ?? ctx.env.MODEL ?? "";
+    // Directory suggestions for the workspace picker: cwd, $HOME, and HOME's
+    // first-level folders (projects live there on this box).
+    const home = ctx.env.HOME ?? "";
+    const homeDirs = home
+        ? (await import("node:fs/promises").then(fs => fs.readdir(home, { withFileTypes: true })).catch(() => []))
+            .filter((d: any) => d.isDirectory() && !d.name.startsWith("."))
+            .slice(0, 40)
+            .map((d: any) => `${home}/${d.name}`)
+        : [];
+    const dirOptions = [process.cwd(), home, ...homeDirs].filter(Boolean)
+        .map((d) => `<option value="${esc(String(d))}"></option>`).join("");
     const defaultWorkspace = process.cwd();
     const groups = await ctx.fns.llm.listModels({});
     const base = await ctx.fns.agent.getBasePromptParts({});
@@ -42,8 +53,6 @@ export default async function (ctx: Context, _session: Session | null, _opts: { 
   <h1 class="text-xl font-semibold text-gray-800">New agent</h1>
 
   <label class="block">
-
-  <label class="block">
     <span class="block text-xs font-semibold text-gray-600 mb-1">title <span class="font-normal text-gray-400">(optional)</span></span>
     <input name="title" maxlength="120" placeholder="Chat title" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
   </label>
@@ -52,6 +61,15 @@ export default async function (ctx: Context, _session: Session | null, _opts: { 
       ${optgroups}
     </select>
     <span class="block mt-1 text-xs text-gray-500">LM Studio models are fetched live; remote models use the provider-prefixed id (<code>kimi:...</code>, <code>openai:...</code>) and need the matching API key env var set.</span>
+  </label>
+
+  <label class="block">
+    <span class="block text-xs font-semibold text-gray-600 mb-1">working directory</span>
+    <input name="workspaceDir" list="workspace-dirs" value="${esc(process.cwd())}"
+           placeholder="${esc(process.cwd())}"
+           class="w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono">
+    <datalist id="workspace-dirs">${dirOptions}</datalist>
+    <span class="block mt-1 text-xs text-gray-500">§bash, files.* and git run against this directory (the agent can change it later via <code>ctx.fns.workspace.set</code>).</span>
   </label>
 
   <section class="space-y-3">
