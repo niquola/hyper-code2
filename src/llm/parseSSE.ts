@@ -8,14 +8,32 @@
 //             Anthropic) and "data:x" (Kimi omits the space).
 // Callers do their own JSON.parse / [DONE] / event-dispatch — this only frames.
 // Frames with no `data:` line (comments, keepalives) are skipped.
+// A stalled stream (connection wedged, provider gone quiet) used to hold the
+// agent's run forever — 141s of silence looked like a hang to the user. If no
+// chunk arrives within idleTimeoutMs (default 120s) the generator throws; the
+// run errors out, the statusbar shows it, the next message retries.
 export default async function* (
     _ctx: Context,
     _session: Session | null,
-    opts: { body: ReadableStream<Uint8Array> },
+    opts: { body: ReadableStream<Uint8Array>; idleTimeoutMs?: number },
 ): AsyncGenerator<{ event: string | null; data: string }> {
+    const idleMs = opts.idleTimeoutMs ?? 120_000;
     const decoder = new TextDecoder();
     let buf = "";
-    for await (const chunk of opts.body) {
+    const reader = opts.body.getReader();
+    while (true) {
+        let timer: any;
+        const stall = new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`stream stalled — no data for ${Math.round(idleMs / 1000)}s`)), idleMs);
+        });
+        let done: boolean, chunk: Uint8Array | undefined;
+        try {
+            ({ done, value: chunk } = await Promise.race([reader.read(), stall]) as any);
+        } finally {
+            clearTimeout(timer);
+        }
+        if (done) break;
+        if (!chunk) continue;
         buf += decoder.decode(chunk, { stream: true });
         let idx: number;
         while ((idx = buf.indexOf("\n\n")) >= 0) {

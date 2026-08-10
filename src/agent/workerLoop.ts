@@ -47,6 +47,20 @@ function waitForWork(ctx: Context, timeoutMs: number): Promise<void> {
     });
 }
 
+// Free runs whose claim is older than the lease — a wedged stream / crashed
+// promise must not hold an agent hostage forever. Recovered agents surface as
+// an error (statusbar badge); the next message retries them.
+const RUN_LEASE_MS = 10 * 60_000;
+async function recoverStaleRuns(ctx: Context, now: number): Promise<void> {
+    await ctx.fns.procs.db.run({
+        sql: `UPDATE agents
+            SET run_state = 'idle', run_started_at = NULL,
+                last_error = 'stale run recovered (exceeded ' || ? || 's lease)', updated_at = ?
+          WHERE run_state = 'running' AND run_started_at IS NOT NULL AND run_started_at < ?`,
+        params: [Math.round(RUN_LEASE_MS / 1000), now, now - RUN_LEASE_MS],
+    });
+}
+
 // Atomically claim ONE pending agent, returning its id (or null if none).
 async function claimOne(ctx: Context, now: number): Promise<string | null> {
     const claimed = await ctx.fns.procs.db.select({
@@ -176,6 +190,7 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         // No artificial concurrency cap — backpressure comes from the LLM
         // provider (429 / connection errors) and Postgres serialising row writes.
         let drained = 0;
+        await recoverStaleRuns(ctx, Date.now()).catch(() => undefined);
         while (true) {
             const id = await claimOne(ctx, Date.now());
             if (!id) break;

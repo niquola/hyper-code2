@@ -3,9 +3,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
     const fromIdx = Number(opts.fromIdx ?? 0);
     const limitClause = opts.limit && opts.limit > 0 ? ` LIMIT ${Number(opts.limit)}` : '';
     const sql = fromIdx > 0
-        ? `SELECT idx, payload FROM events WHERE agent_id = ? AND idx >= ? ORDER BY idx ASC${limitClause}`
-        : `SELECT idx, payload FROM events WHERE agent_id = ? ORDER BY idx ASC${limitClause}`;
+        ? `SELECT idx, payload, ts FROM events WHERE agent_id = ? AND idx >= ? ORDER BY idx ASC${limitClause}`
+        : `SELECT idx, payload, ts FROM events WHERE agent_id = ? ORDER BY idx ASC${limitClause}`;
     const params = fromIdx > 0 ? [id, fromIdx] : [id];
     const rows = (await ctx.fns.procs.db.select({ sql, params })) as any[];
-    return rows.map((r: any) => JSON.parse(r.payload));
+    return rows.map((r: any) => ({ ...JSON.parse(r.payload), ts: Number(r.ts) }));
 }

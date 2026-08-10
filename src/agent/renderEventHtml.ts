@@ -38,6 +38,23 @@ function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = 
 }
 
 export default async function (_ctx: Context, _session: Session | null, opts: { event: any; agentId?: string }): Promise<string> {
+
+function messageTime(ts: any): string {
+    const value = Number(ts);
+    if (!Number.isFinite(value)) return '';
+    return new Intl.DateTimeFormat('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(value));
+}
+
+function timeHtml(ts: any, align: 'left' | 'right'): string {
+    const time = messageTime(ts);
+    if (!time) return '';
+    return '<div class="mt-1 text-[10px] leading-none '
+        + (align === 'right' ? 'text-right text-gray-400' : 'text-left text-gray-400')
+        + '">' + esc(time) + '</div>';
+}
     const ev = opts.event;
     const agentId = String(opts.agentId ?? ev?.agentId ?? '');
     if (!ev || typeof ev !== "object") return "";
@@ -48,6 +65,7 @@ export default async function (_ctx: Context, _session: Session | null, opts: { 
             + deleteControls(idx, agentId, true, true)
             + '<div class="ml-auto max-w-[80%] rounded-2xl bg-gray-900 px-4 py-3 text-white whitespace-pre-wrap break-words shadow-sm">'
             + esc(ev.text)
+            + timeHtml(ev.ts, 'right')
             + '</div></div>';
     }
 
@@ -68,6 +86,7 @@ export default async function (_ctx: Context, _session: Session | null, opts: { 
             + '<div class="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
             + safeHtml
             + '</div>'
+            + timeHtml(ev.ts, 'left') 
             + usage
             + '</div></div>';
     }
