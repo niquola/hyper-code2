@@ -27,13 +27,12 @@ export default async function (
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (ep.apiKey) headers["authorization"] = `Bearer ${ep.apiKey}`;
 
-    const res = await fetch(ep.url, {
+    const res = await ctx.fns.llm.connectFetch({ url: ep.url, init: {
         method: "POST",
         headers,
         body: JSON.stringify(body),
-        // 45s to FIRST byte — a connect that never answers must not hold the run.
-        signal: opts.signal ? AbortSignal.any([opts.signal, AbortSignal.timeout(45_000)]) : AbortSignal.timeout(45_000),
-    });
+        signal: opts.signal,
+    } });
     if (!res.ok) throw new Error(`${ep.provider} ${res.status}: ${await res.text()}`);
     if (!res.body) throw new Error("empty response body");
 

@@ -21,6 +21,7 @@ function mkCtx(): Context {
         llm: {
             resolveEndpoint: () => ({ url: "http://mock/v1/messages", modelId: "claude-x", apiKey: "k", provider: "anthropic", api: "anthropic" }),
             parseSSE: (opts: any) => parseSSE(ctx, null, opts),
+            connectFetch: (o: any) => fetch(o.url, o.init),
             toAnthropicMessages: (opts: any) => toAnthropicMessages(ctx, null, opts),
         },
     };

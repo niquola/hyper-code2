@@ -18,6 +18,7 @@ const mkCtx = () => {
         llm: {
             resolveEndpoint: (opts: any) => resolveEndpoint(ctx, null, opts),
             parseSSE: (opts: any) => parseSSE(ctx, null, opts),
+            connectFetch: (o: any) => fetch(o.url, o.init),
         },
         agent: {
             fullSystemPrompt: (opts: any) => fullSystemPrompt(ctx, null, opts),

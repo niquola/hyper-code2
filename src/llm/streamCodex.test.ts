@@ -27,6 +27,7 @@ function mkCtx(): Context {
             refreshCodex: async () => fakeJwt,
             toCodexInput: (opts: any) => toCodexInput(ctx, null, opts),
             parseSSE: (opts: any) => parseSSE(ctx, null, opts),
+            connectFetch: (o: any) => fetch(o.url, o.init),
         },
     };
     return ctx as unknown as Context;

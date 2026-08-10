@@ -82,7 +82,14 @@ declare global {
             stageCommitPush: Injected<typeof import("./git/stageCommitPush").default>;
             status: Injected<typeof import("./git/status").default>;
         };
+        gmail: {
+            api: Injected<typeof import("./gmail/api").default>;
+            list: Injected<typeof import("./gmail/list").default>;
+            read: Injected<typeof import("./gmail/read").default>;
+            token: Injected<typeof import("./gmail/token").default>;
+        };
         llm: {
+            connectFetch: Injected<typeof import("./llm/connectFetch").default>;
             listModels: Injected<typeof import("./llm/listModels").default>;
             parseSSE: Injected<typeof import("./llm/parseSSE").default>;
             refreshClaudeCode: Injected<typeof import("./llm/refreshClaudeCode").default>;
