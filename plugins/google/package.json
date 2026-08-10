@@ -1,0 +1,18 @@
+{
+  "name": "google",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "google",
+    "icon": "ph-google-logo",
+    "optional": true,
+    "description": "Google Workspace: OAuth token broker (google) + gmail, gcal, gdoc, gsheets, gtasks and Workspace Admin directory (gworkspace)."
+  },
+  "dependencies": {
+    "marked": "^18.0.7"
+  },
+  "devDependencies": {
+    "procs": "workspace:*"
+  }
+}

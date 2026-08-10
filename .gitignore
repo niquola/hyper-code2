@@ -46,3 +46,4 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # scanned roots (src/, .hyper/) so they can never leak into ctx.fns / ctx_ns.d.ts.
 .test-tmp/
 .runtime-tw/
+plugins/*/.secrets

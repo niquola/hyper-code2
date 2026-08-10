@@ -52,6 +52,10 @@
         "port": 3010
       }
     },
-    "modules": []
+    "modules": {
+      "google-local": {
+        "path": "plugins/google"
+      }
+    }
   }
 }
