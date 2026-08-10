@@ -26,7 +26,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const runtime = [
         "",
         "## Runtime context (auto-injected, fresh each turn)",
-        `- cwd: ${process.cwd()}`,
+        `- workspace directory: ${agent.workspaceDir || process.cwd()}`,
+        "- relative file paths, shell commands, and git operations use this directory",
+        "- workspace is the base directory, not a filesystem sandbox",
         `- your agent id: ${agent.id}`,
         `- db path: ${ctx.env?.DB_PATH ?? ".hyper/_runtime/sessions"}`,
         "",

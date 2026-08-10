@@ -12,6 +12,7 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         sql: `SELECT
             a.id,
             a.model,
+            a.title AS "explicitTitle",
             a.created_at AS "createdAt",
             a.updated_at AS "updatedAt",
             COALESCE((SELECT COUNT(*) FROM messages m WHERE m.agent_id = a.id AND m.role = 'user'), 0) AS turns,
@@ -23,7 +24,7 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
     return rows.map((r: any) => ({
         id: r.id,
         model: r.model,
-        title: r.firstUser ? String(r.firstUser).slice(0, 40) : '(empty)',
+        title: r.explicitTitle || (r.firstUser ? String(r.firstUser).slice(0, 40) : '(empty)'),
         turns: Number(r.turns),
         createdAt: Number(r.createdAt),
         updatedAt: Number(r.updatedAt),

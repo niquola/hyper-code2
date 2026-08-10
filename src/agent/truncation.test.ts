@@ -63,3 +63,17 @@ describe('token-limit truncation guard', () => {
         expect(msgs[msgs.length - 1]!.content).toBe('recovered.');  // loop continued and closed
     });
 });
+
+describe('§write parse warning', () => {
+    test('a .ts file that does not parse gets an actionable WARNING in the result', async () => {
+        const ctx = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:echo' });
+        await ctx.fns.session.save({ agent });
+        await ctx.fns.agent.executeMarker({ agent, call: { kind: 'write', path: '.test-tmp/bad.ts', content: 'const a = 1;\nэто проза в файле' } });
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        const res = String(msgs[msgs.length - 1]!.content);
+        expect(res).toContain('wrote .test-tmp/bad.ts');
+        expect(res).toContain('does NOT parse');
+        expect(res).toContain('bare § line');
+    });
+});

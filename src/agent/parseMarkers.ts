@@ -36,6 +36,7 @@ export default function (_ctx: Context, _session: Session | null, opts: { text: 
     prose: string;
     calls: types.agent.MarkerCall[];
     errors: types.agent.MarkerParseError[];
+    epilogue: string;
 } {
     const { text } = opts;
     const candidates: Candidate[] = [];
@@ -118,10 +119,15 @@ export default function (_ctx: Context, _session: Session | null, opts: { text: 
         });
     }
 
-    if (hits.length === 0) return { prose: unescape(proseRaw), calls: [], errors };
+    if (hits.length === 0) return { prose: unescape(proseRaw), calls: [], errors, epilogue: '' };
 
     const prose = unescape(proseRaw);
     const calls: types.agent.MarkerCall[] = [];
+    // Prose AFTER a marker body: legal when the body was explicitly closed with
+    // a bare `§` line — collected here and rendered by run() after the calls.
+    // (It used to be silently dropped, which taught models to skip the close —
+    // and an unclosed sign-off lands INSIDE a §write file.)
+    const epilogueChunks: string[] = [];
     for (let i = 0; i < hits.length; i++) {
         const cur = hits[i]!;
         const next = hits[i + 1];
@@ -132,7 +138,11 @@ export default function (_ctx: Context, _session: Session | null, opts: { text: 
 
         let content = raw;
         const closeMatch = raw.match(/(?:^|\n)§(?=\n|$)/);
-        if (closeMatch) content = raw.slice(0, closeMatch.index);
+        if (closeMatch) {
+            content = raw.slice(0, closeMatch.index);
+            const after = raw.slice(closeMatch.index! + closeMatch[0]!.length).replace(/^\n/, '');
+            if (after.trim()) epilogueChunks.push(unescape(after));
+        }
         content = content.replace(/\n§\s*$/, '');
 
         if (content.trim() === '') continue;
@@ -148,5 +158,5 @@ export default function (_ctx: Context, _session: Session | null, opts: { text: 
         calls.push(cur.call);
     }
 
-    return { prose, calls, errors };
+    return { prose, calls, errors, epilogue: epilogueChunks.join('\n\n') };
 }

@@ -42,7 +42,7 @@ export default async function (
 
         const { text, usage, finishReason } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
 
-        const { prose, calls, errors } = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
+        const { prose, calls, errors, epilogue } = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
 
         // A reply cut off by the token limit may end mid-marker — a §write with
         // half a file, an §eval with half a statement. Executing that corrupts
@@ -91,6 +91,18 @@ export default async function (
 
         for (const call of calls) {
             await ctx.fns.agent.executeMarker({ agent, call, usage });
+        }
+
+        // Prose the model wrote AFTER an explicitly-closed body (bare § line) —
+        // rendered in order, after the calls it follows.
+        if (epilogue?.trim()) {
+            const epAppend = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: epilogue } });
+            await ctx.fns.session.syncAgentState({ agent });
+            const epHtml = await ctx.fns.markdown.render({ source: epilogue });
+            await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
+                text: epilogue, html: epHtml, usage, messageIdx: epAppend.idx,
+            } });
+            await ctx.fns.session.syncAgentState({ agent });
         }
 
         // Parser errors (misplaced markers etc) tail the chain as a single

@@ -15,7 +15,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
 
     const row = ((await ctx.fns.procs.db.select({
-        sql: `SELECT model, created_at, updated_at, parent_id, fork_offset, run_state,
+        sql: `SELECT title, model, created_at, updated_at, parent_id, fork_offset, run_state,
                      (SELECT COUNT(*) FROM messages WHERE agent_id = agents.id) AS msgs,
                      (SELECT COUNT(*) FROM messages WHERE agent_id = agents.id AND role = 'user' AND excluded_from_cursor = 0) AS turns
                 FROM agents WHERE id = ?`,
@@ -34,7 +34,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const main = `
 <div ${ctx.fns.procs.ui.attr({ page: "agent", id })} class="p-8 max-w-3xl">
   <div class="flex items-center gap-3 mb-6">
-    <h1 class="text-xl font-semibold font-mono">${esc(id)}</h1>
+    <h1 class="text-xl font-semibold">${esc(row.title || id)}</h1>
     <span class="text-xs px-2 py-0.5 rounded-full border ${row.run_state === 'running' ? 'border-green-300 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-500'}">${esc(row.run_state ?? 'idle')}</span>
     <div class="ml-auto flex gap-2">
       <form method="POST" action="/agent/${encodeURIComponent(id)}/fork" hx-boost="false"><button ${ctx.fns.procs.ui.attr({ action: "fork", id })} class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">fork</button></form>
@@ -44,6 +44,17 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
   </div>
   <div class="space-y-1.5 mb-6">
     ${fact('model', `<span class="font-mono">${esc(agent.model)}</span>`)}
+    ${fact('id', `<span class="font-mono">${esc(id)}</span>`)}
+    <form method="POST" action="/agent/${encodeURIComponent(id)}/workspace" hx-boost="false" class="flex gap-2 items-center py-2">
+      <label class="w-28 shrink-0 text-sm text-gray-400" for="workspace-dir">workspace</label>
+      <input id="workspace-dir" name="workspaceDir" value="${esc(agent.workspaceDir)}" class="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1 text-sm font-mono">
+      <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">change</button>
+    </form>
+    <form method="POST" action="/agent/${encodeURIComponent(id)}/title" hx-boost="false" class="flex gap-2 items-center py-2">
+      <label class="w-28 shrink-0 text-sm text-gray-400" for="agent-title">title</label>
+      <input id="agent-title" name="title" maxlength="120" value="${esc(row.title ?? '')}" placeholder="Chat title" class="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1 text-sm">
+      <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">save</button>
+    </form>
     ${fact('created', esc(dt(row.created_at)))}
     ${fact('updated', esc(dt(row.updated_at)))}
     ${fact('messages', `${Number(row.msgs ?? 0)} total · ${Number(row.turns ?? 0)} user turns`)}
@@ -56,5 +67,5 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
   <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-4 whitespace-pre-wrap max-h-80 overflow-y-auto">${esc(prompt)}</pre>` : ''}
 </div>`;
 
-    return { currentId: id, title: id, main };
+    return { currentId: id, title: row.title || id, main };
 }

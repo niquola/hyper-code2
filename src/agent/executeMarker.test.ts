@@ -180,4 +180,24 @@ describe('agent.executeMarker', () => {
         expect(msgs.map((m: any) => m.role)).toEqual(['assistant']);
         expect(msgs[0]!.content).toBe('§html\n<p class="x">hi</p>');
     });
+    test('injects agent workspace into the marker session', async () => {
+        const ctx = await setup();
+        const a = await mkAgent(ctx);
+        a.workspaceDir = "/tmp/agent-workspace";
+        let seenSession: any;
+        ctx.fns.files.read = async (_c: any, session: any) => {
+            seenSession = session;
+            return "ok";
+        };
+
+        await executeMarker(ctx, null, {
+            agent: a,
+            call: { kind: 'read', path: 'x.txt', format: 'plain' },
+            usage: {},
+        });
+
+        expect(seenSession.workspaceDir).toBe("/tmp/agent-workspace");
+        expect(seenSession.agentId).toBe(a.id);
+    });
+
 });

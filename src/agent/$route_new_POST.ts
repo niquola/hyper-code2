@@ -1,5 +1,7 @@
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
     const form = await opts.req.formData();
+    const title = String(form.get("title") ?? "").trim().slice(0, 120);
+    const workspaceDir = await ctx.fns.workspace.normalize({ dir: String(form.get("workspaceDir") ?? "") });
     const model = (form.get("model") as string)?.trim()
         || (await ctx.fns.settings?.modelDefault?.({}))
         || ctx.env.MODEL
@@ -18,6 +20,6 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const systemPromptRaw = (form.get("systemPrompt") as string)?.trim() || "";
     const systemPrompt = [presetText, systemPromptRaw].filter(Boolean).join("\n\n");
 
-    const agent = await ctx.fns.agent.start({ model, systemPrompt });
+    const agent = await ctx.fns.agent.start({ model, title, workspaceDir, systemPrompt });
     return new Response(null, { status: 303, headers: { location: `/agent/${encodeURIComponent(agent.id)}` } });
 }

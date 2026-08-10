@@ -7,6 +7,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
     const agent: types.agent.Agent = {
         id: row.id,
         model: row.model,
+        title: row.title ?? "",
+        workspaceDir: row.workspace_dir || process.cwd(),
         systemPrompt: row.system_prompt,
         scratchpad: JSON.parse(row.scratchpad),
         messages: [],

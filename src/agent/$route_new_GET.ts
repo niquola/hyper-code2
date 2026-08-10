@@ -1,5 +1,6 @@
 export default async function (ctx: Context, _session: Session | null, _opts: { req: Request; params: Record<string, string> }) {
     const defaultModel = (await ctx.fns.settings?.modelDefault?.({})) ?? ctx.env.MODEL ?? "";
+    const defaultWorkspace = process.cwd();
     const groups = await ctx.fns.llm.listModels({});
     const base = await ctx.fns.agent.getBasePromptParts({});
     const coreTokens = Math.ceil((base.core?.length || 0) / 4);
@@ -41,6 +42,11 @@ export default async function (ctx: Context, _session: Session | null, _opts: { 
   <h1 class="text-xl font-semibold text-gray-800">New agent</h1>
 
   <label class="block">
+
+  <label class="block">
+    <span class="block text-xs font-semibold text-gray-600 mb-1">title <span class="font-normal text-gray-400">(optional)</span></span>
+    <input name="title" maxlength="120" placeholder="Chat title" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+  </label>
     <span class="block text-xs font-semibold text-gray-600 mb-1">model</span>
     <select name="model" class="w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono bg-white">
       ${optgroups}

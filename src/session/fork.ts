@@ -6,6 +6,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
     const agent = await ctx.fns.agent.start({
         model: parent.model,
         systemPrompt: parent.systemPrompt,
+        title: opts.title ?? (parent.title ? `${parent.title} (fork)` : ""),
+        workspaceDir: parent.workspaceDir,
         parentId: parent.id,
         forkOffset: opts.offset ?? fullCount,
     });

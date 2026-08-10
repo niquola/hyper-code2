@@ -7,6 +7,17 @@ export default async function (
     const { agent, call } = opts;
     const usage = opts.usage;
 
+    // A derived context gives this marker chain an agent-scoped workspace.
+    // Never mutate process.cwd(): agents execute concurrently.
+    const executionCtx: any = Object.create(ctx);
+    executionCtx.session = {
+        ...(ctx.session ?? {}),
+        kind: "agent-marker",
+        agentId: agent.id,
+        workspaceDir: agent.workspaceDir || process.cwd(),
+    };
+    ctx = executionCtx;
+
     const markerText = ctx.fns.agent.serializeMarkerCall({ call });
     const append = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: markerText } });
     await ctx.fns.session.syncAgentState({ agent });
@@ -38,6 +49,17 @@ export default async function (
             await ctx.fns.files.write({ path: call.path, content: call.content });
             const lines = call.content.split('\n').length;
             output = `wrote ${call.path} (${call.content.length} bytes, ${lines} lines)`;
+            // Actionable feedback: a code file that does not even parse is a
+            // mistake the model can fix NOW (usually prose glued after the body
+            // — close it with a bare § line). The write itself stands.
+            const loader = /\.tsx$/.test(call.path) ? 'tsx' : /\.(ts)$/.test(call.path) ? 'ts' : /\.(jsx)$/.test(call.path) ? 'jsx' : /\.(js|mjs)$/.test(call.path) ? 'js' : null;
+            if (loader) {
+                try { new Bun.Transpiler({ loader: loader as any }).transformSync(call.content); }
+                catch (pe: any) {
+                    output += `\nWARNING: the file does NOT parse (${String(pe?.message ?? pe).split('\n')[0]?.slice(0, 160)}). ` +
+                        'If you wrote prose after the code, close the §write body with a bare § line first — everything until then goes INTO the file. Fix the file now.';
+                }
+            }
         } else if (call.kind === 'bash') {
             const r = await ctx.fns.agent.executeBash({ code: call.content });
             output = r.output;

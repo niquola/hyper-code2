@@ -206,3 +206,26 @@ describe('unescaped-§ warnings vs code spans', () => {
         expect(r.errors[0]!.kind).toBe('unescaped');
     });
 });
+
+describe('explicit close → epilogue prose', () => {
+    const parse = (text: string) => {
+        const parseMarkers = require('./parseMarkers').default;
+        return parseMarkers({} as any, null, { text });
+    };
+    test('prose after a closed body becomes epilogue, not file content', () => {
+        const r = parse('§write:x.ts\nconst a = 1;\n§\nЗаписал файл — едем дальше.');
+        expect(r.calls.length).toBe(1);
+        expect(r.calls[0]!.content).toBe('const a = 1;');
+        expect(r.epilogue).toBe('Записал файл — едем дальше.');
+    });
+    test('close → prose → another marker still parses both', () => {
+        const r = parse('§write:x.ts\nconst a = 1;\n§\nтеперь проверю\n§eval\nconsole.log(1)');
+        expect(r.calls.map((c: any) => c.kind)).toEqual(['write', 'eval']);
+        expect(r.epilogue).toBe('теперь проверю');
+    });
+    test('unclosed body keeps old semantics — trailing text stays in the body', () => {
+        const r = parse('§write:x.ts\nconst a = 1;\nhvost prose');
+        expect(r.calls[0]!.content).toBe('const a = 1;\nhvost prose');
+        expect(r.epilogue).toBe('');
+    });
+});

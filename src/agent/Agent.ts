@@ -1,6 +1,8 @@
 export type Agent = {
     id: string;
     model: string;
+    title: string;
+    workspaceDir: string;
     systemPrompt: string;
     messages: any[];                        // synchronized runtime view of DB-backed transcript
     events: any[];                          // synchronized runtime view of DB-backed event trace

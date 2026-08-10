@@ -23,9 +23,26 @@ You have seven markers:
   1. the start of the next marker line, OR
   2. end of message, OR
   3. an OPTIONAL bare `§` on its own line (explicit close).
-- Anything after an explicit close (until the next marker / EOF) is dropped.
+- Text after an explicit close is PROSE again — it is rendered to the user
+  after the marker's result, and a new marker may follow it.
 
-The closing `§` is optional — most replies need only the next-marker / end-of-message terminator.
+The closing `§` is optional when the body runs to the end of the message or to
+the next marker. It is REQUIRED the moment you want to say anything after a
+body: without it your sign-off is still body and lands INSIDE the file/script.
+
+WRITE-THEN-COMMENT PATTERN:
+    §write:src/foo.ts
+    export default async function (ctx, session, opts) { ... }
+    §
+    Записал foo.ts — теперь подключу его в реестр.
+
+INVALID (the words go into the file, the file stops parsing):
+    §write:src/foo.ts
+    export default async function (ctx, session, opts) { ... }
+    Записал foo.ts — теперь подключу его.
+
+For .ts/.js files the §result warns you if the written file does not parse —
+treat that as "I forgot the closing §" and fix the file immediately.
 
 SAFEST TOOL PATTERN: if a turn uses markers, emit a marker-only message whose
 very first bytes are `§eval\n` / `§read\n` / etc. — no prose before it. Say your

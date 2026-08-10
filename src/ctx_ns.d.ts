@@ -335,6 +335,7 @@ declare global {
             save: Injected<typeof import("./session/save").default>;
             search: Injected<typeof import("./session/search").default>;
             searchBm25: Injected<typeof import("./session/searchBm25").default>;
+            setTitle: Injected<typeof import("./session/setTitle").default>;
             syncAgentState: Injected<typeof import("./session/syncAgentState").default>;
             truncateMessagesFrom: Injected<typeof import("./session/truncateMessagesFrom").default>;
             updateScratchpad: Injected<typeof import("./session/updateScratchpad").default>;
@@ -386,6 +387,12 @@ declare global {
             script: Injected<typeof import("./ui/script").default>;
             sendToAgent: Injected<typeof import("./ui/sendToAgent").default>;
             topbar: Injected<typeof import("./ui/topbar").default>;
+        };
+        workspace: {
+            get: Injected<typeof import("./workspace/get").default>;
+            normalize: Injected<typeof import("./workspace/normalize").default>;
+            resolve: Injected<typeof import("./workspace/resolve").default>;
+            set: Injected<typeof import("./workspace/set").default>;
         };
     }
 
