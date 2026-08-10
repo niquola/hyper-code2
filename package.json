@@ -10,7 +10,8 @@
     "test": "bun test"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "happy-dom": "^20.11.2"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -41,11 +42,15 @@
   "procs": {
     "prod": {
       "procs/log": {},
-      "procs/db": { "url": "postgres://hyper:hyper@localhost:54393/hyper" },
+      "procs/db": {
+        "url": "postgres://hyper:hyper@localhost:54393/hyper"
+      },
       "procs/migrate": {},
       "procs/repl": {},
       "agent": {},
-      "procs/http": { "port": 3010 }
+      "procs/http": {
+        "port": 3010
+      }
     },
     "modules": []
   }

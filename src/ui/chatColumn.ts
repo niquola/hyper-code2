@@ -40,7 +40,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
 
     return `
 <header class="px-3 py-2 border-b border-gray-200 flex items-center gap-2 text-xs bg-gray-50">
-  <select onchange="location.href='/agent/'+encodeURIComponent(this.value)"
+  <select ${ctx.fns.procs.ui.attr({ role: "agent-picker" })} onchange="location.href='/agent/'+encodeURIComponent(this.value)"
           class="max-w-[11rem] truncate rounded border border-gray-300 bg-white px-1.5 py-1 text-xs font-mono">${options}</select>
   <a href="/agent/new" title="new agent" class="px-1.5 py-0.5 rounded border border-gray-300 bg-white hover:bg-gray-100">+</a>
   ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}
@@ -54,6 +54,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
 <div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}" hx-trigger="load" hx-swap="outerHTML"></div>
 </div>
 <form id="form"
+      ${ctx.fns.procs.ui.attr({ form: "chat" })}
       class="flex gap-2 p-3 border-t border-gray-200"
       hx-post="/agent/${encodeURIComponent(id)}?debounceSeconds=0.1"
       hx-trigger="submit"

@@ -32,14 +32,14 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const fact = (k: string, v: string) => `<div class="flex gap-2 text-sm"><span class="w-28 shrink-0 text-gray-400">${k}</span><span class="min-w-0 break-all">${v}</span></div>`;
 
     const main = `
-<div class="p-8 max-w-3xl">
+<div ${ctx.fns.procs.ui.attr({ page: "agent", id })} class="p-8 max-w-3xl">
   <div class="flex items-center gap-3 mb-6">
     <h1 class="text-xl font-semibold font-mono">${esc(id)}</h1>
     <span class="text-xs px-2 py-0.5 rounded-full border ${row.run_state === 'running' ? 'border-green-300 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-500'}">${esc(row.run_state ?? 'idle')}</span>
     <div class="ml-auto flex gap-2">
-      <form method="POST" action="/agent/${encodeURIComponent(id)}/fork" hx-boost="false"><button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">fork</button></form>
-      <form method="POST" action="/agent/${encodeURIComponent(id)}/archive" hx-boost="false"><button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">archive</button></form>
-      <form method="POST" action="/agent/${encodeURIComponent(id)}/delete" hx-boost="false" onsubmit="return confirm('delete this agent?')"><button class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">delete</button></form>
+      <form method="POST" action="/agent/${encodeURIComponent(id)}/fork" hx-boost="false"><button ${ctx.fns.procs.ui.attr({ action: "fork", id })} class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">fork</button></form>
+      <form method="POST" action="/agent/${encodeURIComponent(id)}/archive" hx-boost="false"><button ${ctx.fns.procs.ui.attr({ action: "archive", id })} class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">archive</button></form>
+      <form method="POST" action="/agent/${encodeURIComponent(id)}/delete" hx-boost="false" onsubmit="return confirm('delete this agent?')"><button ${ctx.fns.procs.ui.attr({ action: "delete", id })} class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">delete</button></form>
     </div>
   </div>
   <div class="space-y-1.5 mb-6">

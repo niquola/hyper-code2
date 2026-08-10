@@ -36,9 +36,11 @@ export default async function (ctx: Context, session: Session | null, opts: { cu
   .assistant pre.shiki { padding: .6em .8em; border-radius: 6px; overflow-x: auto; margin: .4em 0; font-size: 12.5px; line-height: 1.45; }
   .tool pre.shiki { padding: 0; margin: 0; overflow-x: auto; }
 </style>
+${((ctx.state as any).procs?.styles ?? []).map((st: any) => `<link rel="stylesheet" href="${esc(st.href)}">`).join("\n")}
 ${opts.headExtra ?? ""}
 <script src="/ui/control.js" defer></script>
 <script src="/procs/events/client.js" defer></script>
+<script src="/screen/client.js" defer></script>
 </head>
 <body class="bg-gray-100 text-gray-900 text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div class="flex h-screen">

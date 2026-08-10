@@ -18,7 +18,7 @@ export default function (ctx: Context, _session: Session | null, opts: { path: s
 
     const tab = ([href, label]: [string, string]) => {
         const active = opts.path === href || opts.path.startsWith(href + "/");
-        return `<a href="${esc(href)}" class="px-3 py-1.5 text-xs rounded-t border-b-2 ${active
+        return `<a href="${esc(href)}" ${ctx.fns.procs.ui.attr({ action: "open-tab", id: label })} class="px-3 py-1.5 text-xs rounded-t border-b-2 ${active
             ? "border-gray-800 font-semibold text-gray-900"
             : "border-transparent text-gray-500 hover:text-gray-800"}">${esc(label)}</a>`;
     };

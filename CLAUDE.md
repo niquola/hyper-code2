@@ -125,6 +125,27 @@ Vendored `src/procs/` is upstream code: keep local patches minimal and marked wi
 - `GET /agent/:id` is the agent's overview/passport page (right pane) and sets the current agent.
 - ⌘K palette (`ui.navMenu` island + `nav.items` + `GET /nav/items`): agents, built-in pages, and every mounted module's top-level GET pages. Module tabs come from procs modules metadata (`m.tab`), uniskill-style: mount a module → it shows up in nav.
 
+## screen & tour (ported from health-workspaces)
+
+- `ctx.fns.screen.*` drives the tab the person already has open — no browser in
+  the process: `screen.eval` pushes code down the SSE stream, the tab answers at
+  `POST /screen/result` (handler in ui/controlScript). Verbs: `open` (partial
+  nav into #main) · `click` · `fill` · `submit` · `point` (pointer+ring+caption)
+  · `say` · `readScreen` (the data-* catalogue) · `text` · `where` (last beacon,
+  no round trip).
+- Targets are addressed by `procs.ui.attr` data-* markers (page/entity/id/form/
+  action/role), NEVER CSS selectors. Seeded so far: topbar tabs (action:
+  open-tab), chat form (form: chat), agent picker (role), search page/form/hits,
+  agent passport (page: agent + fork/archive/delete actions). New UI should
+  carry markers from birth.
+- `ctx.fns.tour.play({steps})` — scripted walk (Back/Next/Show me); `tour.review`
+  checks steps against pages with no browser; `screen.step` — live tour, one
+  step per turn; the person's press comes back through the `screen.press` hook
+  → `agent/$hook_screen.press.ts` drops "[tour] the user pressed …" into the
+  CURRENT agent's queue.
+- The pointer/tour CSS lives in the framework sheet — the layout links
+  `ctx.state.procs.styles` (procs/styles/app.css); don't remove that link.
+
 ## UI script routes
 
 - `$script_*.js` files are served as bundled browser assets by `procs/http/$loader_script.ts`, not as fns. After changing one, `ctx.fns.procs.http.loadRoutes({})` (or dev.sync) and verify the actually served HTTP output (e.g. `/agent/chat.js`), including `.hyper` overrides — not just the file on disk.

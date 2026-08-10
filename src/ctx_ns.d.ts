@@ -294,6 +294,21 @@ declare global {
         repl: {
             eval: Injected<typeof import("./repl/eval").default>;
         };
+        screen: {
+            click: Injected<typeof import("./screen/click").default>;
+            eval: Injected<typeof import("./screen/eval").default>;
+            fill: Injected<typeof import("./screen/fill").default>;
+            open: Injected<typeof import("./screen/open").default>;
+            openTab: Injected<typeof import("./screen/openTab").default>;
+            point: Injected<typeof import("./screen/point").default>;
+            readScreen: Injected<typeof import("./screen/readScreen").default>;
+            say: Injected<typeof import("./screen/say").default>;
+            step: Injected<typeof import("./screen/step").default>;
+            submit: Injected<typeof import("./screen/submit").default>;
+            tabs: Injected<typeof import("./screen/tabs").default>;
+            text: Injected<typeof import("./screen/text").default>;
+            where: Injected<typeof import("./screen/where").default>;
+        };
         session: {
             appendAssistantEvent: Injected<typeof import("./session/appendAssistantEvent").default>;
             appendAssistantMessage: Injected<typeof import("./session/appendAssistantMessage").default>;
@@ -351,6 +366,10 @@ declare global {
         tools: {
             dice: Injected<typeof import("./tools/dice").default>;
             password: Injected<typeof import("./tools/password").default>;
+        };
+        tour: {
+            play: Injected<typeof import("./tour/play").default>;
+            review: Injected<typeof import("./tour/review").default>;
         };
         ui: {
             action: Injected<typeof import("./ui/action").default>;
@@ -446,12 +465,20 @@ declare global {
                 type State = import("./procs/styles/State").State;
             }
         }
+        namespace screen {
+            type Catalogue = import("./screen/Catalogue").Catalogue;
+            type Descriptor = import("./screen/Descriptor").Descriptor;
+            type State = import("./screen/State").State;
+        }
         namespace session {
             type Bm25Hit = import("./session/Bm25Hit").Bm25Hit;
         }
         namespace tools {
             type DiceOpts = import("./tools/DiceOpts").DiceOpts;
             type PasswordOpts = import("./tools/PasswordOpts").PasswordOpts;
+        }
+        namespace tour {
+            type Step = import("./tour/Step").Step;
         }
         namespace ui {
             type AgentLaunch = import("./ui/AgentLaunch").AgentLaunch;
@@ -477,6 +504,7 @@ declare global {
             repl: import("./procs/repl/State").State;
             styles: import("./procs/styles/State").State;
         };
+        screen: import("./screen/State").State;
     }
 
     type Session = import("./Session").Session;
