@@ -122,6 +122,14 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
         return '<details' + openAttr + ' class="tool border border-gray-200 rounded-xl overflow-hidden text-xs leading-snug bg-white shadow-sm ' + (ev.isError ? 'ring-1 ring-red-200' : '') + '"><summary class="cursor-pointer select-none flex items-center justify-between gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-200"><span class="font-mono font-semibold text-gray-800">' + label + '</span><span class="text-gray-500 font-mono">args ' + argsLen + 'c · result ' + resultLen + 'c · ' + status + '</span></summary><div class="bg-white px-4 py-3 tool-code">' + (ev.argsHtml || '') + '</div><div class="bg-gray-50 border-t border-gray-200 px-4 py-3 text-gray-700 tool-result">' + (ev.resultHtml || '') + '</div></details>';
     }
 
+    if (ev.type === "attempt") {
+        // A protocol-invalid candidate that was repaired before commit — never
+        // part of the LLM transcript; kept for the audit trail.
+        return '<div class="relative opacity-50"><details class="border border-amber-200 bg-amber-50 rounded-xl overflow-hidden text-xs">'
+            + '<summary class="cursor-pointer select-none px-4 py-2 text-amber-800">invalid attempt · repaired before commit <span class="text-amber-600">(' + esc(String(ev.error ?? '').slice(0, 80)) + ')</span></summary>'
+            + '<pre class="px-4 py-3 whitespace-pre-wrap break-words text-gray-600 bg-white">' + esc(ev.text) + '</pre></details></div>';
+    }
+
     if (ev.type === "error") {
         return '<div class="bg-gray-100 text-red-700 border border-red-200 rounded-lg px-4 py-3 whitespace-pre-wrap break-words">' + esc(ev.error) + '</div>';
     }

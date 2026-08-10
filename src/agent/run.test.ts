@@ -164,13 +164,15 @@ describe('agent.run', () => {
         const results = msgs.filter((m: any) => String(m.content ?? '').startsWith('§result:eval'));
         expect(results).toHaveLength(1);
         expect(evalCalls).toBe(1);
-        // The warning was fed back — and collapsed from the LLM view after the
-        // clean follow-up (audit keeps it).
+        // The invalid candidate was repaired BEFORE commit: the warning went to
+        // the model ephemerally, nothing of it lives in the transcript — the
+        // audit trail is an `attempt` event.
         const audit = await ctx.fns.session.getMessages({ id: a.id, includeExcluded: true });
-        const warn = audit.find((m: any) => String(m.content ?? '').includes('§error:marker-unescaped'));
-        expect(warn).toBeDefined();
-        expect(warn.content).toContain('Warning');
-        expect(warn.content).toContain('reserved for marker execution');
+        expect(audit.find((m: any) => String(m.content ?? '').includes('§error:marker-unescaped'))).toBeUndefined();
+        const evs = await ctx.fns.session.getEvents({ id: a.id });
+        const att = evs.find((e: any) => e.type === 'attempt');
+        expect(att).toBeDefined();
+        expect(String(att.error)).toContain('reserved for marker execution');
         // Closing prose lands as the last assistant message.
         const lastAssistant = [...msgs].reverse().find((m: any) => m.role === 'assistant');
         expect(lastAssistant.content).toBe('computed: 4');
@@ -204,7 +206,7 @@ describe('agent.run', () => {
         ]);
     });
 
-    test('parser-warning feedback user-message is flagged excluded_from_cursor', async () => {
+    test('protocol-invalid reply is repaired pre-commit — no warning row, attempt event instead', async () => {
         const ctx = await setup();
         let turn = 0;
         ctx.fns.llm.stream = async () => {
@@ -220,14 +222,15 @@ describe('agent.run', () => {
         await run(ctx, a, 'compute');
 
         const rows = await ctx.fns.procs.db.select({
-            sql: 'SELECT idx, role, content, excluded_from_cursor FROM messages WHERE agent_id = ? AND role = ? ORDER BY idx',
-            params: [a.id, 'user'],
+            sql: 'SELECT role, content FROM messages WHERE agent_id = ? ORDER BY idx',
+            params: [a.id],
         });
-        // Real input: idx 0, excluded=0. Synthetic warning is excluded.
-        expect(rows[0].excluded_from_cursor).toBe(0);
-        const warn = rows.find((r: any) => String(r.content ?? '').includes('§error:marker-unescaped'));
-        expect(warn).toBeDefined();
-        expect(warn.excluded_from_cursor).toBe(1);
+        // Only the real input and the accepted reply — the invalid candidate and
+        // its warning never became messages.
+        expect(rows.map((r: any) => r.role)).toEqual(['user', 'assistant']);
+        expect(rows[1].content).toBe('fixed');
+        const evs = await ctx.fns.session.getEvents({ id: a.id });
+        expect(evs.filter((e: any) => e.type === 'attempt').length).toBe(1);
     });
 
     test('§html marker renders an assistant bubble with raw HTML and no synthetic result', async () => {

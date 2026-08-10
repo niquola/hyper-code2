@@ -64,9 +64,35 @@ export default async function (
         consumedUserIdx = Math.max(consumedUserIdx, Number(seen?.i ?? -1));
         await ctx.fns.session.syncAgentState({ agent });
 
-        const { text, usage, finishReason } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
+        let { text, usage, finishReason } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
+        let parsed = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
 
-        const { prose, calls, errors, epilogue } = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
+        // Pre-commit repair loop (co's design): a reply that is protocol-invalid
+        // AND has nothing executable is never committed to the transcript.
+        // Instead the model gets an EPHEMERAL retry — the invalid candidate plus
+        // ONE specific error — and only the accepted attempt becomes canonical.
+        // Invalid candidates live on as `attempt` events (UI/audit only).
+        // Replies with at least one valid call keep the permissive path below.
+        for (let repair = 1; repair <= 2
+            && parsed.calls.length === 0 && parsed.errors.length > 0 && String(text ?? '').trim(); repair++) {
+            const hint = parsed.errors[0]!.hint;
+            await ctx.fns.session.appendEvent({ id: agent.id, event: {
+                type: 'attempt', status: 'invalid', repair, text: String(text), error: hint,
+            } });
+            const saved = agent.messages;
+            try {
+                agent.messages = [...(saved ?? []),
+                    { role: 'assistant', content: String(text) },
+                    { role: 'user', content: `Your previous response was invalid and was NOT executed or recorded.\nError: ${hint}\nReturn a corrected replacement response only. Do not explain the correction.` },
+                ];
+                ({ text, usage, finishReason } = await ctx.fns.llm.stream({ agent, signal: ac.signal }));
+            } finally {
+                agent.messages = saved;
+            }
+            parsed = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
+        }
+
+        const { prose, calls, errors, epilogue } = parsed;
 
         // A reply cut off by the token limit may end mid-marker — a §write with
         // half a file, an §eval with half a statement. Executing that corrupts

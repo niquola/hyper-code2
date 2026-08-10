@@ -167,3 +167,57 @@ describe('corrected failures collapse out of the LLM view', () => {
         expect(html).toContain('opacity-50');
     });
 });
+
+describe('pre-commit repair loop (protocol-invalid, nothing executable)', () => {
+    test('invalid candidate never enters the transcript; repaired reply executes', async () => {
+        const ctx = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:echo' });
+        await ctx.fns.session.save({ agent });
+        let evals = 0;
+        ctx.state.registry.repl.eval = async () => { evals++; return 'ran'; };
+        const seen: string[] = [];
+        let call = 0;
+        ctx.state.registry.llm.stream = async (_c: any, _s: any, o: any) => {
+            seen.push(o.agent.messages[o.agent.messages.length - 1]?.content ?? '');
+            if (++call === 1) return { text: 'Сейчас проверю.\u00a7eval и посмотрю', usage: {}, finishReason: 'stop' };
+            if (call === 2) return { text: '\u00a7eval\nok()', usage: {}, finishReason: 'stop' };
+            return { text: 'готово.', usage: {}, finishReason: 'stop' };
+        };
+
+        await ctx.fns.agent.run({ agent, userText: 'go' });
+
+        expect(evals).toBe(1);
+        // the repair request was EPHEMERAL: the model saw it in-flight…
+        expect(seen[1]).toContain('was invalid');
+        // …but neither the invalid candidate nor the repair note is in the audit transcript
+        const audit = await ctx.fns.session.getMessages({ id: agent.id, includeExcluded: true });
+        const all = JSON.stringify(audit);
+        expect(all).not.toContain('Сейчас проверю.');
+        expect(all).not.toContain('was invalid');
+        // the invalid attempt is an audit EVENT with the repaired-before-commit UI
+        const evs = await ctx.fns.session.getEvents({ id: agent.id });
+        const att = evs.find((e: any) => e.type === 'attempt');
+        expect(att).toBeDefined();
+        expect(att.status).toBe('invalid');
+        const html = await ctx.fns.agent.renderEventHtml({ event: att, agentId: agent.id });
+        expect(html).toContain('repaired before commit');
+    });
+
+    test('two failed repairs fall back to the permissive path (warning committed)', async () => {
+        const ctx = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:echo' });
+        await ctx.fns.session.save({ agent });
+        let call = 0;
+        ctx.state.registry.llm.stream = async () => (++call <= 3
+            ? { text: 'опять клею \u00a7eval криво', usage: {}, finishReason: 'stop' }
+            : { text: 'сдаюсь, просто отвечаю.', usage: {}, finishReason: 'stop' });
+
+        await ctx.fns.agent.run({ agent, userText: 'go' });
+
+        const audit = await ctx.fns.session.getMessages({ id: agent.id, includeExcluded: true });
+        const all = JSON.stringify(audit);
+        expect(all).toContain('marker-unescaped');            // permissive fallback committed the warning
+        const evs = await ctx.fns.session.getEvents({ id: agent.id });
+        expect(evs.filter((e: any) => e.type === 'attempt').length).toBe(2);  // both repair attempts audited
+    });
+});
