@@ -42,6 +42,8 @@ export default async function (
     // clean. Near-tail flags are prefix-cache-cheap.
     const pendingFailures: Record<string, number[]> = {};
     let protocolNoteIdxs: number[] = [];
+    let repairPairIdxs: number[] = [];
+    let repairs = 0;
 
     while (true) {
         if (++turns > MAX_TURNS) {
@@ -67,37 +69,7 @@ export default async function (
         let { text, usage, finishReason } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
         let parsed = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
 
-        // Pre-commit repair loop (co's design): a reply that is protocol-invalid
-        // AND has nothing executable is never committed to the transcript.
-        // Instead the model gets an EPHEMERAL retry — the invalid candidate plus
-        // ONE specific error — and only the accepted attempt becomes canonical.
-        // Invalid candidates live on as `attempt` events (UI/audit only).
-        // Replies with at least one valid call keep the permissive path below.
-        for (let repair = 1; repair <= 2
-            && parsed.calls.length === 0 && parsed.errors.length > 0 && String(text ?? '').trim(); repair++) {
-            const hint = parsed.errors[0]!.hint;
-            await ctx.fns.session.appendEvent({ id: agent.id, event: {
-                type: 'attempt', status: 'invalid', repair, text: String(text), error: hint,
-            } });
-            const saved = agent.messages;
-            try {
-                agent.messages = [...(saved ?? []),
-                    { role: 'assistant', content: String(text) },
-                    { role: 'user', content: `Your previous response was invalid and was NOT executed or recorded.\nError: ${hint}\nReturn a corrected replacement response only. Do not explain the correction.` },
-                ];
-                ({ text, usage, finishReason } = await ctx.fns.llm.stream({ agent, signal: ac.signal }));
-            } finally {
-                agent.messages = saved;
-            }
-            parsed = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
-        }
-
-        const { prose, calls, errors, epilogue } = parsed;
-
-        // A reply cut off by the token limit may end mid-marker — a §write with
-        // half a file, an §eval with half a statement. Executing that corrupts
-        // state, so NOTHING runs: the model is told to re-issue, smaller.
-        if (finishReason === 'length' && calls.length > 0) {
+        if (finishReason === 'length' && parsed.calls.length > 0) {
             const hint = 'Your reply hit the token limit and was truncated mid-marker. NOTHING was executed. ' +
                 'Re-issue the marker(s) in a shorter form: split large §write bodies into several calls, ' +
                 'or produce big content via §eval + Bun.write in chunks.';
@@ -109,6 +81,50 @@ export default async function (
             await ctx.fns.session.syncAgentState({ agent });
             continue;
         }
+
+        // Repair loop, DB-first (co's design + co's review): a reply with
+        // protocol errors or broken marker bodies AND nothing that passes
+        // preflight is not accepted. The candidate and a one-error repair note
+        // are PERSISTED as ordinary rows — the next stream reads them from the
+        // synced transcript (no in-memory agent.messages mutation, no race
+        // with steering; a user message landing mid-repair joins the retry
+        // naturally). Once a reply is accepted (or repairs are exhausted) the
+        // candidate+note rows are flagged excluded_from_llm — near-tail,
+        // prefix-cache-cheap — so only the accepted attempt stays in the LLM
+        // view. Invalid candidates surface as dimmed `attempt` events.
+        const preflights = parsed.calls.map((c: any) => ctx.fns.agent.preflightCall({ call: c }));
+        const executableCount = preflights.filter((pf: any) => pf.ok).length;
+        const firstHint = parsed.errors[0]?.hint ?? preflights.find((pf: any) => !pf.ok)?.hint;
+        if (executableCount === 0 && firstHint && String(text ?? '').trim() && repairs < 2) {
+            repairs++;
+            const cand = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: String(text) } });
+            const note = await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                role: 'user',
+                content: `Your previous response was invalid and was NOT executed.\nError: ${firstHint}\nReturn a corrected replacement response only. Do not explain the correction.`,
+                excluded_from_cursor: true,
+            } });
+            repairPairIdxs.push(cand.idx, note.idx);
+            await ctx.fns.session.appendEvent({ id: agent.id, event: {
+                type: 'attempt', status: 'invalid', repair: repairs, text: String(text), error: firstHint, messageIdx: cand.idx,
+            } });
+            await ctx.fns.session.syncAgentState({ agent });
+            continue;
+        }
+        // Leaving repair mode (accepted, or fell back to permissive): the
+        // intermediate candidates and notes drop out of the LLM view.
+        if (repairPairIdxs.length) {
+            await ctx.fns.session.collapseFailures({ id: agent.id, messageIdxs: repairPairIdxs });
+            repairPairIdxs = [];
+            repairs = 0;
+            await ctx.fns.session.syncAgentState({ agent });
+        }
+
+        const { prose, calls, errors, epilogue } = parsed;
+
+        // A reply cut off by the token limit may end mid-marker — a §write with
+        // half a file, an §eval with half a statement. Executing that corrupts
+        // state, so NOTHING runs: the model is told to re-issue, smaller.
+
 
         // No markers and no parser errors — close the turn cleanly.
         if (calls.length === 0 && errors.length === 0) {

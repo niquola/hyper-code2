@@ -26,6 +26,7 @@ declare global {
             nextId: Injected<typeof import("./agent/nextId").default>;
             parseMarkers: Injected<typeof import("./agent/parseMarkers").default>;
             parseReadMarker: Injected<typeof import("./agent/parseReadMarker").default>;
+            preflightCall: Injected<typeof import("./agent/preflightCall").default>;
             readAndSummarize: Injected<typeof import("./agent/readAndSummarize").default>;
             renderEventHtml: Injected<typeof import("./agent/renderEventHtml").default>;
             renderEventsHtml: Injected<typeof import("./agent/renderEventsHtml").default>;
@@ -293,6 +294,7 @@ declare global {
             };
         };
         repl: {
+            diagnoseParse: Injected<typeof import("./repl/diagnoseParse").default>;
             eval: Injected<typeof import("./repl/eval").default>;
         };
         screen: {

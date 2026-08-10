@@ -189,11 +189,14 @@ describe('pre-commit repair loop (protocol-invalid, nothing executable)', () => 
         expect(evals).toBe(1);
         // the repair request was EPHEMERAL: the model saw it in-flight…
         expect(seen[1]).toContain('was invalid');
-        // …but neither the invalid candidate nor the repair note is in the audit transcript
+        // DB-first: the candidate and note ARE persisted (audit view) but are
+        // flagged out of the effective LLM transcript after acceptance.
         const audit = await ctx.fns.session.getMessages({ id: agent.id, includeExcluded: true });
-        const all = JSON.stringify(audit);
-        expect(all).not.toContain('Сейчас проверю.');
-        expect(all).not.toContain('was invalid');
+        expect(JSON.stringify(audit)).toContain('Сейчас проверю.');
+        const llmView = await ctx.fns.session.getMessages({ id: agent.id });
+        const flat = JSON.stringify(llmView);
+        expect(flat).not.toContain('Сейчас проверю.');
+        expect(flat).not.toContain('was invalid');
         // the invalid attempt is an audit EVENT with the repaired-before-commit UI
         const evs = await ctx.fns.session.getEvents({ id: agent.id });
         const att = evs.find((e: any) => e.type === 'attempt');

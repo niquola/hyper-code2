@@ -39,6 +39,8 @@ export default async function (
     let output = '';
     let isError = false;
     try {
+        const pf = ctx.fns.agent.preflightCall({ call });
+        if (!pf.ok) throw new Error(`preflight: ${pf.hint}`);
         if (call.kind === 'eval') {
             output = await ctx.fns.repl.eval({ code: call.content, agent });
         } else if (call.kind === 'write') {

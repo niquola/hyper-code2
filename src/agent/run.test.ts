@@ -225,10 +225,11 @@ describe('agent.run', () => {
             sql: 'SELECT role, content FROM messages WHERE agent_id = ? ORDER BY idx',
             params: [a.id],
         });
-        // Only the real input and the accepted reply — the invalid candidate and
-        // its warning never became messages.
-        expect(rows.map((r: any) => r.role)).toEqual(['user', 'assistant']);
-        expect(rows[1].content).toBe('fixed');
+        // The candidate+note are persisted (DB-first repair) but flagged out of
+        // the LLM view; the effective transcript is just input + accepted reply.
+        const llmView = await ctx.fns.session.getMessages({ id: a.id });
+        expect(llmView.map((m: any) => m.role)).toEqual(['user', 'assistant']);
+        expect(llmView[1].content).toBe('fixed');
         const evs = await ctx.fns.session.getEvents({ id: a.id });
         expect(evs.filter((e: any) => e.type === 'attempt').length).toBe(1);
     });
