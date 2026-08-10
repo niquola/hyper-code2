@@ -471,10 +471,6 @@ declare global {
             sendToAgent: Injected<typeof import("./ui/sendToAgent").default>;
             topbar: Injected<typeof import("./ui/topbar").default>;
         };
-        uni: {
-            eval: Injected<typeof import("./uni/eval").default>;
-            skills: Injected<typeof import("./uni/skills").default>;
-        };
         workspace: {
             get: Injected<typeof import("./workspace/get").default>;
             normalize: Injected<typeof import("./workspace/normalize").default>;
