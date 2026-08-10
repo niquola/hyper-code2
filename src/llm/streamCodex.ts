@@ -51,7 +51,7 @@ export default async function (
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         if (opts.signal?.aborted) throw new Error("aborted");
         try {
-            res = await fetch(ep.url, { method: "POST", headers, body: bodyJson, signal: opts.signal });
+            res = await fetch(ep.url, { method: "POST", headers, body: bodyJson, signal: opts.signal ? AbortSignal.any([opts.signal, AbortSignal.timeout(45_000)]) : AbortSignal.timeout(45_000) });
             if (res.ok) break;
             const errText = await res.text();
             lastErr = new Error(`${ep.provider} ${res.status}: ${errText.slice(0, 500)}`);

@@ -167,6 +167,20 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
             params: [advanceCursor ? 1 : 0, consumedIdx, advanceCursor ? 1 : 0, consumedIdx, ts + 100, errorText, ts, agentId],
         });
 
+        // One automatic retry for TRANSIENT failures (stalled stream, 429/5xx,
+        // dropped connection): reschedule once with a short backoff. Anything
+        // else — and a second failure in a row — stays manual (statusbar badge).
+        const transient = errorText && /stalled|429|(?:^|\D)5\d\d(?:\D|$)|Connection closed|ConnectionRefused|network|ETIMEDOUT|ECONNRESET|timed? ?out/i.test(errorText);
+        const retries: Record<string, number> = ((ctx.state as any).agentRunRetries ??= {});
+        if (!errorText) delete retries[agentId];
+        else if (transient && (retries[agentId] ?? 0) < 1) {
+            retries[agentId] = (retries[agentId] ?? 0) + 1;
+            await ctx.fns.procs.db.run({
+                sql: 'UPDATE agents SET next_run_at = COALESCE(next_run_at, ?) WHERE id = ?',
+                params: [ts + 10_000, agentId],
+            });
+        }
+
         agent.abortController = null;
         agent.isStreaming = false;
         try { await ctx.fns.session.syncAgentState({ agent }); } catch {}

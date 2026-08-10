@@ -19,7 +19,12 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
 
     if (row?.run_state === 'running') {
         const elapsed = ((now - Number(row.run_started_at ?? now)) / 1000).toFixed(1);
-        label = `running · ${elapsed}s`;
+        const lastEv = ((await ctx.fns.procs.db.select({
+            sql: 'SELECT MAX(ts) AS t FROM events WHERE agent_id = ?',
+            params: [agentId],
+        })) as any[])[0];
+        const quiet = lastEv?.t ? Math.round((now - Number(lastEv.t)) / 1000) : null;
+        label = `running · ${elapsed}s${quiet != null && quiet > 10 ? ` · quiet ${quiet}s` : ''}`;
         cls = 'text-blue-700 bg-blue-50 border-blue-300';
     } else if (row?.next_run_at) {
         const waits = Math.max(0, (Number(row.next_run_at) - now) / 1000).toFixed(1);

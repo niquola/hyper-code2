@@ -36,7 +36,7 @@ describe("session.load", () => {
             { role: 'assistant', content: '§eval\nconsole.log(1);' },
             { role: 'user', content: '§result:eval\n1' },
         ]);
-        expect(loaded!.events).toEqual([
+        expect(loaded!.events).toMatchObject([   // co's feature adds ts to every event
             { type: 'user', text: 'a' },
             { type: 'tool_call', name: 'eval', args: { code: 'console.log(1);' }, result: '1' },
         ]);

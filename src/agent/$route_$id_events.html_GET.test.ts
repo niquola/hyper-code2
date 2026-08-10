@@ -22,8 +22,10 @@ describe('GET /agent/:id/events.html', () => {
 
         const res = await ctx.fns.procs.http.dispatch({ url: `/agent/${a.id}/events.html?offset=0` });
         const body = await res.text();
-        expect(body).toContain('data-ev="user">hi');
-        expect(body).toContain('data-ev="user">two');
+        // user events are re-rendered (timestamps rode in with agent co's
+        // feature) — assert content, not the seeded cached markup
+        expect(body).toContain('>hi<');
+        expect(body).toContain('>two<');
         expect(body).toContain('id="msg-tail"');
         expect(body).toContain(`offset=2`);
     });
@@ -37,9 +39,9 @@ describe('GET /agent/:id/events.html', () => {
 
         const res = await ctx.fns.procs.http.dispatch({ url: `/agent/${a.id}/events.html?offset=2` });
         const body = await res.text();
-        expect(body).toContain('<div>c</div>');
-        expect(body).not.toContain('<div>a</div>');
-        expect(body).not.toContain('<div>b</div>');
+        expect(body).toContain('>c<');
+        expect(body).not.toContain('>a<');
+        expect(body).not.toContain('>b<');
         expect(body).toContain('offset=3');
     });
 

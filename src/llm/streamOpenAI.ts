@@ -31,7 +31,8 @@ export default async function (
         method: "POST",
         headers,
         body: JSON.stringify(body),
-        signal: opts.signal,
+        // 45s to FIRST byte — a connect that never answers must not hold the run.
+        signal: opts.signal ? AbortSignal.any([opts.signal, AbortSignal.timeout(45_000)]) : AbortSignal.timeout(45_000),
     });
     if (!res.ok) throw new Error(`${ep.provider} ${res.status}: ${await res.text()}`);
     if (!res.body) throw new Error("empty response body");

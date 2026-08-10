@@ -30,7 +30,20 @@ export default async function (
     // run already answered.
     let consumedUserIdx = -1;
 
+    // A model that ping-pongs markers forever is a legal infinite loop — cap the
+    // cycles per run; the note tells it to continue in a fresh pass if needed.
+    const MAX_TURNS = 60;
+    let turns = 0;
+
     while (true) {
+        if (++turns > MAX_TURNS) {
+            await ctx.fns.session.appendErrorEvent({ id: agent.id, error: `run hit the ${MAX_TURNS}-turn cap — closing; send a message to continue` });
+            await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                role: 'user', content: `§error:turn-cap\nThis run exceeded ${MAX_TURNS} marker cycles and was closed. Summarize where you are; the user can send a message to continue.`, excluded_from_cursor: true,
+            } });
+            await ctx.fns.session.syncAgentState({ agent });
+            return { text: '', usage: null, consumedUserIdx };
+        }
         // Order matters (ck's review): read the frontier BEFORE syncing the
         // transcript. A message landing between the two then gets INTO the
         // model call but is NOT counted consumed — worst case a harmless
