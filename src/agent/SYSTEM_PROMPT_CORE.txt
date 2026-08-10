@@ -39,6 +39,7 @@ ctx.fns namespaces:
 
   agent       run, compact, start, stop, clear, delegateTask, finishTask, llmCall, readAndSummarize, executeMarker, parseMarkers, fullSystemPrompt, buildLlmRequest
   session     append*, replace*, truncate*, delete*, get*, save, load, fork, search, syncAgentState, updateScratchpad
+  workspace   get ({}) → { dir }, set ({ dir }) — the agent's working directory; files/bash/git follow it
   procs.db    select, run, insert, exec, conn (framework Postgres layer — async, ? placeholders)
   settings    get, set, list, getString, getNumber, modelDefault, declared
   files       read, write, list, open, close, stat, exists, mkdir, remove, rename

@@ -27,10 +27,13 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
         "",
         "## Runtime context (auto-injected, fresh each turn)",
         `- workspace directory: ${agent.workspaceDir || process.cwd()}`,
-        "- relative file paths, shell commands, and git operations use this directory",
-        "- workspace is the base directory, not a filesystem sandbox",
+        "- §read/§write/§grep/§edit, ctx.fns.files.*, §bash and ctx.fns.git.* resolve here",
+        "- CAVEAT: raw Bun.file()/Bun.write() inside §eval resolve against the SERVER's cwd," ,
+        "  not the workspace — inside §eval use ctx.fns.files.* or ctx.fns.workspace.resolve({ path })",
+        "- inspect/change: ctx.fns.workspace.get({}) / await ctx.fns.workspace.set({ dir })",
+        "- workspace is a base directory, not a sandbox",
         `- your agent id: ${agent.id}`,
-        `- db path: ${ctx.env?.DB_PATH ?? ".hyper/_runtime/sessions"}`,
+        "- storage: Postgres — ctx.fns.procs.db.* (never bare Bun.sql)",
         "",
     ].join("\n");
 
