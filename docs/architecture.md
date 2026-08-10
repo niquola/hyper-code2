@@ -4,11 +4,11 @@
 
 **Simplicity first. DB-first. htmx long-poll. One in-process worker, runs in parallel.**
 
-Everything durable lives in SQLite. Everything visible to the user comes from a normal HTTP fetch. There is no queue table — debounce and run-state are columns on `agents`. Realtime is one in-process condvar; it carries no data, only "go look in the DB".
+Everything durable lives in Postgres (paradedb). Everything visible to the user comes from a normal HTTP fetch. There is no queue table — debounce and run-state are columns on `agents`. Realtime is one in-process condvar; it carries no data, only "go look in the DB".
 
 ```mermaid
 graph TB
-    subgraph Truth[SQLite — source of truth]
+    subgraph Truth[Postgres — source of truth]
         AGENTS[(agents<br/>id · run_state · next_run_at<br/>last_processed_msg_idx · run_started_at)]
         MSGS[(messages<br/>append-only · per-agent idx)]
         EVENTS[(events<br/>append-only · per-agent idx)]
@@ -44,10 +44,10 @@ graph TB
 
 ## Principles
 
-1. **The DB is the source of truth.** Messages, events, run-state, scheduling — all in SQLite. Memory is only an execution cache.
+1. **The DB is the source of truth.** Messages, events, run-state, scheduling — all in Postgres. Memory is only an execution cache.
 2. **HTTP is the data plane.** Browser fetches all visible state through normal HTTP requests. Long-polling is just `GET` that holds the connection.
 3. **Wakeups are signals, not data.** `wakeWaiters` carries no payload — handlers re-read the DB after they wake. A lost or duplicate wake at worst delays a long-poll until its 25 s timeout, after which it re-fetches anyway.
-4. **One worker. No queue table. Parallel drain.** Run scheduling is two columns on `agents`: `next_run_at` (when to fire) and `run_state` (`'idle' | 'running'`). One in-process `workerLoop` claims every currently-eligible agent in a tight `claimOne()` loop and spawns each as its own promise — different agents run concurrently. Per-agent serialisation is enforced by SQLite's `UPDATE … RETURNING` (two concurrent claims can't both win the same `idle` row), not by an in-memory lock.
+4. **One worker. No queue table. Parallel drain.** Run scheduling is two columns on `agents`: `next_run_at` (when to fire) and `run_state` (`'idle' | 'running'`). One in-process `workerLoop` claims every currently-eligible agent in a tight `claimOne()` loop and spawns each as its own promise — different agents run concurrently. Per-agent serialisation is enforced by Postgres row locking on `UPDATE … RETURNING` (two concurrent claims can't both win the same `idle` row), not by an in-memory lock.
 5. **Minimal client JS.** ~30 lines: Enter-key handler + scroll-on-swap. Everything else is htmx attributes.
 
 ---
@@ -73,7 +73,7 @@ graph TB
 sequenceDiagram
     participant B as Browser (htmx form)
     participant S as Server
-    participant DB as SQLite
+    participant DB as Postgres
     participant W as workerLoop
     participant L as LLM
 
@@ -132,7 +132,7 @@ agents.last_error             TEXT          -- last error text (audit-lite)
 Rules:
 
 - `POST` does `UPDATE agents SET next_run_at = MAX(COALESCE(next_run_at, 0), now + N)`. The `MAX` prevents an earlier message from rolling back an already-pushed-out run.
-- The worker's atomic claim is `UPDATE agents SET run_state='running' WHERE id IN (SELECT id FROM agents WHERE run_state='idle' AND next_run_at <= now ORDER BY next_run_at ASC LIMIT 1) RETURNING id`. SQLite's `RETURNING` makes this one-statement-atomic — two concurrent statements **cannot** both win the same row, so two parallel runners trying to grab the same agent will see exactly one `claimed.length === 1` and one `claimed.length === 0`.
+- The worker's atomic claim is `UPDATE agents SET run_state='running' WHERE id IN (SELECT id FROM agents WHERE run_state='idle' AND next_run_at <= now ORDER BY next_run_at ASC LIMIT 1) RETURNING id`. Postgres row locking makes this one-statement-atomic — two concurrent statements **cannot** both win the same row, so two parallel runners trying to grab the same agent will see exactly one `claimed.length === 1` and one `claimed.length === 0`.
 - **Cursor scope is `role='user'` AND `excluded_from_cursor=0`.** Both the pre-run frontier snapshot and the post-run "still pending" check filter out synthetic `§result:*` / `§error:*` user-rows. Assistant emissions are not `role='user'` to begin with. Without this, every successful turn would look like fresh input and the worker would re-run on the same conversation forever.
 - `last_processed_msg_idx` only advances on **success**. Aborted or failed runs leave the cursor where it was. They also do **not** auto-reschedule (`next_run_at = NULL` on the failure path) — the user's next POST decides whether to retry. Otherwise a permanently broken LLM call would burn the worker in a tight loop.
 - If new **real user** messages land while a run is in progress, the worker's `finally` block detects `MAX(idx) WHERE role='user' AND excluded_from_cursor=0 > cursor` and sets `next_run_at = now + 5s` again before returning to `idle`. Successful run → auto-rescheduling for the new input. Failed run → no rescheduling.
@@ -157,7 +157,7 @@ while (workerLoopRunning) {
 }
 ```
 
-No artificial concurrency cap — backpressure comes from the LLM provider (429s, connection errors, retried in `streamCodex` / `streamAnthropic`) and SQLite serialising writes at microsecond scale. `runOne`'s `finally` calls `wakeWorker` so a finishing run unblocks the loop without waiting for the 30 s safety poll. Verified by `src/agent/workerLoop.test.ts` — three mock runs of 100 ms each land in ~150 ms wall-clock with overlapping intervals; serial would be ~300 ms with none.
+No artificial concurrency cap — backpressure comes from the LLM provider (429s, connection errors, retried in `streamCodex` / `streamAnthropic`) and Postgres serialising row writes. `runOne`'s `finally` calls `wakeWorker` so a finishing run unblocks the loop without waiting for the 30 s safety poll. Verified by `src/agent/workerLoop.test.ts` — three mock runs of 100 ms each land in ~150 ms wall-clock with overlapping intervals; serial would be ~300 ms with none.
 
 ---
 
@@ -355,7 +355,7 @@ We **do** run agents in parallel — that's the whole point of the parallel-drai
 - The bottleneck for actual parallelism is the LLM stream (`fetch` + SSE), and Bun event-loop already overlaps those across N concurrent `runOne` promises in one driver. A second driver loop would buy nothing the first one doesn't already cover.
 - One driver = one place to track wake signals (`workerWakeWaiters`) and one mental model. Two drivers would race for claims, and we'd need extra coordination just so they don't claim the same row twice — exactly the problem we already solved with `UPDATE … RETURNING`, just twice over.
 
-If a different DB engine ever lifts the SQLite single-writer limit and writes become the bottleneck, we'd then partition the agent space across multiple driver loops keyed on `agent_id % N`. Until then it's premature.
+If writes ever become the bottleneck, we'd partition the agent space across multiple driver loops keyed on `agent_id % N`. Until then it's premature.
 
 ### Why htmx and not React/Datastar/etc
 

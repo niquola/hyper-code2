@@ -29,6 +29,45 @@ export default async function (
     const parsed = ctx.fns.files.parseHashlineEdit({ input: opts.input });
     const before = await ctx.fns.files.read({ path: parsed.path });
     const hadTrailingNl = before.endsWith("\n");
+    const literalOps = parsed.ops.filter((op): op is Extract<types.files.EditHashlineOp, { kind: "literal_replace" }> => op.kind === "literal_replace");
+    const literalEdits: Array<{ start: number; end: number; replacement: string }> = [];
+    for (const op of literalOps) {
+        const matches: number[] = [];
+        let from = 0;
+        while (from <= before.length - op.old.length) {
+            const at = before.indexOf(op.old, from);
+            if (at < 0) break;
+            matches.push(at);
+            from = at + op.old.length;
+        }
+        if (op.all) {
+            if (matches.length === 0) throw new Error("replace-all found 0 matches");
+        } else if (matches.length !== 1) {
+            throw new Error(`replace requires exactly one match, found ${matches.length}`);
+        }
+        for (const start of op.all ? matches : matches.slice(0, 1)) {
+            literalEdits.push({ start, end: start + op.old.length, replacement: op.replacement });
+        }
+    }
+    literalEdits.sort((a, b) => a.start - b.start);
+    for (let i = 1; i < literalEdits.length; i++) {
+        if (literalEdits[i]!.start < literalEdits[i - 1]!.end) {
+            throw new Error("overlap conflict between literal replacements");
+        }
+    }
+    let literalContent = before;
+    for (const edit of [...literalEdits].reverse()) {
+        literalContent = literalContent.slice(0, edit.start) + edit.replacement + literalContent.slice(edit.end);
+    }
+    if (literalOps.length) {
+        if (parsed.ops.length !== literalOps.length) throw new Error("literal replace cannot be mixed with anchored ops");
+        const diff = await ctx.fns.markdown.highlight({
+            code: `--- ${parsed.path}\n+++ ${parsed.path}\n${before}\n---\n${literalContent}`,
+            lang: "diff",
+        }).catch(() => "");
+        const res = await ctx.fns.files.write({ path: parsed.path, content: literalContent });
+        return { path: parsed.path, bytes: res.bytes, diff, content: literalContent };
+    }
     const base = splitLinesKeepEmpty(before);
 
     const planned: PlannedOp[] = parsed.ops.map((op, order) => {

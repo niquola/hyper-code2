@@ -7,7 +7,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { q
 }>> {
     const q = String(opts.query ?? "").trim();
     if (!q) return [];
-    // ILIKE replaces sqlite's `LIKE ... COLLATE NOCASE`; camelCase alias must be
+    // Postgres: ILIKE for case-insensitive match; camelCase alias must be
     // quoted (pg folds unquoted identifiers to lowercase); ts is BIGINT → string.
     const rows = (await ctx.fns.procs.db.select({
         sql: `

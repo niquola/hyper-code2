@@ -3,6 +3,19 @@ function payload(line: string): string {
     return line.slice(1);
 }
 
+function parseJsonStrings(input: string, line: string): [string, string] {
+    try {
+        const values = JSON.parse(`[${input.replace(/"\s+"/, '","')}]`);
+        if (!Array.isArray(values) || values.length !== 2 || values.some((x) => typeof x !== "string")) {
+            throw new Error();
+        }
+        if (!values[0]) throw new Error("old text must not be empty");
+        return values as [string, string];
+    } catch (error: any) {
+        if (error?.message === "old text must not be empty") throw error;
+        throw new Error(`replace expects two JSON strings: ${line}`);
+    }
+}
 export default function (_ctx: Context, _session: Session | null, opts: { input: string }): { path: string; ops: types.files.EditHashlineOp[] } {
     const raw = String(opts.input ?? "").replaceAll("\r\n", "\n");
     const lines = raw.split("\n");
@@ -18,6 +31,18 @@ export default function (_ctx: Context, _session: Session | null, opts: { input:
     while (i < lines.length) {
         const line = lines[i] ?? "";
         if (!line.trim()) {
+            i++;
+            continue;
+        }
+        if (line.startsWith("replace ")) {
+            const [old, replacement] = parseJsonStrings(line.slice("replace ".length), line);
+            ops.push({ kind: "literal_replace", old, replacement, all: false });
+            i++;
+            continue;
+        }
+        if (line.startsWith("replace-all ")) {
+            const [old, replacement] = parseJsonStrings(line.slice("replace-all ".length), line);
+            ops.push({ kind: "literal_replace", old, replacement, all: true });
             i++;
             continue;
         }

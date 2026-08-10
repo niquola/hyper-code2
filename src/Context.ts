@@ -44,7 +44,7 @@ declare global {
         cli?: Record<string, Function>;
         dev?: { errors: Map<string, string> };
         watcher?: any;
-        db?: import("bun:sqlite").Database;
+        db?: unknown;   // legacy slot; storage is Postgres (ctx.state.procs.db.sql)
         [key: string]: any;
     }
 }

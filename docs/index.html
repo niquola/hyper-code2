@@ -141,7 +141,7 @@ ctx.fns.db.select(ctx,
   [agent.id])
 
 // Who am I?  →  agent.id, agent.model, agent.systemPrompt, agent.scratchpad</code></pre>
-  <p>The system prompt teaches it the <strong>three places that matter</strong>: <code>ctx.fns</code> (what it can do), <code>ctx.routes</code> (what it exposes), <code>SQLite</code> (what it remembers). Once those are visible, "extending myself" becomes a concrete loop: <em>see the gap → write the file → hot-load → use it</em>. No reflection, no plugin API — the source code <em>is</em> the introspection surface.</p>
+  <p>The system prompt teaches it the <strong>three places that matter</strong>: <code>ctx.fns</code> (what it can do), <code>ctx.routes</code> (what it exposes), <code>Postgres</code> (what it remembers). Once those are visible, "extending myself" becomes a concrete loop: <em>see the gap → write the file → hot-load → use it</em>. No reflection, no plugin API — the source code <em>is</em> the introspection surface.</p>
 </section>
 
 <!-- 7. HYPER-CODE2 + ARCH -->
@@ -151,7 +151,7 @@ ctx.fns.db.select(ctx,
   <p class="lead">Small enough that the agent holds the architecture in context. Simple enough that it can extend it without breaking anything.</p>
   <ul>
     <li><strong>Bun</strong> — fast runtime, batteries-included (<code>Bun.serve</code>, <code>Bun.file</code>, <code>Bun.$</code>, <code>bun:sqlite</code>, <code>Bun.build</code>), ~zero deps.</li>
-    <li><strong>SQLite</strong> for sessions — agents, messages, events, all queryable by the agent itself.</li>
+    <li><strong>Postgres</strong> (paradedb) for sessions — agents, messages, events, all queryable by the agent itself.</li>
     <li><strong>Web UI</strong> — SSR chat, files explorer (shiki + CodeMirror+vim), settings page (device-flow logins for Kimi-coding / Codex subscriptions, JWT auto-refresh).</li>
     <li>About <strong>1000 lines</strong>. Works with OpenAI, Anthropic, Groq, OpenRouter, LM Studio.</li>
   </ul>
@@ -162,7 +162,7 @@ ctx.fns.db.select(ctx,
      └─SSE /events──────────────┤ agent.events    (UI trace)
                                 │ agent.messages  (LLM transcript)
                                 │ agent.scratchpad (off-context state)
-                                │ SQLite sessions  (agents, messages, events)
+                                │ Postgres sessions (agents, messages, events)
                                 └────────────┘</code></pre>
 </section>
 
@@ -173,7 +173,7 @@ ctx.fns.db.select(ctx,
   <p class="lead">Three rules that make hot-swap trivial.</p>
   <ol>
     <li><strong>Functions take everything as parameters.</strong> No <code>this</code>, no closures over module state, no DI container. First arg is always <code>ctx</code> — anything the function needs comes through it.</li>
-    <li><strong>All state lives in one place: <code>ctx</code>.</strong> <code>ctx.state.*</code> in memory; SQLite for persistence; <code>agent.scratchpad</code> for off-LLM working memory. State never hides inside a module.</li>
+    <li><strong>All state lives in one place: <code>ctx</code>.</strong> <code>ctx.state.*</code> in memory; Postgres for persistence; <code>agent.scratchpad</code> for off-LLM working memory. State never hides inside a module.</li>
     <li><strong>Any function can be hot-swapped at runtime.</strong> Edit the file → <code>ctx.fns.repl.load(ctx, "agent.run")</code> → next call uses the new version. No restart, no re-init, no stale closures because there were no closures to begin with.</li>
   </ol>
 <pre><code>// All the data this function will ever touch comes through ctx + args:

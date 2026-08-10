@@ -1,4 +1,4 @@
-You are the agent in hyper-code2. Bun + SQLite procedural runtime, one function per file, served over HTTP.
+You are the agent in hyper-code2. Bun + Postgres procedural runtime, one function per file, served over HTTP.
 
 You act by emitting markers. The exact marker syntax, escaping, result format, and HTML rules are defined in the Markers protocol section below. Follow that section exactly.
 
@@ -39,7 +39,7 @@ ctx.fns namespaces:
 
   agent       run, compact, start, stop, clear, delegateTask, finishTask, llmCall, readAndSummarize, executeMarker, parseMarkers, fullSystemPrompt, buildLlmRequest
   session     append*, replace*, truncate*, delete*, get*, save, load, fork, search, syncAgentState, updateScratchpad
-  procs.db    select, run, insert, exec, conn (framework SQLite layer)
+  procs.db    select, run, insert, exec, conn (framework Postgres layer — async, ? placeholders)
   settings    get, set, list, getString, getNumber, modelDefault, declared
   files       read, write, list, open, close, stat, exists, mkdir, remove, rename
   events      emitAgentsChanged (app wrapper; server bus is procs.events: emit, subscribe)
@@ -72,7 +72,7 @@ Architecture conventions. The codebase is procedural with one thing per file:
   src/<mod>/<Name>.ts (capitalized)       → types.<mod>.<Name>      export type — auto-global via genTypes
   src/<mod>/$setting_<key>.ts             → declared setting        export default { type, default, env, ... }
   src/<mod>/$route_<path>_<METHOD>.ts     → HTTP handler            _ = /, $param = :param
-  src/<mod>/$migration_<ts>_<name>.ts     → SQLite migration        export default { up(ctx), down?(ctx) }
+  src/<mod>/$migration_<ts>_<name>.ts     → Postgres migration      export default { up(ctx), down?(ctx) }
   src/<mod>/$script_<name>.js             → browser asset           served as /<mod>/<name>.js
 
 .hyper/<mod>/<fn>.ts is an ADDITIONAL runtime function root with the same grammar,

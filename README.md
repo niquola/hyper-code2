@@ -6,9 +6,9 @@ A self-extending AI agent server on Bun, running on the [procs](https://github.c
 
 The agent acts by emitting `§eval` / `§write:<path>` / `§bash` / `§html` markers in plain content. The runtime parses each marker, executes its body (JS/TS for eval, file write for write, `bash -c` for bash, TSX render for html), and feeds the result back as a synthetic user message on the next turn. No JSON tool schemas, no escape-in-escape, one wire format.
 
-**State is separated from functions.** Behaviour lives in files under `src/` / `.hyper/` and is loaded into `ctx.fns.<module>.<fn>` — called as `ctx.fns.mod.fn({ ...opts })`, with `ctx` and the request `session` injected by a Proxy. Runtime state lives on `ctx.state` (in-memory) and a SQLite DB (`agents`, `messages`, `events`, any table the agent chooses to add). Replacing a file + `ctx.fns.procs.repl.load({ name: "<module>" })` (or just saving it — the dev watcher syncs) swaps the function everywhere without touching state or restarting the process — routes, procedures, types, even the agent loop itself can be extended live.
+**State is separated from functions.** Behaviour lives in files under `src/` / `.hyper/` and is loaded into `ctx.fns.<module>.<fn>` — called as `ctx.fns.mod.fn({ ...opts })`, with `ctx` and the request `session` injected by a Proxy. Runtime state lives on `ctx.state` (in-memory) and Postgres (`agents`, `messages`, `events`, any table the agent chooses to add — paradedb, so transcripts are BM25-searchable). Replacing a file + `ctx.fns.procs.repl.load({ name: "<module>" })` (or just saving it — the dev watcher syncs) swaps the function everywhere without touching state or restarting the process — routes, procedures, types, even the agent loop itself can be extended live.
 
-**All sessions are in SQLite and fully agent-accessible.** Every turn's messages and UI events for every agent are rows in `.hyper/_runtime/sessions`. The agent reads its own + other agents' history with a one-liner: `§eval\nctx.fns.procs.db.select({ sql: "SELECT … FROM messages …" })`. Useful for recalling prior work, mining patterns, or building custom indexes.
+**All sessions are in Postgres and fully agent-accessible.** Every turn's messages and UI events for every agent are rows in the `hyper` Postgres (paradedb, `~/.hyper/docker-compose.yml`). The agent reads its own + other agents' history with a one-liner: `§eval\nctx.fns.procs.db.select({ sql: "SELECT … FROM messages …" })`. Useful for recalling prior work, mining patterns, or building custom indexes.
 
 ## What it is
 
@@ -51,7 +51,7 @@ flowchart LR
         RUN["run<br/>→ LLM → parseMarkers → execute"]
     end
 
-    subgraph DB[SQLite]
+    subgraph DB[Postgres]
         AGENTS[(agents<br/>+ next_run_at<br/>+ run_state<br/>+ last_processed_msg_idx)]
         MSGS[(messages<br/>append-only<br/>+ excluded_from_cursor<br/>+ excluded_from_llm)]
         EVENTS[(events<br/>append-only)]
@@ -85,7 +85,7 @@ flowchart LR
 - **`src/<mod>/<Name>.ts`** (noun, capitalized) → `types.<mod>.<Name>` global type via `procs.dev.genTypes`. No `import type` of project types anywhere.
 - **`src/<mod>/$setting_<key>.ts`** → declared runtime setting (`{ type, default, env, options, … }`) → `ctx.state.settings.registry`.
 - **`src/<mod>/$route_<path>_<METHOD>.ts`** → HTTP handler `(ctx, session, { req, params })`. `_` = `/`, `$param` = `:param`.
-- **`src/<mod>/$migration_<id>.ts`** → SQLite migration (`{ up, down? }`), applied at startup in id order.
+- **`src/<mod>/$migration_<id>.ts`** → Postgres migration (`{ up, down? }`), applied at startup in id order.
 - **`src/<mod>/$script_<name>.js`** → browser asset, bundled, served as `/<mod>/<name>.js`.
 - Plus the rest of the procs grammar: `$middleware`, `$config.ts`, `$start/$stop`, `$cli_*`, `$loader_*`, `$point_/$hook_` — see `CLAUDE.md`.
 
@@ -96,7 +96,7 @@ No cross-imports between project files — call other procedures via `ctx.fns`. 
 ```
 src/
   $main.ts                        procs boot: makeCtx (injecting Proxy) → loadFns → genTypes → loadRoutes → lifecycle.start
-  $test.ts                        testCtx for bun tests (full registry, :memory: db, no server)
+  $test.ts                        testCtx for bun tests (full registry, per-ctx pg_temp schema, no server)
   Context.ts / Session.ts         global framework types
   ctx_ns.d.ts                     AUTO-GEN by procs.dev.genTypes — never edit
   $route_GET.ts                   GET /  — redirect to the latest agent
@@ -125,7 +125,7 @@ src/
 
 .runtime/                         port, repl-token (0600), signing key — gitignored
 .hyper/                           runtime-writable overlay, gitignored
-  _runtime/sessions               SQLite DB
+  _runtime/sessions               legacy sqlite file (storage is the hyper Postgres, ~/.hyper/docker-compose.yml)
   <agent-generated>/              whatever the agent decides to add
 
 script/

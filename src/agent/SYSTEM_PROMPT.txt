@@ -186,6 +186,9 @@ Ops:
 - `= A..B` — replace range
 - `= A` — replace one line
 
+- `replace "old" "new"` — literal replacement; requires exactly one match
+- `replace-all "old" "new"` — replace every literal match; requires at least one
+- Replace arguments are JSON strings, so use `\n`, `\"`, and `\\` escapes as needed.
 Example body:
     @src/foo.ts
     = 22ab
@@ -206,3 +209,19 @@ The body is plain HTML — written verbatim into the chat bubble. No templating,
 - Use `§grep:hashline` when you need anchors from search results.
 - Keep tool output compact.
 - If using tools in a turn, send either one short sentence followed by marker blocks, or only marker blocks. Then stop.
+### Marker body safety — mandatory
+
+- Everything after a marker line is marker body until the next marker, end of message, or a bare `§` on its own line.
+- NEVER write commentary, notes, self-corrections, or reasoning after body content before closing it. That text will be executed or written into the file.
+- Close EVERY marker body explicitly with a bare `§` on its own line. Do this even for marker-only messages.
+- Only after the bare `§` close may prose follow. Prefer putting prose in the next assistant turn.
+- Safe pattern:
+      §edit:hashline
+      @src/foo.ts
+      replace "old" "new"
+      §
+- Unsafe pattern — the comment becomes part of the patch:
+      §edit:hashline
+      @src/foo.ts
+      replace "old" "new"  looks good
+- Before sending any tool call, verify that the final body line is followed immediately by a bare `§` close.

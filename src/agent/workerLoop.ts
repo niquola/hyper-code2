@@ -6,8 +6,8 @@
 //
 //   UPDATE agents SET run_state='running' WHERE id IN (SELECT … LIMIT 1) RETURNING id
 //
-// Two concurrent claims targeting the same `idle` row can't both win — SQLite's
-// RETURNING semantics ensure exactly one statement gets the id. So we never
+// Two concurrent claims targeting the same `idle` row can't both win — Postgres
+// row locking on UPDATE…RETURNING ensures exactly one statement gets the id. So we never
 // need an in-memory `inflight` Map keyed by agent id; the DB is the lock.
 //
 // State on the agents row:
@@ -174,7 +174,7 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         // Drain every claimable agent into a parallel promise. The atomic
         // claim guarantees no two concurrent runs target the same agent.
         // No artificial concurrency cap — backpressure comes from the LLM
-        // provider (429 / connection errors) and SQLite serialising writes.
+        // provider (429 / connection errors) and Postgres serialising row writes.
         let drained = 0;
         while (true) {
             const id = await claimOne(ctx, Date.now());

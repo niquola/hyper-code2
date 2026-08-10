@@ -57,7 +57,7 @@ src/
 script/repl.ts        external REPL client (reads .runtime/port + .runtime/repl-token)
 .runtime/             port, repl-token, signing key, bundled scripts (gitignored)
 .hyper/               runtime-writable overlay — scanned AFTER src/, overrides by name;
-                      _runtime/sessions is the SQLite DB (procs.prod procs/db url)
+                      _runtime/sessions is the LEGACY sqlite file (storage is Postgres now)
 ```
 
 ## Server, REPL, hot reload
