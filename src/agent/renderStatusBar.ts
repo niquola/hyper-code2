@@ -3,7 +3,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     let usage = initialUsage;
     const now = Date.now();
     const row = ((await ctx.fns.procs.db.select({
-        sql: 'SELECT run_state, run_started_at, next_run_at, last_processed_msg_idx FROM agents WHERE id = ?',
+        sql: 'SELECT run_state, run_started_at, next_run_at, last_processed_msg_idx, last_error FROM agents WHERE id = ?',
         params: [agentId],
     })) as any[])[0];
 
@@ -25,13 +25,21 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
         const waits = Math.max(0, (Number(row.next_run_at) - now) / 1000).toFixed(1);
         label = `queued · ${waits}s`;
         cls = 'text-amber-700 bg-amber-50 border-amber-300';
+    } else if (row?.last_error) {
+        // A failed run does NOT auto-retry (by design) — without this badge it
+        // looks like a hang. The next user message retries; say so.
+        label = 'error';
+        cls = 'text-red-700 bg-red-50 border-red-300';
     } else {
         label = 'idle';
         cls = 'text-gray-500 bg-gray-50 border-gray-200';
     }
 
     const url = `/agent/${encodeURIComponent(agentId)}/statusbar`;
-    const statusBadge = `<span class="text-xs px-2 py-0.5 rounded border font-mono ${cls}">${label}</span>`;
+    const esc = (t: any) => ctx.fns.procs.ui.escape({ text: t });
+    const statusBadge = row?.last_error && row?.run_state !== 'running'
+        ? `<span class="text-xs px-2 py-0.5 rounded border font-mono ${cls} max-w-[16rem] truncate inline-block align-bottom" title="${esc(String(row.last_error))} — send a message to retry">error: ${esc(String(row.last_error).slice(0, 48))}</span>`
+        : `<span class="text-xs px-2 py-0.5 rounded border font-mono ${cls}">${label}</span>`;
     const tokensBadge = usage ? `<span class="text-xs px-2 py-0.5 rounded border border-gray-300 bg-white text-gray-600 font-mono">💬 ${((usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0)) / 1000}k</span>` : '';
     return `<div id="status-bar" hx-get="${url}" hx-trigger="every 1s" hx-swap="outerHTML" class="flex items-center gap-2">${statusBadge}${tokensBadge}</div>`;
 }
