@@ -1,3 +1,9 @@
+function sanitizeMessage(msg: any): any {
+    return {
+        ...msg,
+        content: String(msg.content ?? '').trimEnd(),
+    };
+}
 export default async function (
     ctx: Context,
     _session: Session | null,
@@ -61,6 +67,8 @@ export default async function (
     }
 
     const messages: any[] = [];
+    if (system) messages.push(sanitizeMessage({ role: 'system', content: system }));
+    messages.push(sanitizeMessage({ role: 'user', content: user }));
     if (system) messages.push({ role: 'system', content: system });
     messages.push({ role: 'user', content: user });
 

@@ -32,9 +32,13 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
         const cached = ev.eventHtml ?? (ev.type !== 'assistant' ? ev.html : undefined);
         return cached ?? await ctx.fns.agent.renderEventHtml({ event: ev, agentId: id });
     }))).join('\n');
-
-    const statusBarHtml = await ctx.fns.agent.renderStatusBar({ agentId: id });
     const agents = await ctx.fns.session.list({});
+    const lastEvent = ((await ctx.fns.procs.db.select({
+        sql: 'SELECT payload FROM events WHERE agent_id = ? AND type = \'assistant\' ORDER BY idx DESC LIMIT 1',
+        params: [id],
+    })) as any[])[0];
+    const lastUsage = lastEvent ? JSON.parse(lastEvent.payload).usage : null;
+    const statusBarHtml = await ctx.fns.agent.renderStatusBar({ agentId: id, initialUsage: lastUsage });
     const options = agents.map((a: any) =>
         `<option value="${esc(a.id)}"${a.id === id ? " selected" : ""}>${esc(a.id)} · ${esc(String(a.title ?? "").slice(0, 32))}</option>`).join("");
 

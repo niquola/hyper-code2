@@ -1,11 +1,19 @@
-export default async function (ctx: Context, _session: Session | null, opts: { agentId: string }): Promise<string> {
-    const { agentId } = opts;
+export default async function (ctx: Context, _session: Session | null, opts: { agentId: string; initialUsage?: any }): Promise<string> {
+    const { agentId, initialUsage } = opts;
+    let usage = initialUsage;
     const now = Date.now();
     const row = ((await ctx.fns.procs.db.select({
-        sql: 'SELECT run_state, run_started_at, next_run_at FROM agents WHERE id = ?',
+        sql: 'SELECT run_state, run_started_at, next_run_at, last_processed_msg_idx FROM agents WHERE id = ?',
         params: [agentId],
     })) as any[])[0];
 
+    if (!usage) {
+        const lastEvent = ((await ctx.fns.procs.db.select({
+            sql: 'SELECT payload FROM events WHERE agent_id = ? AND type = \'assistant\' ORDER BY idx DESC LIMIT 1',
+            params: [agentId],
+        })) as any[])[0];
+        usage = lastEvent ? JSON.parse(lastEvent.payload).usage : null;
+    }
     let label: string;
     let cls: string;
 
@@ -23,9 +31,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     }
 
     const url = `/agent/${encodeURIComponent(agentId)}/statusbar`;
-    return `<span id="status-bar"
-        hx-get="${url}"
-        hx-trigger="every 1s"
-        hx-swap="outerHTML"
-        class="text-xs px-2 py-0.5 rounded border font-mono ${cls}">${label}</span>`;
+    const statusBadge = `<span class="text-xs px-2 py-0.5 rounded border font-mono ${cls}">${label}</span>`;
+    const tokensBadge = usage ? `<span class="text-xs px-2 py-0.5 rounded border border-gray-300 bg-white text-gray-600 font-mono">💬 ${((usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0)) / 1000}k</span>` : '';
+    return `<div id="status-bar" hx-get="${url}" hx-trigger="every 1s" hx-swap="outerHTML" class="flex items-center gap-2">${statusBadge}${tokensBadge}</div>`;
 }
