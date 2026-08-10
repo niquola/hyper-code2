@@ -28,6 +28,7 @@ declare global {
             parseReadMarker: Injected<typeof import("./agent/parseReadMarker").default>;
             readAndSummarize: Injected<typeof import("./agent/readAndSummarize").default>;
             renderEventHtml: Injected<typeof import("./agent/renderEventHtml").default>;
+            renderEventsHtml: Injected<typeof import("./agent/renderEventsHtml").default>;
             renderStatusBar: Injected<typeof import("./agent/renderStatusBar").default>;
             run: Injected<typeof import("./agent/run").default>;
             sanitizeHtmlBody: Injected<typeof import("./agent/sanitizeHtmlBody").default>;

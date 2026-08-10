@@ -16,12 +16,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
 
     const maxIdx = await ctx.fns.session.getMaxEventIdx({ id });
     const events = await ctx.fns.session.getEvents({ id, fromIdx: offset });
-    const eventsHtml = (await Promise.all(events.map(async (ev: any) => {
-        const cached = (ev.type === 'user' || ev.type === 'assistant')
-            ? undefined
-            : (ev.eventHtml ?? (ev.type !== 'assistant' ? ev.html : undefined));
-        return cached ?? await ctx.fns.agent.renderEventHtml({ event: ev, agentId: id });
-    }))).join('\n');
+    const eventsHtml = await ctx.fns.agent.renderEventsHtml({ events, agentId: id });
 
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
     const usageOob = lastAssistant?.usage

@@ -109,3 +109,25 @@ describe('eval parse-error diagnosis', () => {
         expect(res).toContain('bare \u00a7 line'.replace('\u00a7', String.fromCharCode(0xa7)));
     });
 });
+
+describe('fail-fast marker chain', () => {
+    test('markers after a failed one are skipped with a note', async () => {
+        const ctx = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:echo' });
+        await ctx.fns.session.save({ agent });
+        let call = 0;
+        ctx.state.registry.repl.eval = async () => { throw new Error('boom'); };
+        let wrote = 0;
+        ctx.state.registry.files.write = async () => { wrote++; };
+        ctx.state.registry.llm.stream = async () => (++call === 1
+            ? { text: '\u00a7eval\nbad()\n\u00a7write:.test-tmp/x.txt\nhello', usage: {}, finishReason: 'stop' }
+            : { text: 'done.', usage: {}, finishReason: 'stop' });
+
+        await ctx.fns.agent.run({ agent, userText: 'go' });
+
+        expect(wrote).toBe(0);  // the §write after the failed §eval did NOT run
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        const skipped = msgs.find((m: any) => String(m.content).includes('skipped: earlier'));
+        expect(skipped).toBeDefined();
+    });
+});

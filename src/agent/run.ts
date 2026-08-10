@@ -105,9 +105,23 @@ export default async function (
             await ctx.fns.session.syncAgentState({ agent });
         }
 
+        // Fail-fast chain: markers after a failed one were written assuming its
+        // success (verify → patch → write) — executing them anyway applies
+        // patches whose precondition just failed. Skip the rest, say so.
+        let failedAt: string | null = null;
         for (const call of calls) {
-            await ctx.fns.agent.executeMarker({ agent, call, usage });
+            if (failedAt) {
+                await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                    role: 'user',
+                    content: `§result:${call.kind}:skipped\nskipped: earlier §${failedAt} in this reply failed — re-issue this marker if it still applies.`,
+                    excluded_from_cursor: true,
+                } });
+                continue;
+            }
+            const r = await ctx.fns.agent.executeMarker({ agent, call, usage });
+            if ((r as any)?.isError) failedAt = call.kind;
         }
+        if (failedAt) await ctx.fns.session.syncAgentState({ agent });
 
         // Prose the model wrote AFTER an explicitly-closed body (bare § line) —
         // rendered in order, after the calls it follows.

@@ -28,10 +28,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const isStreaming = stateRow?.run_state === 'running' || !!stateRow?.next_run_at;
     const initJson = JSON.stringify({ agentId: id, inheritedCount, offset: maxIdx + 1, isStreaming }).replaceAll('<', '\\u003c');
 
-    const eventsHtml = (await Promise.all(events.map(async (ev: any) => {
-        const cached = ev.eventHtml ?? (ev.type !== 'assistant' ? ev.html : undefined);
-        return cached ?? await ctx.fns.agent.renderEventHtml({ event: ev, agentId: id });
-    }))).join('\n');
+    const eventsHtml = await ctx.fns.agent.renderEventsHtml({ events, agentId: id });
     const agents = await ctx.fns.session.list({});
     const lastEvent = ((await ctx.fns.procs.db.select({
         sql: 'SELECT payload FROM events WHERE agent_id = ? AND type = \'assistant\' ORDER BY idx DESC LIMIT 1',

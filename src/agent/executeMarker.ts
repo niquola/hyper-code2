@@ -3,7 +3,7 @@ export default async function (
     ctx: Context,
     _session: Session | null,
     opts: { agent: types.agent.Agent; call: types.agent.MarkerCall; usage?: any },
-): Promise<void> {
+): Promise<{ isError: boolean }> {
     const { agent, call } = opts;
     const usage = opts.usage;
 
@@ -24,7 +24,7 @@ export default async function (
             text: '', html, usage, messageIdx: append.idx,
         } });
         await ctx.fns.session.syncAgentState({ agent });
-        return;
+        return { isError: false };
     }
 
     if (call.kind === 'evalHtml') {
@@ -33,7 +33,7 @@ export default async function (
             text: '', html, usage, messageIdx: append.idx,
         } });
         await ctx.fns.session.syncAgentState({ agent });
-        return;
+        return { isError: false };
     }
 
     let output = '';
@@ -142,4 +142,5 @@ export default async function (
         role: 'user', content: resultText, excluded_from_cursor: true,
     } });
     await ctx.fns.session.syncAgentState({ agent });
+    return { isError };
 }

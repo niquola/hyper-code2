@@ -202,6 +202,21 @@ Result:
 
 The body is plain HTML — written verbatim into the chat bubble. No templating, no JS execution.
 
+## Several operations per reply — the rules
+
+- You MAY emit several markers in one reply: they execute IN ORDER, each gets
+  its own §result. Use this when you already KNOW every body (checked the files
+  earlier): §eval verify → §edit patch → §write new file.
+- A later marker CANNOT use an earlier marker's result — bodies are written
+  before anything runs. If step 2 depends on step 1's output, either do BOTH
+  inside one §eval (results flow through variables, cheap and fast), or split
+  into two replies.
+- Prefer ONE §eval that composes several ctx.fns calls (loops, Promise.all)
+  for mechanical work — reading N files, a series of selects. Keep DECISIONS
+  (edits, commits, anything a human should see) as separate markers.
+- If a marker in the chain FAILS, the rest of the reply's markers are SKIPPED
+  (you'll see "skipped: earlier marker failed") — re-issue what still applies.
+
 ## Discipline
 
 - Use small steps.
