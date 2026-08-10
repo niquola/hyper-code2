@@ -77,3 +77,17 @@ describe('§write parse warning', () => {
         expect(res).toContain('bare § line');
     });
 });
+
+describe('NUL bytes in marker output', () => {
+    test('a result with \\u0000 survives the pg INSERT (scrubbed, run alive)', async () => {
+        const ctx = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:echo' });
+        await ctx.fns.session.save({ agent });
+        ctx.state.registry.repl.eval = async () => 'binary\u0000junk\u0000here';
+        await ctx.fns.agent.executeMarker({ agent, call: { kind: 'eval', content: 'x' } });
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        const res = String(msgs[msgs.length - 1]!.content);
+        expect(res).toContain('binary');
+        expect(res).not.toContain('\u0000');
+    });
+});

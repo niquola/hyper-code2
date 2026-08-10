@@ -11,7 +11,7 @@ export default async function (
         SET scratchpad = ?, updated_at = ?
         WHERE id = ?
     `,
-        params: [JSON.stringify(scratchpad ?? {}), ts, id],
+        params: [JSON.stringify(scratchpad ?? {}).replaceAll('\u0000', '\uFFFD'), ts, id],
     });
     return { ok: res.changes > 0 };
 }

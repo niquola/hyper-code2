@@ -359,6 +359,7 @@ declare global {
             status: Injected<typeof import("./settings/status").default>;
         };
         skill: {
+            greet: Injected<typeof import("../.hyper/skill/greet").default>;
             hello: Injected<typeof import("./skill/hello").default>;
             inspect: Injected<typeof import("./skill/inspect").default>;
             uptime: Injected<typeof import("../.hyper/skill/uptime").default>;

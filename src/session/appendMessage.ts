@@ -4,6 +4,11 @@ export default async function (
     opts: { id: string; message: any; ts?: number },
 ): Promise<{ idx: number }> {
     const { id, message } = opts;
+    // Postgres text refuses NUL bytes — scrub at the boundary so one stray \0
+    // in a marker result / pasted text can't fail the INSERT and kill a run.
+    if (typeof message.content === 'string' && message.content.includes('\u0000')) {
+        message.content = message.content.replaceAll('\u0000', '\uFFFD');
+    }
     const ts = opts.ts ?? Date.now();
     const row = ((await ctx.fns.procs.db.select({ sql: 'SELECT COALESCE(MAX(idx), -1) AS n FROM messages WHERE agent_id = ?', params: [id] })) as any[])[0];
     const idx = Number(row?.n ?? -1) + 1;

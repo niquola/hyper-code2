@@ -118,6 +118,10 @@ export default async function (
         isError = true;
     }
 
+    // Postgres text refuses NUL bytes — a §read of a binary or bash output
+    // with \0 must not kill the whole run at the INSERT (it did: agent cm).
+    output = output.replaceAll('\u0000', '\uFFFD');
+
     // Oversized results go to agent.scratchpad.results — the transcript (and
     // the tool_call event) carry a preview + pointer; §eval reads the rest.
     output = await ctx.fns.agent.stashResult({ agent, output, kind: call.kind });
