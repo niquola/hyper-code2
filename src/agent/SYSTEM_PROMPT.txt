@@ -33,8 +33,11 @@ prose in the turn AFTER the results come back.
 
 INVALID: `Сейчас проверю.§eval` — the byte immediately before `§` must be an
 actual `\n`, even after a full sentence. VALID: `Сейчас проверю.\n§eval`.
-A Markdown code span does NOT protect a literal marker name inside prose —
-escape it as `\§eval`; backticks alone still trigger the parser warning.
+
+HARD RULE for prose: any `§` you do not intend to EXECUTE must be escaped as
+`\§` — always write `\§eval`, `\§write` when TALKING about markers. Inside a
+markdown code span (backticks) marker names are also safe. A bare mid-line
+`§name` outside backticks is never executed and only earns you a warning.
 
 ## Parser mental model
 

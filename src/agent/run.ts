@@ -28,12 +28,17 @@ export default async function (
     let consumedUserIdx = -1;
 
     while (true) {
-        await ctx.fns.session.syncAgentState({ agent });
+        // Order matters (ck's review): read the frontier BEFORE syncing the
+        // transcript. A message landing between the two then gets INTO the
+        // model call but is NOT counted consumed — worst case a harmless
+        // duplicate pass. The reverse order counted messages the model never
+        // saw and lost them.
         const seen = ((await ctx.fns.procs.db.select({
             sql: "SELECT COALESCE(MAX(idx), -1) AS i FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
             params: [agent.id],
         })) as any[])[0];
         consumedUserIdx = Math.max(consumedUserIdx, Number(seen?.i ?? -1));
+        await ctx.fns.session.syncAgentState({ agent });
 
         const { text, usage, finishReason } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
 

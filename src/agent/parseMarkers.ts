@@ -100,7 +100,16 @@ export default function (_ctx: Context, _session: Session | null, opts: { text: 
     if (hits.length === 0) proseRaw = text;
     else proseRaw = text.slice(0, hits[0]!.index).replace(/\n+$/, '');
 
+    // Prose ABOUT markers is legal: a §name inside a markdown code span
+    // (`...` or a fenced ``` block) is documentation, not a call attempt —
+    // no warning. Only a bare mid-line § outside code spans is worth teaching.
+    const codeSpans: Array<[number, number]> = [];
+    for (const cs of proseRaw.matchAll(/```[\s\S]*?```|`[^`\n]*`/g)) {
+        codeSpans.push([cs.index!, cs.index! + cs[0]!.length]);
+    }
+    const inCode = (i: number) => codeSpans.some(([a, b]) => i >= a && i < b);
     for (const m of proseRaw.matchAll(UNESCAPED_RE)) {
+        if (inCode(m.index!)) continue;
         const snippet = m[0]!.slice(0, 30);
         errors.push({
             kind: 'unescaped',

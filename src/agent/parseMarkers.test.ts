@@ -188,3 +188,21 @@ describe('agent.parseMarkers', () => {
         expect((r.calls[0] as any).content).toBe('console.log("the §eval marker")');
     });
 });
+describe('unescaped-§ warnings vs code spans', () => {
+    const parse = (text: string) => {
+        const parseMarkers = require('./parseMarkers').default;
+        return parseMarkers({} as any, null, { text });
+    };
+    test('§name inside inline backtick spans is documentation — no warning', () => {
+        // NB: a fenced block with a marker at column 1 still EXECUTES (wire
+        // format is line-based); inline spans are the documentation idiom.
+        const r = parse('Я поддерживаю `§eval`, `§write, §bash` и `формат §read:hashline` — вот так.');
+        expect(r.errors.length).toBe(0);
+        expect(r.calls.length).toBe(0);
+    });
+    test('bare mid-line §name outside backticks still warns', () => {
+        const r = parse('Сейчас проверю.§eval и посмотрю');
+        expect(r.errors.length).toBe(1);
+        expect(r.errors[0]!.kind).toBe('unescaped');
+    });
+});
