@@ -98,8 +98,13 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
     let errorText: string | null = null;
     let aborted = false;
 
+    // Steering: run() reports the user-message frontier its LAST model call
+    // actually saw — everything up to it was answered inside this run, so the
+    // cursor advances to it and no duplicate pass is scheduled for it.
+    let consumedIdx = frontierIdx;
     try {
-        await ctx.fns.agent.run({ agent, userText: '', userMessageAlreadyAppended: true });
+        const result = await ctx.fns.agent.run({ agent, userText: '', userMessageAlreadyAppended: true });
+        consumedIdx = Math.max(frontierIdx, Number((result as any)?.consumedUserIdx ?? -1));
     } catch (e: any) {
         if (isAbortError(e)) {
             aborted = true;
@@ -126,16 +131,26 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
                     run_started_at = NULL,
                     last_processed_msg_idx = CASE WHEN ? = 1 THEN ? ELSE last_processed_msg_idx END,
                     next_run_at = CASE
-                        WHEN ? = 1 AND (SELECT COALESCE(MAX(idx), -1) FROM messages m
-                               WHERE m.agent_id = agents.id AND m.role = 'user' AND m.excluded_from_cursor = 0) > ?
-                        THEN COALESCE(next_run_at, ?)
+                        WHEN ? = 1 THEN
+                            -- success: reschedule iff a user message exists past what
+                            -- this run's LAST model call consumed (steering answered
+                            -- everything up to consumedIdx inside the run); a schedule
+                            -- for an already-consumed POST is cleared. A message that
+                            -- commits after this snapshot re-sets next_run_at itself,
+                            -- serialized after this row lock — nothing is lost.
+                            CASE WHEN (SELECT COALESCE(MAX(idx), -1) FROM messages m
+                                        WHERE m.agent_id = agents.id AND m.role = 'user' AND m.excluded_from_cursor = 0) > ?
+                                 THEN COALESCE(next_run_at, ?)
+                                 ELSE NULL END
+                        -- abort/error: keep whatever schedule a concurrent POST set
+                        -- (user-triggered retry); claim consumed the original one.
                         ELSE next_run_at
                     END,
                     last_error = ?,
                     updated_at = ?
               WHERE id = ?
               RETURNING next_run_at`,
-            params: [advanceCursor ? 1 : 0, frontierIdx, advanceCursor ? 1 : 0, frontierIdx, ts + 100, errorText, ts, agentId],
+            params: [advanceCursor ? 1 : 0, consumedIdx, advanceCursor ? 1 : 0, consumedIdx, ts + 100, errorText, ts, agentId],
         });
 
         agent.abortController = null;

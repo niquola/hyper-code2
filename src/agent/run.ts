@@ -20,7 +20,21 @@ export default async function (
         await ctx.fns.session.syncAgentState({ agent });
     }
 
+    // Steering (pi-style): a user message POSTed while this run is busy joins
+    // the NEXT model call — the transcript is refreshed before every stream —
+    // and `consumedUserIdx` records the frontier that call actually saw, so
+    // the worker's finalize won't schedule a duplicate run for a message this
+    // run already answered.
+    let consumedUserIdx = -1;
+
     while (true) {
+        await ctx.fns.session.syncAgentState({ agent });
+        const seen = ((await ctx.fns.procs.db.select({
+            sql: "SELECT COALESCE(MAX(idx), -1) AS i FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
+            params: [agent.id],
+        })) as any[])[0];
+        consumedUserIdx = Math.max(consumedUserIdx, Number(seen?.i ?? -1));
+
         const { text, usage, finishReason } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
 
         const { prose, calls, errors } = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
@@ -45,7 +59,7 @@ export default async function (
             // Skip empty completions entirely — they produce phantom bubbles
             // and have no informational value to either UI or LLM.
             if (!text || !String(text).trim()) {
-                return { text: text ?? '', usage };
+                return { text: text ?? '', usage, consumedUserIdx };
             }
             const append = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: text } });
             await ctx.fns.session.syncAgentState({ agent });
@@ -54,7 +68,7 @@ export default async function (
                 text: prose || text || '', html, usage, messageIdx: append.idx,
             } });
             await ctx.fns.session.syncAgentState({ agent });
-            return { text, usage };
+            return { text, usage, consumedUserIdx };
         }
 
         // Persist the prose chunk that preceded the first marker, if any.
