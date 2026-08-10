@@ -86,3 +86,13 @@ describe("llm.toAnthropicMessages", () => {
         }
     });
 });
+
+test("final assistant content is trimmed (anthropic rejects trailing whitespace)", () => {
+    const out = convert({} as any, null, { messages: [
+        { role: "user", content: "go" },
+        { role: "assistant", content: "\u00a7eval\nconsole.log(1)\n" },
+    ] });
+    const last = out[out.length - 1]!;
+    expect(last.role).toBe("assistant");
+    expect(last.content[0]!.text).toBe("\u00a7eval\nconsole.log(1)");
+});

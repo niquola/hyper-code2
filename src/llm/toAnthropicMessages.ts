@@ -27,5 +27,11 @@ export default function (_ctx: Context, _session: Session | null, opts: { messag
             out.push({ role, content: [{ type: "text", text }] });
         }
     }
+    // 3. "final assistant content cannot end with trailing whitespace" — a
+    //    marker text / prose row usually carries a trailing \n, and when the
+    //    transcript happens to end on assistant, the whole call is rejected.
+    const last = out[out.length - 1];
+    const lastBlock = last?.content[last.content.length - 1];
+    if (last?.role === "assistant" && lastBlock) lastBlock.text = lastBlock.text.replace(/\s+$/, "");
     return out;
 }
