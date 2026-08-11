@@ -13,6 +13,7 @@ export default async function (
         instructions?: string;
         mode?: "await" | "async";
         responseFormat?: "text" | "json" | "report" | { kind: "report" | "json"; fields?: string[] };
+        autoArchive?: boolean;
     },
 ): Promise<{ childId: string; summary?: string; result?: any; started?: true }> {
     const parentAgent = opts.parent;
@@ -22,6 +23,7 @@ export default async function (
     const forkContext = !!opts?.forkContext;
     const instructions = String(opts?.instructions ?? "").trim();
     const responseFormat = opts?.responseFormat ?? "text";
+    const autoArchive = opts.autoArchive !== false;
 
     const child = forkContext
         ? await ctx.fns.session.fork({ id: parentAgent.id })
@@ -38,6 +40,7 @@ export default async function (
         task,
         instructions,
         responseFormat,
+        autoArchive,
         status: "running",
     };
     await ctx.fns.session.save({ agent: child });
@@ -47,7 +50,13 @@ export default async function (
     const prompt = ctx.fns.agent.buildDelegatedTaskPrompt({ task, instructions, responseFormat });
 
     if (mode === "async") {
-        void ctx.fns.agent.run({ agent: child, userText: prompt });
+        void ctx.fns.agent.run({ agent: child, userText: prompt })
+            .then(async () => {
+                if (autoArchive && child.scratchpad?.delegateTask?.status === "finished") {
+                    await ctx.fns.session.archive({ id: child.id });
+                }
+            })
+            .catch((error: any) => console.error(`delegateTask async child ${child.id} failed:`, error));
         return { childId: child.id, started: true };
     }
 
@@ -61,7 +70,9 @@ export default async function (
         const meta = child.scratchpad?.delegateTask;
         if (meta?.status === "finished" && meta.result) {
             waiters.delete(child.id);
-            return { childId: child.id, summary: meta.result.summary, result: meta.result.result ?? null };
+            const response = { childId: child.id, summary: meta.result.summary, result: meta.result.result ?? null };
+            if (autoArchive) await ctx.fns.session.archive({ id: child.id });
+            return response;
         }
         waiters.delete(child.id);
         throw new Error("delegateTask: child completed without finishTask");

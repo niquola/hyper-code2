@@ -42,15 +42,15 @@ declare global {
         browser: {
             click: Injected<typeof import("../plugins/browser/src/browser/click").default>;
             closeSessions: Injected<typeof import("../plugins/browser/src/browser/closeSessions").default>;
+            evaluate: Injected<typeof import("../plugins/browser/src/browser/evaluate").default>;
             googleAI: Injected<typeof import("../plugins/browser/src/browser/googleAI").default>;
             googleAIFollowUp: Injected<typeof import("../plugins/browser/src/browser/googleAIFollowUp").default>;
             googleSearch: Injected<typeof import("../plugins/browser/src/browser/googleSearch").default>;
+            navigate: Injected<typeof import("../plugins/browser/src/browser/navigate").default>;
             readPage: Injected<typeof import("../plugins/browser/src/browser/readPage").default>;
             research: Injected<typeof import("../plugins/browser/src/browser/research").default>;
-            tabClose: Injected<typeof import("../plugins/browser/src/browser/tabClose").default>;
-            evaluate: Injected<typeof import("../plugins/browser/src/browser/evaluate").default>;
-            navigate: Injected<typeof import("../plugins/browser/src/browser/navigate").default>;
             screenshot: Injected<typeof import("../plugins/browser/src/browser/screenshot").default>;
+            tabClose: Injected<typeof import("../plugins/browser/src/browser/tabClose").default>;
             tabs: Injected<typeof import("../plugins/browser/src/browser/tabs").default>;
             text: Injected<typeof import("../plugins/browser/src/browser/text").default>;
             title: Injected<typeof import("../plugins/browser/src/browser/title").default>;

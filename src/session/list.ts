@@ -9,6 +9,8 @@ export default async function (ctx: Context, _session: Session | null, opts?: { 
     runState: string;
     unread: number;
     archivedAt: number | null;
+    parentId: string | null;
+    delegated: boolean;
 }>> {
     // Postgres folds unquoted aliases to lowercase — camelCase aliases must be quoted.
     // created_at / updated_at / COUNT(*) are BIGINTs and come back as strings → Number().
@@ -27,6 +29,8 @@ export default async function (ctx: Context, _session: Session | null, opts?: { 
             a.created_at AS "createdAt",
             a.archived_at AS "archivedAt",
             a.updated_at AS "updatedAt",
+            COALESCE(a.parent_id, NULLIF((a.scratchpad::jsonb #>> '{delegateTask,parentId}'), '')) AS "parentId",
+            ((a.scratchpad::jsonb #>> '{delegateTask,parentId}') IS NOT NULL) AS delegated,
             COALESCE((SELECT COUNT(*) FROM messages m WHERE m.agent_id = a.id AND m.role = 'user'), 0) AS turns,
             COALESCE((SELECT COUNT(*) FROM messages m WHERE m.agent_id = a.id AND m.role = 'assistant'
                 AND m.idx > COALESCE((SELECT k.value::int FROM kv k WHERE k.key = 'seen:' || a.id), -1)), 0) AS unread,
@@ -46,5 +50,7 @@ export default async function (ctx: Context, _session: Session | null, opts?: { 
         runState: r.runState || 'idle',
         unread: Number(r.unread),
         archivedAt: r.archivedAt == null ? null : Number(r.archivedAt),
+        parentId: r.parentId == null ? null : String(r.parentId),
+        delegated: r.delegated === true || r.delegated === 't' || r.delegated === 1,
     }));
 }
