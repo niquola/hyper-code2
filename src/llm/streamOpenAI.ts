@@ -7,12 +7,13 @@ export default async function (
     thinking: string;
     finishReason: string | null;
     usage: any;
+    toolCalls: { id: string; name: string; args: any }[];
 }> {
     const { agent } = opts;
     const { system: sys, messages: convo } = await ctx.fns.agent.buildLlmRequest({ agent });
     const messages: any[] = [];
     if (sys) messages.push({ role: "system", content: sys });
-    messages.push(...convo);
+    messages.push(...ctx.fns.llm.toOpenAIMessages({ messages: convo }));
 
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
 
@@ -23,6 +24,13 @@ export default async function (
         stream_options: { include_usage: true },
         prompt_cache_key: agent.id,
     };
+
+    // Native function calls, in JSON protocol mode only (see agent.wireTools).
+    const tools = ctx.fns.agent.wireTools({ agent, api: "openai" });
+    if (tools.length) {
+        body.tools = tools;
+        body.parallel_tool_calls = true;
+    }
 
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (ep.apiKey) headers["authorization"] = `Bearer ${ep.apiKey}`;
@@ -40,6 +48,9 @@ export default async function (
     let thinking = "";
     let finishReason: string | null = null;
     let usage: any = undefined;
+    // Arguments arrive as a JSON string split across deltas, keyed by index —
+    // the pieces are concatenated per slot and parsed once at the end.
+    const slots: { id: string; name: string; buf: string }[] = [];
 
     for await (const { data } of ctx.fns.llm.parseSSE({ body: res.body })) {
         if (data === "[DONE]") break;
@@ -57,8 +68,24 @@ export default async function (
             thinking += delta.reasoning_content;
             opts.onEvent?.({ type: "thinking_delta", delta: delta.reasoning_content });
         }
+        for (const tc of delta.tool_calls ?? []) {
+            const i = Number(tc.index ?? 0);
+            const slot = (slots[i] ??= { id: "", name: "", buf: "" });
+            if (tc.id) slot.id = tc.id;
+            if (tc.function?.name) slot.name += tc.function.name;
+            if (typeof tc.function?.arguments === "string") slot.buf += tc.function.arguments;
+        }
         if (choice.finish_reason) finishReason = choice.finish_reason;
     }
 
-    return { text, thinking, finishReason, usage };
+    const toolCalls = slots.filter(Boolean).map(s => ({ id: s.id, name: s.name, args: parseArgs(s.buf) }));
+    return { text, thinking, finishReason, usage, toolCalls };
+}
+
+// Without strict decoding the arguments are best-effort JSON, and a truncated
+// reply can end mid-object. A parse failure travels as an argument the schema
+// will reject by name, rather than as an exception that kills the run.
+function parseArgs(buf: string): any {
+    if (!buf.trim()) return {};
+    try { return JSON.parse(buf); } catch { return { __unparsed: buf }; }
 }

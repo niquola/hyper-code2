@@ -1,3 +1,11 @@
+// The stand-in provider every test runs on (`model: "mock:*"`).
+//
+// Two ways to drive it, both through agent.scratchpad.mockLLM:
+//   { echoUser: true } | { userText, defaultText }   — plain text replies
+//   { turns: [{ text?, toolCalls: [{ name, args }] }, …] }
+//        — one entry consumed per call, so a JSON-protocol loop can be scripted
+//          end to end: call a tool, see the result, then answer in prose. Ids
+//          are generated per turn, which is what pairs a result to its call.
 export default async function (
     ctx: Context,
     _session: Session | null,
@@ -7,6 +15,7 @@ export default async function (
     thinking: string;
     finishReason: string | null;
     usage: any;
+    toolCalls: { id: string; name: string; args: any }[];
 }> {
     const { agent } = opts;
     const messages = agent.parentId ? await ctx.fns.session.getFullMessages({ id: agent.id }) : (agent.messages ?? []);
@@ -14,10 +23,31 @@ export default async function (
     const cfg = agent.scratchpad.mockLLM ?? {};
     const usage = { prompt_tokens: messages.length, total_tokens: messages.length + 1 };
 
-    if (last?.role === "user") {
-        const text = cfg.echoUser ? String(last.content ?? "") : String(cfg.userText ?? "ok");
-        return { text, thinking: "", finishReason: "stop", usage };
+    if (Array.isArray(cfg.turns)) {
+        const n = Number(agent.scratchpad.mockTurn ?? 0);
+        agent.scratchpad.mockTurn = n + 1;
+        const turn = cfg.turns[n];
+        if (turn) {
+            const calls = (turn.toolCalls ?? []).map((c: any, i: number) => ({
+                id: c.id ?? `call_${n}_${i}`,
+                name: c.name,
+                args: c.args ?? {},
+            }));
+            return {
+                text: String(turn.text ?? ""),
+                thinking: "",
+                finishReason: calls.length ? "tool_calls" : "stop",
+                usage,
+                toolCalls: calls,
+            };
+        }
+        return { text: String(cfg.defaultText ?? "done"), thinking: "", finishReason: "stop", usage, toolCalls: [] };
     }
 
-    return { text: String(cfg.defaultText ?? "ok"), thinking: "", finishReason: "stop", usage };
+    if (last?.role === "user") {
+        const text = cfg.echoUser ? String(last.content ?? "") : String(cfg.userText ?? "ok");
+        return { text, thinking: "", finishReason: "stop", usage, toolCalls: [] };
+    }
+
+    return { text: String(cfg.defaultText ?? "ok"), thinking: "", finishReason: "stop", usage, toolCalls: [] };
 }

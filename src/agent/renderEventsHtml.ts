@@ -5,14 +5,10 @@ export default async function (
 ): Promise<string> {
     const { events, agentId } = opts;
 
-    return (await Promise.all(events.map(async (event: any) => {
-        // Message bubbles are rendered from event data because their
-        // presentation depends on DB metadata such as the timestamp.
-        if (event.type === "user" || event.type === "assistant") {
-            return ctx.fns.agent.renderEventHtml({ event, agentId });
-        }
-
-        const cached = event.eventHtml ?? event.html;
-        return cached ?? ctx.fns.agent.renderEventHtml({ event, agentId });
-    }))).join("\n");
+    // Always render, never serve a cached bubble: an event is data, and the
+    // markup is a view of it that may change between two page loads (a tool
+    // card ages, a renderer improves). Rendering a full transcript is ~7 ms.
+    return (await Promise.all(
+        events.map((event: any) => ctx.fns.agent.renderEventHtml({ event, agentId })),
+    )).join("\n");
 } 

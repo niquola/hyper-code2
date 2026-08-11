@@ -1,8 +1,8 @@
 import { describe, test, expect } from "bun:test";
 import { mkTestCtx } from "../_testCtx.entry";
 
-// Seed a realistic transcript: user → assistant prose → §eval (marker) →
-// §result (excluded_from_cursor) → assistant prose. Events mirror it, with
+// Seed a realistic transcript: user → assistant prose → assistant tool call →
+// tool result (excluded_from_cursor) → assistant prose. Events mirror it, with
 // messageIdx anchoring user/assistant/tool_call bubbles to their messages.
 async function seed() {
     const ctx = await mkTestCtx();
@@ -10,8 +10,8 @@ async function seed() {
     const id = agent.id;
     await ctx.fns.session.appendMessage({ id, message: { role: "user", content: "hello" } });               // 0
     await ctx.fns.session.appendMessage({ id, message: { role: "assistant", content: "hi prose" } });        // 1
-    await ctx.fns.session.appendMessage({ id, message: { role: "assistant", content: "§eval\nx=1" } });      // 2
-    await ctx.fns.session.appendMessage({ id, message: { role: "user", content: "§result:eval\nout", excluded_from_cursor: true } }); // 3
+    await ctx.fns.session.appendMessage({ id, message: { role: "assistant", content: "", tool_calls: [{ id: "c1", name: "eval", args: { code: "x=1" } }] } });      // 2
+    await ctx.fns.session.appendMessage({ id, message: { role: "tool", content: "out", tool_call_id: "c1", excluded_from_cursor: true } }); // 3
     await ctx.fns.session.appendMessage({ id, message: { role: "assistant", content: "done" } });            // 4
 
     await ctx.fns.session.appendEvent({ id, event: { type: "user", text: "hello", messageIdx: 0 } });        // ev0
@@ -36,15 +36,15 @@ describe("session.truncateMessagesFrom", () => {
 
         const msgs = await rawMsgs(ctx, id);
         expect(msgs.map((m: any) => m.idx)).toEqual([0, 1, 2, 3]); // idx 4 gone, no renumber
-        // The §result flag survived (the old getMessages→replaceMessages round-trip lost it).
+        // The exclusion flag survived (the old getMessages→replaceMessages round-trip lost it).
         expect(Number(msgs.find((m: any) => m.idx === 3).exc)).toBe(1);
         // Event ev3 (messageIdx 4) gone; ev0..ev2 kept.
         expect((await rawEvents(ctx, id)).map((e: any) => e.idx)).toEqual([0, 1, 2]);
     });
 
-    test("walks back a marker pair: truncating from §result drops the §eval too", async () => {
+    test("walks back a call/result pair: truncating from the result drops the call too", async () => {
         const { ctx, id } = await seed();
-        const res = await ctx.fns.session.truncateMessagesFrom({ id, from: 3 }); // §result → walk back to §eval (2)
+        const res = await ctx.fns.session.truncateMessagesFrom({ id, from: 3 }); // result → walk back to the call (2)
         expect(res).toEqual({ ok: true, from: 2 });
         expect((await rawMsgs(ctx, id)).map((m: any) => m.idx)).toEqual([0, 1]);
         // boundary event = ev2 (tool_call, messageIdx 2) → ev2 & ev3 removed.

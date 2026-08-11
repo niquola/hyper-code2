@@ -7,19 +7,12 @@
 //    Drop messages[<idx>..] and replace with one synthetic user note. If
 //    <idx> lands inside a marker pair, walks back over the pair so we never
 //    leave half a pair stranded — same invariant as truncateMessagesFrom.
-function isAssistantInvocation(m: any): boolean {
-    if (m?.role !== "assistant") return false;
-    const c = String(m.content ?? "");
-    return c.startsWith("§eval\n") || c === "§eval"
-        || c.startsWith("§write:")
-        || c.startsWith("§bash\n") || c === "§bash"
-        || c.startsWith("§html\n") || c === "§html";
-}
-function isToolResult(m: any): boolean {
-    if (m?.role !== "user") return false;
-    const c = String(m.content ?? "");
-    return c.startsWith("§result:") || c.startsWith("§error:");
-}
+// A call and its answer are one unit: compaction may not cut between them,
+// because a provider rejects a transcript with either half missing.
+const isAssistantInvocation = (_ctx: Context, m: any): boolean =>
+    m?.role === "assistant" && m?.tool_calls != null;
+const isToolResult = (_ctx: Context, m: any): boolean =>
+    m?.role === "tool" || m?.tool_call_id != null;
 
 export default async function (
     ctx: Context,
@@ -38,7 +31,7 @@ export default async function (
         while (effectiveFrom > 0) {
             const cur = agent.messages[effectiveFrom];
             const prev = agent.messages[effectiveFrom - 1];
-            if (isToolResult(cur) || isAssistantInvocation(prev)) effectiveFrom -= 1;
+            if (isToolResult(ctx, cur) || isAssistantInvocation(ctx, prev)) effectiveFrom -= 1;
             else break;
         }
         const dropped = agent.messages.slice(effectiveFrom);
@@ -55,7 +48,7 @@ export default async function (
     const summary = String(summaryRaw);
     for (let i = agent.messages.length - 1; i >= 0; i--) {
         const m = agent.messages[i];
-        if (!isToolResult(m)) continue;
+        if (!isToolResult(ctx, m)) continue;
         const before = String(m.content ?? "").length;
         const newContent = `[compacted] ${summary}`;
         const next = agent.messages.slice();

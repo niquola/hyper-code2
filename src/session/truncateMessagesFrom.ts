@@ -16,7 +16,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
     if (!Number.isInteger(from) || from < 0) return { ok: false, reason: "invalid idx" };
 
     const rows = (await ctx.fns.procs.db.select({
-        sql: "SELECT idx, role, content FROM messages WHERE agent_id = ? ORDER BY idx",
+        sql: "SELECT idx, role, content, tool_calls, tool_call_id FROM messages WHERE agent_id = ? ORDER BY idx",
         params: [id],
     })) as any[];
     // First to-be-deleted row at or after `from` (robust to idx gaps).
@@ -27,8 +27,10 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
     while (p > 0) {
         const cur = rows[p];
         const prev = rows[p - 1];
-        const curIsResult = cur.role === "user" && (await ctx.fns.agent.markerKind({ content: cur.content })) === "result";
-        const prevIsInvocation = (await ctx.fns.agent.markerKind({ content: prev.content })) === "invocation";
+        // A tool result cannot outlive the call it answers, and vice versa —
+        // the provider rejects a transcript with either half missing.
+        const curIsResult = cur.role === "tool" || cur.tool_call_id != null;
+        const prevIsInvocation = prev.tool_calls != null;
         if (curIsResult || prevIsInvocation) p -= 1;
         else break;
     }

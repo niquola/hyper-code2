@@ -1,386 +1,166 @@
 import { describe, test, expect } from 'bun:test';
 import { mkTestCtx } from '../_testCtx.entry';
-import runFn from './run';
-import parseMarkers from './parseMarkers';
-import formatMarkerResult from './formatMarkerResult';
-import formatMarkerError from './formatMarkerError';
 
-const run = (ctx: any, agent: any, userText: string) => runFn(ctx, null, { agent, userText });
-
-async function setup() {
-    const ctx = await mkTestCtx();
-    ctx.fns.agent.parseMarkers = parseMarkers;
-    ctx.fns.agent.formatMarkerResult = formatMarkerResult;
-    ctx.fns.agent.formatMarkerError = formatMarkerError;
-    // Real eval — uses ctx.fns.repl.eval which mkTestCtx wires to a default fn.
-    // Override per-test for richer behaviours.
-    ctx.fns.files.write = async (_c: any, _s: any, opts: { path: string; content: string }) => {
-        ((_c.state as any).__written ??= {})[opts.path] = opts.content;
-        return { ok: true };
-    };
-    return ctx;
+async function mkAgent(ctx: any, turns: any[]) {
+    const agent = await ctx.fns.agent.start({ model: 'mock:test' });
+    agent.scratchpad.mockLLM = { turns, defaultText: 'done' };
+    await ctx.fns.session.save({ agent });
+    return agent;
 }
 
 describe('agent.run', () => {
-    test('plain reply (no markers) closes the turn', async () => {
-        const ctx = await setup();
-        ctx.fns.llm.stream = async () => ({ text: 'just a chat reply', toolCalls: [], thinking: '', usage: {} });
+    test('a tool call round-trips: assistant row carries the call, a tool row answers it by id', async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.fns.files.read = async (_c: any, _s: any, o: any) => `CONTENT OF ${o.path}`;
 
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        const res: any = await run(ctx, a, 'hi');
-        expect(res.text).toBe('just a chat reply');
-
-        const msgs = await ctx.fns.session.getMessages({ id: a.id });
-        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant']);
-        expect(msgs[1].content).toBe('just a chat reply');
-    });
-
-    test('single §eval marker is executed and result fed back', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return { text: '§eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
-            return { text: 'computed: 4', toolCalls: [], thinking: '', usage: {} };
-        };
-        // repl.eval is Jupyter-style: returns the captured log buffer as a string.
-        ctx.fns.repl.eval = async (_c: any, _s: any, opts: { code: string }) => opts.code.includes('console.log(2 + 2)') ? '4' : '';
-
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'add 2 and 2');
-
-        const msgs = await ctx.fns.session.getMessages({ id: a.id });
-        // user → assistant(§eval) → user(§result:eval) → assistant(prose)
-        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
-        expect(msgs[1].content).toContain('§eval');
-        expect(msgs[2].content).toContain('§result:eval');
-        expect(msgs[2].content).toContain('4');
-        expect(msgs[3].content).toBe('computed: 4');
-    });
-
-    test('§write marker invokes files.write with raw content', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        const body = 'export default function () {\n  return `hi ${who}`;\n}\n';
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return { text: `§write:src/foo.ts\n${body}`, toolCalls: [], thinking: '', usage: {} };
-            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
-        };
-
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'create file');
-
-        // files.write should have been called with the EXACT content, no escape munging.
-        expect(ctx.state.__written['src/foo.ts']).toBe(body.replace(/\n$/, ''));
-    });
-
-    test('content with backticks/template-literals survives roundtrip unchanged', async () => {
-        const ctx = await setup();
-        const tricky = 'const x = `hello ${name}`;\nconst y = "with \\\"quotes\\\"";';
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return { text: `§write:tricky.ts\n${tricky}`, toolCalls: [], thinking: '', usage: {} };
-            return { text: 'ok', toolCalls: [], thinking: '', usage: {} };
-        };
-
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'write tricky');
-        expect(ctx.state.__written['tricky.ts']).toBe(tricky);
-    });
-
-    test('multiple markers split into chained assistant→user pairs', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return {
-                text: 'doing two things\n§eval\nconsole.log(1);\n§write:a.ts\nexport const a = 1;',
-                toolCalls: [], thinking: '', usage: {},
-            };
-            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
-        };
-        ctx.fns.repl.eval = async () => '1';
-
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'two things');
-
-        const msgs = await ctx.fns.session.getMessages({ id: a.id });
-        // Chain: user(input) → assistant(prose) → assistant(§eval) →
-        //        user(§result:eval) → assistant(§write) → user(§result:write) → assistant(done)
-        expect(msgs.map((m: any) => m.role))
-            .toEqual(['user', 'assistant', 'assistant', 'user', 'assistant', 'user', 'assistant']);
-        expect(msgs[1]!.content).toBe('doing two things');
-        expect(msgs[2]!.content).toBe('§eval\nconsole.log(1);');
-        expect(msgs[3]!.content).toContain('§result:eval');
-        expect(msgs[3]!.content).toContain('1');
-        expect(msgs[3]!.content).not.toContain('§result:write'); // result is per-call, not joined
-        expect(msgs[4]!.content).toBe('§write:a.ts\nexport const a = 1;');
-        expect(msgs[5]!.content).toContain('§result:write:a.ts');
-        expect(msgs[6]!.content).toBe('done');
-        expect(ctx.state.__written['a.ts']).toBe('export const a = 1;');
-    });
-
-    test('misplaced marker (no \\n before §) is NOT executed; warning fed back to model', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) {
-                // Bug pattern: model glues prose to marker without \n.
-                return { text: 'считаю.§eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
-            }
-            // After seeing the warning, model retries with proper format.
-            if (turn === 2) {
-                return { text: '§eval\nconsole.log(2 + 2);', toolCalls: [], thinking: '', usage: {} };
-            }
-            return { text: 'computed: 4', toolCalls: [], thinking: '', usage: {} };
-        };
-        let evalCalls = 0;
-        ctx.fns.repl.eval = async (_c: any, _s: any, opts: { code: string }) => {
-            evalCalls++;
-            return opts.code.includes('console.log(2 + 2)') ? '4' : '';
-        };
-
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'compute');
-
-        const msgs = await ctx.fns.session.getMessages({ id: a.id });
-        // Strict: turn 1's misplaced §eval did NOT run. Only turn 2's clean
-        // §eval ran. So exactly one §result:eval lands.
-        const results = msgs.filter((m: any) => String(m.content ?? '').startsWith('§result:eval'));
-        expect(results).toHaveLength(1);
-        expect(evalCalls).toBe(1);
-        // The invalid candidate was repaired BEFORE commit: the warning went to
-        // the model ephemerally, nothing of it lives in the transcript — the
-        // audit trail is an `attempt` event.
-        const audit = await ctx.fns.session.getMessages({ id: a.id, includeExcluded: true });
-        expect(audit.find((m: any) => String(m.content ?? '').includes('§error:marker-unescaped'))).toBeUndefined();
-        const evs = await ctx.fns.session.getEvents({ id: a.id });
-        const att = evs.find((e: any) => e.type === 'attempt');
-        expect(att).toBeDefined();
-        expect(String(att.error)).toContain('reserved for marker execution');
-        // Closing prose lands as the last assistant message.
-        const lastAssistant = [...msgs].reverse().find((m: any) => m.role === 'assistant');
-        expect(lastAssistant.content).toBe('computed: 4');
-    });
-
-    test('synthetic §result user-message is flagged excluded_from_cursor', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return { text: '§eval\nconsole.log(1);', toolCalls: [], thinking: '', usage: {} };
-            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
-        };
-        ctx.fns.repl.eval = async () => '1';
-
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'go');
-
-        const rows = await ctx.fns.procs.db.select({
-            sql: 'SELECT idx, role, excluded_from_cursor, substr(content, 1, 30) as preview FROM messages WHERE agent_id = ? ORDER BY idx',
-            params: [a.id],
-        });
-        // user(real) → assistant(§eval) → user(synthetic §result) → assistant(done)
-        expect(rows).toEqual([
-            { idx: 0, role: 'user',      excluded_from_cursor: 0, preview: 'go' },
-            { idx: 1, role: 'assistant', excluded_from_cursor: 0, preview: '§eval\nconsole.log(1);' },
-            { idx: 2, role: 'user',      excluded_from_cursor: 1, preview: '§result:eval\n1' },
-            { idx: 3, role: 'assistant', excluded_from_cursor: 0, preview: 'done' },
+        const agent = await mkAgent(ctx, [
+            { text: 'Смотрю файл.', toolCalls: [{ name: 'read', args: { path: 'src/x.ts' } }] },
+            { text: 'Там лежит контент.' },
         ]);
+        await ctx.fns.agent.run({ agent, userText: 'что в файле?' });
+
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'tool', 'assistant']);
+
+        const call = msgs[1]!.tool_calls[0];
+        expect(call).toMatchObject({ name: 'read', args: { path: 'src/x.ts' } });
+        expect(msgs[2]!.tool_call_id).toBe(call.id);
+        expect(msgs[2]!.content).toBe('CONTENT OF src/x.ts');
+        expect(msgs[3]!.content).toBe('Там лежит контент.');
+
+        // the UI renders from events, so the call has to show up there too
+        const events = await ctx.fns.session.getEvents({ id: agent.id });
+        const toolEvent = events.find((e: any) => e.type === 'tool_call');
+        expect(toolEvent).toMatchObject({ name: 'read', isError: false });
     });
 
-    test('protocol-invalid reply is repaired pre-commit — no warning row, attempt event instead', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return { text: 'считаю.§eval\nconsole.log(1);', toolCalls: [], thinking: '', usage: {} };
-            return { text: 'fixed', toolCalls: [], thinking: '', usage: {} };
-        };
-        ctx.fns.repl.eval = async () => '1';
+    test('parallel calls in one reply each get their own answer', async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.fns.files.read = async (_c: any, _s: any, o: any) => `READ:${o.path}`;
+        ctx.fns.files.grep = async () => [{ path: 'a.ts', line: 1, column: 2, text: 'hit' }];
 
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
+        const agent = await mkAgent(ctx, [
+            { toolCalls: [
+                { name: 'read', args: { path: 'a.ts' } },
+                { name: 'grep', args: { pattern: 'hit' } },
+            ] },
+            { text: 'оба готовы' },
+        ]);
+        await ctx.fns.agent.run({ agent, userText: 'go' });
 
-        await run(ctx, a, 'compute');
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'tool', 'tool', 'assistant']);
+        expect(msgs[1]!.tool_calls).toHaveLength(2);
+        expect(msgs[2]!.content).toBe('READ:a.ts');
+        expect(msgs[3]!.content).toBe('a.ts:1:2: hit');
+        expect([msgs[2]!.tool_call_id, msgs[3]!.tool_call_id])
+            .toEqual(msgs[1]!.tool_calls.map((c: any) => c.id));
+    });
 
-        const rows = await ctx.fns.procs.db.select({
-            sql: 'SELECT role, content FROM messages WHERE agent_id = ? ORDER BY idx',
-            params: [a.id],
+    test('a bad argument comes back as the tool answer, and the loop keeps going', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await mkAgent(ctx, [
+            { toolCalls: [{ name: 'read', args: { path: 'a.ts', maxLine: 3 } }] },
+            { text: 'понял, опция называется maxLines' },
+        ]);
+        await ctx.fns.agent.run({ agent, userText: 'go' });
+
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        expect(msgs[2]!.role).toBe('tool');
+        expect(msgs[2]!.content).toContain('unknown option "maxLine"');
+        expect(msgs[3]!.content).toContain('maxLines');
+
+        const events = await ctx.fns.session.getEvents({ id: agent.id });
+        expect(events.find((e: any) => e.type === 'tool_call')!.isError).toBe(true);
+    });
+
+
+    test('tool schemas go on the wire in the endpoint dialect', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:test' });
+
+        const wire = ctx.fns.agent.wireTools({ agent, api: 'anthropic' });
+        expect(wire.map((t: any) => t.name).sort()).toEqual(['bash', 'edit', 'eval', 'grep', 'read', 'write']);
+
+        const narrowed = ctx.fns.agent.wireTools({ agent: { ...agent, tools: ['read'] }, api: 'openai' });
+        expect(narrowed).toHaveLength(1);
+    });
+});
+
+describe('transcript surgery keeps JSON pairs intact', () => {
+    async function withPair(ctx: any) {
+        ctx.fns.files.read = async () => 'FILE';
+        const agent = await ctx.fns.agent.start({ model: 'mock:test' });
+            agent.scratchpad.mockLLM = { turns: [
+            { toolCalls: [{ name: 'read', args: { path: 'a.ts' } }] },
+            { text: 'готово' },
+        ] };
+        await ctx.fns.session.save({ agent });
+        await ctx.fns.agent.run({ agent, userText: 'go' });
+        return agent;
+    }
+
+    test('deleting half a JSON pair is refused, like half a marker pair', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await withPair(ctx);
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        const callIdx = 1, resultIdx = 2;
+
+        expect(await ctx.fns.session.deleteMessageAt({ id: agent.id, idx: callIdx }))
+            .toMatchObject({ ok: false });
+        expect(await ctx.fns.session.deleteMessageAt({ id: agent.id, idx: resultIdx }))
+            .toMatchObject({ ok: false });
+        expect((await ctx.fns.session.getMessages({ id: agent.id })).length).toBe(msgs.length);
+    });
+
+    test('truncating into a pair walks back to the call', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await withPair(ctx);
+
+        // idx 2 is the tool result — cutting there must take its call with it
+        await ctx.fns.session.truncateMessagesFrom({ id: agent.id, from: 2 });
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        expect(msgs.map((m: any) => m.role)).toEqual(['user']);
+    });
+
+    test('rewriting the transcript preserves tool_calls and tool_call_id', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await withPair(ctx);
+
+        const before = await ctx.fns.session.getMessages({ id: agent.id });
+        await ctx.fns.session.replaceMessages({ id: agent.id, messages: before });
+        const after = await ctx.fns.session.getMessages({ id: agent.id });
+
+        expect(after[1]!.tool_calls).toEqual(before[1]!.tool_calls);
+        expect(after[2]!.tool_call_id).toBe(before[1]!.tool_calls[0].id);
+
+        // …and so does session.save, which rewrites every row from memory
+        await ctx.fns.session.syncAgentState({ agent });
+        await ctx.fns.session.save({ agent });
+        const saved = await ctx.fns.session.getMessages({ id: agent.id });
+        expect(saved[1]!.tool_calls[0].name).toBe('read');
+        expect(saved[2]!.tool_call_id).toBe(saved[1]!.tool_calls[0].id);
+    });
+
+    test('a reply truncated mid-arguments executes nothing and says so', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:test' });
+            let ran = 0;
+        ctx.fns.tools.read = async () => { ran++; return 'x'; };
+        ctx.fns.llm.stream = async () => ({
+            text: '', usage: null, finishReason: 'length',
+            toolCalls: [{ id: 'c1', name: 'read', args: { __unparsed: '{"path": "a.t' } }],
         });
-        // The candidate+note are persisted (DB-first repair) but flagged out of
-        // the LLM view; the effective transcript is just input + accepted reply.
-        const llmView = await ctx.fns.session.getMessages({ id: a.id });
-        expect(llmView.map((m: any) => m.role)).toEqual(['user', 'assistant']);
-        expect(llmView[1].content).toBe('fixed');
-        const evs = await ctx.fns.session.getEvents({ id: a.id });
-        expect(evs.filter((e: any) => e.type === 'attempt').length).toBe(1);
-    });
+        await ctx.fns.session.save({ agent });
 
-    test('§html marker renders an assistant bubble with raw HTML and no synthetic result', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return { text: '§html\n<div class="card">Hi</div>', toolCalls: [], thinking: '', usage: {} };
-            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
-        };
+        const turns: any[] = [];
+        ctx.fns.llm.stream = async () => turns.length++
+            ? { text: 'ok', usage: null, finishReason: 'stop', toolCalls: [] }
+            : { text: '', usage: null, finishReason: 'length', toolCalls: [{ id: 'c1', name: 'read', args: { __unparsed: '{"path": "a.t' } }] };
 
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'render a card');
-
-        const msgs = await ctx.fns.session.getMessages({ id: a.id });
-        // Chain: user → assistant(§html) → assistant(done)
-        // No synthetic §result:html — html doesn't produce results.
-        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'assistant']);
-        expect(msgs[1]!.content).toBe('§html\n<div class="card">Hi</div>');
-        expect(msgs[1]!.content).not.toContain('§result');
-        expect(msgs[2]!.content).toBe('done');
-
-        // The UI event for the html marker carries the raw HTML, not the marker text.
-        const events = await ctx.fns.session.getEvents({ id: a.id });
-        const htmlEvent = events.find((e: any) => e.html === '<div class="card">Hi</div>');
-        expect(htmlEvent).toBeDefined();
-        expect(htmlEvent.type).toBe('assistant');
-    });
-
-    test('§html body is plain HTML — no template interpolation, braces stay as text', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) {
-                return {
-                    text: '§html\n<div class="card"><h3>{agent.scratchpad.user.name}</h3></div>',
-                    toolCalls: [], thinking: '', usage: {},
-                };
-            }
-            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
-        };
-
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        a.scratchpad.user = { name: 'Иван' };
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'render');
-
-        const events = await ctx.fns.session.getEvents({ id: a.id });
-        const htmlEvent = events.find((e: any) => e.type === 'assistant' && e.html?.includes('class="card"'));
-        expect(htmlEvent).toBeDefined();
-        // Braces are LITERAL — no template engine. "Иван" never appears.
-        expect(htmlEvent.html).toBe('<div class="card"><h3>{agent.scratchpad.user.name}</h3></div>');
-        expect(htmlEvent.html).not.toContain('Иван');
-    });
-
-    test('§html body that is a full HTML document is sanitised down to its inner content', async () => {
-        // <!DOCTYPE>/<html>/<body>/<style>/<script> get stripped; inner
-        // markup survives. No more parse errors — body is plain HTML.
-        const ctx = await setup();
-        const dirty = [
-            '<!DOCTYPE html>',
-            '<html><head>',
-            '<title>oops</title>',
-            '<style>body { margin: 40px }</style>',
-            '</head><body>',
-            '<div>x</div>',
-            '</body></html>',
-        ].join('\n');
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return { text: `§html\n${dirty}`, toolCalls: [], thinking: '', usage: {} };
-            return { text: 'done', toolCalls: [], thinking: '', usage: {} };
-        };
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'render bad');
-
-        const events = await ctx.fns.session.getEvents({ id: a.id });
-        const htmlEvent = events.find((e: any) => e.type === 'assistant' && e.html?.includes('<div>x</div>'));
-        expect(htmlEvent).toBeDefined();
-        expect(htmlEvent.html).toBe('<div>x</div>');
-        // No §error:html feedback — nothing to fail anymore.
-        const msgs = await ctx.fns.session.getMessages({ id: a.id });
-        const errMsg = msgs.find((m: any) => String(m.content ?? '').startsWith('§error:html'));
-        expect(errMsg).toBeUndefined();
-    });
-
-    test('§bash marker runs `bash -c` and feeds back §result:bash with stdout', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return { text: '§bash\necho hello-bash', toolCalls: [], thinking: '', usage: {} };
-            return { text: 'ok', toolCalls: [], thinking: '', usage: {} };
-        };
-
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'run a shell');
-
-        const msgs = await ctx.fns.session.getMessages({ id: a.id });
-        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
-        expect(msgs[1]!.content).toBe('§bash\necho hello-bash');
-        expect(msgs[2]!.content).toContain('§result:bash');
-        expect(msgs[2]!.content).toContain('hello-bash');
-        expect(msgs[3]!.content).toBe('ok');
-    });
-
-    test('§bash non-zero exit is tagged :error and includes [exit N]', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return { text: '§bash\nexit 7', toolCalls: [], thinking: '', usage: {} };
-            return { text: 'caught', toolCalls: [], thinking: '', usage: {} };
-        };
-
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'fail bash');
-        const msgs = await ctx.fns.session.getMessages({ id: a.id });
-        expect(msgs[2]!.content).toContain('§result:bash:error');
-        expect(msgs[2]!.content).toContain('[exit 7]');
-    });
-
-    test('eval errors are tagged :error in the result block', async () => {
-        const ctx = await setup();
-        let turn = 0;
-        ctx.fns.llm.stream = async () => {
-            turn++;
-            if (turn === 1) return { text: '§eval\nthrow new Error("boom");', toolCalls: [], thinking: '', usage: {} };
-            return { text: 'caught', toolCalls: [], thinking: '', usage: {} };
-        };
-        ctx.fns.repl.eval = async () => { throw new Error('boom'); };
-
-        const a = await ctx.fns.agent.start({ model: 'mock:test' });
-        await ctx.fns.session.save({ agent: a });
-
-        await run(ctx, a, 'fail');
-        const msgs = await ctx.fns.session.getMessages({ id: a.id });
-        expect(msgs[2]!.content).toContain('§result:eval:error');
-        expect(msgs[2]!.content).toContain('boom');
+        await ctx.fns.agent.run({ agent, userText: 'go' });
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id, includeExcluded: true });
+        expect(ran).toBe(0);
+        expect(msgs.some((m: any) => String(m.content).includes('cut off mid-call'))).toBe(true);
     });
 });

@@ -13,6 +13,9 @@ export default async function (
     return rows.map((r: any) => {
         const m: any = { role: r.role };
         if (r.content !== null) m.content = r.content;
+        // JSONB comes back parsed on some drivers and as text on others.
+        if (r.tool_calls != null) m.tool_calls = typeof r.tool_calls === "string" ? JSON.parse(r.tool_calls) : r.tool_calls;
+        if (r.tool_call_id != null) m.tool_call_id = r.tool_call_id;
         if (Number(r.excluded_from_llm ?? 0) !== 0) m.excluded_from_llm = true;
         return m;
     });

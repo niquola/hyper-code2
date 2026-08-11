@@ -13,12 +13,12 @@ describe('delete message operations', () => {
     expect((await ctx.fns.session.getMessages({ id: 'a1' })).map((m: any) => m.content)).toEqual(['u1', 'u2']);
   });
 
-  test('rejects deleting markers half-pair: assistant §eval alone', async () => {
+  test('rejects deleting half a pair: the assistant tool call alone', async () => {
     const ctx: any = await mkTestCtx(); await ctx.fns.session.save({ agent: seedAgent() as any });
     await ctx.fns.session.replaceMessages({ id: 'a1', messages: [
       { role: 'user',      content: 'go' },
-      { role: 'assistant', content: '§eval\nconsole.log(1);' },
-      { role: 'user',      content: '§result:eval\n1' },
+      { role: 'assistant', content: '', tool_calls: [{ id: 'c1', name: 'eval', args: { code: 'console.log(1)' } }] },
+      { role: 'tool',      content: '1', tool_call_id: 'c1' },
       { role: 'assistant', content: 'done' },
     ] });
     expect((await ctx.fns.session.deleteMessageAt({ id: 'a1', idx: 1 })).ok).toBe(false);
@@ -27,23 +27,23 @@ describe('delete message operations', () => {
     expect((await ctx.fns.session.deleteMessageAt({ id: 'a1', idx: 3 })).ok).toBe(true);
   });
 
-  test('rejects deleting markers half-pair: assistant §write alone', async () => {
+  test('rejects deleting half a pair: a write call alone', async () => {
     const ctx: any = await mkTestCtx(); await ctx.fns.session.save({ agent: seedAgent() as any });
     await ctx.fns.session.replaceMessages({ id: 'a1', messages: [
       { role: 'user',      content: 'create a file' },
-      { role: 'assistant', content: '§write:src/foo.ts\nexport default 1;' },
-      { role: 'user',      content: '§result:write:src/foo.ts\nwrote ...' },
+      { role: 'assistant', content: '', tool_calls: [{ id: 'c2', name: 'write', args: { path: 'src/foo.ts', content: 'export default 1;' } }] },
+      { role: 'tool',      content: 'wrote ...', tool_call_id: 'c2' },
     ] });
     expect((await ctx.fns.session.deleteMessageAt({ id: 'a1', idx: 1 })).ok).toBe(false);
     expect((await ctx.fns.session.deleteMessageAt({ id: 'a1', idx: 2 })).ok).toBe(false);
   });
 
-  test('truncate from walks back over markers pair (user-result)', async () => {
+  test('truncate from walks back over a call/result pair (from the result)', async () => {
     const ctx: any = await mkTestCtx(); await ctx.fns.session.save({ agent: seedAgent() as any });
     await ctx.fns.session.replaceMessages({ id: 'a1', messages: [
       { role: 'user',      content: 'go' },
-      { role: 'assistant', content: '§eval\nconsole.log(1);' },
-      { role: 'user',      content: '§result:eval\n1' },
+      { role: 'assistant', content: '', tool_calls: [{ id: 'c1', name: 'eval', args: { code: 'console.log(1)' } }] },
+      { role: 'tool',      content: '1', tool_call_id: 'c1' },
       { role: 'assistant', content: 'done' },
     ] });
     // User asks "delete from idx 2 (the result)" — must walk back to idx 1
@@ -54,13 +54,13 @@ describe('delete message operations', () => {
     expect((await ctx.fns.session.getMessages({ id: 'a1' })).map((m: any) => m.content)).toEqual(['go']);
   });
 
-  test('truncate from walks back over markers pair (assistant-marker)', async () => {
+  test('truncate from walks back over a call/result pair (from the call)', async () => {
     const ctx: any = await mkTestCtx(); await ctx.fns.session.save({ agent: seedAgent() as any });
     await ctx.fns.session.replaceMessages({ id: 'a1', messages: [
       { role: 'user',      content: 'go' },
       { role: 'assistant', content: 'doing it' },
-      { role: 'assistant', content: '§eval\nconsole.log(1);' },
-      { role: 'user',      content: '§result:eval\n1' },
+      { role: 'assistant', content: '', tool_calls: [{ id: 'c1', name: 'eval', args: { code: 'console.log(1)' } }] },
+      { role: 'tool',      content: '1', tool_call_id: 'c1' },
     ] });
     // "delete from idx 3 (the result)" — walk back over the result, but
     // STOP at the marker (idx 2 stays as boundary, since prev (idx 1) is

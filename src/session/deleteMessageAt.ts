@@ -14,15 +14,16 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
     if (!Number.isInteger(idx) || idx < 0) return { ok: false, reason: "invalid idx" };
 
     const target = ((await ctx.fns.procs.db.select({
-        sql: "SELECT idx, role, content FROM messages WHERE agent_id = ? AND idx = ?",
+        sql: "SELECT idx, role, content, tool_calls, tool_call_id FROM messages WHERE agent_id = ? AND idx = ?",
         params: [id, idx],
     })) as any[])[0];
     if (!target) return { ok: false, reason: "not found" };
-    const kind = await ctx.fns.agent.markerKind({ content: target.content });
+    const kind = target.role === "tool" || target.tool_call_id != null ? "result"
+        : target.tool_calls != null ? "invocation" : null;
     if (target.role === "assistant" && kind === "invocation") {
-        return { ok: false, reason: "cannot delete assistant marker message alone; use delete from here" };
+        return { ok: false, reason: "cannot delete assistant tool-call message alone; use delete from here" };
     }
-    if (target.role === "user" && kind === "result") {
+    if ((target.role === "user" || target.role === "tool") && kind === "result") {
         return { ok: false, reason: "cannot delete tool-result message alone; use delete from here" };
     }
 

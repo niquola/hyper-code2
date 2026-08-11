@@ -12,6 +12,7 @@ export default async function (
     thinking: string;
     finishReason: string | null;
     usage: { prompt_tokens: number; completion_tokens: number };
+    toolCalls: { id: string; name: string; args: any }[];
 }> {
     const { agent } = opts;
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
@@ -31,6 +32,13 @@ export default async function (
         text: { verbosity: "medium" },
         prompt_cache_key: agent.id,
     };
+
+    // Native function_call items, in JSON protocol mode only (agent.wireTools).
+    const tools = ctx.fns.agent.wireTools({ agent, api: "responses" });
+    if (tools.length) {
+        body.tools = tools;
+        body.parallel_tool_calls = true;
+    }
 
     // ChatGPT backend occasionally returns 5xx / "upstream connect error"
     // before any bytes ship. Retry pre-stream with exponential backoff.
@@ -73,6 +81,10 @@ export default async function (
     let thinking = "";
     let finishReason: string | null = null;
     const usage = { prompt_tokens: 0, completion_tokens: 0 };
+    // The Responses API announces a call as an output ITEM and finishes it with
+    // response.output_item.done — the arguments are complete there, so the
+    // *.delta events only matter for showing progress.
+    const toolCalls: { id: string; name: string; args: any }[] = [];
 
     for await (const { data } of ctx.fns.llm.parseSSE({ body: res.body })) {
         if (!data || data === "[DONE]") continue;
@@ -85,6 +97,10 @@ export default async function (
         } else if (t === "response.reasoning_summary_text.delta" && typeof ev.delta === "string") {
             thinking += ev.delta;
             opts.onEvent?.({ type: "thinking_delta", delta: ev.delta });
+        } else if (t === "response.function_call_arguments.delta" && typeof ev.delta === "string") {
+            opts.onEvent?.({ type: "tool_args_delta", delta: ev.delta, id: ev.item_id });
+        } else if (t === "response.output_item.done" && ev.item?.type === "function_call") {
+            toolCalls.push({ id: ev.item.call_id ?? ev.item.id, name: ev.item.name, args: parseArgs(ev.item.arguments) });
         } else if (t === "response.completed" || t === "response.incomplete") {
             const u = ev.response?.usage;
             if (u) {
@@ -105,7 +121,16 @@ export default async function (
         }
     }
 
-    return { text, thinking, finishReason, usage };
+    return { text, thinking, finishReason, usage, toolCalls };
+}
+
+// strict:true makes these schema-valid, but a truncated reply can still end
+// mid-object. A parse failure travels as an argument the schema will reject by
+// name, not as a thrown run.
+function parseArgs(raw: unknown): any {
+    const buf = typeof raw === "string" ? raw : "";
+    if (!buf.trim()) return {};
+    try { return JSON.parse(buf); } catch { return { __unparsed: buf }; }
 }
 
 function isRetryable(status: number, body: string): boolean {

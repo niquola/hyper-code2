@@ -17,7 +17,10 @@ function sseResponse(...chunks: string[]): Response {
 function mkCtx(): Context {
     const ctx: any = { state: {}, env: {} };
     ctx.fns = {
-        agent: { buildLlmRequest: async () => ({ system: "sys", messages: [{ role: "user", content: "hi" }] }) },
+        agent: {
+            buildLlmRequest: async () => ({ system: "sys", messages: [{ role: "user", content: "hi" }] }),
+            wireTools: () => [],
+        },
         llm: {
             resolveEndpoint: () => ({ url: "http://mock/v1/messages", modelId: "claude-x", apiKey: "k", provider: "anthropic", api: "anthropic" }),
             parseSSE: (opts: any) => parseSSE(ctx, null, opts),

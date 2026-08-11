@@ -34,17 +34,17 @@ describe('agent.highlightResult', () => {
         expect(calls[0]!.lang).toBe('json');
     });
 
-    test('malformed JSON falls back to javascript', async () => {
+    test('malformed JSON falls back to the caller-declared language', async () => {
         const { ctx, calls } = mkCtx();
         await highlightResult(ctx, '{not real json');
-        expect(calls[0]!.lang).toBe('javascript');
+        expect(calls[0]!.lang).toBe('text');
         expect(calls[0]!.code).toBe('{not real json');
     });
 
-    test('plain text uses javascript', async () => {
+    test('plain text stays plain — colouring prose as code is worse than not colouring it', async () => {
         const { ctx, calls } = mkCtx();
         await highlightResult(ctx, 'hello world');
-        expect(calls[0]!.lang).toBe('javascript');
+        expect(calls[0]!.lang).toBe('text');
     });
 
     test('whitespace-trim aware (leading whitespace before {)', async () => {

@@ -104,22 +104,52 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
     }
 
     if (ev.type === "tool_call") {
-        const argsLen = String(ev.args?.code ?? JSON.stringify(ev.args ?? {})).length;
-        const resultLen = String(ev.result ?? '').length;
-        const status = ev.isError ? '<span class="text-red-600">error</span>' : '<span class="text-green-700">ok</span>';
-        // Marker label: §eval, §write:<path>, §html — visually mirrors what
-        // the agent actually emitted. Falls back to the raw event name for any
-        // legacy/non-marker tool events still in the DB.
-        const label = ev.name === 'write' && ev.args?.path
-            ? `§write:${esc(ev.args.path)}`
-            : ev.name === 'eval' ? '§eval'
-            : ev.name === 'html' ? '§html'
-            : esc(ev.name || 'tool');
-        // Open by default for write (the path is the interesting bit) and on
-        // error — both cases the user usually wants to see the body without an
-        // extra click. Eval stays collapsed since outputs can be long.
-        const openAttr = (ev.isError || ev.name === 'write') ? ' open' : '';
-        return '<details' + openAttr + ' class="tool border border-gray-200 rounded-xl overflow-hidden text-xs leading-snug bg-white shadow-sm ' + (ev.isError ? 'ring-1 ring-red-200' : '') + '"><summary class="cursor-pointer select-none flex items-center justify-between gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-200"><span class="font-mono font-semibold text-gray-800">' + label + '</span><span class="text-gray-500 font-mono">args ' + argsLen + 'c · result ' + resultLen + 'c · ' + status + '</span></summary><div class="bg-white px-4 py-3 tool-code">' + (ev.argsHtml || '') + '</div><div class="bg-gray-50 border-t border-gray-200 px-4 py-3 text-gray-700 tool-result">' + (ev.resultHtml || '') + '</div></details>';
+        const meta = (_ctx as any).fns.agent.toolMeta({ name: ev.name, args: ev.args });
+        const result = String(ev.result ?? '');
+        const lines = result ? result.split('\n').length : 0;
+        // Size in the units a reader thinks in — lines for output, KB only when
+        // it is genuinely big — instead of a raw character count.
+        const size = !result ? ''
+            : result.length > 2048 ? (result.length / 1024).toFixed(1) + ' KB'
+            : lines > 1 ? lines + ' lines'
+            : result.length + ' chars';
+        const status = ev.isError
+            ? '<span class="inline-flex items-center gap-1 text-red-600"><i class="ph ph-warning-circle"></i>error</span>'
+            : '<span class="text-emerald-600"><i class="ph ph-check"></i></span>';
+
+        // Three ages, so a card is loud exactly while it is news:
+        //   < 5s   open — you are watching it happen
+        //   < 20s  one line — still recent, still worth a glance
+        //   older  tucked into an icon in a tray with its neighbours
+        // Decided HERE as well as in the browser, so reloading a long
+        // transcript does not flash a hundred expanded cards before the timers
+        // run. A write opens too — the body it just committed is worth seeing —
+        // but it still ages: only a FAILURE is pinned, because that is the one
+        // thing nobody should have to go digging for.
+        const age = Date.now() - Number(ev.ts ?? Date.now());
+        const tucked = !ev.isError && age >= 20_000;
+        // Order matters: a tucked card is an icon, and an icon cannot also be
+        // an open disclosure. A write stays open for the whole recent window
+        // (its body is the point) but tucks away like everything else.
+        const openAttr = (ev.isError || (!tucked && (ev.name === 'write' || age < 5_000))) ? ' open' : '';
+        return '<details' + openAttr + ' class="group/tool tool rounded-xl border text-xs leading-snug overflow-hidden '
+            + (ev.isError ? 'border-red-200 bg-red-50/40' : 'border-gray-200 bg-white') + (tucked ? ' tool-tucked' : '') + '"'
+            + ' data-tool="' + esc(ev.name || 'tool') + '" data-ts="' + esc(String(ev.ts ?? '')) + '"'
+            + (ev.isError ? ' data-pinned="1"' : '')
+            + ' title="' + esc(meta.label + ' ' + meta.subject) + '">'
+            + '<summary class="flex cursor-pointer select-none items-center gap-2 px-3 py-2 hover:bg-gray-50">'
+            + '<i class="ph ' + esc(meta.icon) + ' text-sm text-gray-400 shrink-0"></i>'
+            + '<span class="tool-label font-mono font-medium text-gray-700 shrink-0">' + esc(meta.label) + '</span>'
+            + '<span class="tool-subject min-w-0 flex-1 truncate font-mono text-gray-500">' + esc(meta.subject) + '</span>'
+            + (size ? '<span class="tool-size shrink-0 text-[10px] text-gray-400">' + esc(size) + '</span>' : '')
+            + '<span class="tool-status shrink-0">' + status + '</span>'
+            + '<i class="tool-caret ph ph-caret-down text-[10px] text-gray-300 transition-transform group-open/tool:rotate-180"></i>'
+            + '</summary>'
+            + '<div class="border-t border-gray-100 bg-gray-50/60 px-3 py-2 tool-code">' + (ev.argsHtml || '') + '</div>'
+            + (result
+                ? '<div class="border-t border-gray-100 px-3 py-2 text-gray-700 tool-result">' + (ev.resultHtml || '') + '</div>'
+                : '')
+            + '</details>';
     }
 
     if (ev.type === "attempt") {

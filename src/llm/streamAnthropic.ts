@@ -8,6 +8,7 @@ export default async function (
     thinking: string;
     finishReason: string | null;
     usage: any;
+    toolCalls: { id: string; name: string; args: any }[];
 }> {
     const { agent } = opts;
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
@@ -24,6 +25,10 @@ export default async function (
         stream: true,
         max_tokens: 8192,
     };
+
+    // Native tool_use blocks, in JSON protocol mode only (see agent.wireTools).
+    const tools = ctx.fns.agent.wireTools({ agent, api: "anthropic" });
+    if (tools.length) body.tools = tools;
 
     const headers: Record<string, string> = {
         "content-type": "application/json",
@@ -74,6 +79,9 @@ export default async function (
     let thinking = "";
     let finishReason: string | null = null;
     let usage: any = { prompt_tokens: 0, completion_tokens: 0 };
+    // A tool_use block opens with its id and name, then its input arrives as a
+    // JSON string across input_json_delta events, keyed by content-block index.
+    const slots = new Map<number, { id: string; name: string; buf: string }>();
 
     for await (const { event, data } of ctx.fns.llm.parseSSE({ body: res.body })) {
         let msg: any;
@@ -82,8 +90,17 @@ export default async function (
         if (type === "message_start") {
             const u = msg.message?.usage;
             if (u) usage.prompt_tokens = u.input_tokens ?? 0;
+        } else if (type === "content_block_start") {
+            const block = msg.content_block ?? {};
+            if (block.type === "tool_use") {
+                slots.set(Number(msg.index ?? 0), { id: block.id, name: block.name, buf: "" });
+            }
         } else if (type === "content_block_delta") {
             const d = msg.delta ?? {};
+            if (d.type === "input_json_delta" && typeof d.partial_json === "string") {
+                const slot = slots.get(Number(msg.index ?? 0));
+                if (slot) slot.buf += d.partial_json;
+            }
             if (d.type === "text_delta" && typeof d.text === "string") {
                 text += d.text;
                 opts.onEvent?.({ type: "text_delta", delta: d.text });
@@ -97,7 +114,18 @@ export default async function (
         }
     }
 
-    return { text, thinking, finishReason: mapStop(finishReason), usage };
+    const toolCalls = [...slots.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([, s]) => ({ id: s.id, name: s.name, args: parseArgs(s.buf) }));
+    return { text, thinking, finishReason: mapStop(finishReason), usage, toolCalls };
+}
+
+// Anthropic buffers tool input into valid JSON unless fine-grained streaming is
+// on, but a truncated reply can still end mid-object. A parse failure travels
+// as an argument the schema will reject by name, not as a thrown run.
+function parseArgs(buf: string): any {
+    if (!buf.trim()) return {};
+    try { return JSON.parse(buf); } catch { return { __unparsed: buf }; }
 }
 
 function mapStop(r: string | null): string | null {

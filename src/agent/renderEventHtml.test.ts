@@ -1,23 +1,43 @@
 import { describe, test, expect } from "bun:test";
 import renderEventHtmlFn from "./renderEventHtml";
+import toolMeta from "./toolMeta";
 
-const ctx = {} as Context;
+// The renderer asks the registry how a tool presents itself, so the stub ctx
+// carries the real fn rather than a fake one — the icon/label/subject table is
+// exactly what these assertions are about.
+const ctx = { fns: { agent: { toolMeta: (opts: any) => toolMeta(ctx, null, opts) } } } as unknown as Context;
 const renderEventHtml = (c: any, event: any, opts: { agentId?: string } = {}) =>
     renderEventHtmlFn(c, null, { event, agentId: opts.agentId });
 
 describe("agent.renderEventHtml", () => {
-  test("renders tool_call as details (inline, no overlay)", async () => {
-    // Markers protocol — the event name is the marker kind, label rendered as ///<kind>.
-    const evalHtml = await renderEventHtml(ctx, { type: "tool_call", name: "eval", argsHtml: "<pre>a</pre>", resultHtml: "<pre>b</pre>", result: "b", args: { code: "a" }, isError: false });
+  test("renders a tool call as a card that names what it acted on", async () => {
+    // The card says the verb and the SUBJECT — "eval 1 + 1", not "args 63c".
+    const evalHtml = await renderEventHtml(ctx, { type: "tool_call", name: "eval", argsHtml: "<pre>a</pre>", resultHtml: "<pre>b</pre>", result: "b", args: { code: "1 + 1" }, isError: false, ts: Date.now() });
     expect(evalHtml).toContain("<details");
-    expect(evalHtml).toContain("§eval");
+    expect(evalHtml).toContain(">eval<");
+    expect(evalHtml).toContain("1 + 1");
+    expect(evalHtml).toContain("ph-brackets-curly");
     expect(evalHtml).toContain("<pre>a</pre>");
     expect(evalHtml).toContain("<pre>b</pre>");
 
-    // §write:<path> includes the target in the label and is open by default.
-    const writeHtml = await renderEventHtml(ctx, { type: "tool_call", name: "write", argsHtml: "<pre>x</pre>", resultHtml: "<pre>ok</pre>", result: "ok", args: { path: "src/foo.ts", content: "x" }, isError: false });
-    expect(writeHtml).toContain("§write:src/foo.ts");
+    // A write names its path and opens by default — the body is the point —
+    // but it is NOT pinned: only a failure escapes the aging timers.
+    const writeHtml = await renderEventHtml(ctx, { type: "tool_call", name: "write", argsHtml: "<pre>x</pre>", resultHtml: "<pre>ok</pre>", result: "ok", args: { path: "src/foo.ts", content: "x" }, isError: false, ts: Date.now() });
+    expect(writeHtml).toContain("src/foo.ts");
     expect(writeHtml).toContain("<details open");
+    expect(writeHtml).not.toContain('data-pinned');
+
+    const failed = await renderEventHtml(ctx, { type: "tool_call", name: "bash", args: { command: "false" }, result: "[exit 1]", argsHtml: "", resultHtml: "", isError: true, ts: Date.now() - 60_000 });
+    expect(failed).toContain('data-pinned="1"');
+    expect(failed).not.toContain("tool-tucked");
+
+    // An old call arrives already tucked, so reloading a long transcript does
+    // not flash a hundred expanded cards.
+    for (const name of ["read", "write"]) {
+        const old = await renderEventHtml(ctx, { type: "tool_call", name, args: { path: "a.ts" }, result: "x", argsHtml: "", resultHtml: "", isError: false, ts: Date.now() - 60_000 });
+        expect(old).toContain("tool-tucked");
+        expect(old).not.toContain("<details open");
+    }
 
     // Errors stay open too so the user sees the failure body without a click.
     const errHtml = await renderEventHtml(ctx, { type: "tool_call", name: "eval", argsHtml: "<pre>x</pre>", resultHtml: "<pre>err</pre>", result: "err", args: { code: "x" }, isError: true });

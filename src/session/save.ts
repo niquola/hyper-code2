@@ -3,13 +3,14 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const now = Date.now();
     await ctx.fns.procs.db.run({
         sql: `
-        INSERT INTO agents (id, title, workspace_dir, model, system_prompt, scratchpad, parent_id, fork_offset, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM agents WHERE id = ?), ?), ?)
+        INSERT INTO agents (id, title, workspace_dir, model, system_prompt, tools, scratchpad, parent_id, fork_offset, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM agents WHERE id = ?), ?), ?)
         ON CONFLICT(id) DO UPDATE SET
             model = excluded.model,
             title = excluded.title,
             workspace_dir = excluded.workspace_dir,
             system_prompt = excluded.system_prompt,
+            tools = excluded.tools,
             scratchpad = excluded.scratchpad,
             parent_id = excluded.parent_id,
             fork_offset = excluded.fork_offset,
@@ -21,6 +22,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
             agent.workspaceDir || process.cwd(),
             agent.model,
             agent.systemPrompt,
+            agent.tools?.length ? JSON.stringify(agent.tools) : null,
             JSON.stringify(agent.scratchpad ?? {}),
             agent.parentId ?? null,
             agent.forkOffset ?? null,
@@ -35,12 +37,14 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     for (let idx = 0; idx < messages.length; idx++) {
         const message: any = messages[idx];
         await ctx.fns.procs.db.run({
-            sql: 'INSERT INTO messages (agent_id, idx, role, content, ts) VALUES (?, ?, ?, ?, ?)',
+            sql: 'INSERT INTO messages (agent_id, idx, role, content, tool_calls, tool_call_id, ts) VALUES (?, ?, ?, ?, ?, ?, ?)',
             params: [
                 agent.id,
                 idx,
                 message.role,
                 typeof message.content === 'string' ? message.content : (message.content == null ? null : JSON.stringify(message.content)),
+                message.tool_calls?.length ? JSON.stringify(message.tool_calls) : null,
+                message.tool_call_id ?? null,
                 now + idx,
             ],
         });

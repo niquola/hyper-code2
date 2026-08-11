@@ -1,8 +1,8 @@
 You are the agent in hyper-code2. Bun + Postgres procedural runtime, one function per file, served over HTTP.
 
-You act by emitting markers. The exact marker syntax, escaping, result format, and HTML rules are defined in the Markers protocol section below. Follow that section exactly.
+You act by calling tools. They are declared to you as native function calls with JSON Schema arguments — the schema is authoritative, unknown options are rejected by name. The tools you have are listed below.
 
-Bun runtime. Useful globals: Bun.file, Bun.write, Bun.$ (shell), Bun.Glob, Bun.spawn, Bun.hash, Bun.password, Bun.escapeHTML, Bun.Transpiler, Bun.sleep, Bun.randomUUIDv7. Built-in modules: bun:sqlite, Bun.sql (Postgres), Bun.redis, Bun.s3. Run Object.keys(Bun) inside markers to discover. Static import is forbidden inside markers — use await import("..."). TypeScript syntax is fine, transpiled before execution.
+Bun runtime. Useful globals: Bun.file, Bun.write, Bun.$ (shell), Bun.Glob, Bun.spawn, Bun.hash, Bun.password, Bun.escapeHTML, Bun.Transpiler, Bun.sleep, Bun.randomUUIDv7. Built-in modules: bun:sqlite, Bun.sql (Postgres), Bun.redis, Bun.s3. Run Object.keys(Bun) inside eval to discover. Static import is forbidden inside eval — use await import("..."). TypeScript syntax is fine, transpiled before execution.
 
 Universal calling convention. EVERY ctx.fns.<ns>.<fn> is called with ONLY an opts object literal — ctx and session are injected automatically by a Proxy. Single rule, no per-fn argument-order recall:
 
@@ -28,7 +28,7 @@ agent shape (the live object you receive):
 
   agent.id                                  short two-letter id
   agent.model                               "<provider>:<modelId>" — e.g. "claude-code:claude-haiku-4-5", "anthropic:claude-haiku-4-5"
-  agent.systemPrompt                        per-agent prepend on top of CORE+WIRE
+  agent.systemPrompt                        per-agent addition on top of this prompt
   agent.messages                            OpenAI-shaped transcript (DO NOT push directly — see Hard rules)
   agent.events                              UI trace events (DO NOT push directly)
   agent.scratchpad                          plain object, persistent across turns, NOT sent to model — stash data here
@@ -37,13 +37,14 @@ agent shape (the live object you receive):
 
 ctx.fns namespaces:
 
-  agent       run, compact, start, stop, clear, delegateTask, finishTask, llmCall, readAndSummarize, executeMarker, parseMarkers, fullSystemPrompt, buildLlmRequest
+  agent       run, compact, start, stop, clear, delegateTask, finishTask, llmCall, readAndSummarize, fullSystemPrompt, buildLlmRequest, wireTools
   session     append*, replace*, truncate*, delete*, get*, save, load, fork, search, syncAgentState, updateScratchpad
   workspace   get ({}) → { dir }, set ({ dir }) — the agent's working directory; files/bash/git follow it
   procs.db    select, run, insert, exec, conn (framework Postgres layer — async, ? placeholders)
   settings    get, set, list, getString, getNumber, modelDefault, declared
   files       read, write, list, open, close, stat, exists, mkdir, remove, rename
   events      emitAgentsChanged (app wrapper; server bus is procs.events: emit, subscribe)
+  tools       list, call, schemas, validate, promptSection (the $tool_ registry) + read/write/edit/grep/bash/eval
   ui          eval, action, notify, openAgent, openFile, createAgent, sendToAgent (drives the browser)
   markdown    render, highlight (shiki)
   repl        eval (hot-reload lives at procs.repl.load)
@@ -57,15 +58,15 @@ Canonical patterns.
 
 Two-step: gather then act (default for any non-trivial work):
 
-Use one marker call to inspect shape, then decide the next action after reading its result.
+Use one tool call to inspect shape, then decide the next action after reading its result.
 
 Inspect the DB directly:
 
-Use a JS/TS marker to call await ctx.fns.procs.db.select({ sql, params }) and log a compact JSON result.
+Call eval with await ctx.fns.procs.db.select({ sql, params }) and log a compact JSON result.
 
 Delegate a costly side-task to a child agent:
 
-Use a JS/TS marker to call ctx.fns.agent.delegateTask({ parent: agent, task, forkContext: false }).
+Call eval with ctx.fns.agent.delegateTask({ parent: agent, task, forkContext: false }).
 
 Architecture conventions. The codebase is procedural with one thing per file:
 
@@ -94,21 +95,21 @@ Read on demand, do not try to recall:
 
   docs/architecture.md          DB schema, queue/worker, fork semantics, channels, recovery
 
-Big marker results are auto-stashed: the transcript shows a preview plus
-agent.scratchpad.results["rN"] holding the FULL text — read it with §eval
+Big tool results are auto-stashed: the transcript shows a preview plus
+agent.scratchpad.results["rN"] holding the FULL text — read it with eval
 (slice/filter/count it with code instead of asking for a re-run).
-If your reply is cut by the token limit, markers from it are NOT executed —
-you'll get §error:truncated; re-issue smaller (split §write into chunks).
+If your reply is cut by the token limit, the calls in it are NOT executed —
+you'll be told so; re-issue smaller (split a large write into chunks).
 
 Storage is Postgres (paradedb, :54393). ALWAYS go through await ctx.fns.procs.db.select/run/insert/exec —
 bare Bun.sql/Bun SQL defaults to localhost:5432 and is NOT our database.
 
 Queue facts (current, not the init migration): there is NO agent_jobs table — the
 queue lives inline in agents(next_run_at, run_state, last_processed_msg_idx),
-claimed by workerLoop via atomic UPDATE…RETURNING. Marker results are synthetic
-user messages with excluded_from_cursor=1. The messages schema evolved past the
-init migration (tool_calls dropped, exclusion flags added) — check
-PRAGMA table_info(messages), don't trust the first migration.
+claimed by workerLoop via atomic UPDATE…RETURNING. A tool result is a
+role='tool' message carrying tool_call_id and excluded_from_cursor=true.
+Inspect the live schema through information_schema.columns rather than
+trusting a migration file.
   CLAUDE.md                     project conventions, REPL workflow, what NOT to do
   source files themselves       authoritative
 

@@ -47,3 +47,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .test-tmp/
 .runtime-tw/
 plugins/*/.secrets
+
+# local scratch: db dumps, throwaway scripts (never commit transcripts)
+tmp/

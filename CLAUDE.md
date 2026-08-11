@@ -12,6 +12,9 @@ Procedural TypeScript on Bun, running on the **procs framework** (vendored at `s
 - **Bun, not Node.js.** Use `bun`, `bun test`, `bun install`, `bunx`, `bun build`. `.env` loads automatically.
 - Prefer Bun built-ins over npm packages: `Bun.serve()`, `Bun.file()`, `Bun.write()`, `Bun.$` shell, `Bun.Glob`, `Bun.spawn`, `bun:sqlite`, `Bun.markdown.html`, etc.
 - Tests: `bun:test`. Filename must match `*.test.ts` for auto-discovery.
+- **Requires `ripgrep`** (`brew install ripgrep`): `ctx.fns.files.grep` spawns `rg --json` for
+  .gitignore-aware search. Without it grep falls back to an in-process scan and says so, loudly,
+  in every result — so a missing `rg` is visible to the agent and the user rather than silent.
 
 ## The procs contract (calling convention)
 

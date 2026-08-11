@@ -4,6 +4,10 @@ export type Agent = {
     title: string;
     workspaceDir: string;
     systemPrompt: string;
+    /** Narrow this agent to a subset of the declared tools (wire names). Unset
+     *  = every loaded tool. What is excluded here never reaches the prompt or
+     *  the provider's tool list, so it costs no prefix tokens either. */
+    tools?: string[];
     messages: any[];                        // synchronized runtime view of DB-backed transcript
     events: any[];                          // synchronized runtime view of DB-backed event trace
     cursors: Record<string, number>;

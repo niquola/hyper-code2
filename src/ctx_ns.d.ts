@@ -13,33 +13,28 @@ declare global {
             compact: Injected<typeof import("./agent/compact").default>;
             delegateTask: Injected<typeof import("./agent/delegateTask").default>;
             executeBash: Injected<typeof import("./agent/executeBash").default>;
-            executeMarker: Injected<typeof import("./agent/executeMarker").default>;
             finishTask: Injected<typeof import("./agent/finishTask").default>;
-            formatMarkerError: Injected<typeof import("./agent/formatMarkerError").default>;
-            formatMarkerResult: Injected<typeof import("./agent/formatMarkerResult").default>;
             fullSystemPrompt: Injected<typeof import("./agent/fullSystemPrompt").default>;
             getBasePromptParts: Injected<typeof import("./agent/getBasePromptParts").default>;
             highlightResult: Injected<typeof import("./agent/highlightResult").default>;
             listPromptPresets: Injected<typeof import("./agent/listPromptPresets").default>;
             llmCall: Injected<typeof import("./agent/llmCall").default>;
-            markerKind: Injected<typeof import("./agent/markerKind").default>;
             nextId: Injected<typeof import("./agent/nextId").default>;
-            parseMarkers: Injected<typeof import("./agent/parseMarkers").default>;
-            parseReadMarker: Injected<typeof import("./agent/parseReadMarker").default>;
-            preflightCall: Injected<typeof import("./agent/preflightCall").default>;
             readAndSummarize: Injected<typeof import("./agent/readAndSummarize").default>;
             renderEventHtml: Injected<typeof import("./agent/renderEventHtml").default>;
             renderEventsHtml: Injected<typeof import("./agent/renderEventsHtml").default>;
             renderStatusBar: Injected<typeof import("./agent/renderStatusBar").default>;
             run: Injected<typeof import("./agent/run").default>;
             sanitizeHtmlBody: Injected<typeof import("./agent/sanitizeHtmlBody").default>;
-            serializeMarkerCall: Injected<typeof import("./agent/serializeMarkerCall").default>;
             start: Injected<typeof import("./agent/start").default>;
             stashResult: Injected<typeof import("./agent/stashResult").default>;
             stop: Injected<typeof import("./agent/stop").default>;
+            toolLang: Injected<typeof import("./agent/toolLang").default>;
+            toolMeta: Injected<typeof import("./agent/toolMeta").default>;
             waitForEvent: Injected<typeof import("./agent/waitForEvent").default>;
             wakeWaiters: Injected<typeof import("./agent/wakeWaiters").default>;
             wakeWorker: Injected<typeof import("./agent/wakeWorker").default>;
+            wireTools: Injected<typeof import("./agent/wireTools").default>;
             workerLoop: Injected<typeof import("./agent/workerLoop").default>;
         };
         dev: {
@@ -53,6 +48,7 @@ declare global {
             emitAgentsChanged: Injected<typeof import("./events/emitAgentsChanged").default>;
         };
         files: {
+            applyEdits: Injected<typeof import("./files/applyEdits").default>;
             close: Injected<typeof import("./files/close").default>;
             editHashline: Injected<typeof import("./files/editHashline").default>;
             exists: Injected<typeof import("./files/exists").default>;
@@ -71,6 +67,7 @@ declare global {
             remove: Injected<typeof import("./files/remove").default>;
             rename: Injected<typeof import("./files/rename").default>;
             resolveSafe: Injected<typeof import("./files/resolveSafe").default>;
+            rgPath: Injected<typeof import("./files/rgPath").default>;
             stat: Injected<typeof import("./files/stat").default>;
             write: Injected<typeof import("./files/write").default>;
         };
@@ -173,6 +170,7 @@ declare global {
             streamOpenAI: Injected<typeof import("./llm/streamOpenAI").default>;
             toAnthropicMessages: Injected<typeof import("./llm/toAnthropicMessages").default>;
             toCodexInput: Injected<typeof import("./llm/toCodexInput").default>;
+            toOpenAIMessages: Injected<typeof import("./llm/toOpenAIMessages").default>;
         };
         markdown: {
             highlight: Injected<typeof import("./markdown/highlight").default>;
@@ -448,8 +446,20 @@ declare global {
             wordCount: Injected<typeof import("./skill/wordCount").default>;
         };
         tools: {
+            bash: Injected<typeof import("./tools/bash").default>;
+            call: Injected<typeof import("./tools/call").default>;
             dice: Injected<typeof import("./tools/dice").default>;
+            edit: Injected<typeof import("./tools/edit").default>;
+            editValidate: Injected<typeof import("./tools/editValidate").default>;
+            eval: Injected<typeof import("./tools/eval").default>;
+            grep: Injected<typeof import("./tools/grep").default>;
+            list: Injected<typeof import("./tools/list").default>;
             password: Injected<typeof import("./tools/password").default>;
+            promptSection: Injected<typeof import("./tools/promptSection").default>;
+            read: Injected<typeof import("./tools/read").default>;
+            schemas: Injected<typeof import("./tools/schemas").default>;
+            validate: Injected<typeof import("./tools/validate").default>;
+            write: Injected<typeof import("./tools/write").default>;
         };
         tour: {
             play: Injected<typeof import("./tour/play").default>;
@@ -482,8 +492,6 @@ declare global {
     namespace types {
         namespace agent {
             type Agent = import("./agent/Agent").Agent;
-            type MarkerCall = import("./agent/MarkerCall").MarkerCall;
-            type MarkerParseError = import("./agent/MarkerParseError").MarkerParseError;
         }
         namespace dev {
             type TestRun = import("./dev/TestRun").TestRun;
@@ -565,7 +573,9 @@ declare global {
         }
         namespace tools {
             type DiceOpts = import("./tools/DiceOpts").DiceOpts;
+            type EditOp = import("./tools/EditOp").EditOp;
             type PasswordOpts = import("./tools/PasswordOpts").PasswordOpts;
+            type Tool = import("./tools/Tool").Tool;
         }
         namespace tour {
             type Step = import("./tour/Step").Step;

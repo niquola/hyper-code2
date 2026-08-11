@@ -1,11 +1,12 @@
-// The agent turn loop. Marker-protocol only — we don't run native function
-// calls. The model emits §eval/write/bash/html markers in plain content;
-// parseMarkers extracts them; executeMarker runs each one, persists the
-// marker message + tool_call event + synthetic §result feedback. The loop
-// continues until the model returns a response with no markers (pure prose).
+// The agent turn loop. Tools are invoked as the provider's NATIVE function
+// calls; there is no text protocol to parse, so there is no parse error to
+// repair — the provider validated the envelope and ctx.fns.tools.validate
+// validated the arguments before anything ran.
 //
-// All the per-marker mechanics live in ctx.fns.agent.executeMarker. This
-// file is intentionally small — orchestration only.
+// One loop, one registry: every call goes through ctx.fns.tools.call over the
+// $tool_ declarations, exactly like a call made by hand from the REPL.
+//
+// The loop ends on a reply with no tool calls — pure prose back to the user.
 export default async function (
     ctx: Context,
     _session: Session | null,
@@ -23,42 +24,25 @@ export default async function (
         await ctx.fns.session.syncAgentState({ agent });
     }
 
-    // Steering (pi-style): a user message POSTed while this run is busy joins
-    // the NEXT model call — the transcript is refreshed before every stream —
-    // and `consumedUserIdx` records the frontier that call actually saw, so
-    // the worker's finalize won't schedule a duplicate run for a message this
-    // run already answered.
     let consumedUserIdx = -1;
-
-    // A model that ping-pongs markers forever is a legal infinite loop — cap the
-    // cycles per run; the note tells it to continue in a fresh pass if needed.
     const MAX_TURNS = 60;
     let turns = 0;
-
-    // Corrected-failure collapse (audit stays; LLM view forgets): failed marker
-    // attempts wait here per kind until a call of the SAME kind succeeds, then
-    // the failed pair is flagged excluded_from_llm. Protocol notes (truncation,
-    // misplaced-marker warnings) collapse once the turn that follows them is
-    // clean. Near-tail flags are prefix-cache-cheap.
-    const pendingFailures: Record<string, number[]> = {};
-    let protocolNoteIdxs: number[] = [];
-    let repairPairIdxs: number[] = [];
-    let repairs = 0;
 
     while (true) {
         if (++turns > MAX_TURNS) {
             await ctx.fns.session.appendErrorEvent({ id: agent.id, error: `run hit the ${MAX_TURNS}-turn cap — closing; send a message to continue` });
             await ctx.fns.session.appendMessage({ id: agent.id, message: {
-                role: 'user', content: `§error:turn-cap\nThis run exceeded ${MAX_TURNS} marker cycles and was closed. Summarize where you are; the user can send a message to continue.`, excluded_from_cursor: true,
+                role: 'user',
+                content: `This run exceeded ${MAX_TURNS} tool cycles and was closed. Summarize where you are; the user can send a message to continue.`,
+                excluded_from_cursor: true,
             } });
             await ctx.fns.session.syncAgentState({ agent });
             return { text: '', usage: null, consumedUserIdx };
         }
-        // Order matters (ck's review): read the frontier BEFORE syncing the
-        // transcript. A message landing between the two then gets INTO the
-        // model call but is NOT counted consumed — worst case a harmless
-        // duplicate pass. The reverse order counted messages the model never
-        // saw and lost them.
+
+        // Steering: read the frontier BEFORE refreshing the transcript, so a
+        // message landing between the two gets INTO the call without being
+        // counted consumed (a harmless duplicate pass beats a lost message).
         const seen = ((await ctx.fns.procs.db.select({
             sql: "SELECT COALESCE(MAX(idx), -1) AS i FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
             params: [agent.id],
@@ -66,153 +50,82 @@ export default async function (
         consumedUserIdx = Math.max(consumedUserIdx, Number(seen?.i ?? -1));
         await ctx.fns.session.syncAgentState({ agent });
 
-        let { text, usage, finishReason } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
-        let parsed = ctx.fns.agent.parseMarkers({ text: String(text ?? '') });
+        const { text, usage, finishReason, toolCalls = [] } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
+        const prose = String(text ?? '');
 
-        if (finishReason === 'length' && parsed.calls.length > 0) {
-            const hint = 'Your reply hit the token limit and was truncated mid-marker. NOTHING was executed. ' +
-                'Re-issue the marker(s) in a shorter form: split large §write bodies into several calls, ' +
-                'or produce big content via §eval + Bun.write in chunks.';
-            await ctx.fns.session.appendErrorEvent({ id: agent.id, error: 'reply truncated at token limit — markers not executed' });
-            const tn = await ctx.fns.session.appendMessage({ id: agent.id, message: {
-                role: 'user', content: `§error:truncated\n${hint}`, excluded_from_cursor: true,
-            } });
-            protocolNoteIdxs.push(tn.idx);
-            await ctx.fns.session.syncAgentState({ agent });
-            continue;
-        }
-
-        // Repair loop, DB-first (co's design + co's review): a reply with
-        // protocol errors or broken marker bodies AND nothing that passes
-        // preflight is not accepted. The candidate and a one-error repair note
-        // are PERSISTED as ordinary rows — the next stream reads them from the
-        // synced transcript (no in-memory agent.messages mutation, no race
-        // with steering; a user message landing mid-repair joins the retry
-        // naturally). Once a reply is accepted (or repairs are exhausted) the
-        // candidate+note rows are flagged excluded_from_llm — near-tail,
-        // prefix-cache-cheap — so only the accepted attempt stays in the LLM
-        // view. Invalid candidates surface as dimmed `attempt` events.
-        const preflights = parsed.calls.map((c: any) => ctx.fns.agent.preflightCall({ call: c }));
-        const executableCount = preflights.filter((pf: any) => pf.ok).length;
-        const firstHint = parsed.errors[0]?.hint ?? preflights.find((pf: any) => !pf.ok)?.hint;
-        if (executableCount === 0 && firstHint && String(text ?? '').trim() && repairs < 2) {
-            repairs++;
-            const cand = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: String(text) } });
-            const note = await ctx.fns.session.appendMessage({ id: agent.id, message: {
+        // A reply cut off at the token limit can end mid-arguments: the JSON
+        // never closed, so the call arrives as {__unparsed}. Executing that is
+        // meaningless and the schema would complain about the wrong thing —
+        // NOTHING runs, and the model is told what actually happened.
+        if (finishReason === 'length' && toolCalls.some((c: any) => c?.args?.__unparsed !== undefined)) {
+            await ctx.fns.session.appendErrorEvent({ id: agent.id, error: 'reply truncated at token limit — tool calls not executed' });
+            await ctx.fns.session.appendMessage({ id: agent.id, message: {
                 role: 'user',
-                content: `Your previous response was invalid and was NOT executed.\nError: ${firstHint}\nReturn a corrected replacement response only. Do not explain the correction.`,
+                content: 'Your reply hit the token limit and was cut off mid-call, so NOTHING was executed. '
+                    + 'Re-issue the call with a smaller payload: split a large write into several calls, '
+                    + 'or produce big content with eval instead of passing it as an argument.',
                 excluded_from_cursor: true,
             } });
-            repairPairIdxs.push(cand.idx, note.idx);
-            await ctx.fns.session.appendEvent({ id: agent.id, event: {
-                type: 'attempt', status: 'invalid', repair: repairs, text: String(text), error: firstHint, messageIdx: cand.idx,
-            } });
             await ctx.fns.session.syncAgentState({ agent });
             continue;
         }
-        // Leaving repair mode (accepted, or fell back to permissive): the
-        // intermediate candidates and notes drop out of the LLM view.
-        if (repairPairIdxs.length) {
-            await ctx.fns.session.collapseFailures({ id: agent.id, messageIdxs: repairPairIdxs });
-            repairPairIdxs = [];
-            repairs = 0;
-            await ctx.fns.session.syncAgentState({ agent });
+
+        // The assistant turn is ONE row, carrying both what it said and what it
+        // called — that pairing is what the next request replays.
+        if (!prose.trim() && toolCalls.length === 0) {
+            return { text: prose, usage, consumedUserIdx };
         }
 
-        const { prose, calls, errors, epilogue } = parsed;
+        const append = await ctx.fns.session.appendMessage({ id: agent.id, message: {
+            role: 'assistant',
+            content: prose,
+            tool_calls: toolCalls.length ? toolCalls : undefined,
+        } });
+        await ctx.fns.session.syncAgentState({ agent });
 
-        // A reply cut off by the token limit may end mid-marker — a §write with
-        // half a file, an §eval with half a statement. Executing that corrupts
-        // state, so NOTHING runs: the model is told to re-issue, smaller.
-
-
-        // No markers and no parser errors — close the turn cleanly.
-        if (calls.length === 0 && errors.length === 0) {
-            // Skip empty completions entirely — they produce phantom bubbles
-            // and have no informational value to either UI or LLM.
-            if (!text || !String(text).trim()) {
-                return { text: text ?? '', usage, consumedUserIdx };
-            }
-            if (protocolNoteIdxs.length) {
-                await ctx.fns.session.collapseFailures({ id: agent.id, messageIdxs: protocolNoteIdxs });
-                protocolNoteIdxs = [];
-            }
-            const append = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: text } });
-            await ctx.fns.session.syncAgentState({ agent });
-            const html = await ctx.fns.markdown.render({ source: prose || text || '' });
-            await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
-                text: prose || text || '', html, usage, messageIdx: append.idx,
-            } });
-            await ctx.fns.session.syncAgentState({ agent });
-            return { text, usage, consumedUserIdx };
-        }
-
-        // Persist the prose chunk that preceded the first marker, if any.
-        // Splitting prose from markers gives the model clean per-call pairing
-        // on later turns: [assistant: prose?] → (assistant<marker> → user<result>)+.
         if (prose.trim()) {
-            const proseAppend = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: prose } });
-            await ctx.fns.session.syncAgentState({ agent });
-            const proseHtml = await ctx.fns.markdown.render({ source: prose });
+            const html = await ctx.fns.markdown.render({ source: prose });
             await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
-                text: prose, html: proseHtml, usage, messageIdx: proseAppend.idx,
+                text: prose, html, usage, messageIdx: append.idx,
             } });
             await ctx.fns.session.syncAgentState({ agent });
         }
 
-        // Fail-fast chain: markers after a failed one were written assuming its
-        // success (verify → patch → write) — executing them anyway applies
-        // patches whose precondition just failed. Skip the rest, say so.
-        let failedAt: string | null = null;
-        for (const call of calls) {
-            if (failedAt) {
-                const sk = await ctx.fns.session.appendMessage({ id: agent.id, message: {
-                    role: 'user',
-                    content: `§result:${call.kind}:skipped\nskipped: earlier §${failedAt} in this reply failed — re-issue this marker if it still applies.`,
-                    excluded_from_cursor: true,
-                } });
-                (pendingFailures[call.kind] ??= []).push(sk.idx);
-                continue;
-            }
-            const r = await ctx.fns.agent.executeMarker({ agent, call, usage });
-            if ((r as any)?.isError) {
-                failedAt = call.kind;
-                (pendingFailures[call.kind] ??= []).push(...[(r as any).markerIdx, (r as any).resultIdx].filter((n: any) => n != null));
-            } else {
-                const fixed = [...(pendingFailures[call.kind] ?? []), ...(protocolNoteIdxs.length ? protocolNoteIdxs : [])];
-                if (fixed.length) {
-                    await ctx.fns.session.collapseFailures({ id: agent.id, messageIdxs: fixed });
-                    delete pendingFailures[call.kind];
-                    protocolNoteIdxs = [];
-                }
-            }
-        }
-        if (failedAt) await ctx.fns.session.syncAgentState({ agent });
+        if (toolCalls.length === 0) return { text: prose, usage, consumedUserIdx };
 
-        // Prose the model wrote AFTER an explicitly-closed body (bare § line) —
-        // rendered in order, after the calls it follows.
-        if (epilogue?.trim()) {
-            const epAppend = await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: epilogue } });
-            await ctx.fns.session.syncAgentState({ agent });
-            const epHtml = await ctx.fns.markdown.render({ source: epilogue });
-            await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
-                text: epilogue, html: epHtml, usage, messageIdx: epAppend.idx,
-            } });
-            await ctx.fns.session.syncAgentState({ agent });
-        }
+        // Calls in one reply are independent by construction — no protocol lets
+        // a later call read an earlier one's result — so a failure does not
+        // invalidate its neighbours the way a marker chain's does. Each is
+        // executed and answered on its own.
+        for (const call of toolCalls) {
+            const r = await ctx.fns.tools.call({ name: call.name, args: call.args, agent });
+            const output = await ctx.fns.agent.stashResult({ agent, output: r.output, kind: call.name });
 
-        // Parser errors (misplaced markers etc) tail the chain as a single
-        // user message so the model can self-correct on the next turn.
-        if (errors.length > 0) {
-            for (const e of errors) {
-                await ctx.fns.session.appendErrorEvent({ id: agent.id, error: e.hint });
-            }
-            const errText = errors.map(e => ctx.fns.agent.formatMarkerError({ error: e })).join('\n\n');
-            const wn = await ctx.fns.session.appendMessage({ id: agent.id, message: {
-                role: 'user', content: errText, excluded_from_cursor: true,
+            // Highlight each side in the grammar that actually fits: a write's
+            // body in the file's language, a read's result likewise, bash in
+            // shell — not everything as JavaScript.
+            const argsLang = ctx.fns.agent.toolLang({ name: call.name, args: call.args, part: 'args' });
+            const argsCode = argsLang === 'json'
+                ? JSON.stringify(call.args ?? {}, null, 2)
+                : String(call.args?.code ?? call.args?.command ?? call.args?.content ?? '');
+            const argsHtml = await ctx.fns.markdown.highlight({ code: argsCode, lang: argsLang });
+            const resultHtml = await ctx.fns.agent.highlightResult({
+                output,
+                lang: ctx.fns.agent.toolLang({ name: call.name, args: call.args, part: 'result' }),
+            });
+            await ctx.fns.session.appendToolCallEvent({ id: agent.id, payload: {
+                name: call.name, args: call.args, result: output,
+                argsHtml, resultHtml, isError: r.isError,
+                messageIdx: append.idx,
             } });
-            protocolNoteIdxs.push(wn.idx);
-            await ctx.fns.session.syncAgentState({ agent });
+
+            await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                role: 'tool',
+                content: output,
+                tool_call_id: call.id,
+                excluded_from_cursor: true,
+            } });
         }
+        await ctx.fns.session.syncAgentState({ agent });
     }
 }

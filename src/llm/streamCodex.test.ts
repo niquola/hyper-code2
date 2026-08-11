@@ -21,7 +21,10 @@ const fakeJwt = "h." +
 function mkCtx(): Context {
     const ctx: any = { state: {}, env: {} };
     ctx.fns = {
-        agent: { buildLlmRequest: async () => ({ system: "sys", messages: [{ role: "user", content: "hi" }] }) },
+        agent: {
+            buildLlmRequest: async () => ({ system: "sys", messages: [{ role: "user", content: "hi" }] }),
+            wireTools: () => [],
+        },
         llm: {
             resolveEndpoint: () => ({ url: "http://mock/codex", modelId: "gpt-x", apiKey: "", provider: "codex", api: "responses" }),
             refreshCodex: async () => fakeJwt,

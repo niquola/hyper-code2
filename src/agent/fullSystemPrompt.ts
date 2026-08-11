@@ -1,24 +1,27 @@
 // Build the system prompt sent to the LLM each turn. Kept intentionally small —
 // long prompts hit the "lost in the middle" attention failure on every frontier
 // model. Detail docs (CLAUDE.md, docs/architecture.md, the source itself) are
-// referenced from CORE and read on demand via ctx.fns.files.read.
+// referenced from CORE and read on demand via the read tool.
+//
 // Layers:
 //   1. SYSTEM_PROMPT_CORE.txt — invariants + map of ctx.fns + doc pointers
-//   2. SYSTEM_PROMPT.txt      — markers wire-format
+//   2. the tool section       — ASSEMBLED from the $tool_ declarations that are
+//                               actually loaded (index + guidelines), so an
+//                               unmounted or narrowed-away tool costs no tokens
 //   3. agent.systemPrompt     — per-agent additive override (if any)
-//   4. runtime context block  — cwd, agent id, db path
-// Files are .txt (not .md) on purpose — most frontier models follow plain
-// telegraphic text better than nested markdown headers + fences when the
-// content is itself describing markup that they're meant to emit.
+//   4. runtime context block  — workspace, agent id, storage
+//
+// There is no wire-format section any more: tools travel as native function
+// schemas in the request's `tools` array, so describing a call syntax in prose
+// would be duplicating what the provider already enforces.
 import { resolve } from "node:path";
 
 const CORE_PATH = resolve(import.meta.dir, "SYSTEM_PROMPT_CORE.txt");
-const WIRE_PATH = resolve(import.meta.dir, "SYSTEM_PROMPT.txt");
 
 export default async function (ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }): Promise<string> {
     const { agent } = opts;
     const core = await Bun.file(CORE_PATH).text();
-    const wire = await Bun.file(WIRE_PATH).text();
+    const tools = ctx.fns.tools.promptSection({ protocol: "json", only: agent.tools });
 
     const perAgent = (agent.systemPrompt ?? "").trim();
     const perAgentBlock = perAgent ? `\n\n## Per-agent instructions\n\n${perAgent}` : "";
@@ -27,9 +30,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
         "",
         "## Runtime context (auto-injected, fresh each turn)",
         `- workspace directory: ${agent.workspaceDir || process.cwd()}`,
-        "- §read/§write/§grep/§edit, ctx.fns.files.*, §bash and ctx.fns.git.* resolve here",
-        "- CAVEAT: raw Bun.file()/Bun.write() inside §eval resolve against the SERVER's cwd," ,
-        "  not the workspace — inside §eval use ctx.fns.files.* or ctx.fns.workspace.resolve({ path })",
+        "- read/write/grep/edit, ctx.fns.files.* , bash and ctx.fns.git.* resolve here",
+        "- CAVEAT: raw Bun.file()/Bun.write() inside eval resolve against the SERVER's cwd,",
+        "  not the workspace — inside eval use ctx.fns.files.* or ctx.fns.workspace.resolve({ path })",
         "- inspect/change: ctx.fns.workspace.get({}) / await ctx.fns.workspace.set({ dir })",
         "- workspace is a base directory, not a sandbox",
         `- your agent id: ${agent.id}`,
@@ -37,5 +40,5 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
         "",
     ].join("\n");
 
-    return core + "\n\n" + wire + perAgentBlock + runtime;
+    return core + "\n\n" + tools + perAgentBlock + runtime;
 }

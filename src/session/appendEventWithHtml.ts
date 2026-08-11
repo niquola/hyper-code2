@@ -1,17 +1,16 @@
-// Build an event, render its bubble HTML into the right cache field, and append.
-// Centralises the render-then-append step shared by every typed append*Event
-// wrapper. The cached bubble goes in `eventHtml` for every type EXCEPT
-// tool_call, which stores it in `html` (assistant already uses `html` for its
-// markdown body); the events.html route reads them accordingly.
+// Append a typed event.
+//
+// It used to render the bubble here and cache the HTML in the payload. That
+// cache is gone: re-rendering a whole transcript measured at ~7 ms, while the
+// cache cost hundreds of KB per agent AND froze old bubbles in whatever markup
+// the renderer produced back then — improve the rendering and history kept the
+// old look forever. Now every read renders fresh, so a change applies to the
+// entire transcript at once, and events carry data (not markup).
 export default async function (
     ctx: Context,
     _session: Session | null,
     opts: { id: string; type: string; payload?: any; ts?: number },
 ): Promise<{ idx: number }> {
-    const { id, type } = opts;
-    const event = { type, ...(opts.payload ?? {}) } as any;
-    const html = await ctx.fns.agent.renderEventHtml({ event, agentId: id });
-    if (type === "tool_call") event.html = html;
-    else event.eventHtml = html;
-    return ctx.fns.session.appendEvent({ id, event, ts: opts.ts });
+    const event = { type: opts.type, ...(opts.payload ?? {}) } as any;
+    return ctx.fns.session.appendEvent({ id: opts.id, event, ts: opts.ts });
 }

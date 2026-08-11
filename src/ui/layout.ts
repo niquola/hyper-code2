@@ -30,6 +30,24 @@ export default async function (ctx: Context, session: Session | null, opts: { cu
 <title>${esc(pageTitle)}</title>
 <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<style>
+/* A tucked tool card: icon only, sitting in a row with its neighbours. The
+   width transition is what makes it read as "moving aside" rather than as the
+   page reflowing under you. */
+.tool-tray { display: flex; flex-wrap: wrap; gap: .25rem; align-items: center; }
+.tool.tool-tucked { width: 2rem; height: 2rem; border-radius: 9999px; overflow: hidden; }
+.tool.tool-tucked > summary { padding: 0; height: 100%; justify-content: center; }
+.tool.tool-tucked .tool-label,
+.tool.tool-tucked .tool-subject,
+.tool.tool-tucked .tool-size,
+.tool.tool-tucked .tool-status,
+.tool.tool-tucked .tool-caret { display: none; }
+.tool.tool-tucked > *:not(summary) { display: none; }
+.tool { transition: width .2s ease, background-color .2s ease; }
+.tool.tool-tucked:hover { background-color: rgb(249 250 251); }
+</style>
+
 <style>
   body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
   .shiki { background: transparent !important; }

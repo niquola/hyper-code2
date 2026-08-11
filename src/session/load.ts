@@ -10,6 +10,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
         title: row.title ?? "",
         workspaceDir: row.workspace_dir || process.cwd(),
         systemPrompt: row.system_prompt,
+        tools: row.tools == null ? undefined : (typeof row.tools === 'string' ? JSON.parse(row.tools) : row.tools),
         scratchpad: JSON.parse(row.scratchpad),
         messages: [],
         events: [],

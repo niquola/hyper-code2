@@ -3,13 +3,13 @@ import { mkTestCtx } from "../_testCtx.entry";
 import compact from "./compact";
 
 describe("agent.compact", () => {
-    test("replaces last §result:* user message with summary", async () => {
+    test("replaces the last tool result with a summary", async () => {
         const ctx: any = await mkTestCtx();
         const agent = await ctx.fns.agent.start({ model: "x" });
         agent.messages.push(
             { role: "user", content: "do it" },
-            { role: "assistant", content: "§eval\nconsole.log(1);" },
-            { role: "user", content: "§result:eval\n" + "A".repeat(2000) },
+            { role: "assistant", content: "", tool_calls: [{ id: "c1", name: "eval", args: {} }] },
+            { role: "tool", content: "A".repeat(2000), tool_call_id: "c1" },
         );
         ctx.fns.session = { replaceMessages: (_c: any, _s: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
         const res = await compact(ctx, null, { agent, summary: "listed 42 files" });
@@ -29,13 +29,13 @@ describe("agent.compact", () => {
         const ctx: any = await mkTestCtx();
         const agent = await ctx.fns.agent.start({ model: "x" });
         agent.messages.push(
-            { role: "user", content: "§result:eval\nold" },
+            { role: "tool", content: "old", tool_call_id: "c0" },
             { role: "assistant", content: "intermediate" },
-            { role: "user", content: "§result:eval\nbig payload" },
+            { role: "tool", content: "big payload", tool_call_id: "c1" },
         );
         ctx.fns.session = { replaceMessages: (_c: any, _s: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
         await compact(ctx, null, { agent, summary: "summary" });
-        expect(agent.messages[0].content).toBe("§result:eval\nold");
+        expect(agent.messages[0].content).toBe("old");
         expect(agent.messages[2].content).toBe("[compacted] summary");
     });
 
@@ -59,15 +59,15 @@ describe("agent.compact", () => {
             expect(agent.messages[2].content).toContain("[compacted from #2");
         });
 
-        test("walks back when from-1 is an assistant marker", async () => {
+        test("walks back when the row before is a tool call", async () => {
             const ctx: any = await mkTestCtx();
             const agent = await ctx.fns.agent.start({ model: "x" });
             agent.messages.push(
                 { role: "user", content: "hi" },
-                { role: "assistant", content: "§eval\nconsole.log(1);" },
-                { role: "user", content: "§result:eval\nresult A" },
-                { role: "assistant", content: "§eval\nconsole.log(2);" },
-                { role: "user", content: "§result:eval\nresult B" },
+                { role: "assistant", content: "", tool_calls: [{ id: "c1", name: "eval", args: {} }] },
+                { role: "tool", content: "result A", tool_call_id: "c1" },
+                { role: "assistant", content: "", tool_calls: [{ id: "c2", name: "eval", args: {} }] },
+                { role: "tool", content: "result B", tool_call_id: "c2" },
             );
             ctx.fns.session = { replaceMessages: (_c: any, _s: any, opts: { id: string; messages: any[] }) => { agent.messages = opts.messages; }, syncAgentState: () => agent };
             // Asking to compact at idx 4 (a result) walks back over the result
