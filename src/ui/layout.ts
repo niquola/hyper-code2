@@ -46,11 +46,13 @@ export default async function (ctx: Context, session: Session | null, opts: { cu
 .tool.tool-tucked > *:not(summary) { display: none; }
 .tool { transition: width .2s ease, background-color .2s ease; }
 .tool.tool-tucked:hover { background-color: rgb(249 250 251); }
-/* Highlighted code inside a toast: wrap, stay small, no shiki background
-   fighting the toast's own colour. */
-.toast-detail pre { margin: 0; padding: .35rem .5rem; border-radius: .5rem; background: rgba(0,0,0,.04) !important; white-space: pre-wrap; word-break: break-word; }
-.toast-detail pre + pre { margin-top: .25rem; }
-.toast-detail code { font-size: 11px; line-height: 1.35; }
+/* Highlighted code inside tool detail dialogs. */
+.tool-dialog-body pre { margin: 0; padding: .75rem 1rem; border-radius: .65rem; background: rgba(0,0,0,.04) !important; white-space: pre-wrap; word-break: break-word; }
+.tool-dialog-body pre + pre { margin-top: .75rem; }
+.tool-dialog-body code { font-size: 12px; line-height: 1.5; }
+.tool-dialog-body .edit-preview pre { border-radius: 0; background: transparent !important; }
+.tool-dialog-body .edit-remove pre { background: transparent !important; }
+.tool-dialog-body .edit-add pre { background: transparent !important; }
 </style>
 
 <style>

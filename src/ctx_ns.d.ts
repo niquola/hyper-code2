@@ -22,6 +22,7 @@ declare global {
             llmCall: Injected<typeof import("./agent/llmCall").default>;
             nextId: Injected<typeof import("./agent/nextId").default>;
             readAndSummarize: Injected<typeof import("./agent/readAndSummarize").default>;
+            renderEditArgs: Injected<typeof import("./agent/renderEditArgs").default>;
             renderEventHtml: Injected<typeof import("./agent/renderEventHtml").default>;
             renderEventsHtml: Injected<typeof import("./agent/renderEventsHtml").default>;
             renderStatusBar: Injected<typeof import("./agent/renderStatusBar").default>;
@@ -40,6 +41,13 @@ declare global {
         };
         browser: {
             click: Injected<typeof import("../plugins/browser/src/browser/click").default>;
+            closeSessions: Injected<typeof import("../plugins/browser/src/browser/closeSessions").default>;
+            googleAI: Injected<typeof import("../plugins/browser/src/browser/googleAI").default>;
+            googleAIFollowUp: Injected<typeof import("../plugins/browser/src/browser/googleAIFollowUp").default>;
+            googleSearch: Injected<typeof import("../plugins/browser/src/browser/googleSearch").default>;
+            readPage: Injected<typeof import("../plugins/browser/src/browser/readPage").default>;
+            research: Injected<typeof import("../plugins/browser/src/browser/research").default>;
+            tabClose: Injected<typeof import("../plugins/browser/src/browser/tabClose").default>;
             evaluate: Injected<typeof import("../plugins/browser/src/browser/evaluate").default>;
             navigate: Injected<typeof import("../plugins/browser/src/browser/navigate").default>;
             screenshot: Injected<typeof import("../plugins/browser/src/browser/screenshot").default>;

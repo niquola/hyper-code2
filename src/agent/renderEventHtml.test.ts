@@ -1,11 +1,23 @@
 import { describe, test, expect } from "bun:test";
 import renderEventHtmlFn from "./renderEventHtml";
 import toolMeta from "./toolMeta";
+import toolLang from "./toolLang";
+import highlightResult from "./highlightResult";
+import renderEditArgs from "./renderEditArgs";
 
 // The renderer asks the registry how a tool presents itself, so the stub ctx
 // carries the real fn rather than a fake one — the icon/label/subject table is
 // exactly what these assertions are about.
-const ctx = { fns: { agent: { toolMeta: (opts: any) => toolMeta(ctx, null, opts) } } } as unknown as Context;
+const ctx = { fns: {
+  agent: {
+    toolMeta: (opts: any) => toolMeta(ctx, null, opts),
+    toolLang: (opts: any) => toolLang(ctx, null, opts),
+    highlightResult: (opts: any) => highlightResult(ctx, null, opts),
+    renderEditArgs: (opts: any) => renderEditArgs(ctx, null, opts),
+  },
+  markdown: { highlight: async ({ code }: any) => `<pre>${String(code)}</pre>` },
+  procs: { ui: { escape: ({ text }: any) => String(text) } },
+} } as unknown as Context;
 const renderEventHtml = (c: any, event: any, opts: { agentId?: string } = {}) =>
     renderEventHtmlFn(c, null, { event, agentId: opts.agentId });
 
@@ -17,7 +29,7 @@ describe("agent.renderEventHtml", () => {
     expect(evalHtml).toContain(">eval<");
     expect(evalHtml).toContain("1 + 1");
     expect(evalHtml).toContain("ph-brackets-curly");
-    expect(evalHtml).toContain("<pre>a</pre>");
+    expect(evalHtml).toContain("<pre>1 + 1</pre>");
     expect(evalHtml).toContain("<pre>b</pre>");
 
     // A write names its path like everything else; it is a circle too.

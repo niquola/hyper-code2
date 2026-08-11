@@ -118,21 +118,12 @@ export default async function (
             const r = await ctx.fns.tools.call({ name: call.name, args: call.args, agent });
             const output = await ctx.fns.agent.stashResult({ agent, output: r.output, kind: call.name });
 
-            // Highlight each side in the grammar that actually fits: a write's
-            // body in the file's language, a read's result likewise, bash in
-            // shell — not everything as JavaScript.
-            const argsLang = ctx.fns.agent.toolLang({ name: call.name, args: call.args, part: 'args' });
-            const argsCode = argsLang === 'json'
-                ? JSON.stringify(call.args ?? {}, null, 2)
-                : String(call.args?.code ?? call.args?.command ?? call.args?.content ?? '');
-            const argsHtml = await ctx.fns.markdown.highlight({ code: argsCode, lang: argsLang });
-            const resultHtml = await ctx.fns.agent.highlightResult({
-                output,
-                lang: ctx.fns.agent.toolLang({ name: call.name, args: call.args, part: 'result' }),
-            });
+            // Events store data, never rendered markup. renderEventHtml builds
+            // the current view on every read, so renderer improvements apply to
+            // old calls too (including edit diff cards).
             await ctx.fns.session.appendToolCallEvent({ id: agent.id, payload: {
                 name: call.name, args: call.args, result: output,
-                argsHtml, resultHtml, isError: r.isError,
+                isError: r.isError,
                 messageIdx: append.idx,
             } });
 

@@ -109,10 +109,9 @@ function ageTool(card) {
     const since = Date.now() - born;
 
     card.addEventListener('click', () => { card.dataset.pinned = '1'; }, { once: true });
-    // A tucked card is a button, not a disclosure: clicking it raises the same
-    // toast the call raised when it happened, in the same corner. The
-    // transcript keeps its shape — you asked to LOOK at something, not to
-    // rearrange the conversation around it.
+    // A tucked card opens as a real centered dialog: immediately expanded,
+    // scrollable, and explicitly dismissible. Tool detail is something a human
+    // asked to inspect, not a transient notification in the corner.
     card.addEventListener('click', (e) => {
         if (!card.classList.contains('tool-tucked')) return;
         e.preventDefault();
@@ -120,11 +119,10 @@ function ageTool(card) {
         const subject = card.querySelector('.tool-subject')?.textContent ?? '';
         const args = card.querySelector('.tool-code')?.innerHTML ?? '';
         const result = card.querySelector('.tool-result')?.innerHTML ?? '';
-        window.toast?.({
-            level: card.classList.contains('bg-red-50/40') ? 'error' : 'info',
-            message: (label + ' ' + subject).trim(),
-            bodyHtml: args + result,
-            sticky: true,
+        openToolDialog({
+            title: (label + ' ' + subject).trim(),
+            bodyHtml: args + result || '<div class="text-sm text-gray-400">No output</div>',
+            isError: card.classList.contains('bg-red-50/40'),
         });
     });
 
@@ -142,3 +140,41 @@ function ageTools(root) {
 
 ageTools();
 document.body.addEventListener('htmx:afterSwap', () => ageTools());
+
+
+function openToolDialog({ title, bodyHtml, isError }) {
+    document.getElementById('tool-dialog')?.remove();
+    const root = document.createElement('div');
+    root.id = 'tool-dialog';
+    root.className = 'fixed inset-0 z-[1100] flex items-center justify-center bg-gray-950/40 p-4 backdrop-blur-[1px]';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+
+    const panel = document.createElement('div');
+    panel.className = 'flex max-h-[82vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border bg-white shadow-2xl ' + (isError ? 'border-red-200' : 'border-gray-200');
+    const header = document.createElement('div');
+    header.className = 'flex shrink-0 items-center gap-3 border-b border-gray-200 px-5 py-3.5';
+    const heading = document.createElement('h2');
+    heading.className = 'min-w-0 flex-1 truncate font-mono text-sm font-semibold ' + (isError ? 'text-red-700' : 'text-gray-800');
+    heading.textContent = title;
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'flex size-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300';
+    close.title = 'Close';
+    close.setAttribute('aria-label', 'Close');
+    close.innerHTML = '<i class="ph ph-x text-lg" aria-hidden="true"></i>';
+    const body = document.createElement('div');
+    body.className = 'tool-dialog-body min-h-0 flex-1 overflow-auto bg-gray-50/60 p-5 text-xs text-gray-700';
+    body.innerHTML = bodyHtml;
+
+    const dismiss = () => { document.removeEventListener('keydown', onKey); root.remove(); };
+    const onKey = (event) => { if (event.key === 'Escape') dismiss(); };
+    close.addEventListener('click', dismiss);
+    root.addEventListener('mousedown', (event) => { if (event.target === root) dismiss(); });
+    document.addEventListener('keydown', onKey);
+    header.append(heading, close);
+    panel.append(header, body);
+    root.appendChild(panel);
+    document.body.appendChild(root);
+    close.focus();
+}

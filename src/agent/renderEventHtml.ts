@@ -109,6 +109,17 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
         const meta = (_ctx as any).fns.agent.toolMeta({ name: ev.name, args: ev.args });
         const result = String(ev.result ?? '');
         const lines = result ? result.split('\n').length : 0;
+        const argsLang = (_ctx as any).fns.agent.toolLang({ name: ev.name, args: ev.args, part: 'args' });
+        const argsCode = argsLang === 'json'
+            ? JSON.stringify(ev.args ?? {}, null, 2)
+            : String(ev.args?.code ?? ev.args?.command ?? ev.args?.content ?? '');
+        const argsHtml = ev.name === 'edit'
+            ? await (_ctx as any).fns.agent.renderEditArgs({ path: ev.args?.path, edits: ev.args?.edits })
+            : await (_ctx as any).fns.markdown.highlight({ code: argsCode, lang: argsLang });
+        const resultHtml = await (_ctx as any).fns.agent.highlightResult({
+            output: result,
+            lang: (_ctx as any).fns.agent.toolLang({ name: ev.name, args: ev.args, part: 'result' }),
+        });
         // Size in the units a reader thinks in — lines for output, KB only when
         // it is genuinely big — instead of a raw character count.
         const size = !result ? ''
@@ -119,13 +130,10 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
             ? '<span class="inline-flex items-center gap-1 text-red-600"><i class="ph ph-warning-circle"></i>error</span>'
             : '<span class="text-emerald-600"><i class="ph ph-check"></i></span>';
 
-        // A tool call is a CIRCLE in the transcript, from birth. The detail
-        // travels as a toast in the corner while it happens (see
-        // session.appendToolCallEvent), so the chat stays a conversation and
-        // the machinery sits beside it. Clicking a circle brings the whole card
-        // back into the stream for as long as you want it. An ERRORED call is
-        // no exception — it keeps its red tint in the tray, but it ages and
-        // tucks like the rest: a retried find is not worth a permanent line.
+        // A tool call is a compact icon in the transcript. Its arguments and
+        // result are already present in the hidden markup below; chat.js opens
+        // them in a sticky popup when the user clicks the icon. Errors keep a
+        // red tint, but do not interrupt the conversation with an auto-toast.
         const openAttr = '';
         const tucked = true;
         return '<details' + openAttr + ' class="group/tool tool rounded-xl border text-xs leading-snug overflow-hidden '
@@ -140,9 +148,9 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
             + '<span class="tool-status shrink-0">' + status + '</span>'
             + '<i class="tool-caret ph ph-caret-down text-[10px] text-gray-300 transition-transform group-open/tool:rotate-180"></i>'
             + '</summary>'
-            + '<div class="border-t border-gray-100 bg-gray-50/60 px-3 py-2 tool-code">' + (ev.argsHtml || '') + '</div>'
+            + '<div class="border-t border-gray-100 bg-gray-50/60 px-3 py-2 tool-code">' + argsHtml + '</div>'
             + (result
-                ? '<div class="border-t border-gray-100 px-3 py-2 text-gray-700 tool-result">' + (ev.resultHtml || '') + '</div>'
+                ? '<div class="border-t border-gray-100 px-3 py-2 text-gray-700 tool-result">' + resultHtml + '</div>'
                 : '')
             + '</details>';
     }
