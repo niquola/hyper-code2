@@ -22,6 +22,15 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const { agent } = opts;
     const core = await Bun.file(CORE_PATH).text();
     const tools = ctx.fns.tools.promptSection({ protocol: "json", only: agent.tools });
+    // Executable project plugins are ordinary procs modules, not necessarily
+    // native LLM tools. Give the agent a compact index and let it inspect the
+    // module's SKILL.md/source, then call functions through eval as usual.
+    const plugins = (ctx.fns.procs.modules.list({}) as any[])
+        .filter((m: any) => m.plugin)
+        .map((m: any) => `- ${m.name}: ${m.description || m.namespaces.join(", ")}\n  path: ${m.dir}${m.skill ? `\n  docs: ${m.skill}` : ""}`);
+    const pluginBlock = plugins.length
+        ? `\n\n## Mounted plugins/modules\n\n${plugins.join("\n")}\n\nRead a plugin's docs/source on demand. Its functions are available through ctx.fns; discover signatures from ctx.state.registry before calling.`
+        : "";
 
     const perAgent = (agent.systemPrompt ?? "").trim();
     const perAgentBlock = perAgent ? `\n\n## Per-agent instructions\n\n${perAgent}` : "";
@@ -40,5 +49,5 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
         "",
     ].join("\n");
 
-    return core + "\n\n" + tools + perAgentBlock + runtime;
+    return core + "\n\n" + tools + pluginBlock + perAgentBlock + runtime;
 }

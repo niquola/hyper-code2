@@ -38,6 +38,19 @@ declare global {
             wireTools: Injected<typeof import("./agent/wireTools").default>;
             workerLoop: Injected<typeof import("./agent/workerLoop").default>;
         };
+        browser: {
+            click: Injected<typeof import("../plugins/browser/src/browser/click").default>;
+            evaluate: Injected<typeof import("../plugins/browser/src/browser/evaluate").default>;
+            navigate: Injected<typeof import("../plugins/browser/src/browser/navigate").default>;
+            screenshot: Injected<typeof import("../plugins/browser/src/browser/screenshot").default>;
+            tabs: Injected<typeof import("../plugins/browser/src/browser/tabs").default>;
+            text: Injected<typeof import("../plugins/browser/src/browser/text").default>;
+            title: Injected<typeof import("../plugins/browser/src/browser/title").default>;
+        };
+        cdp: {
+            send: Injected<typeof import("../plugins/browser/src/cdp/send").default>;
+            session: Injected<typeof import("../plugins/browser/src/cdp/session").default>;
+        };
         dev: {
             ping: Injected<typeof import("./dev/ping").default>;
             readLog: Injected<typeof import("./dev/readLog").default>;

@@ -1,0 +1,12 @@
+{
+  "name": "browser",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "browser",
+    "icon": "ph-browser",
+    "optional": true,
+    "description": "Basic automation of a real Chrome over CDP on :9222: tabs, navigation, page evaluation, text, clicks and screenshots."
+  }
+}

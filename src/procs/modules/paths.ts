@@ -33,7 +33,12 @@ const DEFAULTS = ["./modules"];
 // anybody's home folder. That matters everywhere that is not a laptop — a
 // deploy, a test, a demo of what a fresh clone does — because otherwise the
 // composition of the process depends on whose machine it runs on.
-const PLUGIN_DEFAULTS = [".claude/skills", ".agents/skills", "~/.claude/skills", "~/.agent/skills", "~/.codex/skills"];
+// hyper-code2: the plugin catalogue is project-local. Upstream also reads the
+// Claude/Codex skill homes, but those hold prompt/document skills rather than
+// executable modules, and offering them in /procs/modules invites mounting a
+// directory that has no code to run. A host can still name another catalogue
+// explicitly through procs.plugins or PROCS_PLUGINS.
+const PLUGIN_DEFAULTS: string[] = [];
 
 // `plugin` marks the ones that are a CATALOGUE rather than this host's own
 // library: the machine's skill directories and the project's, whose contents

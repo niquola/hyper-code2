@@ -90,7 +90,7 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
             : '<pre class="text-xs whitespace-pre-wrap break-words">' + esc(ev.text || '') + '</pre>';
         return '<div class="group relative flex justify-start">'
             + deleteControls(idx, agentId, true, true)
-            + '<div class="assistant max-w-[90%] rounded-2xl bg-gray-50 px-4 py-3 shadow-sm border border-gray-200">'
+            + '<div class="assistant max-w-[90%] rounded-2xl bg-white px-4 py-3 shadow-sm border border-gray-200">'
             + '<div class="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
             + safeHtml
             + '</div>'

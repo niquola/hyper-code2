@@ -53,7 +53,7 @@ describe("agent.renderEventHtml", () => {
   test("renders assistant as left bubble with htmx delete buttons when agentId given", async () => {
     const html = await renderEventHtml(ctx, { type: "assistant", html: "<p>ok</p>", usage: { prompt_tokens: 1234, total_tokens: 1300 }, messageIdx: 7 }, { agentId: 'a1' });
     expect(html).toContain("justify-start");
-    expect(html).toContain("rounded-2xl bg-gray-50");
+    expect(html).toContain("rounded-2xl bg-white");
     expect(html).toContain("prose prose-sm max-w-none");
     expect(html).toContain(`hx-post="/agent/a1/messages/delete"`);
     expect(html).toContain(`"idx":"7"`);

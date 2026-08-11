@@ -40,6 +40,9 @@
     "tailwindcss": "^4.3.3"
   },
   "procs": {
+    "plugins": [
+      "./plugins"
+    ],
     "prod": {
       "procs/log": {},
       "procs/db": {
@@ -53,6 +56,7 @@
       }
     },
     "modules": {
+      "browser": {},
       "google-local": {
         "path": "plugins/google"
       }
