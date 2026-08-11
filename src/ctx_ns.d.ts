@@ -531,6 +531,18 @@ declare global {
             resolve: Injected<typeof import("./workspace/resolve").default>;
             set: Injected<typeof import("./workspace/set").default>;
         };
+        zulip: {
+            api: Injected<typeof import("../plugins/zulip/src/zulip/api").default>;
+            channels: Injected<typeof import("../plugins/zulip/src/zulip/channels").default>;
+            creds: Injected<typeof import("../plugins/zulip/src/zulip/creds").default>;
+            dms: Injected<typeof import("../plugins/zulip/src/zulip/dms").default>;
+            edit: Injected<typeof import("../plugins/zulip/src/zulip/edit").default>;
+            markRead: Injected<typeof import("../plugins/zulip/src/zulip/markRead").default>;
+            messages: Injected<typeof import("../plugins/zulip/src/zulip/messages").default>;
+            send: Injected<typeof import("../plugins/zulip/src/zulip/send").default>;
+            topics: Injected<typeof import("../plugins/zulip/src/zulip/topics").default>;
+            users: Injected<typeof import("../plugins/zulip/src/zulip/users").default>;
+        };
     }
 
     namespace types {
