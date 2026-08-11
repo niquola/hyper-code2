@@ -17,6 +17,7 @@ declare global {
             fullSystemPrompt: Injected<typeof import("./agent/fullSystemPrompt").default>;
             getBasePromptParts: Injected<typeof import("./agent/getBasePromptParts").default>;
             highlightResult: Injected<typeof import("./agent/highlightResult").default>;
+            imageContent: Injected<typeof import("./agent/imageContent").default>;
             listPromptPresets: Injected<typeof import("./agent/listPromptPresets").default>;
             llmCall: Injected<typeof import("./agent/llmCall").default>;
             nextId: Injected<typeof import("./agent/nextId").default>;
@@ -576,6 +577,7 @@ declare global {
             type Bm25Hit = import("./session/Bm25Hit").Bm25Hit;
         }
         namespace tools {
+            type Content = import("./tools/Content").Content;
             type DiceOpts = import("./tools/DiceOpts").DiceOpts;
             type EditOp = import("./tools/EditOp").EditOp;
             type PasswordOpts = import("./tools/PasswordOpts").PasswordOpts;

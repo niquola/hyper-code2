@@ -21,7 +21,7 @@
 //      and every tool_use needs exactly one result.
 //      → consecutive tool results coalesce into a single user message, ahead
 //        of any prose the same turn produced.
-export default function (_ctx: Context, _session: Session | null, opts: { messages: any[] }): any[] {
+export default function (ctx: Context, _session: Session | null, opts: { messages: any[] }): any[] {
     const out: { role: "user" | "assistant"; content: any[] }[] = [];
 
     const push = (role: "user" | "assistant", block: any) => {
@@ -44,21 +44,25 @@ export default function (_ctx: Context, _session: Session | null, opts: { messag
 
     for (const m of opts.messages) {
         const role = m?.role;
-        const text = String(m?.content ?? "");
+        const parts = toParts(m?.content);
+        const text = parts.filter((p: any) => p.type === "text").map((p: any) => p.text).join("\n");
+        const images = parts.filter((p): p is Extract<types.tools.Content, { type: "image" }> => p.type === "image");
 
         if (role === "tool") {
             push("user", {
                 type: "tool_result",
                 tool_use_id: m.tool_call_id,
-                content: text === "" ? "(no output)" : text,
+                content: text === "" ? "(image attached below)" : text,
                 ...(m.isError ? { is_error: true } : {}),
             });
+            for (const image of images) push("user", { type: "image", source: { type: "base64", media_type: image.mimeType, data: image.data } });
             continue;
         }
 
         if (role !== "user" && role !== "assistant") continue;   // system handled elsewhere
 
         if (text.trim() !== "") push(role, { type: "text", text });
+        for (const image of images) push(role, { type: "image", source: { type: "base64", media_type: image.mimeType, data: image.data } });
         for (const call of m?.tool_calls ?? []) {
             push("assistant", { type: "tool_use", id: call.id, name: call.name, input: call.args ?? {} });
         }
@@ -71,4 +75,12 @@ export default function (_ctx: Context, _session: Session | null, opts: { messag
     const lastBlock = last?.content[last.content.length - 1];
     if (last?.role === "assistant" && lastBlock?.type === "text") lastBlock.text = lastBlock.text.replace(/\s+$/, "");
     return out;
+}
+
+// Local mirror of llm/contentParts — these converters are PURE (tests call
+// them with a bare ctx), so content normalization cannot ride ctx.fns.
+function toParts(content: any): types.tools.Content[] {
+    if (typeof content === "string") return content ? [{ type: "text", text: content }] : [];
+    if (!Array.isArray(content)) return content == null ? [] : [{ type: "text", text: JSON.stringify(content) }];
+    return content.filter((p: any) => p?.type === "text" && typeof p.text === "string" || p?.type === "image" && typeof p.data === "string" && typeof p.mimeType === "string");
 }

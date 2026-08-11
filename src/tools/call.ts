@@ -13,7 +13,7 @@ export default async function (
     ctx: Context,
     session: Session | null,
     opts: { name: string; args?: any; agent?: types.agent.Agent },
-): Promise<{ output: string; isError: boolean }> {
+): Promise<{ output: string; content?: types.tools.Content[]; isError: boolean }> {
     const name = String(opts.name ?? "").trim();
     const all = ctx.fns.tools.list({});
     const tool = all.find((t: any) => t.wireName === name || t.name === name || t.key === name);
@@ -57,12 +57,14 @@ export default async function (
     }
 
     let output = "";
+    let content: types.tools.Content[] | undefined;
     let isError = false;
     try {
         const r = await fn(args);
         if (typeof r === "string") output = r;
         else {
             output = String(r?.output ?? "");
+            if (Array.isArray(r?.content)) content = r.content;
             isError = r?.isError === true;
         }
     } catch (e: any) {
@@ -75,5 +77,5 @@ export default async function (
     // agent cm). Replace with U+FFFD.
     output = output.replaceAll("\u0000", "\uFFFD");
 
-    return { output, isError };
+    return { output, ...(content?.length ? { content } : {}), isError };
 }

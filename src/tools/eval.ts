@@ -5,6 +5,6 @@ export default async function (
     ctx: Context,
     session: Session | null,
     opts: { code: string },
-): Promise<string> {
+): Promise<string | { output: string; content: types.tools.Content[] }> {
     return await ctx.fns.repl.eval({ code: opts.code, agent: (session as any)?.agent });
 }

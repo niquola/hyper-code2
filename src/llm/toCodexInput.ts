@@ -21,12 +21,19 @@ export default function (
             continue;
         }
         if (m.role === "tool") {
-            input.push({ type: "function_call_output", call_id: m.tool_call_id, output: String(m.content ?? "") });
+            const content = parts(m.content);
+            const text = content.filter((p: any) => p.type === "text").map((p: any) => p.text).join("\n");
+            input.push({ type: "function_call_output", call_id: m.tool_call_id, output: text || "(image attached below)" });
+            for (const part of content) if (part.type === "image") {
+                input.push({ type: "message", role: "user", content: [{ type: "input_image", detail: "auto", image_url: `data:${part.mimeType};base64,${part.data}` }] });
+            }
             continue;
         }
         if (m.role === "user") {
-            const text = typeof m.content === "string" ? m.content : JSON.stringify(m.content ?? "");
-            input.push({ type: "message", role: "user", content: [{ type: "input_text", text }] });
+            const content = parts(m.content).map((part: any) => part.type === "image"
+                ? { type: "input_image", detail: "auto", image_url: `data:${part.mimeType};base64,${part.data}` }
+                : { type: "input_text", text: part.text });
+            if (content.length) input.push({ type: "message", role: "user", content });
             continue;
         }
         if (m.role === "assistant") {
@@ -44,4 +51,10 @@ export default function (
         }
     }
     return { instructions, input };
+}
+
+function parts(content: any): types.tools.Content[] {
+    if (typeof content === "string") return content ? [{ type: "text", text: content }] : [];
+    if (!Array.isArray(content)) return content == null ? [] : [{ type: "text", text: JSON.stringify(content) }];
+    return content.filter((p: any) => p?.type === "text" && typeof p.text === "string" || p?.type === "image" && typeof p.data === "string" && typeof p.mimeType === "string");
 }

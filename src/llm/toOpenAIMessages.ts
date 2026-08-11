@@ -9,19 +9,25 @@
 // An assistant message that only called tools has no content — OpenAI accepts
 // null there, and some proxies reject "" — so the field is omitted rather than
 // sent empty.
-export default function (_ctx: Context, _session: Session | null, opts: { messages: any[] }): any[] {
+export default function (ctx: Context, _session: Session | null, opts: { messages: any[] }): any[] {
     const out: any[] = [];
 
     for (const m of opts.messages) {
         if (m?.role === "tool") {
-            out.push({ role: "tool", tool_call_id: m.tool_call_id, content: String(m.content ?? "") });
+            const parts = toParts(m.content);
+            const text = parts.filter((p: any) => p.type === "text").map((p: any) => p.text).join("\n");
+            out.push({ role: "tool", tool_call_id: m.tool_call_id, content: text || "(image attached below)" });
+            const images = parts.filter((p: any) => p.type === "image").map((p: any) => ({ type: "image_url", image_url: { url: `data:${p.mimeType};base64,${p.data}` } }));
+            if (images.length) out.push({ role: "user", content: images });
             continue;
         }
 
-        const text = String(m?.content ?? "");
+        const parts = toParts(m?.content);
+        const text = parts.filter((p: any) => p.type === "text").map((p: any) => p.text).join("\n");
+        const images = parts.filter((p: any) => p.type === "image").map((p: any) => ({ type: "image_url", image_url: { url: `data:${p.mimeType};base64,${p.data}` } }));
         const calls = m?.tool_calls ?? [];
         if (!calls.length) {
-            if (m?.role) out.push({ role: m.role, content: text });
+            if (m?.role) out.push({ role: m.role, content: images.length ? [...(text ? [{ type: "text", text }] : []), ...images] : text });
             continue;
         }
 
@@ -35,4 +41,12 @@ export default function (_ctx: Context, _session: Session | null, opts: { messag
     }
 
     return out;
+}
+
+// Local mirror of llm/contentParts — these converters are PURE (tests call
+// them with a bare ctx), so content normalization cannot ride ctx.fns.
+function toParts(content: any): types.tools.Content[] {
+    if (typeof content === "string") return content ? [{ type: "text", text: content }] : [];
+    if (!Array.isArray(content)) return content == null ? [] : [{ type: "text", text: JSON.stringify(content) }];
+    return content.filter((p: any) => p?.type === "text" && typeof p.text === "string" || p?.type === "image" && typeof p.data === "string" && typeof p.mimeType === "string");
 }

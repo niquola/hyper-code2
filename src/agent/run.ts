@@ -121,7 +121,9 @@ export default async function (
 
             await ctx.fns.session.appendMessage({ id: agent.id, message: {
                 role: 'tool',
-                content: output,
+                content: r.content?.length
+                    ? [{ type: 'text', text: output }, ...r.content]
+                    : output,
                 tool_call_id: call.id,
                 excluded_from_cursor: true,
             } });
