@@ -1,8 +1,7 @@
-// Shared parse diagnosis for §eval bodies: models glue trailing prose onto the
-// code, and a bare "Parse error" teaches nothing. If the code parses once
-// trailing lines are dropped (or after cutting at the last ';'), the hint
-// QUOTES the non-code tail and points at the bare-§ close. Used by both the
-// eval wrapper (runtime error path) and preflightCall (pre-execution).
+// Shared parse diagnosis for native eval's JSON `code` argument: a bare
+// "Parse error" teaches nothing. If the code parses once trailing lines are
+// dropped (or after cutting at the last ';'), the hint quotes the non-code tail.
+// Used by both the eval wrapper and pre-execution checks.
 const DIAG = new Bun.Transpiler({ loader: "ts" });
 
 export default function (
@@ -18,7 +17,7 @@ export default function (
     if (parses(code)) return { ok: true };
     const junkHint = (junk: string) =>
         `the tail of the body is not code: ${JSON.stringify(junk.trim().slice(0, 120))}. ` +
-        `If that is prose you wrote after the code, close the §eval body with a bare § line and put the prose AFTER it.`;
+        `If that is prose accidentally included in the eval code argument, remove it and keep only TypeScript/JavaScript code.`;
     const lines = code.split("\n");
     for (let drop = 1; drop <= Math.min(5, lines.length - 1); drop++) {
         if (parses(lines.slice(0, lines.length - drop).join("\n"))) {

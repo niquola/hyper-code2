@@ -1,11 +1,9 @@
-// Agent-facing eval: wraps procs.repl.eval with the §eval contract —
+// Agent-facing eval tool: wraps procs.repl.eval for native JSON tool calls —
 //   - `agent` is bound in scope when given (the running agent object)
 //   - the result is captured output plus optional structured image content from
 //     the last expression (pi-mono style). Plain calls still return a string.
-//   - a parse error is DIAGNOSED: models glue trailing prose onto the body
-//     ("…console.log(x);  ok now check tests" — the cm pattern), and a bare
-//     "Parse error" teaches nothing. If the code parses once trailing lines
-//     are dropped, the error names the first non-code line and the fix.
+//   - a parse error is DIAGNOSED when non-code text lands in the JSON `code`
+//     argument, so the model gets a useful hint instead of a bare parse error.
 const DIAG_TRANSPILER = new Bun.Transpiler({ loader: "ts" });
 
 export default async function (

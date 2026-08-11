@@ -5,7 +5,7 @@ alwaysApply: true
 
 # hyper-code2
 
-Procedural TypeScript on Bun, running on the **procs framework** (vendored at `src/procs/` — see `~/health-workspaces/procs` for the upstream). One HTTP server, a multi-agent chat driven by the markers protocol, all code hot-reloadable through a tokened external REPL.
+Procedural TypeScript on Bun, running on the **procs framework** (vendored at `src/procs/` — see `~/health-workspaces/procs` for the upstream). One HTTP server, a multi-agent chat driven by native JSON tool calls, all code hot-reloadable through a tokened external REPL.
 
 ## Runtime environment
 
@@ -52,7 +52,7 @@ src/
   ctx_ns.d.ts         AUTO-GEN by ctx.fns.procs.dev.genTypes
   procs/              VENDORED framework — ctx.fns.procs.* (patched: .hyper overlay
                       root in modules/discover, _migrations name→id compat, WAL)
-  agent/              markers protocol loop: run, workerLoop, executeMarker, parseMarkers,
+  agent/              native JSON tool-call loop: run, workerLoop, wireTools,
                       routes /agent/:id*, $start.ts (loadAll + workerLoop), SYSTEM_PROMPT_CORE.txt
   session/            DB-first agent persistence (agents/messages/events) + $migration_*.ts
   llm/                stream dispatch by "provider:model" + OAuth refreshers + streamMock
@@ -93,10 +93,11 @@ bun script/repl.ts -f /tmp/play.js                     # from file; stdin works 
 
 ## Agent (unchanged core design)
 
-- **Markers protocol only** — `§eval` / `§write:<path>` / `§bash` / `§html` / `§read` / `§grep` / `§edit` in plain content; `parseMarkers` → `executeMarker` → synthetic `§result:*` user message; loop until prose-only reply (`src/agent/run.ts`).
+- **Native JSON tool calls** — providers receive schemas from the `$tool_*.md` registry; `agent.run` persists assistant `tool_calls`, validates arguments through `tools.call`, and appends `role='tool'` results. There is no text-marker parser in the active agent loop.
+- The native `eval` tool typechecks its JSON `code` argument against the live project with an in-process TypeScript Language Service before execution. Toggle globally with declared setting `repl.typecheckEval` / env `EVAL_TYPECHECK`; internal callers can override one call with `typecheck: false`.
 - Multi-agent at `ctx.state.agent[id]` (runtime view; **DB is source of truth**). Mutate transcript/events via `ctx.fns.session.append*/replace*/syncAgentState` — never `.push()` directly in runtime code.
 - Queue: `agents.next_run_at` + `run_state` + `last_processed_msg_idx`; single in-process `workerLoop` claims atomically (`UPDATE … RETURNING id`), started by `agent/$start.ts`.
-- Agent-visible behaviour lives in `src/agent/SYSTEM_PROMPT_CORE.txt` (+ `SYSTEM_PROMPT.txt` wire format), composed by `fullSystemPrompt`. It teaches the NEW calling convention — keep it in sync when conventions change.
+- Agent-visible behaviour lives in `src/agent/SYSTEM_PROMPT_CORE.txt`, composed by `fullSystemPrompt` with native tool schemas and compact tool guidance. Keep it in sync when conventions change.
 - Forks: child stores `parent_id` + `fork_offset`; effective transcript via `ctx.fns.session.getFullMessages({ id })` — never copy transcripts.
 
 ## Testing discipline

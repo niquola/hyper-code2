@@ -1,8 +1,9 @@
 ---
 description: >-
   Run TypeScript/JavaScript inside the running server process. `ctx` is in scope, so every
-  ctx.fns.<module>.<fn>({ ... }) is callable. Jupyter-style — console.log/print are captured
-  and the last expression is returned.
+  ctx.fns.<module>.<fn>({ ... }) is callable. The code is typechecked against the live project
+  before execution when repl.typecheckEval is enabled. Jupyter-style — console.log/print are
+  captured and the last expression is returned.
 marker: eval
 promptSnippet: "run JS/TS in-process, with ctx in scope"
 promptGuidelines:
@@ -16,9 +17,11 @@ parameters:
   required: [code]
   additionalProperties: false
 ---
-### `§eval`
+### Native `eval` tool
 
-- Runs JavaScript or TypeScript as the body of an async function.
+- The JSON `code` argument runs as the body of an async function.
+- By default it is checked by an in-process TypeScript Language Service before execution; type errors prevent all side effects.
+- Disable globally with the declared setting `repl.typecheckEval=false` or `EVAL_TYPECHECK=false`. Internal callers may override one call with `procs.repl.eval({ code, typecheck: false })`.
 - Top-level await works.
 - Use `console.log(...)` or `print(...)` to produce output.
 - Return values are ignored.

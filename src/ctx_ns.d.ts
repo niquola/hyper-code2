@@ -340,6 +340,7 @@ declare global {
                 explain: Injected<typeof import("./procs/repl/explain").default>;
                 load: Injected<typeof import("./procs/repl/load").default>;
                 token: Injected<typeof import("./procs/repl/token").default>;
+                typecheck: Injected<typeof import("./procs/repl/typecheck").default>;
             };
             styles: {
                 build: Injected<typeof import("./procs/styles/build").default>;

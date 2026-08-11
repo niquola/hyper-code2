@@ -19,10 +19,18 @@ function formatArg(a: any): string {
 export default async function (
     ctx: Context,
     session: Session | null,
-    opts: { code: string; bindings?: Record<string, any> },
+    opts: { code: string; bindings?: Record<string, any>; typecheck?: boolean },
 ): Promise<EvalResult> {
     const code = opts.code;
     const bindings: Record<string, any> = opts.bindings ?? {};
+    const configuredTypecheck = opts.typecheck === undefined
+        ? await ctx.fns.settings.get({ module: "repl", scopeType: "global", key: "typecheckEval" })
+        : undefined;
+    const typecheck = opts.typecheck ?? configuredTypecheck;
+    if (typecheck !== false) {
+        const checked = await ctx.fns.procs.repl.typecheck({ code, bindings });
+        if (!checked.ok) throw new TypeError(`eval: typecheck failed:\n${checked.errors.map((e: string) => `  ${e}`).join("\n")}`);
+    }
     const buffer: string[] = [];
     const log = (...args: any[]) => {
         buffer.push(args.map(formatArg).join(' '));
