@@ -50,7 +50,7 @@ function messageTime(ts: any): string {
     }).format(new Date(value));
 }
 
-function timeHtml(ts: any, tone: 'dark' | 'light'): string {
+function timeHtml(ts: any, tone: 'dark' | 'light', suffix = ''): string {
     const time = messageTime(ts);
     if (!time) return '';
     // Telegram-style: an inline stamp consumes only the tail of the final line.
@@ -58,11 +58,11 @@ function timeHtml(ts: any, tone: 'dark' | 'light'): string {
     // text wraps.
     return '<span class="inline-block ml-2 whitespace-nowrap text-[10px] leading-none '
         + (tone === 'dark' ? 'text-gray-400' : 'text-gray-400')
-        + '">' + esc(time) + '</span>';
+        + '">' + esc(time) + suffix + '</span>';
 }
 
-function appendTime(html: string, ts: any, tone: 'dark' | 'light'): string {
-    const stamp = timeHtml(ts, tone);
+function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''): string {
+    const stamp = timeHtml(ts, tone, suffix);
     if (!stamp) return html;
     // Markdown's common one-line shape is <p>…</p>. Keeping the float inside
     // that final paragraph lets it share the line instead of creating a row.
@@ -94,6 +94,14 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light'): string {
         const idx = ev.messageIdx ?? ev.idx ?? 0;
         const usage = '';
         // Defensive: if the pre-rendered html is unbalanced (markdown.render
+        const indicators = ev.instructionIndicators ?? {};
+        const statusDot = indicators.statusLine
+            ? '<span title="Status line: ' + esc(indicators.statusLine) + '" aria-label="status line applied" class="ml-1.5 inline-block size-1.5 rounded-full bg-gray-400 align-middle"></span>'
+            : '';
+        const nudgeDot = indicators.reflectionNudge
+            ? '<span title="Reflection nudge: ' + esc(indicators.reflectionNudge) + '" aria-label="reflection nudge applied" class="ml-1 inline-flex align-middle text-violet-500"><i class="ph ph-brain text-[11px]"></i></span>'
+            : '';
+        const instructionMarks = statusDot + nudgeDot;
         // sometimes chokes on heredoc / shell `>` / mixed-code prose) fall
         // back to a plain escaped <pre>. One bad bubble must not break the
         // whole page layout below it.
@@ -105,7 +113,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light'): string {
             + deleteControls(idx, agentId, true, true)
             + '<div class="assistant max-w-[90%] rounded-2xl bg-white px-4 py-3 shadow-sm border border-gray-200">'
             + '<div class="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
-            + appendTime(safeHtml, ev.ts, 'light')
+            + appendTime(safeHtml, ev.ts, 'light', instructionMarks)
             + '</div>'
             + usage
             + '</div></div>';

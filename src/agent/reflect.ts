@@ -45,7 +45,7 @@ export default async function (
                 role: m.role,
                 content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
             }));
-            const system = `Ты — фоновый рефлексирующий агент. Обнови рефлексию основного агента по новому фрагменту диалога. Не отвечай пользователю и не продолжай задачу. Определи: что сейчас делается, текущий этап и следующий шаг; конкретные задачи; удовлетворённость пользователя только по явным сигналам (отсутствие критики не означает удовлетворённость); значимые ошибки агента, их влияние, статус и урок. Не считай обычное исследование вариантов ошибкой. Рекурсивно обновляй tasks: сохраняй незавершённые, объединяй дубли, меняй статусы по фактам и оставляй не более 5 последних done. Сохраняй актуальные прежние выводы и удаляй устаревшие. Верни только JSON с полями activity {goal,currentStep,status: exploring|planning|executing|verifying|blocked,nextStep}, tasks [{title,status: todo|doing|blocked|done,nextStep}], userSatisfaction {level: unknown|dissatisfied|mixed|satisfied,trend: unknown|declining|stable|improving,confidence,reasons}, mistakes [{description,impact,status: unresolved|corrected|accepted,lesson}].`;
+            const system = `Ты — фоновый рефлексирующий агент. Обнови рефлексию основного агента по новому фрагменту диалога. Не отвечай пользователю и не продолжай задачу. Определи: что сейчас делается, текущий этап и следующий шаг; конкретные задачи; удовлетворённость пользователя только по явным сигналам (отсутствие критики не означает удовлетворённость); значимые ошибки агента, их влияние, статус и урок. Не считай обычное исследование вариантов ошибкой. Рекурсивно обновляй tasks: сохраняй незавершённые, объединяй дубли, меняй статусы по фактам и оставляй не более 5 последних done. Также создай reflectionNudge — одну короткую практическую инструкцию основному агенту на ближайшие ходы, только если она поможет избежать наблюдаемой ошибки или лучше продолжить текущую работу. Это не пересказ цели и не общая банальность. Если полезной инструкции нет, верни null. Не переопределяй явные инструкции пользователя. Сохраняй актуальные прежние выводы и удаляй устаревшие. Верни только JSON с полями activity {goal,currentStep,status: exploring|planning|executing|verifying|blocked,nextStep}, tasks [{title,status: todo|doing|blocked|done,nextStep}], userSatisfaction {level: unknown|dissatisfied|mixed|satisfied,trend: unknown|declining|stable|improving,confidence,reasons}, mistakes [{description,impact,status: unresolved|corrected|accepted,lesson}], reflectionNudge: null | {text,reason,expiresAfterTurns: 1..9}.`;
             const call = await ctx.fns.agent.llmCall({
                 agent: child,
                 system,
@@ -57,6 +57,12 @@ export default async function (
             const openTasks = state.tasks.filter((task: any) => task?.status !== "done");
             const doneTasks = state.tasks.filter((task: any) => task?.status === "done").slice(-5);
             state.tasks = [...openTasks, ...doneTasks];
+            if (state.reflectionNudge && typeof state.reflectionNudge === "object") {
+                const text = String(state.reflectionNudge.text ?? "").trim().slice(0, 500);
+                const reason = String(state.reflectionNudge.reason ?? "").trim().slice(0, 500);
+                const expiresAfterTurns = Math.max(1, Math.min(9, Math.floor(Number(state.reflectionNudge.expiresAfterTurns ?? 3) || 3)));
+                state.reflectionNudge = text ? { text, reason, expiresAfterTurns, createdAtUserCount: userCount } : null;
+            } else state.reflectionNudge = null;
             const next = {
                 revision: Number(previous?.revision ?? 0) + 1,
                 reflectedThrough: snapshotOffset,

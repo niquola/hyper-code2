@@ -140,6 +140,18 @@ describe("agent.renderEventHtml", () => {
     const html = await renderEventHtml(ctx, { type: "user", text: "hi", messageIdx: 3 });
     expect(html).not.toContain("hx-post");
   });
+  test("renders applied status line and nudge markers with hover text", async () => {
+    const html = await renderEventHtml(ctx, {
+      type: "assistant", text: "done", html: "<p>done</p>", messageIdx: 4, ts: Date.now(),
+      instructionIndicators: { statusLine: "be <brief>", reflectionNudge: "verify first" },
+    });
+    expect(html).toContain('aria-label="status line applied"');
+    expect(html).toContain('aria-label="reflection nudge applied"');
+    expect(html).toContain("Status line: be &lt;brief&gt;");
+    expect(html).toContain("Reflection nudge: verify first");
+  });
+
+
 });
 
 describe("agent.renderEventHtml — errors", () => {

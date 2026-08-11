@@ -14,6 +14,7 @@ describe("agent.reflect", () => {
                 activity: { goal: "test reflection", currentStep: "testing", status: "verifying", nextStep: null },
                 tasks: [{ title: "add tasks", status: "done", nextStep: null }],
                 userSatisfaction: { level: "unknown", trend: "unknown", confidence: 0, reasons: [] },
+                reflectionNudge: { text: "verify first", reason: "avoid mistakes", expiresAfterTurns: 2 },
                 mistakes: [],
             }),
             finishReason: "stop", usage: null, raw: null,
@@ -23,5 +24,6 @@ describe("agent.reflect", () => {
         expect(agent.reflection?.reflectedUserCount).toBe(3);
         expect(agent.reflection?.state.activity.goal).toBe("test reflection");
         expect(agent.reflection?.state.tasks[0].title).toBe("add tasks");
+        expect(agent.reflection?.state.reflectionNudge.createdAtUserCount).toBe(3);
     });
 });
