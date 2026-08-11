@@ -59,7 +59,8 @@
       "browser": {},
       "google-local": {
         "path": "plugins/google"
-      }
+      },
+      "telegram": {}
     }
   }
 }

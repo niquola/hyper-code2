@@ -1,0 +1,56 @@
+import { TelegramClient } from "telegram";
+import { StringSession } from "telegram/sessions";
+
+async function opSecret(ref: string) {
+    const path = [`${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin", process.env.PATH ?? ""].join(":");
+    const proc = Bun.spawn(["op", "read", "--no-newline", ref], { stdout: "pipe", stderr: "pipe", env: { ...process.env, PATH: path } });
+    const [value, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+    if (code !== 0) throw new Error("Telegram credential could not be resolved from 1Password");
+    return value;
+}
+
+async function connected(ctx: Context) {
+    const cache = ((ctx.state as any).telegram ??= {});
+    if (cache.client?.connected) return cache.client;
+    if (cache.connecting) return await cache.connecting;
+    cache.connecting = (async () => {
+        const [configRaw, sessionString] = await Promise.all([
+            opSecret("op://hyper/telegram config.json/value"),
+            opSecret("op://hyper/telegram session.txt/value"),
+        ]);
+        if (!configRaw || !sessionString) throw new Error("Telegram credentials are not configured in 1Password");
+        const config = JSON.parse(configRaw);
+        if (!Number.isInteger(config.apiId) || !config.apiHash) throw new Error("Telegram MTProto config is invalid");
+        const client = new TelegramClient(new StringSession(sessionString.trim()), config.apiId, String(config.apiHash), { connectionRetries: 5 });
+        await client.connect();
+        if (!(await client.checkAuthorization())) throw new Error("Telegram session is no longer authorized");
+        cache.client = client;
+        return client;
+    })();
+    try { return await cache.connecting; } finally { cache.connecting = null; }
+}
+
+// List chats/groups/channels (dialogs) ordered by recency.
+// ctx.fns.telegram.dialogs({ max?: 50 })
+// → [{ id, title, type, unreadCount, lastMessage }]
+//   type: supergroup | channel | group | user | <className lowercased>
+//   id is a string (channels/supergroups are negative, e.g. -1001184192226).
+function chatType(entity: any): string {
+    const cn = entity?.className || "Unknown";
+    if (cn === "Channel") return entity.megagroup ? "supergroup" : "channel";
+    if (cn === "Chat") return "group";
+    if (cn === "User") return "user";
+    return cn.toLowerCase();
+}
+
+export default async function (ctx: Context, session: Session | null, opts?: { max?: number }) {
+    const client = await connected(ctx);
+    const dialogs = await client.getDialogs({ limit: opts?.max ?? 50 });
+    return dialogs.map((d: any) => ({
+        id: d.id?.toString() || "",
+        title: d.title || "No title",
+        type: chatType(d.entity),
+        unreadCount: d.unreadCount,
+        lastMessage: d.message?.message?.slice(0, 120) || undefined,
+    }));
+}

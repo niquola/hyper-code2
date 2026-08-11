@@ -22,14 +22,17 @@ declare global {
             llmCall: Injected<typeof import("./agent/llmCall").default>;
             nextId: Injected<typeof import("./agent/nextId").default>;
             readAndSummarize: Injected<typeof import("./agent/readAndSummarize").default>;
+            reflect: Injected<typeof import("./agent/reflect").default>;
             renderEditArgs: Injected<typeof import("./agent/renderEditArgs").default>;
             renderEventHtml: Injected<typeof import("./agent/renderEventHtml").default>;
             renderEventsHtml: Injected<typeof import("./agent/renderEventsHtml").default>;
             renderStatusBar: Injected<typeof import("./agent/renderStatusBar").default>;
             run: Injected<typeof import("./agent/run").default>;
             sanitizeHtmlBody: Injected<typeof import("./agent/sanitizeHtmlBody").default>;
+            setStatusLine: Injected<typeof import("./agent/setStatusLine").default>;
             start: Injected<typeof import("./agent/start").default>;
             stashResult: Injected<typeof import("./agent/stashResult").default>;
+            statusLineForTurn: Injected<typeof import("./agent/statusLineForTurn").default>;
             stop: Injected<typeof import("./agent/stop").default>;
             toolLang: Injected<typeof import("./agent/toolLang").default>;
             toolMeta: Injected<typeof import("./agent/toolMeta").default>;
@@ -65,6 +68,13 @@ declare global {
             test: Injected<typeof import("./dev/test").default>;
             testSummary: Injected<typeof import("./dev/testSummary").default>;
             typecheck: Injected<typeof import("./dev/typecheck").default>;
+        };
+        duckdb: {
+            inspect: Injected<typeof import("../plugins/duckdb/src/duckdb/inspect").default>;
+            ndjson: Injected<typeof import("../plugins/duckdb/src/duckdb/ndjson").default>;
+            query: Injected<typeof import("../plugins/duckdb/src/duckdb/query").default>;
+            run: Injected<typeof import("../plugins/duckdb/src/duckdb/run").default>;
+            source: Injected<typeof import("../plugins/duckdb/src/duckdb/source").default>;
         };
         events: {
             emitAgentsChanged: Injected<typeof import("./events/emitAgentsChanged").default>;
@@ -104,6 +114,20 @@ declare global {
             freebusy: Injected<typeof import("../plugins/google/src/gcal/freebusy").default>;
             rsvp: Injected<typeof import("../plugins/google/src/gcal/rsvp").default>;
             update: Injected<typeof import("../plugins/google/src/gcal/update").default>;
+        };
+        gcs: {
+            api: Injected<typeof import("../plugins/gcs/src/gcs/api").default>;
+            buckets: Injected<typeof import("../plugins/gcs/src/gcs/buckets").default>;
+            config: Injected<typeof import("../plugins/gcs/src/gcs/config").default>;
+            copy: Injected<typeof import("../plugins/gcs/src/gcs/copy").default>;
+            download: Injected<typeof import("../plugins/gcs/src/gcs/download").default>;
+            ensureBuckets: Injected<typeof import("../plugins/gcs/src/gcs/ensureBuckets").default>;
+            get: Injected<typeof import("../plugins/gcs/src/gcs/get").default>;
+            ls: Injected<typeof import("../plugins/gcs/src/gcs/ls").default>;
+            objects: Injected<typeof import("../plugins/gcs/src/gcs/objects").default>;
+            put: Injected<typeof import("../plugins/gcs/src/gcs/put").default>;
+            remove: Injected<typeof import("../plugins/gcs/src/gcs/remove").default>;
+            upload: Injected<typeof import("../plugins/gcs/src/gcs/upload").default>;
         };
         gdoc: {
             api: Injected<typeof import("../plugins/google/src/gdoc/api").default>;
@@ -145,6 +169,14 @@ declare global {
             accounts: Injected<typeof import("../plugins/google/src/google/accounts").default>;
             reauth: Injected<typeof import("../plugins/google/src/google/reauth").default>;
             token: Injected<typeof import("../plugins/google/src/google/token").default>;
+        };
+        gplaces: {
+            api: Injected<typeof import("../plugins/gplaces/src/gplaces/api").default>;
+            details: Injected<typeof import("../plugins/gplaces/src/gplaces/details").default>;
+            nearby: Injected<typeof import("../plugins/gplaces/src/gplaces/nearby").default>;
+            photo: Injected<typeof import("../plugins/gplaces/src/gplaces/photo").default>;
+            search: Injected<typeof import("../plugins/gplaces/src/gplaces/search").default>;
+            types: Injected<typeof import("../plugins/gplaces/src/gplaces/types").default>;
         };
         gsheets: {
             api: Injected<typeof import("../plugins/google/src/gsheets/api").default>;
@@ -346,6 +378,15 @@ declare global {
                 build: Injected<typeof import("./procs/styles/build").default>;
                 rebuild: Injected<typeof import("./procs/styles/rebuild").default>;
             };
+            telemetry: {
+                dbAttrs: Injected<typeof import("./procs/telemetry/dbAttrs").default>;
+                flush: Injected<typeof import("./procs/telemetry/flush").default>;
+                health: Injected<typeof import("./procs/telemetry/health").default>;
+                recent: Injected<typeof import("./procs/telemetry/recent").default>;
+                record: Injected<typeof import("./procs/telemetry/record").default>;
+                safeSpan: Injected<typeof import("./procs/telemetry/safeSpan").default>;
+                span: Injected<typeof import("./procs/telemetry/span").default>;
+            };
             ui: {
                 alert: Injected<typeof import("./procs/ui/alert").default>;
                 attr: Injected<typeof import("./procs/ui/attr").default>;
@@ -422,8 +463,12 @@ declare global {
             where: Injected<typeof import("./screen/where").default>;
         };
         secrets: {
+            prompt: Injected<typeof import("./secrets/prompt").default>;
             resolve: Injected<typeof import("./secrets/resolve").default>;
             resolveSetting: Injected<typeof import("./secrets/resolveSetting").default>;
+        };
+        secureInput: {
+            prompt: Injected<typeof import("./secureInput/prompt").default>;
         };
         session: {
             appendAssistantEvent: Injected<typeof import("./session/appendAssistantEvent").default>;
@@ -486,6 +531,23 @@ declare global {
             uptime: Injected<typeof import("../.hyper/skill/uptime").default>;
             wordCount: Injected<typeof import("./skill/wordCount").default>;
         };
+        telegram: {
+            contacts: Injected<typeof import("../plugins/telegram/src/telegram/contacts").default>;
+            createFolder: Injected<typeof import("../plugins/telegram/src/telegram/createFolder").default>;
+            dialogs: Injected<typeof import("../plugins/telegram/src/telegram/dialogs").default>;
+            folder: Injected<typeof import("../plugins/telegram/src/telegram/folder").default>;
+            folders: Injected<typeof import("../plugins/telegram/src/telegram/folders").default>;
+            leave: Injected<typeof import("../plugins/telegram/src/telegram/leave").default>;
+            me: Injected<typeof import("../plugins/telegram/src/telegram/me").default>;
+            messages: Injected<typeof import("../plugins/telegram/src/telegram/messages").default>;
+            participants: Injected<typeof import("../plugins/telegram/src/telegram/participants").default>;
+            photo: Injected<typeof import("../plugins/telegram/src/telegram/photo").default>;
+            reauth: Injected<typeof import("../plugins/telegram/src/telegram/reauth").default>;
+            search: Injected<typeof import("../plugins/telegram/src/telegram/search").default>;
+            searchChat: Injected<typeof import("../plugins/telegram/src/telegram/searchChat").default>;
+            send: Injected<typeof import("../plugins/telegram/src/telegram/send").default>;
+            sendFile: Injected<typeof import("../plugins/telegram/src/telegram/sendFile").default>;
+        };
         tools: {
             bash: Injected<typeof import("./tools/bash").default>;
             call: Injected<typeof import("./tools/call").default>;
@@ -507,6 +569,10 @@ declare global {
             play: Injected<typeof import("./tour/play").default>;
             review: Injected<typeof import("./tour/review").default>;
         };
+        tts: {
+            speak: Injected<typeof import("../plugins/tts/src/tts/speak").default>;
+            voices: Injected<typeof import("../plugins/tts/src/tts/voices").default>;
+        };
         ui: {
             action: Injected<typeof import("./ui/action").default>;
             agentsRail: Injected<typeof import("./ui/agentsRail").default>;
@@ -521,8 +587,10 @@ declare global {
             openAgent: Injected<typeof import("./ui/openAgent").default>;
             openFile: Injected<typeof import("./ui/openFile").default>;
             pending: Injected<typeof import("./ui/pending").default>;
+            reflectionDropdown: Injected<typeof import("./ui/reflectionDropdown").default>;
             script: Injected<typeof import("./ui/script").default>;
             sendToAgent: Injected<typeof import("./ui/sendToAgent").default>;
+            state: Injected<typeof import("./ui/state").default>;
             topbar: Injected<typeof import("./ui/topbar").default>;
         };
         workspace: {
@@ -530,6 +598,15 @@ declare global {
             normalize: Injected<typeof import("./workspace/normalize").default>;
             resolve: Injected<typeof import("./workspace/resolve").default>;
             set: Injected<typeof import("./workspace/set").default>;
+        };
+        youtube: {
+            api: Injected<typeof import("../plugins/youtube/src/youtube/api").default>;
+            channel: Injected<typeof import("../plugins/youtube/src/youtube/channel").default>;
+            parse: Injected<typeof import("../plugins/youtube/src/youtube/parse").default>;
+            playlist: Injected<typeof import("../plugins/youtube/src/youtube/playlist").default>;
+            search: Injected<typeof import("../plugins/youtube/src/youtube/search").default>;
+            transcript: Injected<typeof import("../plugins/youtube/src/youtube/transcript").default>;
+            video: Injected<typeof import("../plugins/youtube/src/youtube/video").default>;
         };
         zulip: {
             api: Injected<typeof import("../plugins/zulip/src/zulip/api").default>;
@@ -618,6 +695,9 @@ declare global {
             namespace styles {
                 type State = import("./procs/styles/State").State;
             }
+            namespace telemetry {
+                type State = import("./procs/telemetry/State").State;
+            }
         }
         namespace screen {
             type Catalogue = import("./screen/Catalogue").Catalogue;
@@ -660,6 +740,7 @@ declare global {
             project: import("./procs/project/State").State;
             repl: import("./procs/repl/State").State;
             styles: import("./procs/styles/State").State;
+            telemetry: import("./procs/telemetry/State").State;
         };
         screen: import("./screen/State").State;
     }

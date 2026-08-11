@@ -1,0 +1,46 @@
+import { TelegramClient } from "telegram";
+import { StringSession } from "telegram/sessions";
+
+async function opSecret(ref: string) {
+    const path = [`${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin", process.env.PATH ?? ""].join(":");
+    const proc = Bun.spawn(["op", "read", "--no-newline", ref], { stdout: "pipe", stderr: "pipe", env: { ...process.env, PATH: path } });
+    const [value, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+    if (code !== 0) throw new Error("Telegram credential could not be resolved from 1Password");
+    return value;
+}
+
+async function connected(ctx: Context) {
+    const cache = ((ctx.state as any).telegram ??= {});
+    if (cache.client?.connected) return cache.client;
+    if (cache.connecting) return await cache.connecting;
+    cache.connecting = (async () => {
+        const [configRaw, sessionString] = await Promise.all([
+            opSecret("op://hyper/telegram config.json/value"),
+            opSecret("op://hyper/telegram session.txt/value"),
+        ]);
+        if (!configRaw || !sessionString) throw new Error("Telegram credentials are not configured in 1Password");
+        const config = JSON.parse(configRaw);
+        const client = new TelegramClient(new StringSession(sessionString.trim()), config.apiId, String(config.apiHash), { connectionRetries: 5 });
+        await client.connect();
+        if (!(await client.checkAuthorization())) throw new Error("Telegram session is no longer authorized");
+        cache.client = client;
+        return client;
+    })();
+    try { return await cache.connecting; } finally { cache.connecting = null; }
+}
+
+// WRITE: send a file (as document) to a chat. ctx.fns.telegram.sendFile({ chat, path, caption? })
+//   chat: chat id (string/number) or @username; path: local file path.
+// → { id, date }
+export default async function (ctx: Context, session: Session | null, opts: { chat: string | number; path: string; caption?: string; confirm?: boolean }) {
+    if (opts?.chat === undefined || opts?.chat === null) throw new Error("sendFile: opts.chat required");
+    if (!opts?.path) throw new Error("sendFile: opts.path required");
+    if (opts.confirm !== true) throw new Error("telegram.sendFile is a real write; repeat with confirm: true after explicit user approval");
+    const client = await connected(ctx);
+    const result: any = await client.sendFile(String(opts.chat), {
+        file: opts.path,
+        caption: opts.caption || "",
+        forceDocument: true,
+    });
+    return { id: result.id, date: new Date(result.date * 1000).toISOString() };
+}
