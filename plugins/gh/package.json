@@ -1,0 +1,12 @@
+{
+  "name": "gh",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "GitHub",
+    "icon": "ph-github-logo",
+    "optional": true,
+    "description": "GitHub repositories, issues, pull requests, search, reviews and guarded write operations."
+  }
+}

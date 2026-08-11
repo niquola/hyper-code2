@@ -138,6 +138,18 @@ declare global {
             search: Injected<typeof import("../plugins/google/src/gdoc/search").default>;
             upload: Injected<typeof import("../plugins/google/src/gdoc/upload").default>;
         };
+        gh: {
+            api: Injected<typeof import("../plugins/gh/src/gh/api").default>;
+            comment: Injected<typeof import("../plugins/gh/src/gh/comment").default>;
+            createIssue: Injected<typeof import("../plugins/gh/src/gh/createIssue").default>;
+            issue: Injected<typeof import("../plugins/gh/src/gh/issue").default>;
+            issues: Injected<typeof import("../plugins/gh/src/gh/issues").default>;
+            me: Injected<typeof import("../plugins/gh/src/gh/me").default>;
+            pr: Injected<typeof import("../plugins/gh/src/gh/pr").default>;
+            prs: Injected<typeof import("../plugins/gh/src/gh/prs").default>;
+            repo: Injected<typeof import("../plugins/gh/src/gh/repo").default>;
+            search: Injected<typeof import("../plugins/gh/src/gh/search").default>;
+        };
         git: {
             commit: Injected<typeof import("./git/commit").default>;
             push: Injected<typeof import("./git/push").default>;

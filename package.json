@@ -60,7 +60,8 @@
       "google-local": {
         "path": "plugins/google"
       },
-      "telegram": {}
+      "telegram": {},
+      "gh": {}
     }
   }
 }
