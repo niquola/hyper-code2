@@ -15,7 +15,7 @@ export default async function (
         root: string; configPath: string; configMtime: number;
         service: any; ts: any; evalFile: string; source: string; version: number;
     } | undefined;
-    const currentConfigPath = holder?.root === root
+    const currentConfigPath = holder?.root === root && holder.configPath
         ? holder.configPath
         : join(root, "tsconfig.json");
     const currentConfigMtime = Bun.file(currentConfigPath).lastModified;

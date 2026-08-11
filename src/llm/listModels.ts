@@ -17,9 +17,18 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
 
     // Remote curated defaults (prefixed with provider: so you copy-paste the model string directly)
     out.kimi = [
-        "kimi:kimi-k2-turbo-preview",
-        "kimi:moonshot-v1-32k",
-        "kimi:moonshot-v1-128k",
+        "kimi:kimi-k3",
+        "kimi:kimi-k2.5",
+        "kimi:kimi-k2-thinking-turbo",
+        "kimi:kimi-k2-thinking",
+    ];
+    // Kimi CLI subscription models. These use the Anthropic-compatible coding
+    // endpoint and OAuth token managed by `kimi-cli` under ~/.kimi.
+    out["kimi-coding"] = [
+        "kimi-coding:k3",
+        "kimi-coding:k3-256k",
+        "kimi-coding:kimi-for-coding",
+        "kimi-coding:kimi-for-coding-highspeed",
     ];
     out.openai = [
         "openai:gpt-5-codex",
