@@ -46,6 +46,11 @@ export default async function (ctx: Context, session: Session | null, opts: { cu
 .tool.tool-tucked > *:not(summary) { display: none; }
 .tool { transition: width .2s ease, background-color .2s ease; }
 .tool.tool-tucked:hover { background-color: rgb(249 250 251); }
+/* Highlighted code inside a toast: wrap, stay small, no shiki background
+   fighting the toast's own colour. */
+.toast-detail pre { margin: 0; padding: .35rem .5rem; border-radius: .5rem; background: rgba(0,0,0,.04) !important; white-space: pre-wrap; word-break: break-word; }
+.toast-detail pre + pre { margin-top: .25rem; }
+.toast-detail code { font-size: 11px; line-height: 1.35; }
 </style>
 
 <style>
@@ -62,6 +67,8 @@ ${opts.headExtra ?? ""}
 </head>
 <body class="bg-gray-100 text-gray-900 text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div class="flex h-screen">
+  <!-- The rail loads itself (and keeps itself fresh) — layout never awaits the agent list. -->
+  <nav id="agents-rail" class="shrink-0 w-60 border-r border-gray-300 bg-gray-100 flex flex-col" hx-get="/ui/rail${currentId ? `?current=${encodeURIComponent(currentId)}` : ""}" hx-trigger="load, every 10s, rail-refresh" hx-swap="innerHTML" hx-vals="js:{archived: localStorage.getItem('rail-archived') || ''}" ${ctx.fns.procs.ui.attr({ section: "agents" })}></nav>
   <aside id="chat-panel" class="shrink-0 border-r border-gray-300 flex flex-col bg-gray-50 relative" style="width:var(--chat-w,26rem)">
     <div id="chat-resize" style="position:absolute;top:0;bottom:0;right:0;z-index:10;width:9px;transform:translateX(50%);cursor:col-resize" title="drag to resize"></div>
     ${chat}
@@ -76,6 +83,7 @@ ${opts.headExtra ?? ""}
     <main id="main" hx-history-elt class="flex-1 min-w-0 min-h-0 overflow-y-auto flex flex-col bg-white">${opts.main}</main>
   </section>
 </div>
+<div id="modal"></div>
 ${ctx.fns.ui.navMenu({})}
 <script>
 (function () {

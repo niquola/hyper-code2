@@ -124,9 +124,17 @@ Vendored `src/procs/` is upstream code: keep local patches minimal and marked wi
 
 ## UI frame (workspace-style)
 
-- Layout (`src/ui/layout.ts`): the agent chat is a persistent LEFT column (`ui.chatColumn({agentId})`, resizable, sticky current agent via `ctx.state.uiCurrentAgent`); pages render on the RIGHT under the module tab bar (`ui.topbar`). Tab links are hx-boosted into `#main` only — the chat and its long-poll survive page switches; switching AGENTS is a full load on purpose.
+- Layout (`src/ui/layout.ts`): THREE columns — the agents rail on the far left, the agent chat as a persistent column beside it (`ui.chatColumn({agentId})`, resizable, sticky current agent via `ctx.state.uiCurrentAgent`), pages on the RIGHT under the module tab bar (`ui.topbar`). Tab links are hx-boosted into `#main` only — the chat and its long-poll survive page switches; switching AGENTS is a full load on purpose.
+- **The agents rail** (`ui.agentsRail`, served by `GET /ui/rail`): a one-line placeholder in the layout that loads itself and re-fetches every 10s + on the `rail-refresh` custom event — the layout never awaits the agent list. Agents are grouped by `workspace_dir` (the folder is the project); each row is a running light (`run_state`), the title with the id in brackets, and a WhatsApp-style **unread badge** — assistant messages past the `seen:<id>` watermark in `kv`. The watermark moves when the chat renders (`ui.chatColumn`) and on every open-chat poll (`agent/$route_$id_events.html_GET`): an open chat never accumulates unread. The header's archive toggle (state in `localStorage`, sent via `hx-vals js:`) shows archived agents dimmed with an unarchive button (`POST /agent/:id/unarchive` → `session.unarchive`). The "+" opens the new-agent form as an overlay (`GET /agent/new?popup=1` → `#modal`): full form — model (preselected from `kv last-model`, written on every create), workdir with live directory autocomplete (`GET /agent/dirs?q=`), base prompt, presets, custom instructions.
+- **The chat header** names THIS agent only (title, id, model badge, statusbar) plus ⓘ/archive/delete icons — switching and creating live in the rail. The stop button exists only while something runs: it renders inside the statusbar fragment (1s poll) when `run_state`/`next_run_at` say busy.
+- **Toasts are agent-scoped**: `ui.notify({agentId})` rides the event; the client (ui/controlScript) drops toasts whose agentId differs from `document.body.dataset.agentId`. Toasts without an agentId stay global.
 - `GET /agent/:id` is the agent's overview/passport page (right pane) and sets the current agent.
 - ⌘K palette (`ui.navMenu` island + `nav.items` + `GET /nav/items`): agents, built-in pages, and every mounted module's top-level GET pages. Module tabs come from procs modules metadata (`m.tab`), uniskill-style: mount a module → it shows up in nav.
+
+## Transcript storage invariants
+
+- `events.idx` / `messages.idx` are per-agent, contiguous, and allocated INSIDE the insert (`SELECT COALESCE(MAX(idx),-1)+1 … RETURNING idx` with a jittered retry on duplicate — `session/appendEvent.ts`, `appendMessage.ts`). Never allocate an idx with a separate SELECT: two overlapping appends (a stop's error event against a running turn's tool events) collide on the pkey.
+- Tool-call cards in the transcript age out client-side (open → one line → tucked circle in a tray); an ERRORED call keeps its red tint but tucks like the rest — only a human click pins a card.
 
 ## screen & tour (ported from health-workspaces)
 

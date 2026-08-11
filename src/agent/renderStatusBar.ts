@@ -45,6 +45,13 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const statusBadge = row?.last_error && row?.run_state !== 'running'
         ? `<span class="text-xs px-2 py-0.5 rounded border font-mono ${cls} max-w-[16rem] truncate inline-block align-bottom" title="${esc(String(row.last_error))} — send a message to retry">error: ${esc(String(row.last_error).slice(0, 48))}</span>`
         : `<span class="text-xs px-2 py-0.5 rounded border font-mono ${cls}">${label}</span>`;
-    const tokensBadge = usage ? `<span class="text-xs px-2 py-0.5 rounded border border-gray-300 bg-white text-gray-600 font-mono">💬 ${((usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0)) / 1000}k</span>` : '';
-    return `<div id="status-bar" hx-get="${url}" hx-trigger="every 1s" hx-swap="outerHTML" class="flex items-center gap-2">${statusBadge}${tokensBadge}</div>`;
+    const tokensBadge = usage ? `<span title="context tokens" class="text-xs px-2 py-0.5 rounded border border-gray-300 bg-white text-gray-600 font-mono">${(((usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0)) / 1000).toFixed(1)}k</span>` : '';
+    // Stop exists only while there is something to stop — a running turn or a
+    // queued one. It lives in this fragment because the fragment re-renders
+    // every second: the button appears with the run and leaves with it.
+    const busy = row?.run_state === 'running' || !!row?.next_run_at;
+    const stopBtn = busy
+        ? `<form method="POST" action="/agent/${encodeURIComponent(agentId)}/stop" class="inline"><button title="stop this run" ${ctx.fns.procs.ui.attr({ action: "stop", entity: "agent", id: agentId })} class="text-xs px-1 py-0.5 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50"><i class="ph ph-stop-circle align-middle"></i></button></form>`
+        : '';
+    return `<div id="status-bar" hx-get="${url}" hx-trigger="every 1s" hx-swap="outerHTML" class="flex items-center gap-2">${statusBadge}${tokensBadge}${stopBtn}</div>`;
 }

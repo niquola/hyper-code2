@@ -21,5 +21,10 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const systemPrompt = [presetText, systemPromptRaw].filter(Boolean).join("\n\n");
 
     const agent = await ctx.fns.agent.start({ model, title, workspaceDir, systemPrompt });
+    // The next "+" preselects this — picking a model once is picking a default.
+    await ctx.fns.procs.db.run({
+        sql: "INSERT INTO kv (key, value) VALUES ('last-model', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+        params: [model],
+    }).catch(() => {});
     return new Response(null, { status: 303, headers: { location: `/agent/${encodeURIComponent(agent.id)}` } });
 }

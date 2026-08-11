@@ -1,24 +1,38 @@
-export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<Array<{
+export default async function (ctx: Context, _session: Session | null, opts?: { includeArchived?: boolean }): Promise<Array<{
     id: string;
     model: string;
     title: string;
     turns: number;
     createdAt: number;
     updatedAt: number;
+    workspaceDir: string;
+    runState: string;
+    unread: number;
+    archivedAt: number | null;
 }>> {
     // Postgres folds unquoted aliases to lowercase — camelCase aliases must be quoted.
     // created_at / updated_at / COUNT(*) are BIGINTs and come back as strings → Number().
+    //
+    // `unread` is WhatsApp's number: assistant messages past the reader's
+    // watermark. The watermark lives in kv as seen:<agent id>, written by the
+    // open chat's poll (agent/$route_$id_events.html_GET) — so having the chat
+    // open IS reading it, and a badge only grows on agents you are not looking at.
     const rows = (await ctx.fns.procs.db.select({
         sql: `SELECT
             a.id,
             a.model,
             a.title AS "explicitTitle",
+            a.workspace_dir AS "workspaceDir",
+            a.run_state AS "runState",
             a.created_at AS "createdAt",
+            a.archived_at AS "archivedAt",
             a.updated_at AS "updatedAt",
             COALESCE((SELECT COUNT(*) FROM messages m WHERE m.agent_id = a.id AND m.role = 'user'), 0) AS turns,
+            COALESCE((SELECT COUNT(*) FROM messages m WHERE m.agent_id = a.id AND m.role = 'assistant'
+                AND m.idx > COALESCE((SELECT k.value::int FROM kv k WHERE k.key = 'seen:' || a.id), -1)), 0) AS unread,
             (SELECT content FROM messages m WHERE m.agent_id = a.id AND m.role = 'user' ORDER BY idx LIMIT 1) AS "firstUser"
         FROM agents a
-        WHERE a.archived_at IS NULL
+        ${opts?.includeArchived ? "" : "WHERE a.archived_at IS NULL"}
         ORDER BY a.updated_at DESC`,
     })) as any[];
     return rows.map((r: any) => ({
@@ -28,5 +42,9 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         turns: Number(r.turns),
         createdAt: Number(r.createdAt),
         updatedAt: Number(r.updatedAt),
+        workspaceDir: r.workspaceDir || '',
+        runState: r.runState || 'idle',
+        unread: Number(r.unread),
+        archivedAt: r.archivedAt == null ? null : Number(r.archivedAt),
     }));
 }

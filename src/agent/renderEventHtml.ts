@@ -117,25 +117,18 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
             ? '<span class="inline-flex items-center gap-1 text-red-600"><i class="ph ph-warning-circle"></i>error</span>'
             : '<span class="text-emerald-600"><i class="ph ph-check"></i></span>';
 
-        // Three ages, so a card is loud exactly while it is news:
-        //   < 5s   open — you are watching it happen
-        //   < 20s  one line — still recent, still worth a glance
-        //   older  tucked into an icon in a tray with its neighbours
-        // Decided HERE as well as in the browser, so reloading a long
-        // transcript does not flash a hundred expanded cards before the timers
-        // run. A write opens too — the body it just committed is worth seeing —
-        // but it still ages: only a FAILURE is pinned, because that is the one
-        // thing nobody should have to go digging for.
-        const age = Date.now() - Number(ev.ts ?? Date.now());
-        const tucked = !ev.isError && age >= 20_000;
-        // Order matters: a tucked card is an icon, and an icon cannot also be
-        // an open disclosure. A write stays open for the whole recent window
-        // (its body is the point) but tucks away like everything else.
-        const openAttr = (ev.isError || (!tucked && (ev.name === 'write' || age < 5_000))) ? ' open' : '';
+        // A tool call is a CIRCLE in the transcript, from birth. The detail
+        // travels as a toast in the corner while it happens (see
+        // session.appendToolCallEvent), so the chat stays a conversation and
+        // the machinery sits beside it. Clicking a circle brings the whole card
+        // back into the stream for as long as you want it. An ERRORED call is
+        // no exception — it keeps its red tint in the tray, but it ages and
+        // tucks like the rest: a retried find is not worth a permanent line.
+        const openAttr = '';
+        const tucked = true;
         return '<details' + openAttr + ' class="group/tool tool rounded-xl border text-xs leading-snug overflow-hidden '
-            + (ev.isError ? 'border-red-200 bg-red-50/40' : 'border-gray-200 bg-white') + (tucked ? ' tool-tucked' : '') + '"'
+            + (ev.isError ? 'border-red-200 bg-red-50/40' : 'border-gray-200 bg-white') + ' tool-tucked' + '"'
             + ' data-tool="' + esc(ev.name || 'tool') + '" data-ts="' + esc(String(ev.ts ?? '')) + '"'
-            + (ev.isError ? ' data-pinned="1"' : '')
             + ' title="' + esc(meta.label + ' ' + meta.subject) + '">'
             + '<summary class="flex cursor-pointer select-none items-center gap-2 px-3 py-2 hover:bg-gray-50">'
             + '<i class="ph ' + esc(meta.icon) + ' text-sm text-gray-400 shrink-0"></i>'
@@ -161,7 +154,11 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
     }
 
     if (ev.type === "error") {
-        return '<div class="bg-gray-100 text-red-700 border border-red-200 rounded-lg px-4 py-3 whitespace-pre-wrap break-words">' + esc(ev.error) + '</div>';
+        // Errors surface as a toast (session.appendErrorEvent notifies) and in
+        // the status bar; the row stays in the events table for the audit.
+        // Keeping a red slab in the transcript on top of that was three copies
+        // of the same bad news, and the only one that could not be dismissed.
+        return '';
     }
 
     if (ev.type === "job") {

@@ -38,16 +38,15 @@ describe("agent new routes", () => {
     const html = await res.text();
     expect(html).toContain("<details");
     expect(html).toContain("Base system prompt");
-    expect(html).toContain("Runtime and behavior");
-    expect(html).toContain("Markers protocol");
     expect(html).toContain("CORE BODY");
-    expect(html).toContain("WIRE BODY");
+    // The markers/wire prompt died with the markers protocol — the form has
+    // one base section now, and no "Markers protocol" details.
+    expect(html).not.toContain("Markers protocol");
     expect(html).toContain('name="promptPreset" value="git-safety"');
     expect(html).toContain('name="promptPreset" value="validation"');
     expect(html).toContain('name="promptPreset" value="prompt-injection"');
     expect(html).toContain('name="promptPreset" value="review-mode"');
     expect(html).toContain('name="systemPrompt"');
-    expect(html).toContain("preview");
     expect(html).toContain("safe git");
     expect(html).toContain("verify");
   });

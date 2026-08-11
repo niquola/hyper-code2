@@ -20,28 +20,30 @@ describe("agent.renderEventHtml", () => {
     expect(evalHtml).toContain("<pre>a</pre>");
     expect(evalHtml).toContain("<pre>b</pre>");
 
-    // A write names its path and opens by default — the body is the point —
-    // but it is NOT pinned: only a failure escapes the aging timers.
+    // A write names its path like everything else; it is a circle too.
     const writeHtml = await renderEventHtml(ctx, { type: "tool_call", name: "write", argsHtml: "<pre>x</pre>", resultHtml: "<pre>ok</pre>", result: "ok", args: { path: "src/foo.ts", content: "x" }, isError: false, ts: Date.now() });
     expect(writeHtml).toContain("src/foo.ts");
-    expect(writeHtml).toContain("<details open");
-    expect(writeHtml).not.toContain('data-pinned');
+    expect(writeHtml).not.toContain("<details open");
+    expect(writeHtml).toContain("tool-tucked");
 
-    const failed = await renderEventHtml(ctx, { type: "tool_call", name: "bash", args: { command: "false" }, result: "[exit 1]", argsHtml: "", resultHtml: "", isError: true, ts: Date.now() - 60_000 });
-    expect(failed).toContain('data-pinned="1"');
-    expect(failed).not.toContain("tool-tucked");
+    // A failure is a red circle — the detail is in the toast that does not fade.
+    const failed = await renderEventHtml(ctx, { type: "tool_call", name: "bash", args: { command: "false" }, result: "[exit 1]", argsHtml: "", resultHtml: "", isError: true, ts: Date.now() });
+    expect(failed).toContain("tool-tucked");
+    expect(failed).toContain("border-red-200");
 
     // An old call arrives already tucked, so reloading a long transcript does
     // not flash a hundred expanded cards.
-    for (const name of ["read", "write"]) {
-        const old = await renderEventHtml(ctx, { type: "tool_call", name, args: { path: "a.ts" }, result: "x", argsHtml: "", resultHtml: "", isError: false, ts: Date.now() - 60_000 });
-        expect(old).toContain("tool-tucked");
-        expect(old).not.toContain("<details open");
+    // Age no longer matters: a call is a circle the moment it lands.
+    for (const ts of [Date.now(), Date.now() - 60_000]) {
+        const c = await renderEventHtml(ctx, { type: "tool_call", name: "read", args: { path: "a.ts" }, result: "x", argsHtml: "", resultHtml: "", isError: false, ts });
+        expect(c).toContain("tool-tucked");
+        expect(c).not.toContain("<details open");
     }
 
     // Errors stay open too so the user sees the failure body without a click.
     const errHtml = await renderEventHtml(ctx, { type: "tool_call", name: "eval", argsHtml: "<pre>x</pre>", resultHtml: "<pre>err</pre>", result: "err", args: { code: "x" }, isError: true });
-    expect(errHtml).toContain("<details open");
+    expect(errHtml).toContain("tool-tucked");
+    expect(errHtml).toContain("border-red-200");
 
     // Unknown / legacy event names fall through to the raw name.
     const legacy = await renderEventHtml(ctx, { type: "tool_call", name: "evalCode", argsHtml: "<pre>a</pre>", resultHtml: "<pre>b</pre>", result: "b", args: { code: "a" }, isError: false });
@@ -99,4 +101,11 @@ describe("agent.renderEventHtml", () => {
     const html = await renderEventHtml(ctx, { type: "user", text: "hi", messageIdx: 3 });
     expect(html).not.toContain("hx-post");
   });
+});
+
+describe("agent.renderEventHtml — errors", () => {
+    test("an error renders nothing in the chat: it is a toast and a status bar", async () => {
+        const html = await renderEventHtml(ctx, { type: "error", error: "codex 400: invalid schema" });
+        expect(html).toBe("");
+    });
 });

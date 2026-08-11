@@ -109,16 +109,23 @@ function ageTool(card) {
     const since = Date.now() - born;
 
     card.addEventListener('click', () => { card.dataset.pinned = '1'; }, { once: true });
-    // A tucked card is a button, not a disclosure: the first click brings it
-    // back into the transcript rather than opening it inside the tray.
+    // A tucked card is a button, not a disclosure: clicking it raises the same
+    // toast the call raised when it happened, in the same corner. The
+    // transcript keeps its shape — you asked to LOOK at something, not to
+    // rearrange the conversation around it.
     card.addEventListener('click', (e) => {
         if (!card.classList.contains('tool-tucked')) return;
         e.preventDefault();
-        const tray = card.parentElement;
-        card.classList.remove('tool-tucked');
-        tray.parentNode.insertBefore(card, tray.nextSibling);
-        if (!tray.children.length) tray.remove();
-        card.open = true;
+        const label = card.querySelector('.tool-label')?.textContent ?? 'tool';
+        const subject = card.querySelector('.tool-subject')?.textContent ?? '';
+        const args = card.querySelector('.tool-code')?.innerHTML ?? '';
+        const result = card.querySelector('.tool-result')?.innerHTML ?? '';
+        window.toast?.({
+            level: card.classList.contains('bg-red-50/40') ? 'error' : 'info',
+            message: (label + ' ' + subject).trim(),
+            bodyHtml: args + result,
+            sticky: true,
+        });
     });
 
     if (card.dataset.pinned) return;

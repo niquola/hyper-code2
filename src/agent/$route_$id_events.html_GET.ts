@@ -18,6 +18,17 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const events = await ctx.fns.session.getEvents({ id, fromIdx: offset });
     const eventsHtml = await ctx.fns.agent.renderEventsHtml({ events, agentId: id });
 
+    // This poll only runs while the chat is on screen, so it IS the reader:
+    // move the seen watermark to the newest message. The rail's unread badge
+    // (session.list) counts assistant messages past this mark — an open chat
+    // never accumulates unread, exactly the WhatsApp rule.
+    await ctx.fns.procs.db.run({
+        sql: `INSERT INTO kv (key, value)
+              SELECT 'seen:' || ?, COALESCE(MAX(idx), -1)::text FROM messages WHERE agent_id = ?
+              ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
+        params: [id, id],
+    }).catch(() => { /* a missed mark is a badge that lingers one poll */ });
+
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
     const usageOob = lastAssistant?.usage
         ? `<span id="context-usage" hx-swap-oob="outerHTML" class="text-xs text-gray-500 font-mono">${formatUsage(lastAssistant.usage)}</span>`
