@@ -16,7 +16,7 @@ describe('tools registry', () => {
         const ctx = await setup();
         const byName = Object.fromEntries(ctx.fns.tools.list({}).map((t: any) => [t.wireName, t]));
 
-        expect(Object.keys(byName).sort()).toEqual(['bash', 'edit', 'eval', 'grep', 'read', 'write']);
+        expect(Object.keys(byName).sort()).toEqual(['bash', 'edit', 'eval', 'find', 'grep', 'read', 'write']);
         expect(byName.read.fn).toBe('tools.read');
         expect(byName.read.marker).toBe('read');
         expect(byName.read.parameters.required).toEqual(['path']);

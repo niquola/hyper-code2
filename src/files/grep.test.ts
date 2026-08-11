@@ -205,3 +205,36 @@ describe('hashline output feeds edit directly', () => {
         expect(await Bun.file(`${DIR}/src/hash.ts`).text()).toBe('const one = 1;\nconst two = 22;\n');
     });
 });
+
+describe('find', () => {
+    test('finds files by glob, honours .gitignore, and reports the limit', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:test' });
+        agent.workspaceDir = DIR;
+
+        const ts = await ctx.fns.tools.call({ name: 'find', args: { pattern: '*.ts' }, agent });
+        expect(ts.output).toContain('src/a.ts');
+        expect(ts.output).toContain('src/b.ts');
+        expect(ts.output).not.toContain('node_modules');
+
+        const ignored = await ctx.fns.tools.call({ name: 'find', args: { pattern: 'ignored.txt' }, agent });
+        expect(ignored.output).toContain('no files matched');
+
+        const everywhere = await ctx.fns.tools.call({ name: 'find', args: { pattern: 'ignored.txt', noIgnore: true }, agent });
+        expect(everywhere.output).toContain('ignored.txt');
+
+        const capped = await ctx.fns.tools.call({ name: 'find', args: { pattern: '*.ts', limit: 1 }, agent });
+        expect(capped.output).toContain('stopped at the limit of 1 paths');
+    });
+
+    test('a search can be given a deadline and returns what it had', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:test' });
+        agent.workspaceDir = DIR;
+
+        // A deadline that cannot be hit must not change the answer.
+        const r = await ctx.fns.tools.call({ name: 'grep', args: { pattern: 'alpha', path: 'src', timeout: 30 }, agent });
+        expect(r.isError).toBe(false);
+        expect(r.output).toContain('src/a.ts');
+    });
+});

@@ -52,6 +52,7 @@ declare global {
             close: Injected<typeof import("./files/close").default>;
             editHashline: Injected<typeof import("./files/editHashline").default>;
             exists: Injected<typeof import("./files/exists").default>;
+            find: Injected<typeof import("./files/find").default>;
             formatHashline: Injected<typeof import("./files/formatHashline").default>;
             grep: Injected<typeof import("./files/grep").default>;
             grepHashline: Injected<typeof import("./files/grepHashline").default>;
@@ -418,6 +419,7 @@ declare global {
             setTitle: Injected<typeof import("./session/setTitle").default>;
             syncAgentState: Injected<typeof import("./session/syncAgentState").default>;
             truncateMessagesFrom: Injected<typeof import("./session/truncateMessagesFrom").default>;
+            unarchive: Injected<typeof import("./session/unarchive").default>;
             updateScratchpad: Injected<typeof import("./session/updateScratchpad").default>;
         };
         settings: {
@@ -452,6 +454,7 @@ declare global {
             edit: Injected<typeof import("./tools/edit").default>;
             editValidate: Injected<typeof import("./tools/editValidate").default>;
             eval: Injected<typeof import("./tools/eval").default>;
+            find: Injected<typeof import("./tools/find").default>;
             grep: Injected<typeof import("./tools/grep").default>;
             list: Injected<typeof import("./tools/list").default>;
             password: Injected<typeof import("./tools/password").default>;
@@ -467,6 +470,7 @@ declare global {
         };
         ui: {
             action: Injected<typeof import("./ui/action").default>;
+            agentsRail: Injected<typeof import("./ui/agentsRail").default>;
             chatColumn: Injected<typeof import("./ui/chatColumn").default>;
             controlScript: Injected<typeof import("./ui/controlScript").default>;
             createAgent: Injected<typeof import("./ui/createAgent").default>;

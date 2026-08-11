@@ -20,6 +20,7 @@ export default async function (
         limit?: number;
         noIgnore?: boolean;
         hidden?: boolean;
+        timeout?: number;
     },
 ): Promise<types.files.GrepMatch[]> {
     // Always search FROM the workspace root and point rg at the target, rather
@@ -65,6 +66,14 @@ async function viaRipgrep(
     args.push("--", String(opts.pattern), target);
 
     const proc = Bun.spawn({ cmd: [rg, ...args], cwd: root, stdout: "pipe", stderr: "pipe" });
+    // A search over an unbounded tree is where an agent hangs. With a deadline
+    // it comes back with what it found instead of being killed from outside
+    // with nothing to show.
+    const seconds = Number(opts.timeout);
+    let timedOut = false;
+    const timer = Number.isFinite(seconds) && seconds > 0
+        ? setTimeout(() => { timedOut = true; proc.kill(9); }, seconds * 1000)
+        : null;
 
     const out: types.files.GrepMatch[] = [];
     const decoder = new TextDecoder();
@@ -96,7 +105,8 @@ async function viaRipgrep(
         }
     }
 
-    if (!killed) {
+    if (timer) clearTimeout(timer);
+    if (!killed && !timedOut) {
         const code = await proc.exited;
         // rg exits 1 on "no matches", >1 on a real problem (bad regex, no such
         // path) — that is worth telling the model about.

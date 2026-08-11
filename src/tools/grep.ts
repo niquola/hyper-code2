@@ -16,7 +16,7 @@ export default async function (
     _session: Session | null,
     opts: {
         pattern: string; path?: string; glob?: string; ignoreCase?: boolean; literal?: boolean;
-        context?: number; limit?: number; noIgnore?: boolean; hidden?: boolean; hashline?: boolean;
+        context?: number; limit?: number; noIgnore?: boolean; hidden?: boolean; timeout?: number; hashline?: boolean;
     },
 ): Promise<string> {
     const limit = Math.max(1, opts.limit ?? 50);
@@ -30,6 +30,7 @@ export default async function (
         limit,
         noIgnore: opts.noIgnore === true,
         hidden: opts.hidden === true,
+        timeout: opts.timeout,
     };
 
     const rows: any[] = opts.hashline

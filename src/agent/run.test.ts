@@ -80,7 +80,7 @@ describe('agent.run', () => {
         const agent = await ctx.fns.agent.start({ model: 'mock:test' });
 
         const wire = ctx.fns.agent.wireTools({ agent, api: 'anthropic' });
-        expect(wire.map((t: any) => t.name).sort()).toEqual(['bash', 'edit', 'eval', 'grep', 'read', 'write']);
+        expect(wire.map((t: any) => t.name).sort()).toEqual(['bash', 'edit', 'eval', 'find', 'grep', 'read', 'write']);
 
         const narrowed = ctx.fns.agent.wireTools({ agent: { ...agent, tools: ['read'] }, api: 'openai' });
         expect(narrowed).toHaveLength(1);

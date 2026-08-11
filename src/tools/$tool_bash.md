@@ -6,7 +6,8 @@ description: >-
 marker: bash
 promptSnippet: "run shell commands (ls, git, tests)"
 promptGuidelines:
-  - "Give bash a timeout whenever a command could hang — a server, a watcher, an interactive prompt."
+  - "Give bash a timeout when a command could hang (a server, a watcher, a prompt) — and make it generous: a slow search needs minutes, and a timeout that is too tight kills work that was about to succeed."
+  - "To locate files use the find tool and to search contents use grep; `bash find ~` walks every node_modules on the machine and dies on the clock."
 parameters:
   type: object
   properties:

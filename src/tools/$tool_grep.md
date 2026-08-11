@@ -38,6 +38,9 @@ parameters:
     hidden:
       type: boolean
       description: "Include dotfiles and dot-directories."
+    timeout:
+      type: integer
+      description: "Seconds before the search is cut short, returning what it found so far."
     hashline:
       type: boolean
       description: "Return anchors instead of line numbers, ready for edit."
