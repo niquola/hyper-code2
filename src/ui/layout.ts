@@ -23,11 +23,16 @@ export default async function (ctx: Context, session: Session | null, opts: { cu
            </div>`;
 
     const pageTitle = opts.title ? `${opts.title} · hyper-code2` : "hyper-code2";
+    // A tiny terminal prompt: dark enough to survive light browser chrome,
+    // with a mint chevron and violet cursor that remain legible at 16×16.
+    const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#252a34"/><path d="m8 9 7 7-7 7" fill="none" stroke="#6ee7b7" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 23H25" stroke="#a78bfa" stroke-width="3.2" stroke-linecap="round"/><circle cx="25" cy="7" r="2.3" fill="#fb7185"/></svg>`;
+    const favicon = `data:image/svg+xml,${encodeURIComponent(faviconSvg)}`;
     return `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <title>${esc(pageTitle)}</title>
+<link rel="icon" href="${favicon}" type="image/svg+xml">
 <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
