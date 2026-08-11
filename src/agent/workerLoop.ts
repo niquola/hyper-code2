@@ -189,7 +189,13 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
         // concurrent POST), kick the worker so the loop notices immediately.
         const rescheduled = (finalized.rows[0] as any)?.next_run_at != null;
         if (rescheduled) { try { ctx.fns.agent.wakeWorker?.({}); } catch {} }
+        if (advanceCursor) {
+            try { await ctx.fns.agent.reflect({ agent, every: 3 }); }
+            catch (error) { console.error(`could not schedule reflection for ${agentId}:`, error); }
+        }
+
     }
+
 }
 
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<void> {

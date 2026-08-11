@@ -47,6 +47,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const lastUsage = lastEvent ? JSON.parse(lastEvent.payload).usage : null;
     const statusBarHtml = await ctx.fns.agent.renderStatusBar({ agentId: id, initialUsage: lastUsage });
 
+    const reflectionHtml = ctx.fns.ui.reflectionDropdown({ agent });
     // Switching and creating agents live in the rail on the far left — the
     // header names THIS agent and holds its controls, nothing more.
     return `
@@ -56,6 +57,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
   ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}
   ${statusBarHtml}
   <span class="ml-auto flex items-center gap-1">
+  ${reflectionHtml}
     <a href="/agent/${encodeURIComponent(id)}" title="agent page" class="px-1 text-gray-400 hover:text-gray-700">ⓘ</a>
     <form method="POST" action="/agent/${encodeURIComponent(id)}/archive" hx-boost="false" class="inline">
       <button title="archive — hides from the rail, keeps the transcript" ${ctx.fns.procs.ui.attr({ action: "archive", entity: "agent", id })}
@@ -81,5 +83,19 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     class="flex-1 px-3 py-2 border border-gray-300 rounded font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
 </form>
 <script>window.__init = ${initJson};</script>
+<div class="border-t border-gray-200 bg-gray-50 px-3 py-1.5 text-[11px] text-gray-400">
+  <details class="group">
+    <summary class="cursor-pointer list-none truncate hover:text-gray-600" title="Edit status line"><i class="ph ph-note-pencil"></i> ${agent.statusLine ? esc(agent.statusLine) : 'add status line…'}${agent.statusLine && Number(agent.statusLineEvery ?? 1) > 1 ? ` · every ${Number(agent.statusLineEvery)} turns` : ''}</summary>
+    <form hx-post="/agent/${encodeURIComponent(id)}/status-line" hx-swap="none" class="mt-2 flex items-end gap-2 pb-1">
+      <label class="min-w-0 flex-1">Instruction
+        <input name="text" maxlength="500" value="${esc(agent.statusLine ?? '')}" placeholder="Answer briefly and to the point…" class="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700">
+      </label>
+      <label class="w-20">Every
+        <input name="every" type="number" min="1" max="100" value="${Math.max(1, Number(agent.statusLineEvery ?? 1))}" class="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700">
+      </label>
+      <button class="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-100">save</button>
+    </form>
+  </details>
+</div>
 ${ctx.fns.ui.script({ target: 'agent.chat' })}`;
 }

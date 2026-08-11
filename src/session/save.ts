@@ -3,8 +3,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const now = Date.now();
     await ctx.fns.procs.db.run({
         sql: `
-        INSERT INTO agents (id, title, workspace_dir, model, system_prompt, tools, scratchpad, parent_id, fork_offset, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM agents WHERE id = ?), ?), ?)
+        INSERT INTO agents (id, title, workspace_dir, model, system_prompt, tools, scratchpad, reflection, status_line, status_line_every, parent_id, fork_offset, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM agents WHERE id = ?), ?), ?)
         ON CONFLICT(id) DO UPDATE SET
             model = excluded.model,
             title = excluded.title,
@@ -13,7 +13,10 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
             tools = excluded.tools,
             scratchpad = excluded.scratchpad,
             parent_id = excluded.parent_id,
+            reflection = excluded.reflection,
             fork_offset = excluded.fork_offset,
+            status_line = excluded.status_line,
+            status_line_every = excluded.status_line_every,
             updated_at = excluded.updated_at
     `,
         params: [
@@ -24,6 +27,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
             agent.systemPrompt,
             agent.tools?.length ? JSON.stringify(agent.tools) : null,
             JSON.stringify(agent.scratchpad ?? {}),
+            agent.reflection == null ? null : JSON.stringify(agent.reflection),
+            agent.statusLine ?? "",
+            Math.max(1, Number(agent.statusLineEvery ?? 1)),
             agent.parentId ?? null,
             agent.forkOffset ?? null,
             agent.id,

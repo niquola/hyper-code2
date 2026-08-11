@@ -1,0 +1,82 @@
+function parseJson(text: string): any {
+    const trimmed = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    return JSON.parse(trimmed);
+}
+
+export default async function (
+    ctx: Context,
+    _session: Session | null,
+    opts: { agent: types.agent.Agent; every?: number },
+): Promise<{ started: boolean; reason?: string }> {
+    const parent = opts.agent;
+    const every = Math.max(1, opts.every ?? 3);
+    if (parent.scratchpad?.delegateTask?.taskKind === "reflection") return { started: false, reason: "reflection child" };
+
+    const row = ((await ctx.fns.procs.db.select({
+        sql: `SELECT reflection,
+                     (SELECT COUNT(*) FROM messages WHERE agent_id = agents.id AND role = 'user' AND excluded_from_cursor = 0) AS user_count
+                FROM agents WHERE id = ?`,
+        params: [parent.id],
+    })) as any[])[0];
+    if (!row) return { started: false, reason: "agent missing" };
+
+    const previous = row.reflection == null ? null : (typeof row.reflection === "string" ? JSON.parse(row.reflection) : row.reflection);
+    const userCount = Number(row.user_count ?? 0);
+    const reflectedUserCount = Number(previous?.reflectedUserCount ?? 0);
+    if (userCount - reflectedUserCount < every) return { started: false, reason: "threshold" };
+
+    const running: Set<string> = ((ctx.state as any).reflectionRuns ??= new Set());
+    if (running.has(parent.id)) return { started: false, reason: "already running" };
+    running.add(parent.id);
+
+    void (async () => {
+        let child: types.agent.Agent | null = null;
+        try {
+            const messages = await ctx.fns.session.getFullMessages({ id: parent.id });
+            const snapshotOffset = messages.length;
+            child = await ctx.fns.session.fork({ id: parent.id, offset: snapshotOffset, title: `${parent.title || parent.id} · reflection` });
+            child.scratchpad ??= {};
+            child.scratchpad.delegateTask = { taskKind: "reflection", parentId: parent.id };
+            await ctx.fns.session.updateScratchpad({ id: child.id, scratchpad: child.scratchpad });
+
+            const from = Math.max(0, Number(previous?.reflectedThrough ?? 0));
+            const segment = messages.slice(from).map((m: any, i: number) => ({
+                index: from + i,
+                role: m.role,
+                content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+            }));
+            const system = `Ты — фоновый рефлексирующий агент. Обнови рефлексию основного агента по новому фрагменту диалога. Не отвечай пользователю и не продолжай задачу. Определи: что сейчас делается, текущий этап и следующий шаг; конкретные задачи; удовлетворённость пользователя только по явным сигналам (отсутствие критики не означает удовлетворённость); значимые ошибки агента, их влияние, статус и урок. Не считай обычное исследование вариантов ошибкой. Рекурсивно обновляй tasks: сохраняй незавершённые, объединяй дубли, меняй статусы по фактам и оставляй не более 5 последних done. Сохраняй актуальные прежние выводы и удаляй устаревшие. Верни только JSON с полями activity {goal,currentStep,status: exploring|planning|executing|verifying|blocked,nextStep}, tasks [{title,status: todo|doing|blocked|done,nextStep}], userSatisfaction {level: unknown|dissatisfied|mixed|satisfied,trend: unknown|declining|stable|improving,confidence,reasons}, mistakes [{description,impact,status: unresolved|corrected|accepted,lesson}].`;
+            const call = await ctx.fns.agent.llmCall({
+                agent: child,
+                system,
+                user: `Предыдущая рефлексия:\n${JSON.stringify(previous?.state ?? null)}\n\nНовый фрагмент диалога:\n${JSON.stringify(segment)}`,
+                temperature: 0.2,
+            });
+            const state = parseJson(call.text);
+            if (!state?.activity || !Array.isArray(state?.tasks) || !state?.userSatisfaction || !Array.isArray(state?.mistakes)) throw new Error("invalid reflection shape");
+            const openTasks = state.tasks.filter((task: any) => task?.status !== "done");
+            const doneTasks = state.tasks.filter((task: any) => task?.status === "done").slice(-5);
+            state.tasks = [...openTasks, ...doneTasks];
+            const next = {
+                revision: Number(previous?.revision ?? 0) + 1,
+                reflectedThrough: snapshotOffset,
+                reflectedUserCount: userCount,
+                updatedAt: Date.now(),
+                state,
+            };
+            const updated = await ctx.fns.procs.db.run({
+                sql: `UPDATE agents SET reflection = ?::jsonb, updated_at = ?
+                       WHERE id = ? AND COALESCE((reflection->>'revision')::int, 0) = ?`,
+                params: [JSON.stringify(next), next.updatedAt, parent.id, Number(previous?.revision ?? 0)],
+            });
+            if (updated.changes > 0) parent.reflection = next;
+        } catch (error) {
+            console.error(`reflection for ${parent.id} failed:`, error);
+        } finally {
+            if (child) await ctx.fns.session.archive({ id: child.id }).catch(() => undefined);
+            running.delete(parent.id);
+        }
+    })();
+
+    return { started: true };
+}

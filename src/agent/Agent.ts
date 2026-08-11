@@ -17,6 +17,9 @@ export type Agent = {
     abortController: AbortController | null;
     scratchpad: Record<string, any>;
     parentId?: string | null;
+    statusLine?: string;
+    statusLineEvery?: number;
+    reflection?: Record<string, any> | null;
     forkOffset?: number | null;
     currentJobId?: string | null;
     drainPromise?: Promise<any> | null;

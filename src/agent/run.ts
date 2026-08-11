@@ -24,6 +24,8 @@ export default async function (
         await ctx.fns.session.syncAgentState({ agent });
     }
 
+    agent.scratchpad ??= {};
+    agent.scratchpad.activeStatusLine = await ctx.fns.agent.statusLineForTurn({ agent });
     let consumedUserIdx = -1;
     const MAX_TURNS = 60;
     let turns = 0;
@@ -37,6 +39,8 @@ export default async function (
                 excluded_from_cursor: true,
             } });
             await ctx.fns.session.syncAgentState({ agent });
+        delete agent.scratchpad.activeStatusLine;
+
             return { text: '', usage: null, consumedUserIdx };
         }
 
@@ -91,7 +95,10 @@ export default async function (
             await ctx.fns.session.syncAgentState({ agent });
         }
 
-        if (toolCalls.length === 0) return { text: prose, usage, consumedUserIdx };
+        if (toolCalls.length === 0) {
+            delete agent.scratchpad.activeStatusLine;
+            return { text: prose, usage, consumedUserIdx };
+        }
 
         // Every answer row is written NOW, empty, right after the call it
         // belongs to — before a single tool runs. A call with no result is a

@@ -22,6 +22,8 @@ export default async function (
 ): Promise<{ system: string; messages: any[] }> {
     const { agent } = opts;
     const fullPrompt = await ctx.fns.agent.fullSystemPrompt({ agent });
+    const statusLine = String(agent.scratchpad?.activeStatusLine ?? "").trim();
+    const statusBlock = statusLine ? `\n\n## Current status line\n\n${statusLine}` : "";
     const raw = agent.parentId
         ? await ctx.fns.session.getFullMessages({ id: agent.id })
         : (agent.messages ?? []);
@@ -43,7 +45,7 @@ export default async function (
     const claudeCodeHeader = "You are Claude Code, Anthropic's official CLI for Claude.";
 
     let system = '';
-    let bodyText = fullPrompt;
+    let bodyText = fullPrompt + statusBlock;
     if (ep.provider === 'claude-code') {
         system = claudeCodeHeader;
         if (bodyText.startsWith(claudeCodeHeader)) {
