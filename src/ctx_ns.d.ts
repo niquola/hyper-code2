@@ -412,6 +412,10 @@ declare global {
             text: Injected<typeof import("./screen/text").default>;
             where: Injected<typeof import("./screen/where").default>;
         };
+        secrets: {
+            resolve: Injected<typeof import("./secrets/resolve").default>;
+            resolveSetting: Injected<typeof import("./secrets/resolveSetting").default>;
+        };
         session: {
             appendAssistantEvent: Injected<typeof import("./session/appendAssistantEvent").default>;
             appendAssistantMessage: Injected<typeof import("./session/appendAssistantMessage").default>;
@@ -435,6 +439,7 @@ declare global {
             list: Injected<typeof import("./session/list").default>;
             load: Injected<typeof import("./session/load").default>;
             loadAll: Injected<typeof import("./session/loadAll").default>;
+            repairToolPairs: Injected<typeof import("./session/repairToolPairs").default>;
             replaceEvents: Injected<typeof import("./session/replaceEvents").default>;
             replaceMessages: Injected<typeof import("./session/replaceMessages").default>;
             save: Injected<typeof import("./session/save").default>;
@@ -444,6 +449,7 @@ declare global {
             syncAgentState: Injected<typeof import("./session/syncAgentState").default>;
             truncateMessagesFrom: Injected<typeof import("./session/truncateMessagesFrom").default>;
             unarchive: Injected<typeof import("./session/unarchive").default>;
+            updateMessageContent: Injected<typeof import("./session/updateMessageContent").default>;
             updateScratchpad: Injected<typeof import("./session/updateScratchpad").default>;
         };
         settings: {

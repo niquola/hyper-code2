@@ -93,10 +93,27 @@ export default async function (
 
         if (toolCalls.length === 0) return { text: prose, usage, consumedUserIdx };
 
+        // Every answer row is written NOW, empty, right after the call it
+        // belongs to — before a single tool runs. A call with no result is a
+        // transcript every provider rejects, and a run can die mid-flight (a
+        // restart, a kill, a sleeping machine); with the row already in place
+        // the worst case is an honest "interrupted", not an agent that can
+        // never speak again because its own history is malformed.
+        const pending: Record<string, number> = {};
+        for (const call of toolCalls) {
+            const row = await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                role: 'tool',
+                content: `(${call.name} is running — interrupted before it reported back)`,
+                tool_call_id: call.id,
+                excluded_from_cursor: true,
+            } });
+            pending[call.id] = row.idx;
+        }
+        await ctx.fns.session.syncAgentState({ agent });
+
         // Calls in one reply are independent by construction — no protocol lets
         // a later call read an earlier one's result — so a failure does not
-        // invalidate its neighbours the way a marker chain's does. Each is
-        // executed and answered on its own.
+        // invalidate its neighbours. Each is executed and its row filled in.
         for (const call of toolCalls) {
             const r = await ctx.fns.tools.call({ name: call.name, args: call.args, agent });
             const output = await ctx.fns.agent.stashResult({ agent, output: r.output, kind: call.name });
@@ -119,14 +136,11 @@ export default async function (
                 messageIdx: append.idx,
             } });
 
-            await ctx.fns.session.appendMessage({ id: agent.id, message: {
-                role: 'tool',
-                content: r.content?.length
-                    ? [{ type: 'text', text: output }, ...r.content]
-                    : output,
-                tool_call_id: call.id,
-                excluded_from_cursor: true,
-            } });
+            await ctx.fns.session.updateMessageContent({
+                id: agent.id,
+                idx: pending[call.id]!,
+                content: r.content?.length ? [{ type: 'text', text: output }, ...r.content] : output,
+            });
         }
         await ctx.fns.session.syncAgentState({ agent });
     }

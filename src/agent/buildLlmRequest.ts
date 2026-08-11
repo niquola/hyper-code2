@@ -22,9 +22,22 @@ export default async function (
 ): Promise<{ system: string; messages: any[] }> {
     const { agent } = opts;
     const fullPrompt = await ctx.fns.agent.fullSystemPrompt({ agent });
-    const base = agent.parentId
+    const raw = agent.parentId
         ? await ctx.fns.session.getFullMessages({ id: agent.id })
         : (agent.messages ?? []);
+
+    // A call with no result is a transcript every provider refuses, and a run
+    // that dies between the two writes leaves one behind. Repairing here — on
+    // the way OUT, for whichever dialect — means such an agent answers again
+    // instead of 400-ing forever on history it cannot edit.
+    const { messages: base, repaired } = ctx.fns.session.repairToolPairs({ messages: raw });
+    if (repaired.length) {
+        ctx.fns.procs.log.warn({
+            event: "transcript.repair",
+            msg: `${agent.id}: closed ${repaired.length} unanswered tool call(s)`,
+            calls: repaired.map(r => `${r.name}#${r.id}`),
+        });
+    }
 
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
     const claudeCodeHeader = "You are Claude Code, Anthropic's official CLI for Claude.";
