@@ -1,102 +1,77 @@
-// The module manager: what is mounted, what the project asked for but has not
-// got, and what the machine could offer. A module is one folder with up to four
-// faces — library, tab, skill, service provider — and the badges below are read
-// off its files, not declared anywhere.
-export default async function (ctx: Context, _session: Session | null, opts: {message?: string; error?: string }): Promise<string> {
+// Plugin manager. Keep the primary surface about things a person can turn on
+// and off; framework/process internals live behind one disclosure at the end.
+export default async function (ctx: Context, _session: Session | null, opts: { message?: string; error?: string }): Promise<string> {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
-    // What this page is about: the containers a project turns on and off. The
-    // rest of what is mounted — the framework, this host's own src, the project
-    // it supervises, the libraries the host ships — is the process itself, and
-    // listing it here as something to manage is how a module manager ends up
-    // showing "app" three times.
     const all = ctx.fns.procs.modules.list({});
     const mounted = all.filter((m: any) => m.plugin);
     const parts = all.filter((m: any) => !m.plugin);
     const declared = await ctx.fns.procs.modules.readDeclared({ workdir: ctx.fns.procs.project.workdir({}) });
-    const missing = Object.entries(declared).filter(([name, config]) => config !== false && !mounted.some(m => m.name === name)) as Array<[string, Record<string, any>]>;
+    const missing = Object.entries(declared).filter(([name, config]) => config !== false && !mounted.some((m: any) => m.name === name)) as Array<[string, Record<string, any>]>;
     const catalog = await ctx.fns.procs.modules.catalog({});
-    // A module that refused to start is the answer to "why is nothing happening":
-    // the host stayed up without it, and this is where it says so.
     const failed = Object.entries((ctx.state.procs.lifecycle?.failed ?? {}) as Record<string, string>);
+    const root = ctx.fns.procs.project.projectRoot({});
 
-    const trouble = failed.length
-        ? ctx.fns.procs.ui.notice({
-            tone: "danger",
-            text: `did not start: ${failed.map(([name, why]) => `${name} — ${why}`).join(" · ")}`,
-        })
+    const shortPath = (path: string) => path.startsWith(root + "/") ? "./" + path.slice(root.length + 1) : path;
+    const namespaceChips = (names: string[]) => {
+        const shown = names.slice(0, 5);
+        return shown.map(name => `<span class="rounded-md bg-base-200 px-1.5 py-0.5 font-mono text-[10px] text-base-content/60">${esc(name)}</span>`).join("")
+            + (names.length > shown.length ? `<span class="text-[10px] text-base-content/40">+${names.length - shown.length}</span>` : "");
+    };
+    const skillLink = (p: any) => p.skill
+        ? `<a href="/procs/modules/skill?name=${encodeURIComponent(p.name)}" hx-get="/procs/modules/skill?name=${encodeURIComponent(p.name)}" hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="text-xs text-primary hover:underline">docs</a>`
         : "";
+    const reload = `<form method="POST" action="/plugins/reload" hx-post="/plugins/reload" hx-target="#main" hx-swap="innerHTML"><button class="inline-flex items-center gap-1.5 rounded-lg border border-base-300 bg-base-100 px-3 py-1.5 text-xs font-medium text-base-content/70 shadow-xs hover:border-primary hover:text-primary" title="Rescan configured plugin folders"><i class="ph ph-arrow-clockwise"></i>Reload</button></form>`;
 
-    // A module is a card, not a row of cells: an icon, a line of badges, a
-    // description and a path — so the markup stays here and only the parts that
-    // are the shared thing (badges, buttons, the box, the page) come from ui.
-    const module = (p: (typeof mounted)[number]) => `<div ${ctx.fns.procs.ui.attr({ entity: "module", id: p.name, status: "on" })} class="flex items-start gap-3 border-t border-base-300 px-4 py-3">
-  <i class="ph ${esc(p.icon)} mt-0.5 text-base text-base-content/60" aria-hidden="true"></i>
-  <div class="min-w-0 flex-1">
-    <div class="flex items-center gap-2">
-      ${p.tab ? `<a ${ctx.fns.procs.ui.attr({ role: "label" })} class="font-medium text-primary hover:underline" href="/${esc(p.namespaces[0] ?? p.name)}">${esc(p.label)}</a>` : `<span ${ctx.fns.procs.ui.attr({ role: "label" })} class="font-medium">${esc(p.label)}</span>`}
-      <span ${ctx.fns.procs.ui.attr({ role: "namespace" })} class="font-mono text-xs text-base-content/60">${esc(p.namespaces.join(" "))}</span>
-      ${ctx.fns.procs.ui.badge({ text: p.source, role: "source" })}
-      ${p.tab ? ctx.fns.procs.ui.badge({ text: "tab", tone: "info" }) : ""}
-      ${p.skill ? `<a class="ui-focusable" href="/procs/modules/skill?name=${encodeURIComponent(p.name)}" hx-get="/procs/modules/skill?name=${encodeURIComponent(p.name)}" hx-target="#main" hx-swap="innerHTML" hx-push-url="true" title="Read this module's SKILL.md — the page the agent reads before touching it">${ctx.fns.procs.ui.badge({ text: "skill", tone: "success" })}</a>` : ""}
-      ${p.provides.map(s => ctx.fns.procs.ui.badge({ text: `service:${s}`, tone: "warning" })).join("")}
-      ${p.preview ? ctx.fns.procs.ui.badge({ text: `previews ${p.preview.files}`, tone: "info" }) : ""}
-      ${p.fns.length ? ctx.fns.procs.ui.badge({ text: `${p.fns.length} fns` }) : ""}
+    const pluginCard = (p: any) => `<article ${ctx.fns.procs.ui.attr({ entity: "module", id: p.name, status: "on" })} class="rounded-xl border border-base-300 bg-base-100 p-4 shadow-xs">
+  <div class="flex items-start gap-3">
+    <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-base-200 text-base-content/70"><i class="ph ${esc(p.icon)} text-lg" aria-hidden="true"></i></div>
+    <div class="min-w-0 flex-1">
+      <div class="flex min-w-0 flex-wrap items-center gap-2">
+        ${p.tab ? `<a class="min-w-0 flex-1 truncate font-semibold text-primary hover:underline" href="/${esc(p.namespaces[0] ?? p.name)}">${esc(p.label)}</a>` : `<a class="min-w-0 flex-1 truncate font-semibold text-base-content hover:text-primary hover:underline" href="/plugins/${encodeURIComponent(p.name)}">${esc(p.label)}</a>`}
+        <span class="inline-flex items-center gap-1 text-[11px] text-success"><span class="size-1.5 rounded-full bg-success"></span>on</span>
+      </div>
+      <div class="mt-1 flex items-center gap-2"><a href="/plugins/${encodeURIComponent(p.name)}" class="text-xs text-base-content/45 hover:text-primary">Details</a><span class="ml-auto">${ctx.fns.procs.ui.button({ action: "turn-off", label: "Turn off", entity: "module", id: p.name, post: "/procs/modules/remove", vals: { name: p.name }, tone: "danger" })}</span></div>
+      ${p.description ? `<p class="mt-1 line-clamp-2 text-sm leading-5 text-base-content/65">${esc(p.description)}</p>` : ""}
+      <div class="mt-3 flex flex-wrap items-center gap-1.5">${namespaceChips(p.namespaces)}${skillLink(p)}</div>
+      <div class="mt-3 flex min-w-0 items-center gap-2 border-t border-base-200 pt-2.5 text-[11px] text-base-content/40">
+        <span class="truncate font-mono" title="${esc(p.dir)}">${esc(shortPath(p.dir))}</span>
+        <span class="ml-auto shrink-0">${p.fns.length} functions</span>
+      </div>
     </div>
-    ${p.description ? `<div class="mt-0.5 text-xs text-base-content/70">${esc(p.description)}</div>` : ""}
-    <div ${ctx.fns.procs.ui.attr({ role: "dir" })} class="mt-0.5 truncate font-mono text-xs text-base-content/40" title="${esc(p.dir)}">${esc(p.dir)}</div>
-    ${Object.keys(p.config).length ? `<div class="mt-1 font-mono text-xs text-base-content/60">${esc(JSON.stringify(p.config))}</div>` : ""}
   </div>
-  ${!p.optional ? `<span class="shrink-0 text-xs text-base-content/40">always on</span>`
-        : ctx.fns.procs.ui.button({ action: "turn-off", label: "Turn off", entity: "module", id: p.name, post: "/procs/modules/remove", vals: { name: p.name }, tone: "danger" })}
-</div>`;
+</article>`;
 
-    const gap = ([name, config]: [string, Record<string, any>]) => `<div ${ctx.fns.procs.ui.attr({ entity: "module", id: name, status: "declared" })} class="flex items-center gap-3 border-t border-base-300 px-4 py-3">
-  <i class="ph ph-warning-circle text-base text-warning" aria-hidden="true"></i>
-  <div class="min-w-0 flex-1">
-    <div ${ctx.fns.procs.ui.attr({ role: "namespace" })} class="font-medium">${esc(name)}</div>
-    <div ${ctx.fns.procs.ui.attr({ role: "source" })} class="font-mono text-xs text-base-content/60">${esc(config.git ?? config.path ?? "no git or path — and nothing by that name in the catalogue")}</div>
+    const availableCard = (p: any) => `<article ${ctx.fns.procs.ui.attr({ entity: "module", id: p.name, status: "off" })} class="rounded-xl border border-dashed border-base-300 bg-base-100/60 p-4">
+  <div class="flex items-start gap-3">
+    <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-base-200 text-base-content/50"><i class="ph ${esc(p.icon)} text-lg"></i></div>
+    <div class="min-w-0 flex-1"><div class="font-semibold">${esc(p.label)}</div>${p.description ? `<p class="mt-1 text-sm leading-5 text-base-content/60">${esc(p.description)}</p>` : ""}<div class="mt-2 flex flex-wrap gap-1.5">${skillLink(p)}</div></div>
+    <button class="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-content hover:opacity-90" ${ctx.fns.procs.ui.attr({ action: "turn-on", entity: "module", id: p.name })} hx-post="/procs/modules/add" hx-vals='{"name":${JSON.stringify(p.name)}}' hx-target="#main" hx-swap="innerHTML">Turn on</button>
   </div>
-  ${config.git ? ctx.fns.procs.ui.button({ action: "fetch", label: "Fetch", entity: "module", id: name, post: "/procs/modules/fetch", vals: { name } }) : ""}
-  ${ctx.fns.procs.ui.button({ action: "turn-off", label: "Turn off", entity: "module", id: name, post: "/procs/modules/remove", vals: { name }, tone: "danger" })}
-</div>`;
+</article>`;
 
-    const available = (p: (typeof catalog)[number]) => `<div ${ctx.fns.procs.ui.attr({ entity: "module", id: p.name, status: "off" })} class="flex items-center gap-3 border-t border-base-300 px-4 py-3">
-  <i class="ph ${esc(p.icon)} text-base text-base-content/60" aria-hidden="true"></i>
-  <div class="min-w-0 flex-1">
-    <div class="flex items-center gap-2"><span ${ctx.fns.procs.ui.attr({ role: "label" })} class="font-medium">${esc(p.label)}</span><span ${ctx.fns.procs.ui.attr({ role: "namespace" })} class="font-mono text-xs text-base-content/60">${esc(p.name)}</span>${p.skill ? ctx.fns.procs.ui.badge({ text: "skill", tone: "success" }) : ""}</div>
-    ${p.description ? `<div class="mt-0.5 text-xs text-base-content/70">${esc(p.description)}</div>` : ""}
-    <div ${ctx.fns.procs.ui.attr({ role: "dir" })} class="mt-0.5 truncate font-mono text-xs text-base-content/40">${esc(p.dir)}</div>
-  </div>
-  <button class="shrink-0 rounded-md border border-base-300 px-2 py-1 text-xs hover:border-brand hover:bg-primary/10 hover:text-primary" ${ctx.fns.procs.ui.attr({ action: "turn-on", entity: "module", id: p.name })}
-    hx-post="/procs/modules/add" hx-vals='{"name":${JSON.stringify(p.name)}}' hx-target="#main" hx-swap="innerHTML">Turn on</button>
-</div>`;
+    const missingRow = ([name, config]: [string, Record<string, any>]) => `<div class="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-sm"><i class="ph ph-warning-circle text-warning"></i><div class="min-w-0 flex-1"><div class="font-medium">${esc(name)}</div><div class="truncate font-mono text-xs text-base-content/50">${esc(config.git ?? config.path ?? "source not found")}</div></div>${config.git ? ctx.fns.procs.ui.button({ action: "fetch", label: "Fetch", entity: "module", id: name, post: "/procs/modules/fetch", vals: { name } }) : ""}</div>`;
+
+    const processRow = (p: any) => `<div class="flex min-w-0 items-center gap-3 border-t border-base-200 px-3 py-2 first:border-t-0"><i class="ph ${esc(p.icon)} text-base-content/40"></i><span class="font-medium">${esc(p.label)}</span><span class="min-w-0 truncate font-mono text-[11px] text-base-content/40">${esc(p.namespaces.slice(0, 8).join(" · "))}${p.namespaces.length > 8 ? ` · +${p.namespaces.length - 8}` : ""}</span><span class="ml-auto shrink-0 text-[11px] text-base-content/40">${p.fns.length} functions</span></div>`;
+
+    const notices = [
+        failed.length ? ctx.fns.procs.ui.notice({ tone: "danger", text: `did not start: ${failed.map(([name, why]) => `${name} — ${why}`).join(" · ")}` }) : "",
+        opts.error ? ctx.fns.procs.ui.notice({ text: opts.error, tone: "danger" }) : "",
+        opts.message ? ctx.fns.procs.ui.notice({ text: opts.message, tone: "success" }) : "",
+    ].filter(Boolean).map(html => `<div class="mb-4">${html}</div>`).join("");
 
     return ctx.fns.procs.ui.page({
         page: "modules",
-        title: "Modules",
-        lead: `A module is a folder: its functions are a library, a <span class="font-mono">GET /namespace</span> route makes it a tab, a <span class="font-mono">SKILL.md</span> makes it a skill for the agent. The workspace's own are always on; the rest are named in <span class="font-mono">workspace.json</span>.`,
-        main: `
-${trouble ? `<div class="mt-4">${trouble}</div>` : ""}
-${opts.error ? `<div class="mt-4">${ctx.fns.procs.ui.notice({ text: opts.error, tone: "danger" })}</div>` : ""}
-${opts.message ? `<div class="mt-4">${ctx.fns.procs.ui.notice({ text: opts.message, tone: "success" })}</div>` : ""}
-${ctx.fns.procs.ui.box({ class: "mt-4", title: `${mounted.length} on`, body: mounted.map(module).join(""), empty: "no plugins on — the catalogue is below" })}
-${missing.length ? ctx.fns.procs.ui.box({ class: "mt-4", title: `${missing.length} declared, not mounted`, body: missing.map(gap).join(""), empty: "" }) : ""}
-${ctx.fns.procs.ui.box({ class: "mt-4", title: `${catalog.length} available — off`, body: catalog.map(available).join(""), empty: "every module on this machine is already on" })}
-
-${ctx.fns.procs.ui.box({
-            class: "mt-4", title: `${parts.length} always on — this process`,
-            // The same rows as everything above, not a run of names in a
-            // paragraph: these are the modules a person is most likely to want
-            // to read about — they are the ones nobody chose and nobody can turn
-            // off — and half of them ship a skill that was unreachable from here.
-            body: parts.map(module).join(""),
-        })}
-
-${ctx.fns.procs.ui.form({
-            form: "module-add", post: "/procs/modules/add", class: "mt-4 flex items-center gap-2",
-            body: ctx.fns.procs.ui.field({ name: "name", placeholder: "name", class: "w-40" })
-                + ctx.fns.procs.ui.field({ name: "git", placeholder: "https://github.com/acme/module (leave empty for a platform module)" })
-                + ctx.fns.procs.ui.button({ action: "add", label: "Add", tone: "primary" }),
-        })}`,
+        title: "Plugins",
+        lead: `${mounted.length} active · project-local capabilities from <span class="font-mono">./plugins</span>.`,
+        right: reload,
+        main: `<div class="mt-6 max-w-4xl pb-10">
+${notices}
+<section><div class="mb-3 flex items-baseline justify-between"><h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/45">Active</h2></div><div class="grid grid-cols-1 gap-3">${mounted.map(pluginCard).join("") || `<div class="rounded-xl border border-dashed border-base-300 p-6 text-center text-sm text-base-content/50">No active plugins</div>`}</div></section>
+${missing.length ? `<section class="mt-7"><h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-base-content/45">Needs attention</h2><div class="space-y-2">${missing.map(missingRow).join("")}</div></section>` : ""}
+${catalog.length ? `<section class="mt-7"><h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-base-content/45">Available</h2><div class="grid grid-cols-1 gap-3">${catalog.map(availableCard).join("")}</div></section>` : ""}
+<details class="mt-7 rounded-xl border border-base-300 bg-base-100"><summary class="cursor-pointer select-none px-4 py-3 text-sm text-base-content/60"><span class="font-medium text-base-content/75">Runtime modules</span><span class="ml-2 text-xs text-base-content/40">${parts.length} always loaded</span></summary><div class="border-t border-base-200">${parts.map(processRow).join("")}</div></details>
+<section class="mt-7 rounded-xl border border-base-300 bg-base-100 p-4"><div class="flex items-start gap-3"><div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-base-200"><i class="ph ph-folder-open text-lg text-base-content/60"></i></div><div class="min-w-0 flex-1"><h2 class="font-medium">Load from folder</h2><p class="mt-0.5 text-xs text-base-content/50">Mount a local plugin and hot-load its functions and routes.</p><form class="mt-3 flex flex-col gap-2" method="POST" action="/plugins/load" hx-post="/plugins/load" hx-target="#main" hx-swap="innerHTML"><input name="path" required placeholder="./plugins/my-plugin" class="input input-sm min-w-0 w-full font-mono"><div class="flex min-w-0 gap-2"><input name="name" placeholder="name (optional)" class="input input-sm min-w-0 flex-1"><button class="btn btn-primary btn-sm shrink-0"><i class="ph ph-lightning"></i>Load</button></div></form></div></div></section>
+<details class="mt-3 rounded-xl border border-base-300 bg-base-100"><summary class="cursor-pointer select-none px-4 py-3 text-xs text-base-content/50 hover:text-base-content/75">Load from Git instead</summary><div class="border-t border-base-200 p-4">${ctx.fns.procs.ui.form({ form: "module-add", post: "/procs/modules/add", class: "flex items-center gap-2", body: ctx.fns.procs.ui.field({ name: "name", placeholder: "name", class: "w-40" }) + ctx.fns.procs.ui.field({ name: "git", placeholder: "https://github.com/acme/plugin" }) + ctx.fns.procs.ui.button({ action: "add", label: "Add", tone: "primary" }) })}</div></details>
+</div>`,
     });
 }

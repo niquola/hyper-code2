@@ -209,7 +209,13 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
             const id = await claimOne(ctx, Date.now());
             if (!id) break;
             drained++;
-            const p = runOne(ctx, id).finally(() => inflight.delete(p));
+            const p = runOne(ctx, id).finally(() => {
+                inflight.delete(p);
+                // A completion changes claimability (the agent becomes idle and
+                // may leave pending work). Wake the parked loop immediately;
+                // otherwise another agent can sit scheduled for MAX_IDLE_MS.
+                try { ctx.fns.agent.wakeWorker({}); } catch {}
+            });
             inflight.add(p);
         }
 
@@ -224,10 +230,16 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
             const wait = Math.max(50, Math.min(MAX_IDLE_MS, nextMs));
             await waitForWork(ctx, wait);
         } else if (drained === 0) {
-            // Runs are in flight but no new claims this cycle — wait for a
-            // wake (a finishing run wakes via finally, a POST wakes via
-            // wakeWorker). Avoids burning CPU in a tight while-loop.
-            await waitForWork(ctx, MAX_IDLE_MS);
+            // Runs are in flight but no new claims this cycle. A different idle
+            // agent may already be scheduled a few milliseconds ahead, so wait
+            // for the earlier of a wake and the next due time — never a blind
+            // MAX_IDLE_MS sleep that accidentally serialises agents.
+            const next = ((await ctx.fns.procs.db.select({
+                sql: 'SELECT MIN(next_run_at) AS next FROM agents WHERE run_state = ? AND next_run_at IS NOT NULL AND archived_at IS NULL',
+                params: ['idle'],
+            })) as any[])[0];
+            const nextMs = next?.next ? Number(next.next) - Date.now() : MAX_IDLE_MS;
+            await waitForWork(ctx, Math.max(50, Math.min(MAX_IDLE_MS, nextMs)));
         }
         // else: drained > 0 — loop back immediately to look for more.
     }

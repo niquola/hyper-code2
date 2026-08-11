@@ -88,13 +88,19 @@ describe("agent.renderEventHtml", () => {
     expect(out).toContain('<p>hello &amp; world</p>');
   });
 
-  test("renders user with htmx delete + 'from here' buttons", async () => {
+  test("renders user with compact icon delete controls", async () => {
     const html = await renderEventHtml(ctx, { type: "user", text: "hi", messageIdx: 3 }, { agentId: 'a1' });
     expect(html).toContain("justify-end");
     expect(html).toContain("bg-gray-900");
     expect(html).toContain(`"mode":"one"`);
     expect(html).toContain(`"mode":"from"`);
     expect(html).toContain(`hx-confirm="delete this and everything after?"`);
+    expect(html).toContain('title="Delete message"');
+    expect(html).toContain('title="Delete from here"');
+    expect(html).toContain('ph-trash');
+    expect(html).toContain('ph-arrow-line-down');
+    expect(html).not.toContain('>delete</button>');
+    expect(html).not.toContain('>from here</button>');
   });
 
   test("omits delete controls when agentId not provided (e.g. test stubs)", async () => {

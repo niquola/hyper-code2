@@ -194,4 +194,31 @@ describe('agent.workerLoop', () => {
         expect(row.next_run_at).toBeNull();                       // not rescheduled
         expect(row.last_processed_msg_idx).toBe(beforeCursor);    // cursor preserved
     }, 5_000);
+    test('claims a second agent when it becomes due during another run', async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.fns.agent.workerLoop = workerLoop;
+        ctx.fns.agent.wakeWorker = wakeWorker;
+
+        const now = Date.now();
+        await seedReadyAgent(ctx, 'already', now - 10);
+        await seedReadyAgent(ctx, 'soon', now + 120);
+
+        const started: Record<string, number> = {};
+        ctx.fns.agent.run = async (_c: any, _s: any, opts: any) => {
+            started[opts.agent.id] = Date.now();
+            await Bun.sleep(opts.agent.id === 'already' ? 350 : 30);
+        };
+
+        const loopPromise = workerLoop(ctx, null);
+        const deadline = Date.now() + 2_000;
+        while (!started.soon && Date.now() < deadline) await Bun.sleep(10);
+
+        (ctx.state as any).workerLoopRunning = false;
+        wakeWorker(ctx, null);
+        await loopPromise;
+
+        expect(started.already).toBeDefined();
+        expect(started.soon).toBeDefined();
+        expect(started.soon! - started.already!).toBeLessThan(300);
+    }, 5_000);
 });

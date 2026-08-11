@@ -22,14 +22,13 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const { agent } = opts;
     const core = await Bun.file(CORE_PATH).text();
     const tools = ctx.fns.tools.promptSection({ protocol: "json", only: agent.tools });
-    // Executable project plugins are ordinary procs modules, not necessarily
-    // native LLM tools. Give the agent a compact index and let it inspect the
-    // module's SKILL.md/source, then call functions through eval as usual.
-    const plugins = (ctx.fns.procs.modules.list({}) as any[])
-        .filter((m: any) => m.plugin)
-        .map((m: any) => `- ${m.name}: ${m.description || m.namespaces.join(", ")}\n  path: ${m.dir}${m.skill ? `\n  docs: ${m.skill}` : ""}`);
+    // Executable plugins are ordinary procs functions, not necessarily native
+    // tools. Advertise only a compact index plus the public discovery API; the
+    // agent reads SKILL.md on demand instead of paying for every plugin's docs
+    // in every request.
+    const plugins = ctx.fns.plugins.list({}) as any[];
     const pluginBlock = plugins.length
-        ? `\n\n## Mounted plugins/modules\n\n${plugins.join("\n")}\n\nRead a plugin's docs/source on demand. Its functions are available through ctx.fns; discover signatures from ctx.state.registry before calling.`
+        ? `\n\n## Mounted plugins\n\n${plugins.map((p: any) => `- ${p.name}: ${p.description || p.namespaces.join(", ")}`).join("\n")}\n\nPlugin workflow (ordinary functions, call through eval):\n1. ctx.fns.plugins.list({}) — compact mounted catalogue.\n2. await ctx.fns.plugins.read({ name }) — metadata + SKILL.md text; read this before using a plugin.\n3. ctx.fns.plugins.functions({ name }) — dotted function names and live signatures.\n4. Call the selected function through ctx.fns.<namespace>.<function>({ ... }).\nManage plugins with plugins.load/add/remove/reload. Do not assume every plugin function is a native tool.`
         : "";
 
     const perAgent = (agent.systemPrompt ?? "").trim();

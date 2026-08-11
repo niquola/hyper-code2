@@ -195,6 +195,16 @@ declare global {
         nav: {
             items: Injected<typeof import("./nav/items").default>;
         };
+        plugins: {
+            add: Injected<typeof import("./plugins/add").default>;
+            functions: Injected<typeof import("./plugins/functions").default>;
+            list: Injected<typeof import("./plugins/list").default>;
+            load: Injected<typeof import("./plugins/load").default>;
+            read: Injected<typeof import("./plugins/read").default>;
+            readSkill: Injected<typeof import("./plugins/readSkill").default>;
+            reload: Injected<typeof import("./plugins/reload").default>;
+            remove: Injected<typeof import("./plugins/remove").default>;
+        };
         procs: {
             auth: {
                 authenticate: Injected<typeof import("./procs/auth/authenticate").default>;

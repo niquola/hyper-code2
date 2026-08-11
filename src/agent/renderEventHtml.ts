@@ -24,16 +24,18 @@ function isHtmlBalanced(html: string): boolean {
 function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = true): string {
     if (!agentId) return '';
     const url = '/agent/' + encodeURIComponent(agentId) + '/messages/delete';
-    const btn = (mode: 'one' | 'from', label: string, confirm: string) =>
+    const btn = (mode: 'one' | 'from', title: string, confirm: string, icon: string) =>
         '<button type="button"'
         + ' hx-post="' + url + '"'
         + ' hx-vals=\'{"idx":"' + String(idx) + '","mode":"' + mode + '"}\''
         + ' hx-confirm="' + confirm + '"'
         + ' hx-on::after-request="if (event.detail.successful) location.reload();"'
-        + ' class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-600 shadow-sm hover:bg-gray-50">' + label + '</button>';
-    return '<div class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">'
-        + (allowOne ? btn('one', 'delete', 'delete this message?') : '')
-        + (allowFrom ? btn('from', 'from here', 'delete this and everything after?') : '')
+        + ' title="' + title + '" aria-label="' + title + '"'
+        + ' class="flex size-7 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-400 shadow-sm backdrop-blur transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200">'
+        + '<i class="ph ' + icon + ' text-sm" aria-hidden="true"></i><span class="sr-only">' + title + '</span></button>';
+    return '<div class="absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">'
+        + (allowOne ? btn('one', 'Delete message', 'delete this message?', 'ph-trash') : '')
+        + (allowFrom ? btn('from', 'Delete from here', 'delete this and everything after?', 'ph-arrow-line-down') : '')
         + '</div>';
 }
 

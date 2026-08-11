@@ -1,4 +1,4 @@
-// GET /modules — the module manager.
-export default async function (ctx: Context, _session: Session, _opts: { req: Request }) {
-    return { title: "modules", main: await ctx.fns.procs.modules.panel({}) };
+// Legacy address; plugins are a product surface now, not framework internals.
+export default function (_ctx: Context, _session: Session | null, _opts: { req: Request }) {
+    return new Response(null, { status: 308, headers: { location: "/plugins" } });
 }
