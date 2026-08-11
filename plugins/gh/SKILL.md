@@ -23,7 +23,13 @@ Live GitHub REST API through the locally authenticated `gh` CLI keyring, with `G
 Only after an explicit user request; all require `confirm: true`:
 
 - `gh.createIssue({ owner, repo, title, body?, labels?, assignees?, confirm: true })`
+- `gh.updateIssue({ owner, repo, n, title?, body?, state?, stateReason?, labels?, assignees?, milestone?, confirm: true })`
 - `gh.comment({ owner, repo, n, body, confirm: true })`
+- `gh.createPr({ owner, repo, title, head, base, body?, draft?, confirm: true })`
+- `gh.updatePr({ owner, repo, n, title?, body?, state?, base?, confirm: true })`
+- `gh.requestReviewers({ owner, repo, n, reviewers?, teamReviewers?, confirm: true })`
+- `gh.review({ owner, repo, n, event, body?, comments?, confirm: true })` — `APPROVE | REQUEST_CHANGES | COMMENT`.
+- `gh.merge({ owner, repo, n, method?, title?, message?, sha?, confirm: true })` — destructive; `method`: `merge | squash | rebase`.
 - `gh.api({ route, ..., confirm: true })` for any non-GET request.
 
 ```ts

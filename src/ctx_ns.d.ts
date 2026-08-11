@@ -142,13 +142,19 @@ declare global {
             api: Injected<typeof import("../plugins/gh/src/gh/api").default>;
             comment: Injected<typeof import("../plugins/gh/src/gh/comment").default>;
             createIssue: Injected<typeof import("../plugins/gh/src/gh/createIssue").default>;
+            createPr: Injected<typeof import("../plugins/gh/src/gh/createPr").default>;
             issue: Injected<typeof import("../plugins/gh/src/gh/issue").default>;
             issues: Injected<typeof import("../plugins/gh/src/gh/issues").default>;
             me: Injected<typeof import("../plugins/gh/src/gh/me").default>;
+            merge: Injected<typeof import("../plugins/gh/src/gh/merge").default>;
             pr: Injected<typeof import("../plugins/gh/src/gh/pr").default>;
             prs: Injected<typeof import("../plugins/gh/src/gh/prs").default>;
             repo: Injected<typeof import("../plugins/gh/src/gh/repo").default>;
+            requestReviewers: Injected<typeof import("../plugins/gh/src/gh/requestReviewers").default>;
+            review: Injected<typeof import("../plugins/gh/src/gh/review").default>;
             search: Injected<typeof import("../plugins/gh/src/gh/search").default>;
+            updateIssue: Injected<typeof import("../plugins/gh/src/gh/updateIssue").default>;
+            updatePr: Injected<typeof import("../plugins/gh/src/gh/updatePr").default>;
         };
         git: {
             commit: Injected<typeof import("./git/commit").default>;
