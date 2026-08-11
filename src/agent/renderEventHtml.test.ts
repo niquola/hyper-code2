@@ -38,6 +38,14 @@ describe("agent.renderEventHtml", () => {
     expect(writeHtml).not.toContain("<details open");
     expect(writeHtml).toContain("tool-tucked");
 
+    expect(writeHtml).toContain("border-gray-500");
+    expect(writeHtml).not.toContain("border-gray-200 bg-white");
+
+    const editHtml = await renderEventHtml(ctx, { type: "tool_call", name: "edit", args: { path: "src/foo.ts", edits: [] }, result: "ok", isError: false, ts: Date.now() });
+    expect(editHtml).toContain("border-gray-500");
+
+    const readHtml = await renderEventHtml(ctx, { type: "tool_call", name: "read", args: { path: "src/foo.ts" }, result: "x", isError: false, ts: Date.now() });
+    expect(readHtml).toContain("border-gray-200 bg-white");
     // A failure is a red circle — the detail is in the toast that does not fade.
     const failed = await renderEventHtml(ctx, { type: "tool_call", name: "bash", args: { command: "false" }, result: "[exit 1]", argsHtml: "", resultHtml: "", isError: true, ts: Date.now() });
     expect(failed).toContain("tool-tucked");
@@ -72,6 +80,18 @@ describe("agent.renderEventHtml", () => {
     expect(html).toContain(`hx-confirm="delete this message?"`);
   });
 
+  test("puts time in the final text line instead of a separate row", async () => {
+    const ts = new Date(2025, 0, 1, 12, 34).getTime();
+    const user = await renderEventHtml(ctx, { type: "user", text: "one line", ts, messageIdx: 1 });
+    expect(user).toContain('one line<span class="inline-block ml-2');
+    expect(user).not.toContain('class="mt-1 text-[10px]');
+
+    const assistant = await renderEventHtml(ctx, { type: "assistant", html: "<p>one line</p>", text: "one line", ts, messageIdx: 2 });
+    expect(assistant).toMatch(/one line<span class="inline-block ml-2[^>]*>[^<]+<\/span><\/p>/);
+    expect(assistant).not.toContain('class="mt-1 text-[10px]');
+  });
+
+
   test("assistant: balanced rendered html passes through verbatim", async () => {
     const balanced = '<p>line 1</p><p>line 2</p>';
     const out = await renderEventHtml(ctx, { type: "assistant", html: balanced, text: 'line 1\nline 2', messageIdx: 1 });
@@ -103,7 +123,8 @@ describe("agent.renderEventHtml", () => {
   test("renders user with compact icon delete controls", async () => {
     const html = await renderEventHtml(ctx, { type: "user", text: "hi", messageIdx: 3 }, { agentId: 'a1' });
     expect(html).toContain("justify-end");
-    expect(html).toContain("bg-gray-900");
+    expect(html).toContain("rounded-xl bg-gray-600");
+    expect(html).not.toContain("bg-gray-900");
     expect(html).toContain(`"mode":"one"`);
     expect(html).toContain(`"mode":"from"`);
     expect(html).toContain(`hx-confirm="delete this and everything after?"`);

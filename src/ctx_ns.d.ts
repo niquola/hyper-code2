@@ -515,6 +515,7 @@ declare global {
             createAgent: Injected<typeof import("./ui/createAgent").default>;
             eval: Injected<typeof import("./ui/eval").default>;
             layout: Injected<typeof import("./ui/layout").default>;
+            modelLogo: Injected<typeof import("./ui/modelLogo").default>;
             navMenu: Injected<typeof import("./ui/navMenu").default>;
             notify: Injected<typeof import("./ui/notify").default>;
             openAgent: Injected<typeof import("./ui/openAgent").default>;

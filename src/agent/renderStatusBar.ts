@@ -24,7 +24,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
             params: [agentId],
         })) as any[])[0];
         const quiet = lastEv?.t ? Math.round((now - Number(lastEv.t)) / 1000) : null;
-        label = `running · ${elapsed}s${quiet != null && quiet > 10 ? ` · quiet ${quiet}s` : ''}`;
+        label = `<i class="ph ph-spinner-gap animate-spin" aria-hidden="true"></i><span>${elapsed}s${quiet != null && quiet > 10 ? ` · quiet ${quiet}s` : ''}</span>`;
         cls = 'text-blue-700 bg-blue-50 border-blue-300';
     } else if (row?.next_run_at) {
         const waits = Math.max(0, (Number(row.next_run_at) - now) / 1000).toFixed(1);
@@ -44,7 +44,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const esc = (t: any) => ctx.fns.procs.ui.escape({ text: t });
     const statusBadge = row?.last_error && row?.run_state !== 'running'
         ? `<span class="text-xs px-2 py-0.5 rounded border font-mono ${cls} max-w-[16rem] truncate inline-block align-bottom" title="${esc(String(row.last_error))} — send a message to retry">error: ${esc(String(row.last_error).slice(0, 48))}</span>`
-        : `<span class="text-xs px-2 py-0.5 rounded border font-mono ${cls}">${label}</span>`;
+        : `<span class="text-xs px-2 py-0.5 rounded border font-mono inline-flex items-center gap-1 ${cls}" title="${row?.run_state === 'running' ? 'running' : esc(label)}">${label}</span>`;
     const tokensBadge = usage ? `<span title="context tokens" class="text-xs px-2 py-0.5 rounded border border-gray-300 bg-white text-gray-600 font-mono">${(((usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0)) / 1000).toFixed(1)}k</span>` : '';
     // Stop exists only while there is something to stop — a running turn or a
     // queued one. It lives in this fragment because the fragment re-renders

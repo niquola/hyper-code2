@@ -50,12 +50,24 @@ function messageTime(ts: any): string {
     }).format(new Date(value));
 }
 
-function timeHtml(ts: any, align: 'left' | 'right'): string {
+function timeHtml(ts: any, tone: 'dark' | 'light'): string {
     const time = messageTime(ts);
     if (!time) return '';
-    return '<div class="mt-1 text-[10px] leading-none '
-        + (align === 'right' ? 'text-right text-gray-400' : 'text-left text-gray-400')
-        + '">' + esc(time) + '</div>';
+    // Telegram-style: an inline stamp consumes only the tail of the final line.
+    // It stays beside a one-liner and naturally lands at the lower-right when
+    // text wraps.
+    return '<span class="inline-block ml-2 whitespace-nowrap text-[10px] leading-none '
+        + (tone === 'dark' ? 'text-gray-400' : 'text-gray-400')
+        + '">' + esc(time) + '</span>';
+}
+
+function appendTime(html: string, ts: any, tone: 'dark' | 'light'): string {
+    const stamp = timeHtml(ts, tone);
+    if (!stamp) return html;
+    // Markdown's common one-line shape is <p>…</p>. Keeping the float inside
+    // that final paragraph lets it share the line instead of creating a row.
+    if (/<\/p>\s*$/.test(html)) return html.replace(/<\/p>\s*$/, stamp + '</p>');
+    return html + stamp;
 }
     const ev = opts.event;
     const agentId = String(opts.agentId ?? ev?.agentId ?? '');
@@ -73,9 +85,8 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
         const idx = ev.messageIdx ?? ev.idx ?? 0;
         return '<div class="group relative flex justify-end">'
             + deleteControls(idx, agentId, true, true)
-            + '<div class="ml-auto max-w-[80%] rounded-2xl bg-gray-900 px-4 py-3 text-white whitespace-pre-wrap break-words shadow-sm">'
-            + esc(ev.text)
-            + timeHtml(ev.ts, 'right')
+            + '<div class="ml-auto max-w-[80%] rounded-xl bg-gray-600 px-4 py-3 text-white whitespace-pre-wrap break-words shadow-sm">'
+            + appendTime(esc(ev.text), ev.ts, 'dark')
             + '</div></div>';
     }
 
@@ -94,9 +105,8 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
             + deleteControls(idx, agentId, true, true)
             + '<div class="assistant max-w-[90%] rounded-2xl bg-white px-4 py-3 shadow-sm border border-gray-200">'
             + '<div class="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
-            + safeHtml
+            + appendTime(safeHtml, ev.ts, 'light')
             + '</div>'
-            + timeHtml(ev.ts, 'left') 
             + usage
             + '</div></div>';
     }
@@ -130,6 +140,13 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
             ? '<span class="inline-flex items-center gap-1 text-red-600"><i class="ph ph-warning-circle"></i>error</span>'
             : '<span class="text-emerald-600"><i class="ph ph-check"></i></span>';
 
+        // File-changing tools get a stronger outline, so destructive actions
+        // remain visually distinct even after their cards are tucked away.
+        // Error styling still takes precedence.
+        const destructive = new Set(['write', 'edit', 'remove', 'rename']).has(String(ev.name ?? ''));
+        const cardStyle = ev.isError
+            ? 'border-red-200 bg-red-50/40'
+            : destructive ? 'border-gray-500 bg-white' : 'border-gray-200 bg-white';
         // A tool call is a compact icon in the transcript. Its arguments and
         // result are already present in the hidden markup below; chat.js opens
         // them in a sticky popup when the user clicks the icon. Errors keep a
@@ -137,7 +154,7 @@ function timeHtml(ts: any, align: 'left' | 'right'): string {
         const openAttr = '';
         const tucked = true;
         return '<details' + openAttr + ' class="group/tool tool rounded-xl border text-xs leading-snug overflow-hidden '
-            + (ev.isError ? 'border-red-200 bg-red-50/40' : 'border-gray-200 bg-white') + ' tool-tucked' + '"'
+            + cardStyle + ' tool-tucked' + '"'
             + ' data-tool="' + esc(ev.name || 'tool') + '" data-ts="' + esc(String(ev.ts ?? '')) + '"'
             + ' title="' + esc(meta.label + ' ' + meta.subject) + '">'
             + '<summary class="flex cursor-pointer select-none items-center gap-2 px-3 py-2 hover:bg-gray-50">'

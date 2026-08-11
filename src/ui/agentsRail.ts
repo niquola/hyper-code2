@@ -13,19 +13,16 @@ export default async function (ctx: Context, _session: Session | null, opts: { c
     const row = (a: any, depth = 0) => {
         const on = a.id === opts.currentId;
         const gone = a.archivedAt != null;
-        // The light: green and pulsing while the agent is doing something,
-        // grey when idle. The badge: assistant messages the reader has not had
-        // on screen — never shown for the open agent, whose poll IS reading.
-        const light = a.runState !== "idle"
-            ? `<span class="shrink-0 h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="${esc(a.runState)}"></span>`
-            : `<span class="shrink-0 h-2 w-2 rounded-full bg-gray-300" title="idle"></span>`;
+        // The model mark doubles as activity state: CSS rotates it while the
+        // agent works, avoiding a second status glyph in every row.
+        const active = a.runState !== "idle";
         const badge = !on && a.unread > 0
             ? `<span class="shrink-0 min-w-[1.1rem] rounded-full bg-emerald-500 px-1 text-center text-[10px] font-semibold leading-4 text-white" ${ctx.fns.procs.ui.attr({ role: "unread" })}>${a.unread > 99 ? "99+" : a.unread}</span>`
             : "";
         const subagent = depth > 0
             ? `<span class="shrink-0 rounded bg-indigo-50 px-1 py-0.5 text-[9px] font-medium text-indigo-500" title="subagent of ${esc(a.parentId)}">sub</span>`
             : "";
-        const inner = `${light}
+        const inner = `${ctx.fns.ui.modelLogo({ model: a.model, active })}
       <span class="min-w-0 flex-1 truncate text-xs ${on ? "text-gray-900 font-semibold" : "text-gray-700"}">${gone ? '<i class="ph ph-archive text-gray-400"></i> ' : ""}${esc(a.title)} <span class="font-mono font-normal text-[10px] text-gray-400">(${esc(a.id)})</span></span>
       ${subagent}
       ${badge}`;

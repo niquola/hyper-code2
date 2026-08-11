@@ -5,13 +5,14 @@ const attr = (opts: any) => Object.entries(opts).map(([k, v]) => `data-${k}="${v
 
 test("renders delegated agents nested below their parent", async () => {
     const agents = [
-        { id: "child", title: "research", workspaceDir: "/repo", runState: "idle", unread: 0, archivedAt: null, parentId: "root", delegated: true },
-        { id: "root", title: "main", workspaceDir: "/repo", runState: "idle", unread: 0, archivedAt: null, parentId: null, delegated: false },
-        { id: "grand", title: "source check", workspaceDir: "/repo", runState: "running", unread: 1, archivedAt: null, parentId: "child", delegated: true },
+        { id: "child", model: "claude-code:claude-haiku-4-5", title: "research", workspaceDir: "/repo", runState: "idle", unread: 0, archivedAt: null, parentId: "root", delegated: true },
+        { id: "root", model: "codex:gpt-5.6-sol", title: "main", workspaceDir: "/repo", runState: "idle", unread: 0, archivedAt: null, parentId: null, delegated: false },
+        { id: "grand", model: "kimi:kimi-k3", title: "source check", workspaceDir: "/repo", runState: "running", unread: 1, archivedAt: null, parentId: "child", delegated: true },
     ];
     const ctx = { fns: {
         session: { list: async () => agents },
         procs: { ui: { escape: ({ text }: any) => String(text), attr } },
+        ui: { modelLogo: ({ model, active }: any) => `<span title="${model}" class="${active ? 'animate-spin' : ''}">logo</span>` },
     } } as unknown as Context;
 
     const html = await render(ctx, null, { currentId: "root" });
@@ -20,4 +21,9 @@ test("renders delegated agents nested below their parent", async () => {
     expect(html.match(/title="subagent of/g)?.length).toBe(2);
     expect(html).toContain('title="subagent of');
     expect(html).not.toContain("border-indigo-100");
+    expect(html).toContain('title="codex:gpt-5.6-sol"');
+    expect(html.indexOf('title="codex:gpt-5.6-sol"')).toBeLessThan(html.indexOf('(root)'));
+    expect(html).toContain('title="kimi:kimi-k3" class="animate-spin"');
+    expect(html).not.toContain('rounded-full bg-emerald-500 animate-pulse');
+    expect(html).not.toContain('rounded-full bg-gray-300');
 });
