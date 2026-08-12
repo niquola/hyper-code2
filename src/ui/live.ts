@@ -13,14 +13,17 @@
 export default function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; url: string; topic: string; html?: string; every?: number; attrs?: string },
+    opts: { id: string; url: string; topic: string; html?: string; every?: number; attrs?: string; tag?: string; swap?: string; trigger?: string },
 ): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const every = Math.max(5, opts.every ?? 30);
-    return `<div id="${esc(opts.id)}"`
+    const tag = /^[a-z][a-z0-9-]*$/i.test(opts.tag ?? '') ? opts.tag! : 'div';
+    const swap = opts.swap ?? 'outerHTML';
+    const trigger = [opts.trigger, 'hyper-live from:body', `every ${every}s`].filter(Boolean).join(', ');
+    return `<${tag} id="${esc(opts.id)}"`
         + ` hx-get="${esc(opts.url)}"`
-        + ` hx-trigger="hyper-live from:body, every ${every}s"`
-        + ` hx-swap="outerHTML"`
+        + ` hx-trigger="${esc(trigger)}"`
+        + ` hx-swap="${esc(swap)}"`
         + ` data-live-topic="${esc(opts.topic)}"`
-        + `${opts.attrs ? " " + opts.attrs : ""}>${opts.html ?? ""}</div>`;
+        + `${opts.attrs ? " " + opts.attrs : ""}>${opts.html ?? ""}</${tag}>`;
 }

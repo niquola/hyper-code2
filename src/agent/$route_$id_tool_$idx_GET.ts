@@ -15,6 +15,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { p
     const event = events[0];
     if (!event || Number(event.idx) !== idx || event.type !== "tool_call") {
         return new Response("<div class=\"px-3 py-2 text-xs text-gray-400\">(no body)</div>", {
+            status: 404,
             headers: { "content-type": "text/html; charset=utf-8" },
         });
     }

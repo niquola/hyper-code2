@@ -32,12 +32,6 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const inheritedCount = agent.parentId
         ? (await ctx.fns.session.getFullMessages({ id })).length - (await ctx.fns.session.getMessages({ id })).length
         : 0;
-    const stateRow = ((await ctx.fns.procs.db.select({
-        sql: 'SELECT run_state, next_run_at FROM agents WHERE id = ?',
-        params: [id],
-    })) as any[])[0];
-    const isStreaming = stateRow?.run_state === 'running' || !!stateRow?.next_run_at;
-    const initJson = JSON.stringify({ agentId: id, inheritedCount, offset: maxIdx + 1, isStreaming }).replaceAll('<', '\\u003c');
 
     const historyHead = events.length && Number(events[0]?.idx ?? 0) > 0
         ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${Number(events[0].idx)}&limit=100" hx-trigger="load-older" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] text-gray-400 hover:text-gray-600">older messages</button></div>`
@@ -105,7 +99,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     </form>
   </span>
 </header>
-<div id="messages" class="flex-1 overflow-y-auto px-3 py-3 space-y-2">${historyHead}${eventsHtml}
+<div id="messages" data-agent-id="${esc(id)}" data-inherited-count="${inheritedCount}" style="overflow-anchor:none" class="flex-1 overflow-y-auto px-3 py-3 space-y-2">${historyHead}${eventsHtml}
 ${agent.sleepContext?.active === true
   ? `<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}&compact=1" hx-trigger="load" hx-swap="outerHTML"></div>`
   : `<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}" hx-trigger="load" hx-swap="outerHTML"></div>`}
@@ -120,7 +114,6 @@ ${agent.sleepContext?.active === true
   <textarea id="input" name="text" rows="2" placeholder="type — Enter to send"
     class="flex-1 px-3 py-2 border border-gray-300 rounded font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
 </form>
-<script>window.__init = ${initJson};</script>
 <div class="border-t border-gray-200 bg-gray-50 px-3 py-1.5 text-[11px] text-gray-400">
   <details class="group">
     <summary class="cursor-pointer list-none truncate hover:text-gray-600" title="Edit status line"><i class="ph ph-note-pencil"></i> ${agent.statusLine ? esc(agent.statusLine) : 'add status line…'}${agent.statusLine && Number(agent.statusLineEvery ?? 1) > 1 ? ` · every ${Number(agent.statusLineEvery)} turns` : ''}</summary>

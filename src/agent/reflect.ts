@@ -75,7 +75,10 @@ export default async function (
                        WHERE id = ? AND COALESCE((reflection->>'revision')::int, 0) = ?`,
                 params: [JSON.stringify(next), next.updatedAt, parent.id, Number(previous?.revision ?? 0)],
             });
-            if (updated.changes > 0) parent.reflection = next;
+            if (updated.changes > 0) {
+                parent.reflection = next;
+                ctx.fns.procs.events.refresh({ topic: `agent:${parent.id}`, reason: "reflection" });
+            }
         } catch (error) {
             console.error(`reflection for ${parent.id} failed:`, error);
         } finally {

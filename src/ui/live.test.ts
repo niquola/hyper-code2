@@ -15,6 +15,20 @@ describe("ui.live", () => {
         expect(html).not.toContain("data-live-cursor");
     });
 
+    test("supports non-div regions, inner swaps and one additional trigger", async () => {
+        const ctx: any = await mkTestCtx();
+        const html = ctx.fns.ui.live({
+            id: "agents", url: "/ui/rail", topic: "agents", tag: "nav",
+            swap: "innerHTML", trigger: "load", every: 60, attrs: 'class="rail"',
+        });
+        expect(html).toStartWith('<nav id="agents"');
+        expect(html).toContain('hx-trigger="load, hyper-live from:body, every 60s"');
+        expect(html).toContain('hx-swap="innerHTML"');
+        expect(html).toContain('class="rail"');
+        expect(html).toEndWith('</nav>');
+    });
+
+
     test("the timer is a watchdog, never the mechanism", async () => {
         const ctx: any = await mkTestCtx();
         const html = ctx.fns.ui.live({ id: "x", url: "/x", topic: "t" });

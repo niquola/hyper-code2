@@ -1,11 +1,9 @@
 // Short-fetch HTML stream of events for an agent.
 // Returns rendered events at offset N + a self-replacing tail div.
 //
-// No long-poll — the tail fires only when the browser observes an
-// `agent.event_appended` SSE event for this agent (events/client.js
-// dispatches `hyper-tick` on the body), or once every 10s as a safety
-// fallback. This keeps each tab to a SINGLE persistent HTTP/1.1
-// connection (the SSE stream itself), instead of two (SSE + long-poll).
+// No long-poll: #msg-tail is a standard live region on `agent:<id>`.
+// The shared topic-filtered SSE client triggers its HTMX refresh, while a
+// 30-second watchdog repairs a notification missed during disconnection.
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
     const id = opts.params.id!;
     const url = new URL(opts.req.url);
@@ -52,13 +50,14 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
 
     const nextOffset = maxIdx + 1;
     const tailUrl = `/agent/${encodeURIComponent(id)}/events.html?offset=${nextOffset}${compact ? '&compact=1' : ''}`;
-    // hyper-tick: dispatched by events/client.js on agent.event_appended SSE events
-    //             for this agent, so the tail refreshes only when there's something new.
-    // every 10s:  belt-and-braces poll in case SSE is disconnected.
-    // A live region on this agent's topic: the shared stream says when it
-    // moved, the cursor says whether this tail is behind, and the interval is
-    // only a watchdog.
-    const tail = `<div id="msg-tail" hx-get="${tailUrl}" hx-trigger="hyper-tick from:body, hyper-live from:body, every 30s" hx-swap="outerHTML" data-live-topic="agent:${id}"></div>`;
+    // A standard live region on this agent's topic. The offset remains in the
+    // URL because it is transcript paging state, not SSE protocol state.
+    const tail = ctx.fns.ui.live({
+        id: 'msg-tail',
+        url: tailUrl,
+        topic: `agent:${id}`,
+        every: 30,
+    });
 
     return new Response(eventsHtml + '\n' + tail + usageOob, {
         headers: { 'content-type': 'text/html; charset=utf-8' },

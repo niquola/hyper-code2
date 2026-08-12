@@ -91,7 +91,16 @@ ${opts.headExtra ?? ""}
 <body class="bg-gray-100 text-gray-900 text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div id="frame" class="relative flex h-screen">
   <!-- The rail loads itself (and keeps itself fresh) — layout never awaits the agent list. -->
-  <nav id="agents-rail" class="shrink-0 w-60 border-r border-gray-300 bg-gray-100 flex flex-col" hx-get="/ui/rail${currentId ? `?current=${encodeURIComponent(currentId)}` : ""}" hx-trigger="load, hyper-live from:body, every 60s, rail-refresh" hx-swap="innerHTML" data-live-topic="agents" ${ctx.fns.procs.ui.attr({ section: "agents" })}></nav>
+  ${ctx.fns.ui.live({
+      id: "agents-rail",
+      url: `/ui/rail${currentId ? `?current=${encodeURIComponent(currentId)}` : ""}`,
+      topic: "agents",
+      tag: "nav",
+      swap: "innerHTML",
+      trigger: "load, rail-refresh",
+      every: 60,
+      attrs: `class="shrink-0 w-60 border-r border-gray-300 bg-gray-100 flex flex-col" ${ctx.fns.procs.ui.attr({ section: "agents" })}`,
+  })}
   <!-- Everything that belongs to ONE agent lives here: switching agents swaps
        this container and leaves the rail alone, so the list keeps its scroll,
        its open groups and its focus while the conversation is replaced. -->

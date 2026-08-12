@@ -46,10 +46,8 @@ describe('GET /agent/:id/events.html', () => {
     });
 
     test('returns instantly with empty delta + tail (no long-poll)', async () => {
-        // After the SSE refactor: handler is short-fetch, never blocks on
-        // waitForEvent. The browser triggers the next fetch via
-        // hyper-tick (dispatched by events/client.js on
-        // agent.event_appended SSE) or the 10s safety poll.
+        // The route is a short fetch. The shared SSE live-region client is the
+        // normal trigger; the 30s interval is only a watchdog.
         const ctx = await mkTestCtx();
         const a = await mkAgent(ctx);
 
@@ -60,8 +58,8 @@ describe('GET /agent/:id/events.html', () => {
 
         const body = await res.text();
         expect(body).toContain('id="msg-tail"');
-        // A live region: the shared stream signals, the cursor decides whether
-        // this tail is behind, and the interval only repairs a missed signal.
+        // A standard live region: the shared stream invalidates agent:a and
+        // the interval only repairs a missed signal.
         expect(body).toContain('hyper-live from:body');
         expect(body).toContain('data-live-topic="agent:a"');
         expect(body).toContain('every 30s');

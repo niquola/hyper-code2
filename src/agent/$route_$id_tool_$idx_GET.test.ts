@@ -37,7 +37,9 @@ describe('GET /agent/:id/tool/:idx', () => {
     test('does not return the next event for a missing idx', async () => {
         const ctx: any = await mkTestCtx();
         const { agent, idx } = await seed(ctx, { name: 'read', args: { path: 'a.ts' }, result: 'x', isError: false });
-        const html = await (await ctx.fns.procs.http.dispatch({ url: `/agent/${agent.id}/tool/${idx - 1}` })).text();
+        const res = await ctx.fns.procs.http.dispatch({ url: `/agent/${agent.id}/tool/${idx - 1}` });
+        const html = await res.text();
+        expect(res.status).toBe(404);
         expect(html).toContain('(no body)');
         expect(html).not.toContain('a.ts');
     });
