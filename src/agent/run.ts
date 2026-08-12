@@ -25,6 +25,18 @@ export default async function (
     }
 
     agent.scratchpad ??= {};
+    if (agent.scratchpad.plan?.pausedAt && userText.trim()) {
+        const updated: any = await ctx.fns.session.mutateScratchpad({ id: agent.id, mutate: (scratchpad: Record<string, any>, now: number) => {
+            const plan = scratchpad.plan;
+            if (!plan?.pausedAt) return;
+            plan.pausedAt = null;
+            plan.updatedAt = now;
+            const active = Array.isArray(plan.tasks) ? plan.tasks.find((task: any) => task.status === 'active') : null;
+            if (active && !active.activeSince) active.activeSince = now;
+        } });
+        agent.scratchpad = updated.scratchpad;
+        ctx.fns.events.refreshAgentMeta({ agentId: agent.id, reason: 'plan-resumed' });
+    }
     agent.scratchpad.activeStatusLine = await ctx.fns.agent.statusLineForTurn({ agent });
     let consumedUserIdx = -1;
     const MAX_TURNS = 60;
@@ -33,6 +45,8 @@ export default async function (
     let goalIterations = 0;
     let lastGoalFeedback = "";
     const goalDeadline = Date.now() + 5 * 60_000;
+    const planAttempts: Record<string, number> = {};
+    let totalPlanInjections = 0;
     while (true) {
         if (++turns > MAX_TURNS) {
             await ctx.fns.session.appendErrorEvent({ id: agent.id, error: `run hit the ${MAX_TURNS}-turn cap — closing; send a message to continue` });
@@ -155,6 +169,30 @@ export default async function (
                     continue;
                 }
             }
+
+            const plan = agent.scratchpad?.plan;
+            const activeTask = Array.isArray(plan?.tasks) ? plan.tasks.find((task: any) => task.status === "active") : null;
+            const attempts = activeTask ? Number(planAttempts[activeTask.id] ?? 0) : 0;
+            if (activeTask && !plan.pausedAt && attempts < 2 && totalPlanInjections < 5) {
+                planAttempts[activeTask.id] = attempts + 1;
+                totalPlanInjections++;
+                const feedback = [
+                    `Continue the active plan task.`,
+                    `Task ID: ${activeTask.id}`,
+                    `Title: ${activeTask.title}`,
+                    activeTask.instructions ? `Instructions:\n${activeTask.instructions}` : "",
+                    `Call session.done({ agent, id: ${JSON.stringify(activeTask.id)} }) only after the task is complete.`,
+                ].filter(Boolean).join("\n\n");
+                await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                    role: "user",
+                    content: feedback,
+                    message_type: "plan_feedback",
+                    excluded_from_cursor: true,
+                } });
+                await ctx.fns.session.syncAgentState({ agent });
+                continue;
+            }
+
 
             delete agent.scratchpad.activeStatusLine;
             return { text: prose, usage, consumedUserIdx };

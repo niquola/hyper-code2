@@ -7,6 +7,25 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     try { agent.abortController?.abort('stopped_by_user'); } catch {}
 
     // Reset run state on the agent row. clearQueue also drops the pending debounce window.
+    // An explicit user stop pauses plan continuation. It is resumed only by a
+    // new user run or a new plan, never by automatic recovery.
+    agent.scratchpad ??= {};
+    if (agent.scratchpad.plan && !agent.scratchpad.plan.pausedAt) {
+        const updated: any = await ctx.fns.session.mutateScratchpad({ id: agent.id, mutate: (scratchpad: Record<string, any>, ts: number) => {
+            const plan = scratchpad.plan;
+            if (!plan || plan.pausedAt) return;
+            const task = Array.isArray(plan.tasks) ? plan.tasks.find((item: any) => item.status === 'active') : null;
+            if (task?.activeSince) {
+                task.elapsedMs = Math.max(0, Number(task.elapsedMs ?? 0)) + Math.max(0, ts - Number(task.activeSince));
+                task.activeSince = null;
+            }
+            plan.pausedAt = ts;
+            plan.updatedAt = ts;
+        } });
+        agent.scratchpad = updated.scratchpad;
+        ctx.fns.events?.refreshAgentMeta?.({ agentId: agent.id, reason: 'plan-paused' });
+    }
+
     await ctx.fns.procs.db.run({
         sql: `UPDATE agents
             SET run_state = 'idle',

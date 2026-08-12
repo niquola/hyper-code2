@@ -184,6 +184,64 @@
     });
     mount();
 
+
+    const planEditors = new WeakSet();
+    function mountPlanEditors(root = document) {
+        root.querySelectorAll?.('[data-plan-editor]').forEach(form => {
+            if (planEditors.has(form)) return;
+            planEditors.add(form);
+            const tasks = form.querySelector('[data-plan-tasks]');
+            const pendingRows = () => [...tasks.querySelectorAll('[data-plan-task][data-task-status="pending"]')];
+            const makeId = () => {
+                const used = new Set([...tasks.querySelectorAll('[data-task-id]')].map(row => row.dataset.taskId));
+                let id;
+                do id = `task-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`; while (used.has(id));
+                return id;
+            };
+            const add = () => {
+                const row = document.createElement('div');
+                row.dataset.planTask = '';
+                row.dataset.taskId = makeId();
+                row.dataset.taskStatus = 'pending';
+                row.className = 'rounded-lg px-2 py-1';
+                row.innerHTML = `<div class="flex items-start gap-2 text-xs"><i class="ph ph-circle mt-2 text-gray-300"></i><div class="min-w-0 flex-1"><input data-task-title maxlength="300" required placeholder="Task title" aria-label="Task title" class="w-full border-0 bg-transparent p-0 text-gray-600 outline-none focus:ring-0"><textarea data-task-instructions maxlength="12000" rows="2" placeholder="Detailed instructions" aria-label="Task instructions" class="mt-1 w-full resize-y border-0 bg-transparent p-0 text-[11px] leading-4 text-gray-500 outline-none focus:ring-0"></textarea><code class="block truncate text-[9px] text-gray-300"></code></div><div class="flex shrink-0 items-center gap-0.5"><button type="button" data-plan-move="up" title="Move up" class="rounded p-1 text-gray-400 hover:bg-gray-100"><i class="ph ph-arrow-up"></i></button><button type="button" data-plan-move="down" title="Move down" class="rounded p-1 text-gray-400 hover:bg-gray-100"><i class="ph ph-arrow-down"></i></button><button type="button" data-plan-remove title="Remove task" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><i class="ph ph-x"></i></button></div></div>`;
+                row.querySelector('code').textContent = row.dataset.taskId;
+                tasks.appendChild(row);
+                row.querySelector('[data-task-title]').focus();
+            };
+            form.addEventListener('click', event => {
+                const button = event.target.closest('button');
+                if (!button) return;
+                if (button.matches('[data-plan-add]')) return add();
+                const row = button.closest('[data-plan-task]');
+                if (!row || row.dataset.taskStatus !== 'pending') return;
+                if (button.matches('[data-plan-remove]')) row.remove();
+                if (button.matches('[data-plan-move="up"]')) {
+                    const rows = pendingRows(), i = rows.indexOf(row);
+                    if (i > 0) tasks.insertBefore(row, rows[i - 1]);
+                }
+                if (button.matches('[data-plan-move="down"]')) {
+                    const rows = pendingRows(), i = rows.indexOf(row);
+                    if (i >= 0 && i < rows.length - 1) tasks.insertBefore(rows[i + 1], row);
+                }
+            });
+            form.addEventListener('submit', event => {
+                const rows = [...tasks.querySelectorAll('[data-plan-task]')];
+                if (!rows.length) return event.preventDefault();
+                form.elements.plan.value = JSON.stringify({
+                    title: form.querySelector('[data-plan-title]').value,
+                    tasks: rows.map(row => ({
+                        id: row.dataset.taskId,
+                        title: row.querySelector('[data-task-title]').value,
+                        instructions: row.querySelector('[data-task-instructions]').value,
+                    })),
+                });
+            });
+        });
+    }
+    document.body.addEventListener('htmx:afterSwap', event => mountPlanEditors(event.detail?.target || document));
+    mountPlanEditors();
+
     function openToolDialog({ title, bodyHtml, isError, returnFocus }) {
         document.getElementById('tool-dialog')?.remove();
         const root = document.createElement('div');

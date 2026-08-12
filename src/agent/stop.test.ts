@@ -17,7 +17,9 @@ describe('agent.stop', () => {
         session: {
           appendErrorEvent: (opts: { id: string; error: string }) => calls.push(['appendErrorEvent', opts.id, opts.error]),
           syncAgentState: () => {},
+          mutateScratchpad: () => {},
         },
+        events: { refreshAgentMeta: () => {} },
       },
     };
     const res = await stop(ctx, null, { agent, clearQueue: true });
@@ -40,10 +42,36 @@ describe('agent.stop', () => {
         procs: {
           db: { run: (opts: { sql: string; params?: any[] }) => { calls.push(opts.sql.replace(/\s+/g, ' ').trim()); return { changes: 1, lastInsertRowid: 0 }; } },
         },
-        session: { appendErrorEvent: () => {}, syncAgentState: () => {} },
+        session: { appendErrorEvent: () => {}, syncAgentState: () => {}, mutateScratchpad: () => {} },
+        events: { refreshAgentMeta: () => {} },
       },
     };
     await stop(ctx, null, { agent, clearQueue: false });
     expect(calls[0]).toMatch(/next_run_at = next_run_at/);
   });
+
+  test('pauses an active plan and stops its timer', async () => {
+    let committed: any;
+    const agent: any = {
+      id: 'a1', abortController: null, isStreaming: true,
+      scratchpad: { plan: { tasks: [{ id: 'x', status: 'active', activeSince: 1000, elapsedMs: 50 }] } },
+    };
+    const ctx: any = { fns: {
+      procs: { db: { run: () => ({ changes: 1 }) } },
+      session: {
+        mutateScratchpad: async ({ mutate }: any) => {
+          const scratchpad = structuredClone(agent.scratchpad);
+          await mutate(scratchpad, 1600);
+          committed = scratchpad;
+          return { scratchpad };
+        },
+        appendErrorEvent: () => {}, syncAgentState: () => {},
+      },
+      events: { refreshAgentMeta: () => {} },
+    } };
+    await stop(ctx, null, { agent });
+    expect(committed.plan.pausedAt).toBe(1600);
+    expect(committed.plan.tasks[0]).toMatchObject({ activeSince: null, elapsedMs: 650 });
+  });
+
 });

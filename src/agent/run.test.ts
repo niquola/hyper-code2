@@ -188,4 +188,35 @@ describe('transcript surgery keeps JSON pairs intact', () => {
         expect(result).toMatchObject({ terminal: true, text: 'Sessions list' });
     });
 
+
+    test('plan continuation is bounded and excluded from the user cursor', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await mkAgent(ctx, Array.from({ length: 4 }, () => ({ text: 'not finished' })));
+        await ctx.fns.session.plan({ agent, tasks: [{ id: 'work', title: 'Work', instructions: 'Keep going' }] });
+        const result = await ctx.fns.agent.run({ agent, userText: 'start' });
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id, includeExcluded: true });
+        const feedback = msgs.filter((m: any) => m.message_type === 'plan_feedback');
+        expect(feedback).toHaveLength(2);
+        const cursorRows = await ctx.fns.procs.db.select({ sql: "SELECT idx, excluded_from_cursor FROM messages WHERE agent_id = ? AND message_type = 'plan_feedback' ORDER BY idx", params: [agent.id] });
+        expect(cursorRows.every((row: any) => Number(row.excluded_from_cursor) === 1)).toBe(true);
+        const ordinaryUser = (await ctx.fns.procs.db.select({ sql: "SELECT idx FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0 ORDER BY idx", params: [agent.id] }))[0];
+        expect(result.consumedUserIdx).toBe(Number(ordinaryUser.idx));
+    });
+
+    test('goal continuation runs before plan continuation without conflict', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await mkAgent(ctx, [{ text: 'first' }, { text: 'second' }, { text: 'third' }, { text: 'fourth' }]);
+        await ctx.fns.session.plan({ agent, tasks: [{ id: 'work', title: 'Work' }] });
+        agent.goal = { enabled: true, statement: 'Goal', maxIterations: 1 };
+        let checks = 0;
+        ctx.state.registry.agent.checkGoal = async () => ++checks === 1
+            ? { status: 'continue', reason: 'continue once', nextStep: 'next' }
+            : { status: 'achieved', reason: 'done' };
+        await ctx.fns.session.save({ agent });
+        await ctx.fns.agent.run({ agent, userText: 'start' });
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id, includeExcluded: true });
+        expect(msgs.filter((m: any) => m.message_type === 'goal_feedback')).toHaveLength(2);
+        expect(msgs.filter((m: any) => m.message_type === 'plan_feedback')).toHaveLength(2);
+    });
+
 });

@@ -515,6 +515,7 @@ declare global {
             collapseFailures: Injected<typeof import("./session/collapseFailures").default>;
             delete: Injected<typeof import("./session/delete").default>;
             deleteMessageAt: Injected<typeof import("./session/deleteMessageAt").default>;
+            done: Injected<typeof import("./session/done").default>;
             forAgent: Injected<typeof import("./session/forAgent").default>;
             fork: Injected<typeof import("./session/fork").default>;
             getEvents: Injected<typeof import("./session/getEvents").default>;
@@ -524,6 +525,9 @@ declare global {
             list: Injected<typeof import("./session/list").default>;
             load: Injected<typeof import("./session/load").default>;
             loadAll: Injected<typeof import("./session/loadAll").default>;
+            mutateScratchpad: Injected<typeof import("./session/mutateScratchpad").default>;
+            plan: Injected<typeof import("./session/plan").default>;
+            removePlan: Injected<typeof import("./session/removePlan").default>;
             repairToolPairs: Injected<typeof import("./session/repairToolPairs").default>;
             replaceEvents: Injected<typeof import("./session/replaceEvents").default>;
             replaceMessages: Injected<typeof import("./session/replaceMessages").default>;
@@ -535,6 +539,7 @@ declare global {
             truncateMessagesFrom: Injected<typeof import("./session/truncateMessagesFrom").default>;
             unarchive: Injected<typeof import("./session/unarchive").default>;
             updateMessageContent: Injected<typeof import("./session/updateMessageContent").default>;
+            updatePlan: Injected<typeof import("./session/updatePlan").default>;
             updateScratchpad: Injected<typeof import("./session/updateScratchpad").default>;
         };
         settings: {
