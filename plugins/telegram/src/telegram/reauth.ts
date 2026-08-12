@@ -44,7 +44,12 @@ export default async function (ctx: Context, _session: Session | null, opts?: { 
             phoneNumber: async () => String(config.phone),
             phoneCode: async () => await ctx.fns.secureInput.prompt({ title: "Telegram login code", message: "Enter the code Telegram sent to your Telegram app.", kind: "otp", timeoutMs }),
             password: async hint => await ctx.fns.secureInput.prompt({ title: "Telegram two-factor password", message: hint ? `Enter your Telegram 2FA password. Hint: ${hint}` : "Enter your Telegram 2FA password.", kind: "password", timeoutMs }),
-            onError: async error => { ctx.fns.procs.log.warn({ event: "telegram.reauth.retry", msg: error.message }); return false; },
+            // GramJS retries when onError returns false. A cancelled/expired secure
+            // prompt must terminate reauth instead of immediately opening a new one.
+            onError: async error => {
+                ctx.fns.procs.log.warn({ event: "telegram.reauth.retry", msg: error.message });
+                return /(?:cancelled|timed out|AUTH_USER_CANCEL)/i.test(error.message);
+            },
         });
         const me: any = await client.getMe();
         await saveSession(String(client.session.save()));
