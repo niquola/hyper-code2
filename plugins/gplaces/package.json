@@ -1,0 +1,12 @@
+{
+  "name": "gplaces",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "Google Places",
+    "icon": "ph-map-pin",
+    "optional": true,
+    "description": "Google Places text search, nearby search, details, reviews and photos."
+  }
+}

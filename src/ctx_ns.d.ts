@@ -156,6 +156,41 @@ declare global {
             updateIssue: Injected<typeof import("../plugins/gh/src/gh/updateIssue").default>;
             updatePr: Injected<typeof import("../plugins/gh/src/gh/updatePr").default>;
         };
+        gcs: {
+            api: Injected<typeof import("../plugins/gcs/src/gcs/api").default>;
+            buckets: Injected<typeof import("../plugins/gcs/src/gcs/buckets").default>;
+            config: Injected<typeof import("../plugins/gcs/src/gcs/config").default>;
+            copy: Injected<typeof import("../plugins/gcs/src/gcs/copy").default>;
+            download: Injected<typeof import("../plugins/gcs/src/gcs/download").default>;
+            ensureBuckets: Injected<typeof import("../plugins/gcs/src/gcs/ensureBuckets").default>;
+            get: Injected<typeof import("../plugins/gcs/src/gcs/get").default>;
+            ls: Injected<typeof import("../plugins/gcs/src/gcs/ls").default>;
+            objects: Injected<typeof import("../plugins/gcs/src/gcs/objects").default>;
+            put: Injected<typeof import("../plugins/gcs/src/gcs/put").default>;
+            remove: Injected<typeof import("../plugins/gcs/src/gcs/remove").default>;
+            upload: Injected<typeof import("../plugins/gcs/src/gcs/upload").default>;
+        };
+        gplaces: {
+            api: Injected<typeof import("../plugins/gplaces/src/gplaces/api").default>;
+            details: Injected<typeof import("../plugins/gplaces/src/gplaces/details").default>;
+            nearby: Injected<typeof import("../plugins/gplaces/src/gplaces/nearby").default>;
+            photo: Injected<typeof import("../plugins/gplaces/src/gplaces/photo").default>;
+            search: Injected<typeof import("../plugins/gplaces/src/gplaces/search").default>;
+            types: Injected<typeof import("../plugins/gplaces/src/gplaces/types").default>;
+        };
+        tts: {
+            speak: Injected<typeof import("../plugins/tts/src/tts/speak").default>;
+            voices: Injected<typeof import("../plugins/tts/src/tts/voices").default>;
+        };
+        youtube: {
+            api: Injected<typeof import("../plugins/youtube/src/youtube/api").default>;
+            channel: Injected<typeof import("../plugins/youtube/src/youtube/channel").default>;
+            parse: Injected<typeof import("../plugins/youtube/src/youtube/parse").default>;
+            playlist: Injected<typeof import("../plugins/youtube/src/youtube/playlist").default>;
+            search: Injected<typeof import("../plugins/youtube/src/youtube/search").default>;
+            transcript: Injected<typeof import("../plugins/youtube/src/youtube/transcript").default>;
+            video: Injected<typeof import("../plugins/youtube/src/youtube/video").default>;
+        };
         git: {
             commit: Injected<typeof import("./git/commit").default>;
             push: Injected<typeof import("./git/push").default>;

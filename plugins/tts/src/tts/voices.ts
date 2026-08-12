@@ -1,0 +1,28 @@
+// List Google Cloud TTS voices. OAuth values stay private in 1Password.
+async function accessToken(ctx: Context) {
+    const cache = ((ctx.state as any).tts ??= {} as { token?: { access_token: string; expires_at: number } });
+    if (cache.token && Date.now() < cache.token.expires_at - 60_000) return cache.token.access_token;
+    const [tokenRaw, clientRaw] = await Promise.all([
+        ctx.fns.secrets.resolve({ ref: "op://hyper/tts token.json/value" }),
+        ctx.fns.secrets.resolve({ ref: "op://hyper/tts client_secret.json/value" }),
+    ]);
+    if (!tokenRaw || !clientRaw) throw new Error("Google Cloud TTS credentials are not configured");
+    const token = JSON.parse(tokenRaw), secret = JSON.parse(clientRaw), creds = secret.installed || secret.web;
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ client_id: creds.client_id, client_secret: creds.client_secret, refresh_token: token.refresh_token, grant_type: "refresh_token" }),
+    });
+    const json: any = await res.json();
+    if (!res.ok || !json?.access_token) throw new Error(`TTS token refresh failed (${res.status})`);
+    cache.token = { access_token: json.access_token, expires_at: Date.now() + (json.expires_in ?? 3600) * 1000 };
+    return cache.token.access_token;
+}
+
+export default async function (ctx: Context, _session: Session | null, opts?: { lang?: string }) {
+    const access_token = await accessToken(ctx);
+    const url = `https://texttospeech.googleapis.com/v1/voices${opts?.lang ? `?languageCode=${encodeURIComponent(opts.lang)}` : ""}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${access_token}` } });
+    const json: any = await res.json();
+    if (!res.ok) throw new Error(`Voices API error (${res.status})`);
+    return (json.voices ?? []).map((v: any) => ({ name: v.name, gender: v.ssmlGender, languages: v.languageCodes }));
+}

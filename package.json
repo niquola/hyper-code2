@@ -61,7 +61,11 @@
         "path": "plugins/google"
       },
       "telegram": {},
-      "gh": {}
+      "gh": {},
+      "youtube": {},
+      "gplaces": {},
+      "gcs": {},
+      "tts": {}
     }
   }
 }

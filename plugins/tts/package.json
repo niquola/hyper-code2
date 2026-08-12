@@ -1,0 +1,12 @@
+{
+  "name": "tts",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "Google Cloud TTS",
+    "icon": "ph-speaker-high",
+    "optional": true,
+    "description": "Google Cloud text-to-speech synthesis and voice catalogue."
+  }
+}

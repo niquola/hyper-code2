@@ -1,0 +1,12 @@
+{
+  "name": "youtube",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "YouTube",
+    "icon": "ph-youtube-logo",
+    "optional": true,
+    "description": "YouTube search, metadata, playlists and transcript extraction via yt-dlp."
+  }
+}

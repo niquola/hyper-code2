@@ -1,0 +1,12 @@
+{
+  "name": "gcs",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "Google Cloud Storage",
+    "icon": "ph-cloud",
+    "optional": true,
+    "description": "List, read, upload, copy and delete objects in Google Cloud Storage."
+  }
+}
