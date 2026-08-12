@@ -36,6 +36,15 @@ jobs:
           --health-retries 10
 
     steps:
+      # The suite creates an isolated pg_temp connection per test context. The
+      # stock Postgres limit (100) is too low for the full suite, whose pools
+      # are closed by the Bun test preload at shutdown.
+      - name: Raise Postgres connection limit
+        run: |
+          container="$(docker ps --filter ancestor=paradedb/paradedb:latest-pg18 --format '{{.ID}}' | head -1)"
+          docker exec "$container" psql -U hyper -d hyper -c "ALTER SYSTEM SET max_connections = 500"
+          docker restart "$container"
+          until docker exec "$container" pg_isready -U hyper -d hyper; do sleep 1; done
       - uses: actions/checkout@v4
 
       - name: Setup Bun
