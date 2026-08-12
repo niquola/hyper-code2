@@ -1,6 +1,6 @@
-// GET /agent/:id — the agent's overview page in the RIGHT pane. The chat
-// itself lives in the layout's left column (ui.chatColumn); this route's job is
-// to make :id the current agent (opts → layout sticky) and show its passport.
+// GET /agent/:id — an agent is an ordinary application page. The global layout
+// owns only the agents rail; this route owns the chat and its agent-specific
+// side panel, so navigating to /llms or /files replaces the agent completely.
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
     const id = opts.params.id!;
     let agent = (ctx.state as any).agent?.[id];
@@ -11,61 +11,18 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
             (ctx.state as any).agent[id] = agent;
         }
     }
-    if (!agent) return new Response('Not Found', { status: 404 });
-    const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
+    if (!agent) return new Response("Not Found", { status: 404 });
 
-    const row = ((await ctx.fns.procs.db.select({
-        sql: `SELECT title, model, created_at, updated_at, parent_id, fork_offset, run_state,
-                     (SELECT COUNT(*) FROM messages WHERE agent_id = agents.id) AS msgs,
-                     (SELECT COUNT(*) FROM messages WHERE agent_id = agents.id AND role = 'user' AND excluded_from_cursor = 0) AS turns
-                FROM agents WHERE id = ?`,
-        params: [id],
-    })) as any[])[0] ?? {};
-    const children = (await ctx.fns.procs.db.select({
-        sql: 'SELECT id FROM agents WHERE parent_id = ? AND archived_at IS NULL',
-        params: [id],
-    })) as any[];
-    const scratchKeys = Object.keys(agent.scratchpad ?? {});
-    const prompt = String(agent.systemPrompt ?? '').slice(0, 2000);
-
-    const dt = (v: any) => v ? new Date(Number(v)).toLocaleString() : '—';
-    const fact = (k: string, v: string) => `<div class="flex gap-2 text-sm"><span class="w-28 shrink-0 text-gray-400">${k}</span><span class="min-w-0 break-all">${v}</span></div>`;
-
-    const main = `
-<div ${ctx.fns.procs.ui.attr({ page: "agent", id })} class="p-8 max-w-3xl">
-  <div class="flex items-center gap-3 mb-6">
-    <h1 class="text-xl font-semibold">${esc(row.title || id)}</h1>
-    <span class="text-xs px-2 py-0.5 rounded-full border ${row.run_state === 'running' ? 'border-green-300 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-500'}">${esc(row.run_state ?? 'idle')}</span>
-    <div class="ml-auto flex gap-2">
-      <form method="POST" action="/agent/${encodeURIComponent(id)}/fork" hx-boost="false"><button ${ctx.fns.procs.ui.attr({ action: "fork", id })} class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">fork</button></form>
-      <form method="POST" action="/agent/${encodeURIComponent(id)}/archive" hx-boost="false"><button ${ctx.fns.procs.ui.attr({ action: "archive", id })} class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">archive</button></form>
-      <form method="POST" action="/agent/${encodeURIComponent(id)}/delete" hx-boost="false" onsubmit="return confirm('delete this agent?')"><button ${ctx.fns.procs.ui.attr({ action: "delete", id })} class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">delete</button></form>
-    </div>
-  </div>
-  <div class="space-y-1.5 mb-6">
-    ${fact('model', `<span class="font-mono">${esc(agent.model)}</span>`)}
-    ${fact('id', `<span class="font-mono">${esc(id)}</span>`)}
-    <form method="POST" action="/agent/${encodeURIComponent(id)}/workspace" hx-boost="false" class="flex gap-2 items-center py-2">
-      <label class="w-28 shrink-0 text-sm text-gray-400" for="workspace-dir">workspace</label>
-      <input id="workspace-dir" name="workspaceDir" value="${esc(agent.workspaceDir)}" class="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1 text-sm font-mono">
-      <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">change</button>
-    </form>
-    <form method="POST" action="/agent/${encodeURIComponent(id)}/title" hx-boost="false" class="flex gap-2 items-center py-2">
-      <label class="w-28 shrink-0 text-sm text-gray-400" for="agent-title">title</label>
-      <input id="agent-title" name="title" maxlength="120" value="${esc(row.title ?? '')}" placeholder="Chat title" class="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1 text-sm">
-      <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">save</button>
-    </form>
-    ${fact('created', esc(dt(row.created_at)))}
-    ${fact('updated', esc(dt(row.updated_at)))}
-    ${fact('messages', `${Number(row.msgs ?? 0)} total · ${Number(row.turns ?? 0)} user turns`)}
-    ${row.parent_id ? fact('forked from', `<a class="text-blue-700 hover:underline font-mono" hx-boost="false" href="/agent/${encodeURIComponent(row.parent_id)}">${esc(row.parent_id)}</a> @ msg ${Number(row.fork_offset ?? 0)}`) : ''}
-    ${children.length ? fact('forks', children.map((c: any) => `<a class="text-blue-700 hover:underline font-mono mr-2" hx-boost="false" href="/agent/${encodeURIComponent(c.id)}">${esc(c.id)}</a>`).join('')) : ''}
-    ${scratchKeys.length ? fact('scratchpad', esc(scratchKeys.join(', '))) : ''}
-    ${fact('search', `<a class="text-blue-700 hover:underline" href="/search?agent=${encodeURIComponent(id)}">BM25 in this transcript →</a>`)}
-  </div>
-  ${prompt ? `<div class="text-xs text-gray-400 mb-1">system prompt (custom part)</div>
-  <pre class="text-xs bg-gray-50 border border-gray-200 rounded-lg p-4 whitespace-pre-wrap max-h-80 overflow-y-auto">${esc(prompt)}</pre>` : ''}
+    const chat = await ctx.fns.ui.chatColumn({ agentId: id });
+    const meta = ctx.fns.ui.agentMetaPanel({ agent });
+    // id="chat-panel" is the chat client's mount point: /agent/chat.js loads
+    // once for the whole app and (re)binds itself to this element after every
+    // swap — Enter-to-send, stick-to-bottom, older-message paging and the tool
+    // cards all hang off it. Without the id the page renders and does nothing.
+    const main = `<div ${ctx.fns.procs.ui.attr({ page: "agent", id })} class="flex min-h-0 min-w-0 flex-1 bg-gray-50">
+  <section id="chat-panel" data-agent-id="${ctx.fns.procs.ui.escape({ text: id })}" class="flex min-w-0 flex-1 flex-col">${chat}</section>
+  ${meta}
 </div>`;
 
-    return { currentId: id, title: row.title || id, main };
+    return { currentId: id, title: agent.title || id, main };
 }

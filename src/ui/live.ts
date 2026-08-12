@@ -10,6 +10,12 @@
 // The interval is a WATCHDOG, not the mechanism: it repairs a signal missed
 // while the connection was down. Five seconds is the floor — a widget that
 // wants a hot loop is asking for the wrong thing.
+//
+// The target is stated, never inherited. htmx passes hx-target down to every
+// descendant, so a live region rendered inside a page pane that carries
+// `hx-target="#main"` for its boosted links would answer its own poll by
+// replacing the whole pane — the region eats the page that contains it. Saying
+// "this" out loud costs one attribute and cannot be broken from above.
 export default function (
     ctx: Context,
     _session: Session | null,
@@ -20,10 +26,14 @@ export default function (
     const tag = /^[a-z][a-z0-9-]*$/i.test(opts.tag ?? '') ? opts.tag! : 'div';
     const swap = opts.swap ?? 'outerHTML';
     const trigger = [opts.trigger, 'hyper-live from:body', `every ${every}s`].filter(Boolean).join(', ');
+    // A caller may aim its region somewhere else; only fill in the default when
+    // it did not, because the first attribute of a name is the one that counts.
+    const target = /\bhx-target\s*=/.test(opts.attrs ?? "") ? "" : ` hx-target="this"`;
     return `<${tag} id="${esc(opts.id)}"`
         + ` hx-get="${esc(opts.url)}"`
         + ` hx-trigger="${esc(trigger)}"`
         + ` hx-swap="${esc(swap)}"`
+        + target
         + ` data-live-topic="${esc(opts.topic)}"`
         + `${opts.attrs ? " " + opts.attrs : ""}>${opts.html ?? ""}</${tag}>`;
 }

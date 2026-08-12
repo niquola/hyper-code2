@@ -21,13 +21,14 @@ export default async function (ctx: Context, session: Session | null, opts: { re
         ? (dir > 0 ? agents[0] : agents[agents.length - 1])
         : agents[(at + dir + agents.length) % agents.length];
 
-    // Render the neighbour's view through the ordinary path — one request, and
-    // the address bar follows via HX-Push-Url so Back works as usual.
+    // Render the neighbour's page through the ordinary path — one request, the
+    // same content a click on the rail would produce, and the address bar
+    // follows via HX-Push-Url so Back works as usual.
     const res = await ctx.fns.procs.http.dispatch({
-        url: `/a/${next.id}`,
-        headers: { "hx-request": "true", "x-hyper-frame": "1" },
+        url: `/agent/${next.id}`,
+        headers: { "hx-request": "true" },
     });
     const out = new Response(res.body, res);
-    out.headers.set("HX-Push-Url", `/a/${next.id}`);
+    out.headers.set("HX-Push-Url", `/agent/${next.id}`);
     return out;
 }

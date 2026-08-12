@@ -34,7 +34,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
         : 0;
 
     const historyHead = events.length && Number(events[0]?.idx ?? 0) > 0
-        ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${Number(events[0].idx)}&limit=100" hx-trigger="load-older" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] text-gray-400 hover:text-gray-600">older messages</button></div>`
+        ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${Number(events[0].idx)}&limit=100" hx-trigger="load-older" hx-target="this" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] text-gray-400 hover:text-gray-600">older messages</button></div>`
         : '';
     const activeSleepForView = ctx.fns.agent.getSleepGeneration({ sleepContext: agent.sleepContext, kind: "active" });
     const eventsHtml = activeSleepForView
@@ -101,8 +101,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
 </header>
 <div id="messages" data-agent-id="${esc(id)}" data-inherited-count="${inheritedCount}" style="overflow-anchor:none" class="flex-1 overflow-y-auto px-3 py-3 space-y-2">${historyHead}${eventsHtml}
 ${agent.sleepContext?.active === true
-  ? `<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}&compact=1" hx-trigger="load" hx-swap="outerHTML"></div>`
-  : `<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}" hx-trigger="load" hx-swap="outerHTML"></div>`}
+  ? `<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}&compact=1" hx-trigger="load" hx-target="this" hx-swap="outerHTML"></div>`
+  : `<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}" hx-trigger="load" hx-target="this" hx-swap="outerHTML"></div>`}
 </div>
 <form id="form"
       ${ctx.fns.procs.ui.attr({ form: "chat" })}

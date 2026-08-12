@@ -2,14 +2,18 @@
 // the project, so it is the heading), one line per agent: a running light,
 // the title with the id in brackets, and a WhatsApp-style unread badge.
 // Served by GET /ui/rail and pulled in by the one-line placeholder in
-// layout.ts (`hx-trigger="load, every 10s"`), so the layout never awaits the
-// list and the badges/lights stay fresh without redrawing the page. Switching
-// Clicking an agent swaps ONLY its container (chat + workspace pane): the rail
-// itself is not redrawn, so its scroll position, open groups and focus survive.
-// The
-// re-render.
+// layout.ts, so the layout never awaits the list and the badges/lights stay
+// fresh without redrawing the page.
+//
+// Clicking an agent swaps ONLY the page pane: the rail is not redrawn, so its
+// scroll position, open groups and focus survive the switch. The rail sits
+// OUTSIDE that pane, so its links carry their own htmx attributes instead of
+// inheriting them — nothing about navigation is implied by where a link sits.
 export default async function (ctx: Context, _session: Session | null, opts: { currentId?: string; archived?: boolean }): Promise<string> {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
+    // Open an agent in place: the server answers an hx-request with the page's
+    // own content, so it goes straight into #main and the address bar follows.
+    const open = (id: string) => `hx-get="/agent/${encodeURIComponent(id)}" hx-target="#main" hx-swap="innerHTML" hx-push-url="true"`;
     const agents = await ctx.fns.session.list({ includeArchived: opts.archived === true }).catch(() => []);
 
     const row = (a: any, depth = 0) => {
@@ -30,13 +34,13 @@ export default async function (ctx: Context, _session: Session | null, opts: { c
       ${subagent}
       ${badge}`;
         if (gone) return `<div class="flex items-center gap-1.5 rounded px-2 py-1 opacity-60 hover:opacity-100 hover:bg-gray-200" ${ctx.fns.procs.ui.attr({ entity: "agent", id: a.id, status: "archived" })}>
-      <a href="/agent/${encodeURIComponent(a.id)}" hx-boost="false" hx-get="/a/${encodeURIComponent(a.id)}" hx-target="#agent-view" hx-select="#agent-view" hx-swap="outerHTML" hx-push-url="true" hx-headers='{"x-hyper-frame":"1"}' title="${esc(a.title)}" class="min-w-0 flex-1 flex items-center gap-1.5">${inner}</a>
+      <a href="/agent/${encodeURIComponent(a.id)}" ${open(a.id)} title="${esc(a.title)}" class="min-w-0 flex-1 flex items-center gap-1.5">${inner}</a>
       <button title="unarchive" hx-post="/agent/${encodeURIComponent(a.id)}/unarchive" hx-swap="none"
         hx-on::after-request="htmx.trigger('#agents-rail', 'rail-refresh')"
         ${ctx.fns.procs.ui.attr({ action: "unarchive", entity: "agent", id: a.id })}
         class="shrink-0 px-1 text-gray-400 hover:text-gray-700"><i class="ph ph-arrow-counter-clockwise"></i></button>
     </div>`;
-        return `<a href="/agent/${encodeURIComponent(a.id)}" hx-boost="false" hx-get="/a/${encodeURIComponent(a.id)}" hx-target="#agent-view" hx-select="#agent-view" hx-swap="outerHTML" hx-push-url="true" hx-headers='{"x-hyper-frame":"1"}' title="${esc(a.title)}"
+        return `<a href="/agent/${encodeURIComponent(a.id)}" ${open(a.id)} title="${esc(a.title)}"
        class="flex items-center gap-1.5 rounded-md px-2 py-1.5 ${on ? "bg-white shadow-sm" : "hover:bg-gray-200/70"}"
        ${ctx.fns.procs.ui.attr({ entity: "agent", id: a.id, status: on ? "current" : a.runState })}>
       ${inner}
@@ -94,9 +98,18 @@ export default async function (ctx: Context, _session: Session | null, opts: { c
     <div class="ml-3 space-y-0.5 pl-1.5">${renderTree(list)}</div>
   </div>`).join("");
 
-    return `<div class="flex items-center justify-between px-2 py-2 border-b border-gray-200">
-    <span class="text-[11px] font-medium uppercase tracking-wide text-gray-500">Agents</span>
+    // The only visible entry to navigation, uniskill-style: one button (or ⌘K)
+    // opens the filterable palette over nav.items. A tab strip could only ever
+    // show the handful of pages that fit in it; the palette shows every page
+    // every mounted module ships, plus every agent, and it costs no chrome.
+    return `<div class="flex items-center gap-1.5 px-2 py-2 border-b border-gray-200">
+    <button title="Menu — ⌘K" aria-label="Menu" onclick="window.__navOpen && window.__navOpen()"
+       ${ctx.fns.procs.ui.attr({ action: "open-menu" })}
+       class="inline-flex size-6 shrink-0 items-center justify-center rounded text-gray-500 hover:bg-gray-200 hover:text-gray-900"><i class="ph ph-list"></i></button>
+    <span class="min-w-0 flex-1 text-[11px] font-medium uppercase tracking-wide text-gray-500">Agents</span>
     <span class="flex items-center gap-1">
+    <a href="/llms" title="LLM connections" ${ctx.fns.procs.ui.attr({ action: "open", entity: "llms" })}
+       class="inline-flex size-6 items-center justify-center rounded border border-gray-300 bg-white text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-900"><i class="ph ph-plugs-connected"></i></a>
     <button title="${opts.archived ? "hide archived" : "show archived"}" ${ctx.fns.procs.ui.attr({ action: "toggle-archived", status: opts.archived ? "on" : "off" })}
        onclick="localStorage.setItem('rail-archived', '${opts.archived ? "" : "1"}'); htmx.trigger('#agents-rail', 'rail-refresh')"
        class="px-1.5 py-0.5 rounded border text-xs ${opts.archived ? "border-amber-300 bg-amber-50 text-amber-700" : "border-gray-300 bg-white text-gray-500 hover:bg-gray-50"}"><i class="ph ph-archive"></i></button>

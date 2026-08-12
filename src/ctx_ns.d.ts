@@ -629,7 +629,6 @@ declare global {
             script: Injected<typeof import("./ui/script").default>;
             sendToAgent: Injected<typeof import("./ui/sendToAgent").default>;
             state: Injected<typeof import("./ui/state").default>;
-            topbar: Injected<typeof import("./ui/topbar").default>;
         };
         workspace: {
             get: Injected<typeof import("./workspace/get").default>;

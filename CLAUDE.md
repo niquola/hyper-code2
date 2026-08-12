@@ -125,7 +125,10 @@ Vendored `src/procs/` is upstream code: keep local patches minimal and marked wi
 
 ## UI frame (workspace-style)
 
-- Layout (`src/ui/layout.ts`): THREE columns — the agents rail on the far left, the agent chat as a persistent column beside it (`ui.chatColumn({agentId})`, resizable, sticky current agent via `ctx.state.uiCurrentAgent`), pages on the RIGHT under the module tab bar (`ui.topbar`). Tab links are hx-boosted into `#main` only — the chat and its long-poll survive page switches; switching AGENTS is a full load on purpose.
+- Layout (`src/ui/layout.ts`): TWO regions — the persistent agents rail on the left, and ONE page in `#main` on the right. An agent is an ordinary page (`GET /agent/:id` renders `ui.chatColumn` + `ui.agentMetaPanel`), so `/llms` or `/files` replaces it completely; the layout owns no current agent and keeps no hidden chat alive. Rail links swap `#main` in place (`hx-get` + `hx-push-url`), so the rail keeps its scroll while the page changes.
+- **No htmx attributes on containers that hold content.** htmx inherits `hx-target`, `hx-swap` and `hx-push-url` into every descendant, and `#main` is full of fragments that poll for themselves (chat tail, status bar, meta panel). Navigation attributes live on the things that navigate — rail links, palette rows. Self-refreshing fragments say `hx-target="this"` out loud (`ui.live` emits it by default); a fragment whose response is not UI says `hx-swap="none"`.
+- **Navigation is the ⌘K palette**, uniskill-style: no menu bar. `ui.navMenu` (island at the end of `<body>`) over `GET /nav/items` — pages and module pages first, then agents; the rail header's ☰ button and ⌘K both open it. Mount a module → its top-level GET pages become reachable, no tab to add. ⌘J/⌘K step to the neighbouring agent through `GET /agent/:id/next` (the server owns the order), swapped into `#main`.
+- The chat client (`/agent/chat.js`) loads once and mounts on `#chat-panel` after every swap — Enter-to-send, stick-to-bottom, older-message paging and the tool cards all hang off that id.
 - **The agents rail** (`ui.agentsRail`, served by `GET /ui/rail`): a one-line placeholder in the layout that loads itself and re-fetches every 10s + on the `rail-refresh` custom event — the layout never awaits the agent list. Agents are grouped by `workspace_dir` (the folder is the project); each row is a running light (`run_state`), the title with the id in brackets, and a WhatsApp-style **unread badge** — assistant messages past the `seen:<id>` watermark in `kv`. The watermark moves when the chat renders (`ui.chatColumn`) and on every open-chat poll (`agent/$route_$id_events.html_GET`): an open chat never accumulates unread. The header's archive toggle (state in `localStorage`, sent via `hx-vals js:`) shows archived agents dimmed with an unarchive button (`POST /agent/:id/unarchive` → `session.unarchive`). The "+" opens the new-agent form as an overlay (`GET /agent/new?popup=1` → `#modal`): full form — model (preselected from `kv last-model`, written on every create), workdir with live directory autocomplete (`GET /agent/dirs?q=`), base prompt, presets, custom instructions.
 - **The chat header** names THIS agent only (title, id, model badge, statusbar) plus ⓘ/archive/delete icons — switching and creating live in the rail. The stop button exists only while something runs: it renders inside the statusbar fragment (1s poll) when `run_state`/`next_run_at` say busy.
 - **Toasts are agent-scoped**: `ui.notify({agentId})` rides the event; the client (ui/controlScript) drops toasts whose agentId differs from `document.body.dataset.agentId`. Toasts without an agentId stay global.
@@ -146,8 +149,8 @@ Vendored `src/procs/` is upstream code: keep local patches minimal and marked wi
   · `say` · `readScreen` (the data-* catalogue) · `text` · `where` (last beacon,
   no round trip).
 - Targets are addressed by `procs.ui.attr` data-* markers (page/entity/id/form/
-  action/role), NEVER CSS selectors. Seeded so far: topbar tabs (action:
-  open-tab), chat form (form: chat), agent picker (role), search page/form/hits,
+  action/role), NEVER CSS selectors. Seeded so far: the rail's menu button
+  (action: open-menu), chat form (form: chat), agent picker (role), search page/form/hits,
   agent passport (page: agent + fork/archive/delete actions). New UI should
   carry markers from birth.
 - `ctx.fns.tour.play({steps})` — scripted walk (Back/Next/Show me); `tour.review`

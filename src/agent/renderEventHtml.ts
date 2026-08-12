@@ -27,6 +27,9 @@ function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = 
     const btn = (mode: 'one' | 'from', title: string, confirm: string, icon: string) =>
         '<button type="button"'
         + ' hx-post="' + url + '"'
+        // The page is reloaded on success, so the response is not UI: say so,
+        // or an inherited hx-target/hx-swap paints it over whatever contains us.
+        + ' hx-swap="none"'
         + ' hx-vals=\'{"idx":"' + String(idx) + '","mode":"' + mode + '"}\''
         + ' hx-confirm="' + confirm + '"'
         + ' hx-on::after-request="if (event.detail.successful) location.reload();"'

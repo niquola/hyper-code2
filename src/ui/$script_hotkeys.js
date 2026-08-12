@@ -29,10 +29,8 @@
         event.preventDefault();
 
         window.htmx.ajax('GET', `/agent/${encodeURIComponent(id)}/next?dir=${key === 'j' ? 1 : -1}`, {
-            target: '#agent-view',
-            select: '#agent-view',
-            swap: 'outerHTML',
-            headers: { 'x-hyper-frame': '1' },
+            target: '#main',
+            swap: 'innerHTML',
         });
     });
 })();

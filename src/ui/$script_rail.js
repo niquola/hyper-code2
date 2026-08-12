@@ -22,6 +22,11 @@
         const id = currentAgent();
         if (!rail || !id) return;
 
+        // Toasts are filtered by the agent the body says we are on. Switching
+        // agents no longer reloads the page, so that attribute has to follow
+        // the URL or notifications keep arriving for the agent you left.
+        document.body.dataset.agentId = id;
+
         // The rail refetches itself by URL, so that URL carries everything its
         // request needs: who is current, and whether archived agents are shown.
         //
@@ -33,10 +38,10 @@
         const archived = localStorage.getItem("rail-archived") ? "&archived=1" : "";
         rail.setAttribute("hx-get", "/ui/rail?current=" + encodeURIComponent(id) + archived);
 
-        for (const link of rail.querySelectorAll('a[hx-get^="/a/"]')) {
+        for (const link of rail.querySelectorAll('a[href^="/agent/"]')) {
             // Archived rows sit inside a wrapper and have no selected state.
             if (link.classList.contains("flex-1")) continue;
-            const on = link.getAttribute("hx-get") === "/a/" + encodeURIComponent(id);
+            const on = link.getAttribute("href") === "/agent/" + encodeURIComponent(id);
 
             link.classList.toggle("bg-white", on);
             link.classList.toggle("shadow-sm", on);

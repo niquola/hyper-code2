@@ -38,4 +38,17 @@ describe("ui.live", () => {
         // Nobody may ask for a hot loop.
         expect(ctx.fns.ui.live({ id: "x", url: "/x", topic: "t", every: 1 })).toContain("every 5s");
     });
+
+    // A live region sits inside pages that declare hx-target for their own
+    // links; without saying "this" it inherits that target and the refresh
+    // paints the region over the page containing it.
+    test("a region refreshes itself, whatever its ancestors say", async () => {
+        const ctx: any = await mkTestCtx();
+
+        expect(ctx.fns.ui.live({ id: "x", url: "/x", topic: "t" })).toContain('hx-target="this"');
+        // A caller may still aim it somewhere else, and only its target survives.
+        const aimed = ctx.fns.ui.live({ id: "x", url: "/x", topic: "t", attrs: 'hx-target="#other"' });
+        expect(aimed).toContain('hx-target="#other"');
+        expect(aimed).not.toContain('hx-target="this"');
+    });
 });

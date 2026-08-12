@@ -23,7 +23,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         const eventsHtml = await ctx.fns.agent.renderEventsHtml({ events, agentId: id });
         const firstIdx = events.length ? Number(events[0]?.idx ?? 0) : 0;
         const head = firstIdx > 0
-            ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${firstIdx}&limit=${limit}" hx-trigger="load-older" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] text-gray-400 hover:text-gray-600">older messages</button></div>`
+            ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${firstIdx}&limit=${limit}" hx-trigger="load-older" hx-target="this" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] text-gray-400 hover:text-gray-600">older messages</button></div>`
             : '';
         return new Response(head + eventsHtml, { headers: { 'content-type': 'text/html; charset=utf-8' } });
     }

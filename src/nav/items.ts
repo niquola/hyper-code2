@@ -19,6 +19,7 @@ export default async function (
         { label: "search transcripts", href: "/search", hint: "page" },
         { label: "files", href: "/files", hint: "page" },
         { label: "settings", href: "/settings", hint: "page" },
+        { label: "LLM connections", href: "/llms", hint: "page · models and authentication" },
         { label: "modules", href: "/procs/modules", hint: "page" },
         { label: "new agent", href: "/agent/new", hint: "page" },
     ];
@@ -33,7 +34,10 @@ export default async function (
                 hint: "module page",
             })));
 
-    const all = [...agents, ...pages, ...moduleItems];
+    // Pages first, agents after: the rail already lists every agent, so with no
+    // query typed the palette should show what nothing else on screen does —
+    // and it is the only way to reach a page now that the tab strip is gone.
+    const all = [...pages, ...moduleItems, ...agents];
     const hit = (i: types.nav.Item) => !q || i.label.toLowerCase().includes(q) || i.href.toLowerCase().includes(q) || (i.hint ?? "").toLowerCase().includes(q);
     return all.filter(hit).slice(0, limit);
 }

@@ -4,7 +4,7 @@ export default function (ctx: Context, _session: Session | null, opts: { agent: 
     const reflection = agent.reflection?.state ?? null;
     const running: Set<string> | undefined = (ctx.state as any).reflectionRuns;
     const active = !!running?.has(agent.id);
-    const liveAttrs = `id="reflection-${esc(agent.id)}" hx-get="/agent/${encodeURIComponent(agent.id)}/reflection" hx-trigger="hyper-live from:body, every 60s" hx-swap="outerHTML" data-live-topic="agent:${esc(agent.id)}"`;
+    const liveAttrs = `id="reflection-${esc(agent.id)}" hx-get="/agent/${encodeURIComponent(agent.id)}/reflection" hx-trigger="hyper-live from:body, every 60s" hx-target="this" hx-swap="outerHTML" data-live-topic="agent:${esc(agent.id)}"`;
 
     const buttonClass = 'inline-flex size-7 items-center justify-center rounded-md border transition focus:outline-none focus:ring-2 focus:ring-violet-200';
 

@@ -5,7 +5,7 @@ export default function (_ctx: Context, _session: Session | null, _opts?: {}): s
     return `<div id="nav-overlay" class="hidden fixed inset-0 z-50 bg-black/30" onclick="if(event.target===this)window.__navClose()">
   <div class="mx-auto mt-[10vh] max-w-xl flex flex-col bg-white rounded-xl shadow-2xl border border-gray-300 overflow-hidden">
     <input id="nav-q" name="q" placeholder="Go to… (agents, pages)" autocomplete="off"
-           hx-get="/nav/items" hx-trigger="input changed delay:100ms, focus once" hx-target="#nav-results"
+           hx-get="/nav/items" hx-trigger="load, palette-open, input changed delay:100ms" hx-target="#nav-results"
            class="w-full px-5 py-3 text-base outline-none border-b border-gray-200">
     <div id="nav-results" class="max-h-[50vh] overflow-y-auto"></div>
     <div class="px-5 py-1.5 border-t border-gray-200 bg-gray-50 text-[11px] text-gray-500 flex gap-3">
@@ -22,7 +22,11 @@ export default function (_ctx: Context, _session: Session | null, _opts?: {}): s
   window.__navOpen = function () {
     sel = 0;
     overlay().classList.remove("hidden");
-    setTimeout(() => { const q = document.getElementById("nav-q"); q.focus(); q.select(); }, 30);
+    // Rows are fetched on page load, so the palette is never empty when it
+    // appears; opening asks again because agents come and go while it is shut.
+    const q = document.getElementById("nav-q");
+    if (window.htmx) window.htmx.trigger(q, "palette-open");
+    setTimeout(() => { q.focus(); q.select(); }, 30);
   };
   window.__navClose = function () { overlay().classList.add("hidden"); };
   document.body.addEventListener("htmx:afterSwap", (e) => {
