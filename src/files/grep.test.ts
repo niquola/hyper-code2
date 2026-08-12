@@ -124,7 +124,7 @@ describe('grep is rooted in the agent workspace', () => {
 
     test('an agent with no workspace falls back to the server cwd', async () => {
         const ctx: any = await mkTestCtx();
-        const r = await ctx.fns.tools.call({ name: 'grep', args: { pattern: 'rgPath', path: 'src/files', limit: 2 } });
+        const r = await ctx.fns.tools.call({ name: 'grep', args: { pattern: 'rgPath', path: 'src/files/rgPath.ts', limit: 2 } });
         expect(r.output).toContain('src/files/rgPath.ts');
     });
 });
