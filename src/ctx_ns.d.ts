@@ -9,6 +9,7 @@ declare global {
         agent: {
             buildDelegatedTaskPrompt: Injected<typeof import("./agent/buildDelegatedTaskPrompt").default>;
             buildLlmRequest: Injected<typeof import("./agent/buildLlmRequest").default>;
+            checkGoal: Injected<typeof import("./agent/checkGoal").default>;
             clear: Injected<typeof import("./agent/clear").default>;
             clearReflectionNudge: Injected<typeof import("./agent/clearReflectionNudge").default>;
             compact: Injected<typeof import("./agent/compact").default>;
@@ -25,6 +26,7 @@ declare global {
             nextId: Injected<typeof import("./agent/nextId").default>;
             normalizeSleepContext: Injected<typeof import("./agent/normalizeSleepContext").default>;
             readAndSummarize: Injected<typeof import("./agent/readAndSummarize").default>;
+            recordGoalCheck: Injected<typeof import("./agent/recordGoalCheck").default>;
             reflect: Injected<typeof import("./agent/reflect").default>;
             renderEditArgs: Injected<typeof import("./agent/renderEditArgs").default>;
             renderEventHtml: Injected<typeof import("./agent/renderEventHtml").default>;
@@ -34,6 +36,7 @@ declare global {
             respondHtml: Injected<typeof import("./agent/respondHtml").default>;
             run: Injected<typeof import("./agent/run").default>;
             sanitizeHtmlBody: Injected<typeof import("./agent/sanitizeHtmlBody").default>;
+            setGoal: Injected<typeof import("./agent/setGoal").default>;
             setSleepActive: Injected<typeof import("./agent/setSleepActive").default>;
             setStatusLine: Injected<typeof import("./agent/setStatusLine").default>;
             sleep: Injected<typeof import("./agent/sleep").default>;
@@ -86,6 +89,7 @@ declare global {
         };
         events: {
             emitAgentsChanged: Injected<typeof import("./events/emitAgentsChanged").default>;
+            refreshAgentMeta: Injected<typeof import("./events/refreshAgentMeta").default>;
         };
         files: {
             applyEdits: Injected<typeof import("./files/applyEdits").default>;
@@ -602,6 +606,7 @@ declare global {
         };
         ui: {
             action: Injected<typeof import("./ui/action").default>;
+            agentMetaPanel: Injected<typeof import("./ui/agentMetaPanel").default>;
             agentsRail: Injected<typeof import("./ui/agentsRail").default>;
             chatColumn: Injected<typeof import("./ui/chatColumn").default>;
             controlScript: Injected<typeof import("./ui/controlScript").default>;

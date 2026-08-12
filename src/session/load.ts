@@ -19,6 +19,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
         events: [],
         sleepContext: row.sleep_context == null ? null : (typeof row.sleep_context === 'string' ? JSON.parse(row.sleep_context) : row.sleep_context),
         cursors: {},
+        goal: row.goal == null ? null : (typeof row.goal === 'string' ? JSON.parse(row.goal) : row.goal),
         subscribers: new Set(),
         waiters: [],
         isStreaming: false,

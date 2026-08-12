@@ -52,6 +52,20 @@ describe('POST /agent/:id', () => {
     expect(res.status).toBe(400);
   });
 
+
+  test('rejects an empty canonical text form without serializing it as `text:`', async () => {
+    const { ctx, agent } = await mkCtx();
+    for (const body of ['text=', 'text=%20%20%20']) {
+      const res = await ctx.fns.procs.http.dispatch({
+        method: 'POST',
+        url: '/agent/' + agent.id,
+        body,
+        headers: { 'content-type': 'application/x-www-form-urlencoded', 'hx-request': 'true' },
+      });
+      expect(res.status).toBe(400);
+    }
+    expect(await userMessages(ctx, agent.id)).toEqual([]);
+  });
   test('plain browser HTML form submit redirects 303 back to /agent/:id', async () => {
     const { ctx, agent } = await mkCtx();
     const res = await ctx.fns.procs.http.dispatch({

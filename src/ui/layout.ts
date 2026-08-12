@@ -41,6 +41,9 @@ export default async function (ctx: Context, session: Session | null, opts: { cu
              <a href="/agent/new" hx-boost="false" class="px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-100">+ new agent</a>
            </div>`;
 
+    let metaAgent: types.agent.Agent | null = null;
+    if (currentId) metaAgent = (ctx.state as any).agent?.[currentId] ?? await ctx.fns.session.load({ id: currentId });
+    const metaPanel = metaAgent ? ctx.fns.ui.agentMetaPanel({ agent: metaAgent }) : '';
     const pageTitle = opts.title ? `${opts.title} · hyper-code2` : "hyper-code2";
     // A tiny terminal prompt: dark enough to survive light browser chrome,
     // with a mint chevron and violet cursor that remain legible at 16×16.
@@ -109,18 +112,7 @@ ${opts.headExtra ?? ""}
     <div id="chat-resize" class="${rightPanelCollapsed ? "hidden" : ""}" style="position:absolute;top:0;bottom:0;right:0;z-index:10;width:9px;transform:translateX(50%);cursor:col-resize" title="drag to resize"></div>
     ${chat}
   </aside>
-  <!-- The whole right side navigates into #main (workspace pattern): links and
-       forms inside pages swap the page pane only, so the chat column and its
-       long-poll are never redrawn. hx-history-elt scopes back/forward refetch
-       to #main too. Anything that must re-render the chat (switching agents,
-       creating/deleting one) opts out with hx-boost="false". -->
-  <section id="workspace-panel" class="shrink-0 flex flex-col border-l border-gray-300 bg-gray-100 transition-[width] duration-200 ${rightPanelCollapsed ? "w-9" : "min-w-0 flex-1"}" hx-boost="true" hx-target="#main" hx-swap="innerHTML" hx-push-url="true" aria-hidden="${rightPanelCollapsed ? "true" : "false"}">
-    <div class="flex h-10 shrink-0 items-center border-b border-gray-300 bg-gray-100 ${rightPanelCollapsed ? "justify-center px-0" : "min-w-0"}">
-      ${rightPanelCollapsed ? "" : `<div class="min-w-0 flex-1">${ctx.fns.ui.topbar({ path, agentId: currentId })}</div>`}
-      <button id="workspace-toggle" type="button" title="${rightPanelCollapsed ? "Show workspace" : "Hide workspace"}" aria-label="${rightPanelCollapsed ? "Show workspace" : "Hide workspace"}" aria-expanded="${rightPanelCollapsed ? "false" : "true"}" class="flex size-8 shrink-0 items-center justify-center rounded-md text-gray-400 transition hover:bg-white hover:text-gray-700"><i class="ph ${rightPanelCollapsed ? "ph-caret-left" : "ph-caret-right"}"></i></button>
-    </div>
-    <main id="main" hx-history-elt class="min-w-0 min-h-0 bg-white ${rightPanelCollapsed ? "hidden" : "flex flex-1 flex-col overflow-y-auto"}">${opts.main}</main>
-  </section>
+  ${metaPanel}
   </div>
 </div>
 <div id="modal"></div>

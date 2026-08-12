@@ -22,5 +22,6 @@ export default async function (
     await ctx.fns.procs.db.run({ sql: "UPDATE agents SET sleep_context = ?::jsonb, updated_at = ? WHERE id = ?", params: [JSON.stringify(sleep), Date.now(), opts.id] });
     const agent = (ctx.state as any).agent?.[opts.id];
     if (agent) agent.sleepContext = sleep;
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, reason: "sleep-switch" });
     return { active: sleep.mode === "compact", revision: sleep.activeRevision };
 }

@@ -28,6 +28,7 @@ export default async function (
         forkOffset: opts.forkOffset ?? null,
         sleepContext: null,
         currentJobId: null,
+        goal: null,
         drainPromise: null,
     };
     (ctx.state as any).agent ??= {};

@@ -79,6 +79,7 @@ export default async function (
                 parent.reflection = next;
                 ctx.fns.procs.events.refresh({ topic: `agent:${parent.id}`, reason: "reflection" });
             }
+                ctx.fns.events.refreshAgentMeta({ agentId: parent.id, reason: "reflection" });
         } catch (error) {
             console.error(`reflection for ${parent.id} failed:`, error);
         } finally {

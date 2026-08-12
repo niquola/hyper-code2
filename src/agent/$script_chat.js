@@ -34,10 +34,14 @@
             this.input.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
+                    if (!this.input.value.trim()) return;
                     this.form.requestSubmit();
                 }
             }, { signal });
             this.panel.addEventListener('click', event => this.onClick(event), { signal });
+            this.form.addEventListener('submit', event => {
+                if (!this.input.value.trim()) event.preventDefault();
+            }, { signal });
             this.arrangeTools(this.messages);
             this.addInheritedNote();
             document.body.dataset.agentId = this.agentId;

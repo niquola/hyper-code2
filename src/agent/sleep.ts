@@ -88,7 +88,10 @@ export default async function (
                 sql: "UPDATE agents SET sleep_context = ?::jsonb, updated_at = ? WHERE id = ? AND updated_at = ? AND run_state = 'idle'",
                 params: [JSON.stringify(next), generation.createdAt, parent.id, sourceUpdatedAt],
             });
-            if (updated.changes > 0) parent.sleepContext = next;
+            if (updated.changes > 0) {
+                parent.sleepContext = next;
+                ctx.fns.events.refreshAgentMeta({ agentId: parent.id, reason: "sleep-draft" });
+            }
         } catch (error) {
             console.error(`sleep for ${parent.id} failed:`, error);
         } finally {

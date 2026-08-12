@@ -148,6 +148,22 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
             + '</button>';
     }
 
+    if (ev.type === "goal_activation") {
+        return `<div class="mx-auto max-w-[90%] rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-800"><div class="flex items-center gap-1.5 font-medium"><i class="ph ph-target"></i> Goal enabled · ${Number(ev.iterations ?? 3)} iterations</div><div class="mt-1 leading-5 opacity-80">${esc(ev.text ?? "")}</div></div>`;
+    }
+
+
+    if (ev.type === "goal_check") {
+        const status = String(ev.status ?? "unclear");
+        const achieved = status === "achieved";
+        const limited = status === "limit_reached";
+        const color = achieved ? "border-emerald-200 bg-emerald-50 text-emerald-800" : limited ? "border-orange-200 bg-orange-50 text-orange-800" : status === "continue" ? "border-indigo-200 bg-indigo-50 text-indigo-800" : "border-amber-200 bg-amber-50 text-amber-800";
+        const icon = achieved ? "ph-check-circle" : limited ? "ph-stop-circle" : status === "continue" ? "ph-target" : "ph-warning-circle";
+        const count = ev.maxIterations ? ` · ${Number(ev.iteration ?? 0)}/${Number(ev.maxIterations)}` : "";
+        return `<div class="mx-auto max-w-[90%] rounded-lg border px-3 py-2 text-xs ${color}"><div class="flex items-center gap-1.5 font-medium"><i class="ph ${icon}"></i> Goal check: ${esc(status)}${count}</div><div class="mt-1 leading-5 opacity-80">${esc(ev.reason ?? "")}</div>${ev.nextStep ? `<div class="mt-1 leading-5"><span class="font-medium">Next:</span> ${esc(ev.nextStep)}</div>` : ""}</div>`;
+    }
+
+
     if (ev.type === "attempt") {
         // A protocol-invalid candidate that was repaired before commit — never
         // part of the LLM transcript; kept for the audit trail.

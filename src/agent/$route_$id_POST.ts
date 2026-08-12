@@ -72,7 +72,10 @@ async function readSubmittedText(req: any): Promise<string> {
     if (ct.startsWith('application/x-www-form-urlencoded') || ct.startsWith('multipart/form-data')) {
         const fd = await req.formData();
         const direct = fd.get('text');
-        if (typeof direct === 'string' && direct.trim()) return direct.trim();
+        // Presence of the canonical chat field selects the single-field shape,
+        // even when it is blank. Falling through would serialize it as the
+        // literal message `text:`.
+        if (fd.has('text')) return typeof direct === 'string' ? direct.trim() : '';
         const lines: string[] = [];
         for (const [name, value] of (fd as any).entries()) {
             if (typeof value !== 'string') continue;

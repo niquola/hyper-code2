@@ -30,6 +30,9 @@ export default async function (
     const MAX_TURNS = 60;
     let turns = 0;
 
+    let goalIterations = 0;
+    let lastGoalFeedback = "";
+    const goalDeadline = Date.now() + 5 * 60_000;
     while (true) {
         if (++turns > MAX_TURNS) {
             await ctx.fns.session.appendErrorEvent({ id: agent.id, error: `run hit the ${MAX_TURNS}-turn cap — closing; send a message to continue` });
@@ -56,6 +59,7 @@ export default async function (
 
         const { text, usage, finishReason, toolCalls = [] } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
         const prose = String(text ?? '');
+        delete agent.scratchpad.activeGoalFeedback;
 
         // A reply cut off at the token limit can end mid-arguments: the JSON
         // never closed, so the call arrives as {__unparsed}. Executing that is
@@ -100,7 +104,58 @@ export default async function (
             await ctx.fns.session.syncAgentState({ agent });
         }
 
+            const goal = agent.goal;
         if (toolCalls.length === 0) {
+            if (goal?.enabled && goal?.statement) {
+                const check = await ctx.fns.agent.checkGoal({ agent, candidateAnswer: prose });
+                const feedback = `${check.reason}\n${check.nextStep ?? ""}`.trim();
+                const maxIterations = Math.max(1, Math.min(10, Number(goal.maxIterations ?? 3)));
+                const withinBudget = goalIterations < maxIterations;
+                const withinTime = Date.now() < goalDeadline;
+                const hasProgress = feedback !== lastGoalFeedback;
+                const canContinue = check.status === "continue" && withinBudget && withinTime && hasProgress;
+                const effectiveCheck = check.status === "continue" && !canContinue ? {
+                    status: "limit_reached",
+                    reason: !withinBudget
+                        ? `Goal continuation limit (${maxIterations}) reached. Last check: ${check.reason}`
+                        : !withinTime
+                        ? `Goal continuation deadline reached. Last check: ${check.reason}`
+                        : `Goal checker repeated the same feedback. Last check: ${check.reason}`,
+                    nextStep: check.nextStep,
+                    evidence: check.evidence,
+                } : check;
+                await ctx.fns.agent.recordGoalCheck({ agent, check: effectiveCheck });
+
+                const displayIteration = canContinue ? goalIterations + 1 : Math.min(goalIterations, maxIterations);
+                const label = effectiveCheck.status === "achieved"
+                    ? `Goal achieved: ${effectiveCheck.reason}`
+                    : effectiveCheck.status === "limit_reached"
+                    ? `Goal check limit reached: ${effectiveCheck.reason}`
+                    : `Goal check: ${effectiveCheck.status}. ${effectiveCheck.reason}${effectiveCheck.nextStep ? `\nNext: ${effectiveCheck.nextStep}` : ""}`;
+                const feedbackRow = await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                    role: "user",
+                    content: label,
+                    message_type: "goal_feedback",
+                    excluded_from_cursor: true,
+                } });
+                await ctx.fns.session.appendEvent({ id: agent.id, event: {
+                    type: "goal_check",
+                    status: effectiveCheck.status,
+                    reason: effectiveCheck.reason,
+                    nextStep: effectiveCheck.nextStep ?? null,
+                    iteration: displayIteration,
+                    maxIterations,
+                    messageIdx: feedbackRow.idx,
+                } });
+                await ctx.fns.session.syncAgentState({ agent });
+
+                if (canContinue) {
+                    goalIterations++;
+                    lastGoalFeedback = feedback;
+                    continue;
+                }
+            }
+
             delete agent.scratchpad.activeStatusLine;
             return { text: prose, usage, consumedUserIdx };
         }

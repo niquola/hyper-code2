@@ -23,5 +23,6 @@ export type Agent = {
     forkOffset?: number | null;
     sleepContext?: Record<string, any> | null;
     currentJobId?: string | null;
+    goal?: Record<string, any> | null;
     drainPromise?: Promise<any> | null;
 };

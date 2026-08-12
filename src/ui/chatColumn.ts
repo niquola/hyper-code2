@@ -75,9 +75,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
         ?.slice('Reflection nudge: '.length) ?? '';
     // header names THIS agent and holds its controls, nothing more.
     return `
-<header class="px-3 py-2 border-b border-gray-200 flex items-center gap-2 text-xs bg-gray-50">
+<header class="px-3 py-2 border-b border-gray-300 flex items-center gap-2 text-xs bg-gray-200 shadow-sm">
   ${ctx.fns.ui.modelLogo({ model: agent.model })}
-  <span class="font-mono font-medium text-gray-700">${esc(String(agent.title ?? id).slice(0, 40) || id)} <span class="text-gray-400">(${esc(id)})</span></span>
+  <span class="font-mono font-medium text-gray-800">${esc(String(agent.title ?? id).slice(0, 40) || id)} <span class="text-gray-400">(${esc(id)})</span></span>
   ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}
   ${statusBarHtml}
   <span class="ml-auto flex items-center gap-1">
@@ -111,7 +111,7 @@ ${agent.sleepContext?.active === true
       hx-trigger="submit"
       hx-swap="none"
       hx-on::after-request="this.elements.input.value=''; this.elements.input.focus();">
-  <textarea id="input" name="text" rows="2" placeholder="type — Enter to send"
+  <textarea id="input" name="text" rows="5" placeholder="type — Enter to send"
     class="flex-1 px-3 py-2 border border-gray-300 rounded font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
 </form>
 <div class="border-t border-gray-200 bg-gray-50 px-3 py-1.5 text-[11px] text-gray-400">

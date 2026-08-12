@@ -162,6 +162,22 @@ describe("agent.renderEventHtml", () => {
   });
 
 
+  test("renders goal check as a labelled message card", async () => {
+    const html = await renderEventHtml(ctx, { type: "goal_check", status: "continue", reason: "not verified", nextStep: "run tests", iteration: 1, maxIterations: 3 });
+    expect(html).toContain("Goal check: continue · 1/3");
+    expect(html).toContain("not verified");
+    expect(html).toContain("run tests");
+    expect(html).toContain("ph-target");
+  });
+
+
+  test("renders exhausted goal budget as a terminal orange card", async () => {
+    const html = await renderEventHtml(ctx, { type: "goal_check", status: "limit_reached", reason: "limit reached", iteration: 2, maxIterations: 2 });
+    expect(html).toContain("Goal check: limit_reached · 2/2");
+    expect(html).toContain("ph-stop-circle");
+    expect(html).toContain("border-orange-200");
+  });
+
 });
 
 describe("agent.renderEventHtml — errors", () => {
