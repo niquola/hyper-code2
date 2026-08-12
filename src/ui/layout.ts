@@ -113,6 +113,15 @@ ${opts.headExtra ?? ""}
     ${chat}
   </aside>
   ${metaPanel}
+  <!-- The workspace remains part of every response even when collapsed: route
+       content is semantic output (and HTMX's swap target), not disposable UI. -->
+  <section id="workspace-panel" class="shrink-0 flex flex-col border-l border-gray-300 bg-gray-100 transition-[width] duration-200 ${rightPanelCollapsed ? "w-9" : "min-w-0 flex-1"}" hx-boost="true" hx-target="#main" hx-swap="innerHTML" hx-push-url="true" aria-hidden="${rightPanelCollapsed ? "true" : "false"}">
+    <div class="flex h-10 shrink-0 items-center border-b border-gray-300 bg-gray-100 ${rightPanelCollapsed ? "justify-center px-0" : "min-w-0"}">
+      ${rightPanelCollapsed ? "" : `<div class="min-w-0 flex-1">${ctx.fns.ui.topbar({ path, agentId: currentId })}</div>`}
+      <button id="workspace-toggle" type="button" title="${rightPanelCollapsed ? "Show workspace" : "Hide workspace"}" aria-label="${rightPanelCollapsed ? "Show workspace" : "Hide workspace"}" aria-expanded="${rightPanelCollapsed ? "false" : "true"}" class="flex size-8 shrink-0 items-center justify-center rounded-md text-gray-400 transition hover:bg-white hover:text-gray-700"><i class="ph ${rightPanelCollapsed ? "ph-caret-left" : "ph-caret-right"}"></i></button>
+    </div>
+    <main id="main" hx-history-elt class="min-w-0 min-h-0 bg-white ${rightPanelCollapsed ? "hidden" : "flex flex-1 flex-col overflow-y-auto"}">${opts.main}</main>
+  </section>
   </div>
 </div>
 <div id="modal"></div>

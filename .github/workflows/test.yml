@@ -66,11 +66,13 @@ jobs:
       - name: Type-check
         run: bunx tsc --noEmit
 
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Install DuckDB CLI
         run: |
           curl -fsSL https://install.duckdb.org | sh
           echo "$HOME/.duckdb/cli/latest" >> "$GITHUB_PATH"
-
 
       - name: Run tests
         run: bun test --timeout 15000
