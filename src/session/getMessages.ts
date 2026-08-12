@@ -29,6 +29,7 @@ export default async function (
         if (r.tool_calls != null) m.tool_calls = typeof r.tool_calls === "string" ? JSON.parse(r.tool_calls) : r.tool_calls;
         if (r.tool_call_id != null) m.tool_call_id = r.tool_call_id;
         if (Number(r.excluded_from_llm ?? 0) !== 0) m.excluded_from_llm = true;
+        if (r.message_type != null && r.message_type !== "message") m.message_type = r.message_type;
         return m;
     });
 }

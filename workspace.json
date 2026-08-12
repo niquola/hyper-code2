@@ -1,0 +1,11 @@
+{
+  "modules": {
+    "zulip": {},
+    "youtube": {},
+    "gplaces": {},
+    "gcs": {},
+    "tts": {},
+    "telegram": {},
+    "gh": {}
+  }
+}

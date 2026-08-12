@@ -30,10 +30,14 @@ type ProviderConfig = {
     resolveApiKey?: (ctx: Context) => string | null | Promise<string | null>;
 };
 
-// Read a string-typed declared setting (module=llm, scope=global). Returns undefined
-// when no declaration / no DB row / no env var / no default.
+// Secret declarations contain either a provider reference (env://, op://) or a
+// legacy literal. Resolution is centralized in the secrets namespace.
+const declaredSecret = (key: string) => async (ctx: Context): Promise<string | null> => {
+    return ctx.fns.secrets.resolveSetting({ module: 'llm', scopeType: 'global', key });
+};
+
 const declaredString = (key: string) => async (ctx: Context): Promise<string | null> => {
-    const v = await ctx.fns?.settings?.getString?.({ module: 'llm', scopeType: 'global', key });
+    const v = await ctx.fns.settings.getString({ module: 'llm', scopeType: 'global', key });
     return (typeof v === 'string' && v) ? v : null;
 };
 
@@ -56,7 +60,7 @@ const PROVIDERS: Record<string, ProviderConfig> = {
         // Moonshot-AI OpenAI-compat (NOT the kimi.com/coding subscription — use kimi-coding: for that)
         api: "openai",
         resolveBaseUrl: () => "https://api.moonshot.ai/v1",
-        resolveApiKey: declaredString('kimiApiKey'),
+        resolveApiKey: declaredSecret('kimiApiKey'),
     },
     "kimi-coding": {
         // Kimi coding subscription — Anthropic-messages protocol.
@@ -90,7 +94,7 @@ const PROVIDERS: Record<string, ProviderConfig> = {
     anthropic: {
         api: "anthropic",
         resolveBaseUrl: () => "https://api.anthropic.com",
-        resolveApiKey: declaredString('anthropicApiKey'),
+        resolveApiKey: declaredSecret('anthropicApiKey'),
     },
     "claude-code": {
         // Anthropic subscription via the Claude Code CLI's keychain entry.
@@ -104,17 +108,17 @@ const PROVIDERS: Record<string, ProviderConfig> = {
     openai: {
         api: "openai",
         resolveBaseUrl: () => "https://api.openai.com/v1",
-        resolveApiKey: declaredString('openaiApiKey'),
+        resolveApiKey: declaredSecret('openaiApiKey'),
     },
     groq: {
         api: "openai",
         resolveBaseUrl: () => "https://api.groq.com/openai/v1",
-        resolveApiKey: declaredString('groqApiKey'),
+        resolveApiKey: declaredSecret('groqApiKey'),
     },
     openrouter: {
         api: "openai",
         resolveBaseUrl: () => "https://openrouter.ai/api/v1",
-        resolveApiKey: declaredString('openrouterApiKey'),
+        resolveApiKey: declaredSecret('openrouterApiKey'),
     },
     mock: {
         api: "mock",

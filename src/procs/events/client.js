@@ -4,6 +4,9 @@
 
   let es;
   let retryMs = 1000;
+  let lastTopics = '';
+  let greeted = false;
+  let planned = false;   // we closed the stream ourselves (the topic set changed)
 
   function emitDomEvent(data) {
     document.dispatchEvent(new CustomEvent('hyper-events', { detail: data }));
@@ -14,10 +17,62 @@
   // we ignore stale `hello` echoes when reconnecting to the same process.
   let serverStart = null;
 
+  // ── Live regions ────────────────────────────────────────────────────────
+  // The server says "refresh agent:eh"; every region carrying that topic asks
+  // for itself again. That is the whole protocol.
+  //
+  // There is deliberately NO client state — no cursors, no "what did I already
+  // ask for". State on two sides is state that can disagree, and it did: server
+  // sequence numbers reset on restart while tabs kept the old ones, so regions
+  // looked permanently stale and refetched forever. Nothing is remembered now,
+  // so a restart is not an event at all.
+  //
+  // A refresh cannot cause a refresh: signals come from writes, never from
+  // reads, and re-fetching a region publishes nothing. The loop is impossible by
+  // construction rather than prevented by a guard.
+  const dirty = new Set();
+  let flushTimer = null;
+
+  function regions() {
+    return document.querySelectorAll('[data-live-topic]');
+  }
+
+  function topics() {
+    return [...new Set([...regions()].map(el => el.dataset.liveTopic))].filter(Boolean).sort();
+  }
+
+  // Coalesce: twenty changes in a moment cost one request, not twenty.
+  function refreshSoon(topic) {
+    if (topic) dirty.add(topic);
+    if (flushTimer) return;
+    flushTimer = setTimeout(() => { flushTimer = null; flush(); }, 100);
+  }
+
+  function flush() {
+    if (document.visibilityState !== 'visible') return;   // a hidden tab catches up on return
+    const wanted = new Set(dirty);
+    dirty.clear();
+    if (!wanted.size) return;
+    for (const el of regions()) {
+      if (wanted.has(el.dataset.liveTopic) && window.htmx) window.htmx.trigger(el, 'hyper-live');
+    }
+  }
+
   function handle(data) {
     emitDomEvent(data);
     // Server restarted under us — reload to pick up the new process.
-    if (data?.type === 'hello') sawServer(data.serverStart);
+    if (data?.type === 'hello') {
+      sawServer(data.serverStart);
+      // Catching up is for connections that were LOST. The first greeting
+      // follows a page the server just rendered, and a planned reconnect
+      // follows a swap that just delivered fresh markup — in both cases every
+      // region on screen is already current, and refreshing them was four
+      // extra round trips per agent switch, buying nothing.
+      if (greeted && !planned) for (const topic of data.refresh ?? topics()) refreshSoon(topic);
+      greeted = true;
+      planned = false;
+    }
+    if (data?.topic) refreshSoon(data.topic);
     // `reload` is NOT handled here. emitDomEvent already dispatched it as a
     // `hyper-events` DOM event, and whoever wants to re-render says so with an
     // hx-trigger on that event — the same way #chat and #chat-who do. A page
@@ -42,7 +97,10 @@
   }
 
   function connect() {
-    es = new EventSource('/procs/events');   // the stream lives under the framework's own name
+    // Ask only for what this tab shows: server-side filtering beats waking up
+    // and deciding the event was not ours.
+    const want = topics();
+    es = new EventSource('/procs/events' + (want.length ? '?topics=' + encodeURIComponent(want.join(',')) : ''));
     es.onmessage = (e) => {
       try { handle(JSON.parse(e.data)); retryMs = 1000; } catch {}
     };
@@ -57,10 +115,37 @@
   // tab is allowed to run.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
+    // Back in view: refresh everything on screen, then reconnect if the stream
+    // died while the tab was hidden.
+    for (const topic of topics()) refreshSoon(topic);
     if (es && es.readyState !== 2 /* CLOSED */) return;
     retryMs = 1000;
     connect();
   });
 
+  // A region that arrives with a swap may follow a topic nobody was watching —
+  // resubscribe so the server knows, and check whether it is already behind.
+  // A swap may bring in a region on a topic nobody was watching, so the
+  // subscription is refreshed — debounced, because a swap storm must not become
+  // a reconnect storm.
+  //
+  // It deliberately does NOT sweep: a region that just arrived was rendered
+  // with the server's current cursor, so it is already up to date. Sweeping
+  // here made a request cause a swap, a swap cause a sweep, and a sweep cause a
+  // request — two hundred fetches a second, on an idle page.
+  let resubscribe = null;
+  document.body.addEventListener('htmx:afterSwap', () => {
+    clearTimeout(resubscribe);
+    resubscribe = setTimeout(() => {
+      const want = topics().join(',');
+      if (want === lastTopics) return;
+      lastTopics = want;
+      planned = true;
+      try { es.close(); } catch {}
+      connect();
+    }, 500);
+  });
+
+  lastTopics = topics().join(',');
   connect();
 })();

@@ -21,6 +21,7 @@ export type Agent = {
     statusLineEvery?: number;
     reflection?: Record<string, any> | null;
     forkOffset?: number | null;
+    sleepContext?: Record<string, any> | null;
     currentJobId?: string | null;
     drainPromise?: Promise<any> | null;
 };

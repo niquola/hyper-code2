@@ -17,6 +17,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
         statusLineEvery: Math.max(1, Number(row.status_line_every ?? 1)),
         reflection: row.reflection == null ? null : (typeof row.reflection === 'string' ? JSON.parse(row.reflection) : row.reflection),
         events: [],
+        sleepContext: row.sleep_context == null ? null : (typeof row.sleep_context === 'string' ? JSON.parse(row.sleep_context) : row.sleep_context),
         cursors: {},
         subscribers: new Set(),
         waiters: [],

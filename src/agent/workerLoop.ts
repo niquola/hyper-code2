@@ -212,6 +212,11 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         let drained = 0;
         await recoverStaleRuns(ctx, Date.now()).catch(() => undefined);
         while (true) {
+        const lastSleepScan = Number((ctx.state as any).lastSleepScan ?? 0);
+        if (Date.now() - lastSleepScan >= 60_000) {
+            (ctx.state as any).lastSleepScan = Date.now();
+            await ctx.fns.agent.sleepIdle({}).catch((error: any) => console.error('sleep scan failed:', error));
+        }
             const id = await claimOne(ctx, Date.now());
             if (!id) break;
             drained++;

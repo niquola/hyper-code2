@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 const ctx = await testCtx();
 
 test("lifecycle.order reads package.json proc.prod keys (http last)", async () => {
-    expect(await ctx.fns.procs.lifecycle.order({})).toEqual(["procs/log", "procs/db", "procs/migrate", "procs/repl", "agent", "procs/http"]);
+    expect(await ctx.fns.procs.lifecycle.order({})).toEqual(["procs/log", "procs/telemetry", "procs/db", "procs/migrate", "procs/repl", "agent", "procs/http"]);
 });
 
 // A host mounts modules it did not write. One of them failing to start — a

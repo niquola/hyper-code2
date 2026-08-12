@@ -1,6 +1,6 @@
 // Compact provider mark for chat headers. The full model id stays out of the
 // header's visual flow and is available through the native hover tooltip.
-export default function (ctx: Context, _session: Session | null, opts: { model?: string | null; active?: boolean }): string {
+export default function (ctx: Context, _session: Session | null, opts: { model?: string | null; active?: boolean; bare?: boolean }): string {
     const model = String(opts.model ?? '?');
     const esc = (value: string) => ctx.fns.procs.ui.escape({ text: value });
     const key = model.toLowerCase();
@@ -23,5 +23,8 @@ export default function (ctx: Context, _session: Session | null, opts: { model?:
         ? `<svg viewBox="0 0 24 24" class="size-3.5 fill-current${motion}" aria-hidden="true"><path d="${path}"></path></svg>`
         : `<i class="ph ph-cpu size-3.5 text-sm${motion}" aria-hidden="true"></i>`;
 
-    return `<span class="inline-flex size-6 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600" title="${esc(model)}" aria-label="Model: ${esc(model)}">${mark}</span>`;
+    const frame = opts.bare
+        ? 'inline-flex size-6 shrink-0 items-center justify-center text-gray-600'
+        : 'inline-flex size-6 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600';
+    return `<span class="${frame}" title="${esc(model)}" aria-label="Model: ${esc(model)}">${mark}</span>`;
 }

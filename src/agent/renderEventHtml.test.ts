@@ -24,18 +24,27 @@ const renderEventHtml = (c: any, event: any, opts: { agentId?: string } = {}) =>
 describe("agent.renderEventHtml", () => {
   test("renders a tool call as a card that names what it acted on", async () => {
     // The card says the verb and the SUBJECT — "eval 1 + 1", not "args 63c".
-    const evalHtml = await renderEventHtml(ctx, { type: "tool_call", name: "eval", argsHtml: "<pre>a</pre>", resultHtml: "<pre>b</pre>", result: "b", args: { code: "1 + 1" }, isError: false, ts: Date.now() });
-    expect(evalHtml).toContain("<details");
-    expect(evalHtml).toContain(">eval<");
+    const evalHtml = await renderEventHtml(ctx, { type: "tool_call", name: "eval", argsHtml: "<pre>a</pre>", resultHtml: "<pre>b</pre>", result: "b", args: { code: "1 + 1" }, isError: false, ts: Date.now(), idx: 7 }, { agentId: "a" });
+    expect(evalHtml).toContain('<button type="button"');
+    expect(evalHtml).not.toContain('<details');
+    expect(evalHtml).toContain('data-title="eval 1 + 1"');
     expect(evalHtml).toContain("1 + 1");
     expect(evalHtml).toContain("ph-brackets-curly");
-    expect(evalHtml).toContain("<pre>1 + 1</pre>");
-    expect(evalHtml).toContain("<pre>b</pre>");
+    expect(evalHtml).toContain('data-body="/agent/a/tool/7"');
+    expect(evalHtml).not.toContain('hx-get=');
+    expect(evalHtml).not.toContain('tool-label');
+    expect(evalHtml).not.toContain('tool-subject');
+    expect(evalHtml).not.toContain('tool-size');
+    expect(evalHtml).not.toContain('tool-status');
+    // Arguments and result alike are fetched from /agent/:id/tool/:idx only
+    // when the compact button is clicked.
+    expect(evalHtml).not.toContain("<pre>b</pre>");
 
     // A write names its path like everything else; it is a circle too.
-    const writeHtml = await renderEventHtml(ctx, { type: "tool_call", name: "write", argsHtml: "<pre>x</pre>", resultHtml: "<pre>ok</pre>", result: "ok", args: { path: "src/foo.ts", content: "x" }, isError: false, ts: Date.now() });
+    const writeHtml = await renderEventHtml(ctx, { type: "tool_call", name: "write", argsHtml: "<pre>x</pre>", resultHtml: "<pre>ok</pre>", result: "ok", args: { path: "src/foo.ts", content: "x" }, isError: false, ts: Date.now(), idx: 8 }, { agentId: "a" });
     expect(writeHtml).toContain("src/foo.ts");
-    expect(writeHtml).not.toContain("<details open");
+    expect(writeHtml).not.toContain("<details");
+    expect(writeHtml).toContain('data-body="/agent/a/tool/8"');
     expect(writeHtml).toContain("tool-tucked");
 
     expect(writeHtml).toContain("border-gray-500");
@@ -50,6 +59,7 @@ describe("agent.renderEventHtml", () => {
     const failed = await renderEventHtml(ctx, { type: "tool_call", name: "bash", args: { command: "false" }, result: "[exit 1]", argsHtml: "", resultHtml: "", isError: true, ts: Date.now() });
     expect(failed).toContain("tool-tucked");
     expect(failed).toContain("border-red-200");
+    expect(failed).toContain('data-error="1"');
 
     // An old call arrives already tucked, so reloading a long transcript does
     // not flash a hundred expanded cards.
@@ -57,7 +67,7 @@ describe("agent.renderEventHtml", () => {
     for (const ts of [Date.now(), Date.now() - 60_000]) {
         const c = await renderEventHtml(ctx, { type: "tool_call", name: "read", args: { path: "a.ts" }, result: "x", argsHtml: "", resultHtml: "", isError: false, ts });
         expect(c).toContain("tool-tucked");
-        expect(c).not.toContain("<details open");
+        expect(c).not.toContain("<details");
     }
 
     // Errors stay open too so the user sees the failure body without a click.

@@ -4,6 +4,8 @@ import getString from "../settings/getString";
 import get from "../settings/get";
 
 // Declarations from src/llm/$setting_*.ts. Tests don't go through the loader,
+import resolveSecret from "../secrets/resolve";
+import resolveSetting from "../secrets/resolveSetting";
 // so we seed ctx.state.settings.registry by hand. Keep in sync with the files.
 function makeRegistry() {
     return new Map<string, any>([
@@ -25,6 +27,10 @@ const mkCtx = (env: Record<string, string> = {}) => {
         settings: {
             getString: (opts: any) => getString(ctx, null, opts),
             get: (opts: any) => get(ctx, null, opts),
+        },
+        secrets: {
+            resolve: (opts: any) => resolveSecret(ctx, null, opts),
+            resolveSetting: (opts: any) => resolveSetting(ctx, null, opts),
         },
     };
     return ctx as unknown as Context;

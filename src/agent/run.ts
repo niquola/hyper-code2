@@ -126,6 +126,9 @@ export default async function (
         // Calls in one reply are independent by construction — no protocol lets
         // a later call read an earlier one's result — so a failure does not
         // invalidate its neighbours. Each is executed and its row filled in.
+        // A terminal payload is only acted on AFTER every tool-result row is
+        // filled, preserving the provider's native tool-call transcript.
+        let terminal: { type: 'html'; html: string; text: string } | undefined;
         for (const call of toolCalls) {
             const r = await ctx.fns.tools.call({ name: call.name, args: call.args, agent });
             const output = await ctx.fns.agent.stashResult({ agent, output: r.output, kind: call.name });
@@ -144,7 +147,28 @@ export default async function (
                 idx: pending[call.id]!,
                 content: r.content?.length ? [{ type: 'text', text: output }, ...r.content] : output,
             });
+            if (!r.isError && r.terminal?.type === 'html') terminal = r.terminal;
         }
         await ctx.fns.session.syncAgentState({ agent });
+
+        if (terminal) {
+            const text = terminal.text.trim() || 'HTML response';
+            const html = ctx.fns.agent.sanitizeHtmlBody({ html: terminal.html });
+            const final = await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                role: 'assistant',
+                content: text,
+            } });
+            const activeStatus = String(agent.scratchpad?.activeStatusLine ?? '');
+            const instructionIndicators = {
+                statusLine: activeStatus.split('\n').find((line: string) => line.startsWith('User status line: '))?.slice('User status line: '.length) || null,
+                reflectionNudge: activeStatus.split('\n').find((line: string) => line.startsWith('Reflection nudge: '))?.slice('Reflection nudge: '.length) || null,
+            };
+            await ctx.fns.session.appendAssistantEvent({ id: agent.id, payload: {
+                text, html, usage, messageIdx: final.idx, instructionIndicators,
+            } });
+            await ctx.fns.session.syncAgentState({ agent });
+            delete agent.scratchpad.activeStatusLine;
+            return { text, html, usage, consumedUserIdx, terminal: true };
+        }
     }
 }

@@ -80,7 +80,7 @@ describe('agent.run', () => {
         const agent = await ctx.fns.agent.start({ model: 'mock:test' });
 
         const wire = ctx.fns.agent.wireTools({ agent, api: 'anthropic' });
-        expect(wire.map((t: any) => t.name).sort()).toEqual(['bash', 'edit', 'eval', 'find', 'grep', 'read', 'write']);
+        expect(wire.map((t: any) => t.name).sort()).toEqual(['bash', 'edit', 'eval', 'find', 'grep', 'read', 'respondHtml', 'write']);
 
         const narrowed = ctx.fns.agent.wireTools({ agent: { ...agent, tools: ['read'] }, api: 'openai' });
         expect(narrowed).toHaveLength(1);
@@ -163,4 +163,29 @@ describe('transcript surgery keeps JSON pairs intact', () => {
         expect(ran).toBe(0);
         expect(msgs.some((m: any) => String(m.content).includes('cut off mid-call'))).toBe(true);
     });
+
+    test('respondHtml stores the tool result, sanitizes HTML, publishes one final answer, and skips another LLM turn', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await mkAgent(ctx, [
+            { toolCalls: [{ name: 'respondHtml', args: {
+                html: '<!DOCTYPE html><html><head><script>bad()</script></head><body><section><h2>Sessions</h2></section></body></html>',
+                text: 'Sessions list',
+            } }] },
+            { text: 'THIS TURN MUST NOT RUN' },
+        ]);
+
+        const result = await ctx.fns.agent.run({ agent, userText: 'show sessions' });
+        const msgs = await ctx.fns.session.getMessages({ id: agent.id });
+        expect(msgs.map((m: any) => m.role)).toEqual(['user', 'assistant', 'tool', 'assistant']);
+        expect(msgs[2]!.content).toContain('HTML response accepted');
+        expect(msgs[3]!.content).toBe('Sessions list');
+        expect(msgs.some((m: any) => String(m.content).includes('THIS TURN MUST NOT RUN'))).toBe(false);
+
+        const events = await ctx.fns.session.getEvents({ id: agent.id });
+        const final = events.filter((e: any) => e.type === 'assistant').at(-1);
+        expect(final.text).toBe('Sessions list');
+        expect(final.html).toBe('<section><h2>Sessions</h2></section>');
+        expect(result).toMatchObject({ terminal: true, text: 'Sessions list' });
+    });
+
 });

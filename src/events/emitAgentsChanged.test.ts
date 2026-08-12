@@ -7,6 +7,11 @@ describe("events.emitAgentsChanged", () => {
     const got: any[] = [];
     ctx.fns.procs.events.subscribe({ handler: (e: any) => got.push(e) });
     ctx.fns.events.emitAgentsChanged({ agentId: "a1", reason: "fork" });
-    expect(got).toEqual([{ type: "agents.changed", agentId: "a1", reason: "fork" }]);
+    // Addressed to the "agents" topic, and followed by the refresh that tells
+    // every tab showing the list to ask for it again.
+    expect(got).toEqual([
+        { type: "agents.changed", agentId: "a1", reason: "fork", topic: "agents" },
+        { type: "refresh", reason: "fork", topic: "agents" },
+    ]);
   });
 });

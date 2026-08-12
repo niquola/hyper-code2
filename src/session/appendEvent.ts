@@ -29,6 +29,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
     // showing this agent fetch the delta with a short hx-get instead of
     // holding a long-poll connection per tab.
     await ctx.fns.agent?.wakeWaiters?.({ agentId: id });
-    await ctx.fns.procs.events.emit({ event: { type: 'agent.event_appended', agentId: id, idx } });
+    // Topic-addressed: a tab watching another agent is not woken, and the seq
+    // this returns is the cursor a live region compares itself against.
+    ctx.fns.procs.events.refresh({ topic: `agent:${id}`, reason: "event" });
     return { idx };
 }

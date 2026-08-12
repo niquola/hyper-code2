@@ -1,7 +1,7 @@
 // The tab strip over the page pane: built-in pages + every mounted module that
 // ships a top-level page (procs modules metadata, uniskill-style). Boosted into
 // #main so the chat column survives every switch.
-export default function (ctx: Context, _session: Session | null, opts: { path: string }): string {
+export default function (ctx: Context, _session: Session | null, opts: { path: string; agentId?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const builtins: Array<[string, string]> = [
         ["/search", "search"],
@@ -16,9 +16,17 @@ export default function (ctx: Context, _session: Session | null, opts: { path: s
             .map((r: string) => [r.slice(4), m.label ?? m.name] as [string, string]))
         .filter(([href]: [string, string]) => !builtins.some(([b]) => b === href));
 
+    // Every tab keeps the agent in the path. Switching pages must never change
+    // who the chat on the left is talking to, and the only way to guarantee
+    // that is to carry it in the link rather than remember it somewhere.
+    const link = (href: string) => (opts.agentId ? `/a/${opts.agentId}${href}` : href);
+
     const tab = ([href, label]: [string, string]) => {
         const active = opts.path === href || opts.path.startsWith(href + "/");
-        return `<a href="${esc(href)}" ${ctx.fns.procs.ui.attr({ action: "open-tab", id: label })} class="px-3 py-1.5 text-xs rounded-t border-b-2 ${active
+        // hx-sync: clicking three tabs quickly must leave ONE request in
+        // flight, not three racing for the browser's six sockets. Without it a
+        // burst of clicks queues, and the whole UI looks frozen until it drains.
+        return `<a href="${esc(link(href))}" hx-sync="#main:replace" ${ctx.fns.procs.ui.attr({ action: "open-tab", id: label })} class="px-3 py-1.5 text-xs rounded-t border-b-2 ${active
             ? "border-gray-800 font-semibold text-gray-900"
             : "border-transparent text-gray-500 hover:text-gray-800"}">${esc(label)}</a>`;
     };

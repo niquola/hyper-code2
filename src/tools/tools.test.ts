@@ -16,7 +16,7 @@ describe('tools registry', () => {
         const ctx = await setup();
         const byName = Object.fromEntries(ctx.fns.tools.list({}).map((t: any) => [t.wireName, t]));
 
-        expect(Object.keys(byName).sort()).toEqual(['bash', 'edit', 'eval', 'find', 'grep', 'read', 'write']);
+        expect(Object.keys(byName).sort()).toEqual(['bash', 'edit', 'eval', 'find', 'grep', 'read', 'respondHtml', 'write']);
         expect(byName.read.fn).toBe('tools.read');
         expect(byName.read.marker).toBe('read');
         expect(byName.read.parameters.required).toEqual(['path']);
@@ -180,7 +180,7 @@ describe('structured edit', () => {
 });
 
 describe('bash options', () => {
-    test('cwd, env and timeout reach the shell', async () => {
+    test('cwd, env, secrets and timeout reach the shell', async () => {
         const ctx: any = await mkTestCtx();
 
         const pwd = await ctx.fns.tools.call({ name: 'bash', args: { command: 'pwd', cwd: '/tmp' } });
@@ -189,10 +189,55 @@ describe('bash options', () => {
         const env = await ctx.fns.tools.call({ name: 'bash', args: { command: 'echo "[$HYPER_TEST]"', env: { HYPER_TEST: 'yes' } } });
         expect(env.output).toContain('[yes]');
 
+        ctx.env.HYPER_SECRET_TEST = 'very-secret-value';
+        const secret = await ctx.fns.tools.call({ name: 'bash', args: {
+            command: 'printf "%s" "$TOKEN"',
+            env: { TOKEN: 'ordinary' },
+            secrets: { TOKEN: 'env://HYPER_SECRET_TEST' },
+        } });
+        expect(secret).toEqual({ output: '[REDACTED]', isError: false });
+        expect(secret.output).not.toContain('very-secret-value');
+
         const slow = await ctx.fns.tools.call({ name: 'bash', args: { command: 'echo starting; sleep 5', timeout: 1 } });
         expect(slow.isError).toBe(true);
         expect(slow.output).toContain('timed out after 1s');
         expect(slow.output).toContain('starting');
+    });
+
+    test('secrets reject literals, invalid env names and missing refs', async () => {
+        const ctx: any = await mkTestCtx();
+
+        const literal = await ctx.fns.tools.call({ name: 'bash', args: {
+            command: 'true', secrets: { TOKEN: 'plaintext' },
+        } });
+        expect(literal.isError).toBe(true);
+        expect(literal.output).toContain('must be an op:// or env:// reference');
+
+        const badName = await ctx.fns.tools.call({ name: 'bash', args: {
+            command: 'true', secrets: { 'BAD-NAME': 'env://TOKEN' },
+        } });
+        expect(badName.output).toContain('invalid secret environment variable');
+
+        const missing = await ctx.fns.tools.call({ name: 'bash', args: {
+            command: 'true', secrets: { TOKEN: 'env://HYPER_MISSING_SECRET' },
+        } });
+        expect(missing.output).toContain('could not be resolved');
+    });
+
+
+    test('redacts resolved secrets from both stdout and stderr', async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.env.HYPER_SECRET_TEST = 'secret-with-special-$-chars';
+
+        const result = await ctx.fns.tools.call({ name: 'bash', args: {
+            command: 'printf "%s" "$TOKEN"; printf "%s" "$TOKEN" >&2; exit 3',
+            secrets: { TOKEN: 'env://HYPER_SECRET_TEST' },
+        } });
+
+        expect(result.isError).toBe(true);
+        expect(result.output).toContain('stdout:\n[REDACTED]');
+        expect(result.output).toContain('[REDACTED]');
+        expect(result.output).not.toContain('secret-with-special-$-chars');
     });
 
     test('a relative cwd resolves against the agent workspace', async () => {

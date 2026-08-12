@@ -27,8 +27,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     }
     if (!agent) return `<div class="p-4 text-sm text-gray-400">agent ${esc(id)} not found</div>`;
 
-    const events = await ctx.fns.session.getEvents({ id });
     const maxIdx = await ctx.fns.session.getMaxEventIdx({ id });
+    const events = await ctx.fns.session.getEvents({ id, beforeIdx: maxIdx + 1, limit: 100 });
     const inheritedCount = agent.parentId
         ? (await ctx.fns.session.getFullMessages({ id })).length - (await ctx.fns.session.getMessages({ id })).length
         : 0;
@@ -39,7 +39,13 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const isStreaming = stateRow?.run_state === 'running' || !!stateRow?.next_run_at;
     const initJson = JSON.stringify({ agentId: id, inheritedCount, offset: maxIdx + 1, isStreaming }).replaceAll('<', '\\u003c');
 
-    const eventsHtml = await ctx.fns.agent.renderEventsHtml({ events, agentId: id });
+    const historyHead = events.length && Number(events[0]?.idx ?? 0) > 0
+        ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${Number(events[0].idx)}&limit=100" hx-trigger="load-older" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] text-gray-400 hover:text-gray-600">older messages</button></div>`
+        : '';
+    const activeSleepForView = ctx.fns.agent.getSleepGeneration({ sleepContext: agent.sleepContext, kind: "active" });
+    const eventsHtml = activeSleepForView
+        ? await ctx.fns.agent.renderSleepContextHtml({ sleepContext: agent.sleepContext!, events, agentId: id })
+        : await ctx.fns.agent.renderEventsHtml({ events, agentId: id });
     const lastEvent = ((await ctx.fns.procs.db.select({
         sql: 'SELECT payload FROM events WHERE agent_id = ? AND type = \'assistant\' ORDER BY idx DESC LIMIT 1',
         params: [id],
@@ -49,6 +55,30 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
 
     const reflectionHtml = ctx.fns.ui.reflectionDropdown({ agent });
     // Switching and creating agents live in the rail on the far left — the
+    const sleep = ctx.fns.agent.normalizeSleepContext({ sleepContext: agent.sleepContext });
+    const activeSleep = sleep ? ctx.fns.agent.getSleepGeneration({ sleepContext: sleep, kind: "active" }) : null;
+    const draftSleep = sleep ? ctx.fns.agent.getSleepGeneration({ sleepContext: sleep, kind: "draft" }) : null;
+    const shownSleep = draftSleep ?? activeSleep;
+    const sleepState = shownSleep?.state ?? {};
+    const fullCount = (await ctx.fns.session.getFullMessages({ id })).length;
+    const tailCount = activeSleep ? Math.max(0, fullCount - Number(activeSleep.sourceOffset ?? 0)) : 0;
+    const sleepControl = sleep && shownSleep ? `<details class="relative">
+      <summary class="cursor-pointer list-none px-1 ${sleep.mode === 'compact' ? 'text-indigo-600' : 'text-amber-500'} hover:text-indigo-700" title="${sleep.mode === 'compact' ? `compact v${sleep.activeRevision} · tail ${tailCount}` : `sleep draft v${sleep.draftRevision ?? shownSleep.revision}`}" ><i class="ph ${sleep.mode === 'compact' ? 'ph-moon-stars' : 'ph-moon'}"></i>${draftSleep ? `<span class="ml-0.5 rounded-full bg-amber-100 px-1 text-[9px] text-amber-700">v${draftSleep.revision}</span>` : ''}</summary>
+      <div class="absolute right-0 top-6 z-30 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white p-3 text-left shadow-xl">
+        <div class="font-medium text-gray-800">${sleep.mode === 'compact' ? `Active v${sleep.activeRevision} · tail ${tailCount}` : 'Full history active'}${draftSleep ? ` · draft v${draftSleep.revision} ready` : ''}</div>
+        <div class="mt-2 text-gray-600">${esc(sleepState.situation ?? 'No situation summary')}</div>
+        ${sleepState.nextStep ? `<div class="mt-2 text-gray-500"><span class="font-medium">Next:</span> ${esc(sleepState.nextStep)}</div>` : ''}
+        ${(sleepState.openWork ?? []).length ? `<div class="mt-3 border-t border-gray-100 pt-2 font-medium text-gray-700">Open work</div><ul class="mt-1 list-disc space-y-1 pl-4 text-gray-500">${sleepState.openWork.slice(0, 5).map((x: any) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+        <div class="mt-3 flex flex-wrap gap-2">${draftSleep ? `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="activate"><input type="hidden" name="revision" value="${draftSleep.revision}"><button class="rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs text-indigo-700">Use draft v${draftSleep.revision}</button></form>` : ''}${sleep.mode === 'compact' ? `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="deactivate"><button class="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600">Show full history</button></form>` : ''}<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="prepare"><button class="rounded border border-gray-200 px-2 py-1 text-xs text-gray-500">Build next draft</button></form></div>
+      </div>
+    </details>` : `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none" class="inline"><input type="hidden" name="action" value="prepare"><button title="prepare compact sleep context" class="px-1 text-gray-400 hover:text-indigo-700"><i class="ph ph-bed"></i></button></form>`;
+    // Use the same turn/TTL calculation as the LLM request builder, so the UI
+    // shows exactly the reflection instruction that is currently injected.
+    const activeInstructions = await ctx.fns.agent.statusLineForTurn({ agent });
+    const reflectionNudge = activeInstructions
+        .split('\n')
+        .find((line: string) => line.startsWith('Reflection nudge: '))
+        ?.slice('Reflection nudge: '.length) ?? '';
     // header names THIS agent and holds its controls, nothing more.
     return `
 <header class="px-3 py-2 border-b border-gray-200 flex items-center gap-2 text-xs bg-gray-50">
@@ -58,7 +88,13 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
   ${statusBarHtml}
   <span class="ml-auto flex items-center gap-1">
   ${reflectionHtml}
-    <a href="/agent/${encodeURIComponent(id)}" title="agent page" class="px-1 text-gray-400 hover:text-gray-700">ⓘ</a>
+    ${sleepControl}
+
+    <form method="POST" action="/agent/${encodeURIComponent(id)}/fork" hx-boost="false" class="inline">
+      <button type="submit" title="fork and open" aria-label="Fork and open agent" ${ctx.fns.procs.ui.attr({ action: "fork", entity: "agent", id })} class="px-1 text-gray-400 transition hover:text-indigo-600"><i class="ph ph-git-fork" aria-hidden="true"></i></button>
+    </form>
+
+    <a href="/agent/${encodeURIComponent(id)}" hx-boost="false" title="agent page" class="px-1 text-gray-400 hover:text-gray-700">ⓘ</a>
     <form method="POST" action="/agent/${encodeURIComponent(id)}/archive" hx-boost="false" class="inline">
       <button title="archive — hides from the rail, keeps the transcript" ${ctx.fns.procs.ui.attr({ action: "archive", entity: "agent", id })}
         class="px-1 text-gray-400 hover:text-gray-700"><i class="ph ph-archive"></i></button>
@@ -69,8 +105,10 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     </form>
   </span>
 </header>
-<div id="messages" class="flex-1 overflow-y-auto px-3 py-3 space-y-2">${eventsHtml}
-<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}" hx-trigger="load" hx-swap="outerHTML"></div>
+<div id="messages" class="flex-1 overflow-y-auto px-3 py-3 space-y-2">${historyHead}${eventsHtml}
+${agent.sleepContext?.active === true
+  ? `<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}&compact=1" hx-trigger="load" hx-swap="outerHTML"></div>`
+  : `<div id="msg-tail" hx-get="/agent/${encodeURIComponent(id)}/events.html?offset=${maxIdx + 1}" hx-trigger="load" hx-swap="outerHTML"></div>`}
 </div>
 <form id="form"
       ${ctx.fns.procs.ui.attr({ form: "chat" })}
@@ -97,5 +135,6 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     </form>
   </details>
 </div>
-${ctx.fns.ui.script({ target: 'agent.chat' })}`;
+  ${reflectionNudge ? `<div class="flex items-start gap-2 border-t border-violet-100 bg-violet-50/60 px-3 py-2 text-[11px] leading-4 text-violet-700" title="Active reflection instruction"><i class="ph ph-brain mt-0.5 shrink-0" aria-hidden="true"></i><span class="min-w-0 flex-1">${esc(reflectionNudge)}</span><button hx-post="/agent/${encodeURIComponent(id)}/reflection-nudge/delete" hx-target="closest div" hx-swap="outerHTML" title="Dismiss reflection nudge" aria-label="Dismiss reflection nudge" class="-mr-1 -mt-1 inline-flex size-6 shrink-0 items-center justify-center rounded text-violet-400 hover:bg-violet-100 hover:text-violet-700"><i class="ph ph-x"></i></button></div>` : ''}
+`;
 }

@@ -20,8 +20,8 @@ export default async function (
     for (let attempt = 0; ; attempt++) {
         try {
             const res = await ctx.fns.procs.db.run({
-        sql: `INSERT INTO messages (agent_id, idx, role, content, tool_calls, tool_call_id, ts, excluded_from_llm, excluded_from_cursor)
-              SELECT ?, COALESCE(MAX(idx), -1) + 1, ?, ?, ?, ?, ?, ?, ? FROM messages WHERE agent_id = ?
+        sql: `INSERT INTO messages (agent_id, idx, role, content, tool_calls, tool_call_id, message_type, ts, excluded_from_llm, excluded_from_cursor)
+              SELECT ?, COALESCE(MAX(idx), -1) + 1, ?, ?, ?, ?, ?, ?, ?, ? FROM messages WHERE agent_id = ?
               RETURNING idx`,
         params: [
             id,
@@ -29,6 +29,10 @@ export default async function (
             typeof message.content === "string" ? message.content : (message.content == null ? null : JSON.stringify(message.content)),
             message.tool_calls?.length ? JSON.stringify(message.tool_calls) : null,
             message.tool_call_id ?? null,
+            // Order follows the column list above — message_type sits BETWEEN
+            // tool_call_id and ts. Swapping the two put the string "message"
+            // into the bigint ts slot and every append 500'd.
+            message.message_type ?? "message",
             ts,
             message.excluded_from_llm ? 1 : 0,
             message.excluded_from_cursor ? 1 : 0,

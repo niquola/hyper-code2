@@ -26,6 +26,7 @@ export default async function (
         statusLineEvery: 1,
         reflection: null,
         forkOffset: opts.forkOffset ?? null,
+        sleepContext: null,
         currentJobId: null,
         drainPromise: null,
     };

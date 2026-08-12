@@ -22,6 +22,11 @@ parameters:
       description: "Extra environment variables, merged over the server's own environment."
       additionalProperties:
         type: string
+    secrets:
+      type: object
+      description: "Secret environment variables. Values must be op:// or env:// references; resolved values are redacted from output."
+      additionalProperties:
+        type: string
     timeout:
       type: integer
       description: "Seconds before the command is killed. No timeout by default."
@@ -31,5 +36,20 @@ parameters:
 ### `§bash`
 
 - Runs the body as a shell script via `bash -c`, in the workspace directory.
+- `secrets` maps environment variable names to `op://` or `env://` references. Values are injected only into the child process and redacted from captured output.
 - stdout comes back as the result; a non-zero exit returns `[exit N]` with stderr.
-- The marker form takes no options — use the `bash` tool call for cwd / env / timeout.
+
+Example:
+
+```ts
+await ctx.fns.tools.bash({
+  command: 'curl -H "Authorization: Bearer $TOKEN" https://api.example.com/me',
+  secrets: { TOKEN: 'op://vault/item/field' },
+  timeout: 30,
+});
+```
+
+The model-visible command contains only `$TOKEN` and the secret reference. The resolved value exists in the child process environment and occurrences in captured stdout/stderr are replaced with `[REDACTED]`. `secrets` overrides variables with the same name from `env`.
+
+This prevents accidental transcript leakage, not malicious exfiltration: the invoked program can still read the environment and send it over the network. Do not use `set -x`, place secret values in command arguments, or print the environment.
+- The marker form takes no options — use the `bash` tool call for cwd / env / secrets / timeout.

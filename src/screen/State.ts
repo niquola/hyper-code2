@@ -7,4 +7,8 @@ export type State = {
     pending: Map<number, { resolve: (v: any) => void; reject: (e: any) => void; timer?: any }>;
     // The last thing an open tab said about itself, unasked — see `page.where`.
     here?: { url: string; title: string; page: string | null; at: string };
+    ui?: {
+        url: string; title: string; page: string | null; agentId: string | null;
+        viewport: { width: number; height: number } | null; at: string;
+    };
 };

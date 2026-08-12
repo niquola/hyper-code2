@@ -1,14 +1,17 @@
 // Minimal chat client. Everything else is htmx:
-//   - new events arrive via #msg-tail long-poll on /agent/:id/events.html
+//   - new events arrive on the shared stream (see procs/events/client.js)
 //   - form submit posts via hx-post; ack is 204
 //   - delete buttons are htmx-confirmed posts (see renderEventHtml.deleteControls)
-//   - status bar polls /agent/:id/statusbar
-//   - sidebar polls itself every 10s via x-hyper-fragment header
-const { agentId, inheritedCount = 0 } = window.__init;
-
-const messagesEl = document.getElementById('messages');
-const form = document.getElementById('form');
-const input = document.getElementById('input');
+//
+// Switching agents swaps the frame instead of reloading the page, so this file
+// must be RE-ENTRANT: everything below is bound per chat panel and re-bound
+// when a new one arrives. Binding once at load meant the second agent got a
+// client still holding the first agent's elements.
+let agentId = '';
+let inheritedCount = 0;
+let messagesEl = null;
+let form = null;
+let input = null;
 
 const STICKY_BOTTOM_PX = 48;
 let shouldStickToBottom = true;
@@ -25,51 +28,118 @@ function updateStickiness() {
     shouldStickToBottom = isNearBottom();
 }
 
-messagesEl.addEventListener('scroll', updateStickiness, { passive: true });
+let historyHeight = null;
+let loadingOlder = false;
 
-// Initial scroll-to-bottom + after message-list swaps when user was already near bottom.
+function loadOlder() {
+    const head = document.getElementById('msg-head');
+    if (!head || loadingOlder) return;
+    loadingOlder = true;
+    historyHeight = messagesEl.scrollHeight;
+    htmx.trigger(head, 'load-older');
+}
+
+function onMessagesScroll() {
+    updateStickiness();
+    if (messagesEl.scrollTop < 80) loadOlder();
+}
+
+// Body-level listeners are bound ONCE — they look elements up through the
+// module variables, which initChat re-points at the current panel.
 document.body.addEventListener('htmx:beforeSwap', (e) => {
+    if (!messagesEl) return;
     const target = e.detail?.target;
     if (target === messagesEl || target?.id === 'msg-tail') {
         updateStickiness();
     }
+    // Loading OLDER history grows the list upwards: remember the height now so
+    // the scroll position can be corrected once the rows land.
+    if (target?.id === 'msg-head') {
+        historyHeight = messagesEl.scrollHeight;
+        loadingOlder = true;
+    }
 });
 
 document.body.addEventListener('htmx:afterSwap', (e) => {
+    if (!messagesEl) return;
     const target = e.detail?.target;
     if ((target === messagesEl || target?.id === 'msg-tail') && shouldStickToBottom) {
         scrollBottom();
     }
-});
-
-requestAnimationFrame(() => {
-    scrollBottom();
-    updateStickiness();
-});
-
-if (inheritedCount > 0) {
-    const note = document.createElement('div');
-    note.className = 'bg-gray-50 text-gray-500 italic rounded-lg px-4 py-3';
-    note.textContent = 'inherited context: ' + inheritedCount + ' msgs';
-    messagesEl.prepend(note);
-}
-
-// Enter (without Shift) submits the form.
-input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        form.requestSubmit();
+    // Keep the reader where they were: add exactly the height the new rows took.
+    if (target?.id === 'msg-head') {
+        if (historyHeight != null) messagesEl.scrollTop += messagesEl.scrollHeight - historyHeight;
+        historyHeight = null;
+        loadingOlder = false;
     }
 });
-input.focus();
 
-// ── Tool cards age out ────────────────────────────────────────────────────
-// A call is loud exactly while it is news: open while it happens, one line for
-// a few seconds more, then tucked into an icon that joins its neighbours in a
-// tray. Touch a card and it stops aging — a human took an interest, so the
-// timers have no business overruling that.
-const OPEN_MS = 5_000;
-const TUCK_MS = 20_000;
+// Bind to the chat panel that is on screen right now. Called at load and
+// again after a frame swap, because switching agents no longer reloads the
+// page — the panel is replaced under a client that is already running.
+function initChat() {
+    const panel = document.getElementById('chat-panel');
+    messagesEl = document.getElementById('messages');
+    form = document.getElementById('form');
+    input = document.getElementById('input');
+    if (!panel || !messagesEl || !form || !input) return;
+
+    // The swapped markup carries a fresh window.__init; the panel's own
+    // attribute is the fallback, so the client can never be one agent behind.
+    agentId = (window.__init && window.__init.agentId) || panel.dataset.agentId || '';
+    inheritedCount = (window.__init && window.__init.inheritedCount) || 0;
+
+    if (messagesEl.dataset.bound !== '1') {
+        messagesEl.dataset.bound = '1';
+        messagesEl.addEventListener('scroll', onMessagesScroll, { passive: true });
+    }
+
+    shouldStickToBottom = true;
+    historyHeight = null;
+    loadingOlder = false;
+
+    requestAnimationFrame(() => {
+        scrollBottom();
+        updateStickiness();
+    });
+
+    if (inheritedCount > 0 && !messagesEl.querySelector('[data-inherited]')) {
+        const note = document.createElement('div');
+        note.className = 'bg-gray-50 text-gray-500 italic rounded-lg px-4 py-3';
+        note.dataset.inherited = '1';
+        note.textContent = 'inherited context: ' + inheritedCount + ' msgs';
+        messagesEl.prepend(note);
+    }
+
+    if (input.dataset.bound !== '1') {
+        input.dataset.bound = '1';
+        // Enter (without Shift) submits the form.
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('form')?.requestSubmit();
+            }
+        });
+    }
+    input.focus();
+}
+
+// Re-executing this file (it used to ship inside the swapped panel) must not
+// bind a second copy of every listener: the later runs only re-point at the
+// panel on screen.
+if (window.__hyperChatInstalled) { initChat(); }
+else {
+    window.__hyperChatInstalled = true;
+    initChat();
+}
+// A frame swap brings a whole new chat panel — re-point at it.
+document.body.addEventListener('htmx:afterSwap', (e) => {
+    const t = e.detail?.target;
+    if (t && (t.id === 'chat-panel' || t.id === 'agent-view' || t.id === 'frame' || t.querySelector?.('#chat-panel'))) initChat();
+});
+
+// ── Compact lazy tool links ────────────────────────────────────────────────
+const toolBodyCache = new Map();
 
 function toolTray(card) {
     const prev = card.previousElementSibling;
@@ -80,66 +150,48 @@ function toolTray(card) {
     return tray;
 }
 
-function tuck(card) {
-    if (card.dataset.pinned) return;
-    card.open = false;
-    card.classList.add('tool-tucked');
-    moveToTray(card);
-}
-
-// A card that arrived already tucked (rendered old by the server) still has to
-// join the tray — otherwise a reloaded transcript shows a column of lone icons
-// instead of a row.
 function moveToTray(card) {
-    if (card.parentElement && card.parentElement.classList.contains('tool-tray')) return;
+    if (card.parentElement?.classList.contains('tool-tray')) return;
     const tray = toolTray(card);
     tray.appendChild(card);
-    // A tray that ends up next to another tray is one tray.
     const next = tray.nextElementSibling;
-    if (next && next.classList.contains('tool-tray')) {
+    if (next?.classList.contains('tool-tray')) {
         while (next.firstChild) tray.appendChild(next.firstChild);
         next.remove();
     }
 }
 
-function ageTool(card) {
-    if (card.dataset.aging) return;
-    card.dataset.aging = '1';
-    const born = Number(card.dataset.ts) || Date.now();
-    const since = Date.now() - born;
-
-    card.addEventListener('click', () => { card.dataset.pinned = '1'; }, { once: true });
-    // A tucked card opens as a real centered dialog: immediately expanded,
-    // scrollable, and explicitly dismissible. Tool detail is something a human
-    // asked to inspect, not a transient notification in the corner.
-    card.addEventListener('click', (e) => {
-        if (!card.classList.contains('tool-tucked')) return;
-        e.preventDefault();
-        const label = card.querySelector('.tool-label')?.textContent ?? 'tool';
-        const subject = card.querySelector('.tool-subject')?.textContent ?? '';
-        const args = card.querySelector('.tool-code')?.innerHTML ?? '';
-        const result = card.querySelector('.tool-result')?.innerHTML ?? '';
+function bindTool(card) {
+    if (card.dataset.bound === '1') return;
+    card.dataset.bound = '1';
+    card.addEventListener('click', async () => {
+        const title = card.dataset.title || card.title || card.dataset.tool || 'tool';
+        const url = card.dataset.body;
+        const isError = card.dataset.error === '1';
+        let bodyHtml = url ? toolBodyCache.get(url) : '';
+        if (!bodyHtml && url) {
+            openToolDialog({ title, bodyHtml: '<div class="text-sm text-gray-400">loading…</div>', isError });
+            try {
+                const response = await fetch(url);
+                bodyHtml = response.ok ? await response.text() : '';
+            } catch { bodyHtml = ''; }
+            if (bodyHtml) toolBodyCache.set(url, bodyHtml);
+        }
         openToolDialog({
-            title: (label + ' ' + subject).trim(),
-            bodyHtml: args + result || '<div class="text-sm text-gray-400">No output</div>',
-            isError: card.classList.contains('bg-red-50/40'),
+            title,
+            bodyHtml: bodyHtml || '<div class="text-sm text-gray-400">No output</div>',
+            isError,
         });
     });
-
-    if (card.dataset.pinned) return;
-    if (card.classList.contains('tool-tucked')) { moveToTray(card); return; }
-    if (since < OPEN_MS) setTimeout(() => { if (!card.dataset.pinned) card.open = false; }, OPEN_MS - since);
-    else card.open = false;
-    if (since < TUCK_MS) setTimeout(() => tuck(card), TUCK_MS - since);
-    else tuck(card);
+    moveToTray(card);
 }
 
-function ageTools(root) {
-    (root || document).querySelectorAll('.tool[data-ts]').forEach(ageTool);
+function bindTools(root) {
+    (root || document).querySelectorAll('.tool[data-tool]').forEach(bindTool);
 }
 
-ageTools();
-document.body.addEventListener('htmx:afterSwap', () => ageTools());
+bindTools();
+document.body.addEventListener('htmx:afterSwap', () => bindTools(document.getElementById('messages') || document));
 
 
 function openToolDialog({ title, bodyHtml, isError }) {

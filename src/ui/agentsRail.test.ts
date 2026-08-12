@@ -18,6 +18,10 @@ test("renders delegated agents nested below their parent", async () => {
     const html = await render(ctx, null, { currentId: "root" });
     expect(html.indexOf("(root)")).toBeLessThan(html.indexOf("(child)"));
     expect(html.indexOf("(child)")).toBeLessThan(html.indexOf("(grand)"));
+    expect(html).toContain("2 subagents");
+    expect(html).toContain("1 active");
+    expect(html).toContain("<details");
+    expect(html).not.toMatch(/<details[^>]*open/);
     expect(html.match(/title="subagent of/g)?.length).toBe(2);
     expect(html).toContain('title="subagent of');
     expect(html).not.toContain("border-indigo-100");
@@ -26,4 +30,16 @@ test("renders delegated agents nested below their parent", async () => {
     expect(html).toContain('title="kimi:kimi-k3" class="animate-spin"');
     expect(html).not.toContain('rounded-full bg-emerald-500 animate-pulse');
     expect(html).not.toContain('rounded-full bg-gray-300');
+});
+
+
+test("opens the folded subagent group when current agent is inside it", async () => {
+    const agents = [
+        { id: "root", model: "m", title: "main", workspaceDir: "/repo", runState: "idle", unread: 0, archivedAt: null, parentId: null },
+        { id: "child", model: "m", title: "child", workspaceDir: "/repo", runState: "idle", unread: 0, archivedAt: null, parentId: "root" },
+    ];
+    const ctx = { fns: { session: { list: async () => agents }, procs: { ui: { escape: ({ text }: any) => String(text), attr } }, ui: { modelLogo: () => "logo" } } } as any;
+    const html = await render(ctx, null, { currentId: "child" });
+    expect(html).toMatch(/<details[^>]*open/);
+    expect(html).toContain("1 subagent");
 });

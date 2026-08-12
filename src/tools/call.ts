@@ -13,7 +13,7 @@ export default async function (
     ctx: Context,
     session: Session | null,
     opts: { name: string; args?: any; agent?: types.agent.Agent },
-): Promise<{ output: string; content?: types.tools.Content[]; isError: boolean }> {
+): Promise<{ output: string; content?: types.tools.Content[]; isError: boolean; terminal?: { type: 'html'; html: string; text: string } }> {
     const name = String(opts.name ?? "").trim();
     const all = ctx.fns.tools.list({});
     const tool = all.find((t: any) => t.wireName === name || t.name === name || t.key === name);
@@ -58,24 +58,36 @@ export default async function (
 
     let output = "";
     let content: types.tools.Content[] | undefined;
+    let terminal: { type: 'html'; html: string; text: string } | undefined;
     let isError = false;
+    const attrs: Record<string, any> = { "tool.name": tool.wireName, "agent.id": opts.agent?.id };
     try {
-        const r = await fn(args);
+        const telemetry: any = (callCtx.fns.procs as any).telemetry;
+        const r: any = await (typeof telemetry?.safeSpan === "function"
+            ? telemetry.safeSpan({ name: "tool.execute", attrs, fn: () => fn(args) })
+            : fn(args));
         if (typeof r === "string") output = r;
         else {
             output = String(r?.output ?? "");
             if (Array.isArray(r?.content)) content = r.content;
             isError = r?.isError === true;
+            if (r?.terminal?.type === 'html') terminal = {
+                type: 'html',
+                html: String(r.terminal.html ?? ''),
+                text: String(r.terminal.text ?? ''),
+            };
         }
     } catch (e: any) {
         output = "Error: " + (e?.message ?? String(e));
         isError = true;
     }
+    attrs["tool.error"] = isError;
+    attrs["tool.output_bytes"] = Buffer.byteLength(output);
 
     // Postgres text refuses NUL bytes — reading a binary, or bash output that
     // carries one, must not kill the whole run at the INSERT (it did once:
     // agent cm). Replace with U+FFFD.
     output = output.replaceAll("\u0000", "\uFFFD");
 
-    return { output, ...(content?.length ? { content } : {}), isError };
+    return { output, ...(content?.length ? { content } : {}), ...(terminal ? { terminal } : {}), isError };
 }

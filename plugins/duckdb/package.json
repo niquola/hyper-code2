@@ -1,0 +1,12 @@
+{
+  "name": "duckdb",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "DuckDB",
+    "icon": "ph-database",
+    "optional": true,
+    "description": "Query NDJSON/JSON/CSV/Parquet and local DuckDB databases with SQL using the DuckDB CLI."
+  }
+}

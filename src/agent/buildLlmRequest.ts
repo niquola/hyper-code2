@@ -24,9 +24,19 @@ export default async function (
     const fullPrompt = await ctx.fns.agent.fullSystemPrompt({ agent });
     const statusLine = String(agent.scratchpad?.activeStatusLine ?? "").trim();
     const statusBlock = statusLine ? `\n\n## Current status line\n\n${statusLine}` : "";
-    const raw = agent.parentId
+    const fullHistory = agent.parentId
         ? await ctx.fns.session.getFullMessages({ id: agent.id })
         : (agent.messages ?? []);
+    const sleep = ctx.fns.agent.normalizeSleepContext({ sleepContext: agent.sleepContext });
+    const generation = sleep?.mode === "compact"
+        ? ctx.fns.agent.getSleepGeneration({ sleepContext: sleep, kind: "active" })
+        : null;
+    const sleepMessages = generation?.contextAgentId
+        ? await ctx.fns.session.getMessages({ id: String(generation.contextAgentId) })
+        : generation?.contextMessages;
+    const raw = generation && sleepMessages?.length && Number(generation.sourceOffset) <= fullHistory.length
+        ? [...sleepMessages, ...fullHistory.slice(Math.max(0, Number(generation.tailStart ?? generation.sourceOffset)))]
+        : fullHistory;
 
     // A call with no result is a transcript every provider refuses, and a run
     // that dies between the two writes leaves one behind. Repairing here — on

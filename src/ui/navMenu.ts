@@ -29,7 +29,6 @@ export default function (_ctx: Context, _session: Session | null, _opts?: {}): s
     if (e.detail?.target?.id === "nav-results") { sel = 0; mark(); }
   });
   window.addEventListener("keydown", (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); window.__navOpen(); return; }
     if (overlay().classList.contains("hidden")) return;
     if (e.key === "Escape") { window.__navClose(); return; }
     if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(sel + 1, rows().length - 1); mark(); }

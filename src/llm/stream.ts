@@ -7,8 +7,32 @@ export default async function (
 ) {
     const { agent } = opts;
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
-    if (ep.api === "mock") return ctx.fns.llm.streamMock(opts);
-    if (ep.api === "anthropic") return ctx.fns.llm.streamAnthropic(opts);
-    if (ep.api === "responses") return ctx.fns.llm.streamCodex(opts);
-    return ctx.fns.llm.streamOpenAI(opts);
+    const started = performance.now();
+    let firstEventMs: number | undefined;
+    const onEvent = (ev: any) => {
+        firstEventMs ??= Math.round((performance.now() - started) * 100) / 100;
+        opts.onEvent?.(ev);
+    };
+    const attrs: Record<string, any> = {
+        "llm.provider": ep.provider,
+        "llm.model": ep.modelId,
+        "agent.id": agent.id,
+    };
+    const request = async () => {
+        const wireOpts = { ...opts, onEvent };
+        let result: any;
+        if (ep.api === "mock") result = await ctx.fns.llm.streamMock(wireOpts);
+        else if (ep.api === "anthropic") result = await ctx.fns.llm.streamAnthropic(wireOpts);
+        else if (ep.api === "responses") result = await ctx.fns.llm.streamCodex(wireOpts);
+        else result = await ctx.fns.llm.streamOpenAI(wireOpts);
+        attrs["llm.ttft_ms"] = firstEventMs ?? null;
+        attrs["llm.finish_reason"] = result?.finishReason ?? null;
+        attrs["llm.prompt_tokens"] = result?.usage?.prompt_tokens ?? result?.usage?.input_tokens ?? null;
+        attrs["llm.completion_tokens"] = result?.usage?.completion_tokens ?? result?.usage?.output_tokens ?? null;
+        return result;
+    };
+    const telemetry: any = (ctx.fns.procs as any).telemetry;
+    return await (typeof telemetry?.safeSpan === "function"
+        ? telemetry.safeSpan({ name: "llm.request", attrs, fn: request })
+        : request());
 }

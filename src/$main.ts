@@ -21,9 +21,8 @@ function wrapFns(ctx: any, node: any): any {
     return new Proxy(node, {
         get(target, prop) {
             const v = target[prop as any];
-            // Called with `this` = the function itself, the way Clojure hands a
-            // var its own metadata: inside a (non-arrow) function `this.meta`
-            // says what file it came from and what module it belongs to.
+            // Keep procedure dispatch transparent. Telemetry is deliberately
+            // installed by hand only at coarse, known-cost boundaries.
             if (typeof v === 'function') return (opts?: any) => v.call(v, ctx, ctx.session, opts);
             if (v && typeof v === 'object') return wrapFns(ctx, v);
             return v;

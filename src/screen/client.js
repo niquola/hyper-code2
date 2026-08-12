@@ -13,6 +13,7 @@
 // watching sees what happened instead of the page changing under them.
 
 (() => {
+  let lastViewport = null;
     if (window.page) return;
 
     const sel = (name, value) => "[data-" + name + "=" + JSON.stringify(String(value)) + "]";
@@ -732,13 +733,23 @@
             const at = location.pathname + location.search;
             if (at === window.page._here) return;
             window.page._here = at;
+            // Where this tab is no longer needs saying: the server records it
+            // from the page requests the tab already makes (src/$middleware.ts).
+            // Only what a request CANNOT show is still reported — the viewport,
+            // and only when it changed, so idle tabs stay silent.
             try {
-                navigator.sendBeacon?.("/screen/here", new Blob([JSON.stringify({
+                const size = window.innerWidth + "x" + window.innerHeight;
+                if (size === lastViewport) return;
+                lastViewport = size;
+                const json = JSON.stringify({
                     url: location.pathname + location.search,
                     title: document.title,
                     page: document.querySelector("[data-page]")?.dataset.page ?? null,
-                })], { type: "application/json" }));
-            } catch { /* a tab that cannot say where it is still works */ }
+                    agentId: document.body?.dataset.agentId ?? null,
+                    viewport: { width: window.innerWidth, height: window.innerHeight },
+                });
+                navigator.sendBeacon?.("/ui/state", new Blob([json], { type: "application/json" }));
+            } catch { /* a tab that cannot say its size still works */ }
         },
 
         async go(d) {

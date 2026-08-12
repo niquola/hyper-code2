@@ -125,59 +125,27 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
 
     if (ev.type === "tool_call") {
         const meta = (_ctx as any).fns.agent.toolMeta({ name: ev.name, args: ev.args });
-        const result = String(ev.result ?? '');
-        const lines = result ? result.split('\n').length : 0;
-        const argsLang = (_ctx as any).fns.agent.toolLang({ name: ev.name, args: ev.args, part: 'args' });
-        const argsCode = argsLang === 'json'
-            ? JSON.stringify(ev.args ?? {}, null, 2)
-            : String(ev.args?.code ?? ev.args?.command ?? ev.args?.content ?? '');
-        const argsHtml = ev.name === 'edit'
-            ? await (_ctx as any).fns.agent.renderEditArgs({ path: ev.args?.path, edits: ev.args?.edits })
-            : await (_ctx as any).fns.markdown.highlight({ code: argsCode, lang: argsLang });
-        const resultHtml = await (_ctx as any).fns.agent.highlightResult({
-            output: result,
-            lang: (_ctx as any).fns.agent.toolLang({ name: ev.name, args: ev.args, part: 'result' }),
-        });
-        // Size in the units a reader thinks in — lines for output, KB only when
-        // it is genuinely big — instead of a raw character count.
-        const size = !result ? ''
-            : result.length > 2048 ? (result.length / 1024).toFixed(1) + ' KB'
-            : lines > 1 ? lines + ' lines'
-            : result.length + ' chars';
-        const status = ev.isError
-            ? '<span class="inline-flex items-center gap-1 text-red-600"><i class="ph ph-warning-circle"></i>error</span>'
-            : '<span class="text-emerald-600"><i class="ph ph-check"></i></span>';
-
-        // File-changing tools get a stronger outline, so destructive actions
-        // remain visually distinct even after their cards are tucked away.
-        // Error styling still takes precedence.
+        // File-changing tools get a stronger outline; errors take precedence.
         const destructive = new Set(['write', 'edit', 'remove', 'rename']).has(String(ev.name ?? ''));
         const cardStyle = ev.isError
-            ? 'border-red-200 bg-red-50/40'
-            : destructive ? 'border-gray-500 bg-white' : 'border-gray-200 bg-white';
-        // A tool call is a compact icon in the transcript. Its arguments and
-        // result are already present in the hidden markup below; chat.js opens
-        // them in a sticky popup when the user clicks the icon. Errors keep a
-        // red tint, but do not interrupt the conversation with an auto-toast.
-        const openAttr = '';
-        const tucked = true;
-        return '<details' + openAttr + ' class="group/tool tool rounded-xl border text-xs leading-snug overflow-hidden '
-            + cardStyle + ' tool-tucked' + '"'
-            + ' data-tool="' + esc(ev.name || 'tool') + '" data-ts="' + esc(String(ev.ts ?? '')) + '"'
-            + ' title="' + esc(meta.label + ' ' + meta.subject) + '">'
-            + '<summary class="flex cursor-pointer select-none items-center gap-2 px-3 py-2 hover:bg-gray-50">'
-            + '<i class="ph ' + esc(meta.icon) + ' text-sm text-gray-400 shrink-0"></i>'
-            + '<span class="tool-label font-mono font-medium text-gray-700 shrink-0">' + esc(meta.label) + '</span>'
-            + '<span class="tool-subject min-w-0 flex-1 truncate font-mono text-gray-500">' + esc(meta.subject) + '</span>'
-            + (size ? '<span class="tool-size shrink-0 text-[10px] text-gray-400">' + esc(size) + '</span>' : '')
-            + '<span class="tool-status shrink-0">' + status + '</span>'
-            + '<i class="tool-caret ph ph-caret-down text-[10px] text-gray-300 transition-transform group-open/tool:rotate-180"></i>'
-            + '</summary>'
-            + '<div class="border-t border-gray-100 bg-gray-50/60 px-3 py-2 tool-code">' + argsHtml + '</div>'
-            + (result
-                ? '<div class="border-t border-gray-100 px-3 py-2 text-gray-700 tool-result">' + resultHtml + '</div>'
-                : '')
-            + '</details>';
+            ? 'border-red-200 bg-red-50/40 text-red-500'
+            : destructive ? 'border-gray-500 bg-white text-gray-500' : 'border-gray-200 bg-white text-gray-400';
+        const bodyUrl = agentId && ev.idx != null
+            ? `/agent/${encodeURIComponent(agentId)}/tool/${Number(ev.idx)}`
+            : '';
+        const title = String(meta.label + ' ' + meta.subject).trim();
+
+        // One tool call is one button and one icon. Arguments, result and their
+        // expensive highlighted markup are fetched only when the button is
+        // clicked; chat.js caches the fragment by URL for subsequent opens.
+        return '<button type="button" class="tool tool-tucked shrink-0 rounded-full border ' + cardStyle + '"'
+            + ' data-tool="' + esc(ev.name || 'tool') + '"'
+            + ' data-title="' + esc(title) + '"'
+            + (bodyUrl ? ' data-body="' + esc(bodyUrl) + '"' : '')
+            + (ev.isError ? ' data-error="1"' : '')
+            + ' title="' + esc(title) + '" aria-label="' + esc(title) + '">'
+            + '<i class="ph ' + esc(meta.icon) + '" aria-hidden="true"></i>'
+            + '</button>';
     }
 
     if (ev.type === "attempt") {

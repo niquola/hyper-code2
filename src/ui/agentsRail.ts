@@ -4,36 +4,39 @@
 // Served by GET /ui/rail and pulled in by the one-line placeholder in
 // layout.ts (`hx-trigger="load, every 10s"`), so the layout never awaits the
 // list and the badges/lights stay fresh without redrawing the page. Switching
-// agents is still a full page load (hx-boost="false"): the chat column must
+// Clicking an agent swaps ONLY its container (chat + workspace pane): the rail
+// itself is not redrawn, so its scroll position, open groups and focus survive.
+// The
 // re-render.
 export default async function (ctx: Context, _session: Session | null, opts: { currentId?: string; archived?: boolean }): Promise<string> {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const agents = await ctx.fns.session.list({ includeArchived: opts.archived === true }).catch(() => []);
 
     const row = (a: any, depth = 0) => {
-        const on = a.id === opts.currentId;
+        // Selection is applied by ui/$script_rail.js from the URL — see there.
+        const on = false;
         const gone = a.archivedAt != null;
         // The model mark doubles as activity state: CSS rotates it while the
         // agent works, avoiding a second status glyph in every row.
         const active = a.runState !== "idle";
-        const badge = !on && a.unread > 0
+        const badge = a.unread > 0
             ? `<span class="shrink-0 min-w-[1.1rem] rounded-full bg-emerald-500 px-1 text-center text-[10px] font-semibold leading-4 text-white" ${ctx.fns.procs.ui.attr({ role: "unread" })}>${a.unread > 99 ? "99+" : a.unread}</span>`
             : "";
         const subagent = depth > 0
             ? `<span class="shrink-0 rounded bg-indigo-50 px-1 py-0.5 text-[9px] font-medium text-indigo-500" title="subagent of ${esc(a.parentId)}">sub</span>`
             : "";
-        const inner = `${ctx.fns.ui.modelLogo({ model: a.model, active })}
+        const inner = `${ctx.fns.ui.modelLogo({ model: a.model, active, bare: true })}
       <span class="min-w-0 flex-1 truncate text-xs ${on ? "text-gray-900 font-semibold" : "text-gray-700"}">${gone ? '<i class="ph ph-archive text-gray-400"></i> ' : ""}${esc(a.title)} <span class="font-mono font-normal text-[10px] text-gray-400">(${esc(a.id)})</span></span>
       ${subagent}
       ${badge}`;
         if (gone) return `<div class="flex items-center gap-1.5 rounded px-2 py-1 opacity-60 hover:opacity-100 hover:bg-gray-200" ${ctx.fns.procs.ui.attr({ entity: "agent", id: a.id, status: "archived" })}>
-      <a href="/agent/${encodeURIComponent(a.id)}" hx-boost="false" title="${esc(a.title)}" class="min-w-0 flex-1 flex items-center gap-1.5">${inner}</a>
+      <a href="/agent/${encodeURIComponent(a.id)}" hx-boost="false" hx-get="/a/${encodeURIComponent(a.id)}" hx-target="#agent-view" hx-select="#agent-view" hx-swap="outerHTML" hx-push-url="true" hx-headers='{"x-hyper-frame":"1"}' title="${esc(a.title)}" class="min-w-0 flex-1 flex items-center gap-1.5">${inner}</a>
       <button title="unarchive" hx-post="/agent/${encodeURIComponent(a.id)}/unarchive" hx-swap="none"
         hx-on::after-request="htmx.trigger('#agents-rail', 'rail-refresh')"
         ${ctx.fns.procs.ui.attr({ action: "unarchive", entity: "agent", id: a.id })}
         class="shrink-0 px-1 text-gray-400 hover:text-gray-700"><i class="ph ph-arrow-counter-clockwise"></i></button>
     </div>`;
-        return `<a href="/agent/${encodeURIComponent(a.id)}" hx-boost="false" title="${esc(a.title)}"
+        return `<a href="/agent/${encodeURIComponent(a.id)}" hx-boost="false" hx-get="/a/${encodeURIComponent(a.id)}" hx-target="#agent-view" hx-select="#agent-view" hx-swap="outerHTML" hx-push-url="true" hx-headers='{"x-hyper-frame":"1"}' title="${esc(a.title)}"
        class="flex items-center gap-1.5 rounded-md px-2 py-1.5 ${on ? "bg-white shadow-sm" : "hover:bg-gray-200/70"}"
        ${ctx.fns.procs.ui.attr({ entity: "agent", id: a.id, status: on ? "current" : a.runState })}>
       ${inner}
@@ -57,11 +60,26 @@ export default async function (ctx: Context, _session: Session | null, opts: { c
             children.get(a.parentId)!.push(a);
         }
         const seen = new Set<string>();
+        const descendants = (a: any): any[] => (children.get(a.id) ?? []).flatMap(child => [child, ...descendants(child)]);
         const node = (a: any, depth: number): string => {
             if (seen.has(a.id)) return "";
             seen.add(a.id);
-            const nested = (children.get(a.id) ?? []).map(child => node(child, depth + 1)).join("");
-            return `<div class="${depth ? "ml-3 pl-1" : ""}">${row(a, depth)}${nested}</div>`;
+            const direct = children.get(a.id) ?? [];
+            const allChildren = descendants(a);
+            const nested = direct.map(child => node(child, depth + 1)).join("");
+            if (!direct.length) return `<div class="${depth ? "ml-3 pl-1" : ""}">${row(a, depth)}</div>`;
+
+            const containsCurrent = allChildren.some(child => child.id === opts.currentId);
+            const activeChildren = allChildren.filter(child => child.runState !== "idle").length;
+            const unreadChildren = allChildren.reduce((sum, child) => sum + Number(child.unread ?? 0), 0);
+            const badgeTitle = `${allChildren.length} subagent${allChildren.length === 1 ? "" : "s"}${activeChildren ? ` · ${activeChildren} active` : ""}${unreadChildren ? ` · ${unreadChildren} unread` : ""}`;
+            const childBadge = `<span title="${esc(badgeTitle)}" class="ml-auto inline-flex min-w-[1.2rem] items-center justify-center rounded-full bg-indigo-100 px-1 text-[10px] font-semibold leading-4 text-indigo-600">${allChildren.length}</span>`;
+            return `<details class="${depth ? "ml-3 pl-1" : ""} group/subagents" ${containsCurrent ? "open" : ""}>
+              <summary class="flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden">
+                <span class="min-w-0 flex-1">${row(a, depth)}</span>${childBadge}<i class="ph ph-caret-right text-[10px] text-gray-400 transition-transform group-open/subagents:rotate-90"></i>
+              </summary>
+              <div class="mt-0.5">${nested}</div>
+            </details>`;
         };
         const roots = list.filter(a => !a.parentId || !ids.has(a.parentId));
         const html = roots.map(a => node(a, 0)).join("");

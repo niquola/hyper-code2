@@ -11,8 +11,24 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const url = new URL(opts.req.url);
     const offset = Math.max(0, Number(url.searchParams.get('offset') ?? '0') || 0);
 
+    const beforeRaw = url.searchParams.get('before');
+    const before = beforeRaw == null ? null : Math.max(0, Number(beforeRaw) || 0);
+    const limit = Math.max(1, Math.min(200, Number(url.searchParams.get('limit') ?? '100') || 100));
+    const compact = url.searchParams.get('compact') === '1';
     const agentRow = ((await ctx.fns.procs.db.select({ sql: 'SELECT id FROM agents WHERE id = ?', params: [id] })) as any[])[0];
     if (!agentRow) return new Response('not found', { status: 404 });
+
+    // `before` is the upward history pager. It returns a new head sentinel plus
+    // the page, while the ordinary `offset` mode remains the live bottom tail.
+    if (before != null) {
+        const events = await ctx.fns.session.getEvents({ id, beforeIdx: before, limit });
+        const eventsHtml = await ctx.fns.agent.renderEventsHtml({ events, agentId: id });
+        const firstIdx = events.length ? Number(events[0]?.idx ?? 0) : 0;
+        const head = firstIdx > 0
+            ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${firstIdx}&limit=${limit}" hx-trigger="load-older" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] text-gray-400 hover:text-gray-600">older messages</button></div>`
+            : '';
+        return new Response(head + eventsHtml, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+    }
 
     const maxIdx = await ctx.fns.session.getMaxEventIdx({ id });
     const events = await ctx.fns.session.getEvents({ id, fromIdx: offset });
@@ -35,11 +51,14 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         : '';
 
     const nextOffset = maxIdx + 1;
-    const tailUrl = `/agent/${encodeURIComponent(id)}/events.html?offset=${nextOffset}`;
+    const tailUrl = `/agent/${encodeURIComponent(id)}/events.html?offset=${nextOffset}${compact ? '&compact=1' : ''}`;
     // hyper-tick: dispatched by events/client.js on agent.event_appended SSE events
     //             for this agent, so the tail refreshes only when there's something new.
     // every 10s:  belt-and-braces poll in case SSE is disconnected.
-    const tail = `<div id="msg-tail" hx-get="${tailUrl}" hx-trigger="hyper-tick from:body, every 10s" hx-swap="outerHTML"></div>`;
+    // A live region on this agent's topic: the shared stream says when it
+    // moved, the cursor says whether this tail is behind, and the interval is
+    // only a watchdog.
+    const tail = `<div id="msg-tail" hx-get="${tailUrl}" hx-trigger="hyper-tick from:body, hyper-live from:body, every 30s" hx-swap="outerHTML" data-live-topic="agent:${id}"></div>`;
 
     return new Response(eventsHtml + '\n' + tail + usageOob, {
         headers: { 'content-type': 'text/html; charset=utf-8' },

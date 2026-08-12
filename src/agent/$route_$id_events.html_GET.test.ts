@@ -60,7 +60,31 @@ describe('GET /agent/:id/events.html', () => {
 
         const body = await res.text();
         expect(body).toContain('id="msg-tail"');
-        expect(body).toContain('hyper-tick from:body, every 10s');
+        // A live region: the shared stream signals, the cursor decides whether
+        // this tail is behind, and the interval only repairs a missed signal.
+        expect(body).toContain('hyper-live from:body');
+        expect(body).toContain('data-live-topic="agent:a"');
+        expect(body).toContain('every 30s');
         expect(body).toContain('offset=0');
     });
+    test('pages older events backwards without returning a live tail', async () => {
+        const ctx = await mkTestCtx();
+        const a = await mkAgent(ctx);
+        for (let i = 0; i < 7; i++) {
+            await ctx.fns.session.appendEvent({ id: a.id, event: { type: 'user', text: `event-${i}` } });
+        }
+
+        const res = await ctx.fns.procs.http.dispatch({ url: `/agent/${a.id}/events.html?before=6&limit=3` });
+        const body = await res.text();
+        expect(body).toContain('event-3');
+        expect(body).toContain('event-4');
+        expect(body).toContain('event-5');
+        expect(body).not.toContain('event-2');
+        expect(body).not.toContain('event-6');
+        expect(body).toContain('id="msg-head"');
+        expect(body).toContain('before=3');
+        expect(body).not.toContain('id="msg-tail"');
+    });
+
+
 });

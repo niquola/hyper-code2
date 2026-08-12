@@ -3,7 +3,12 @@
 // stream doubles as presence: it begins when a tab opens and ends when it
 // closes, which is a better answer to "who is here" than anything a heartbeat
 // could give.
+// `?topics=agent:eh,agents` narrows the stream SERVER-side: a tab watching one
+// agent is not woken by every other agent's traffic. Global events (reload,
+// notify) still reach everybody — see procs.events.emit.
 export default async function (ctx: Context, session: Session, opts: { req: Request }) {
+    const topics = (new URL(opts.req.url).searchParams.get("topics") ?? "")
+        .split(",").map(t => t.trim()).filter(Boolean);
     const stream = new ReadableStream({
         start(controller) {
             const enc = new TextEncoder();
@@ -11,8 +16,12 @@ export default async function (ctx: Context, session: Session, opts: { req: Requ
                 try { controller.enqueue(enc.encode(`data: ${JSON.stringify(e)}\n\n`)); }
                 catch { unsub(); }
             };
-            send({ type: "hello", serverStart: (ctx.state as any).serverStart });
-            const unsub = ctx.fns.procs.events.subscribe({ handler: send });
+            // A reconnecting tab may have missed signals while it was away, so
+            // the greeting tells it to refresh what it shows — the same message
+            // any change sends, which keeps recovery and normal operation on
+            // one path instead of two.
+            send({ type: "hello", serverStart: (ctx.state as any).serverStart, refresh: topics });
+            const unsub = ctx.fns.procs.events.subscribe({ handler: send, topics });
             // The stream is also the presence: it lasts exactly as long as the tab.
             const leave = ctx.fns.procs.events.join({});
             const keepalive = setInterval(() => {

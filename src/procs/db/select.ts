@@ -3,8 +3,20 @@
 // bound positionally. `?` placeholders are translated to Postgres $1..$n by
 // db.toPg, so call sites keep the portable `?` style.
 export default async function (ctx: Context, _session: Session | null, opts: { sql: string; params?: any }): Promise<any[]> {
-    const sql = await ctx.fns.procs.db.conn();
-    const p = opts.params == null ? [] : Array.isArray(opts.params) ? opts.params : [opts.params];
-    const rows = await sql.unsafe(ctx.fns.procs.db.toPg({ sql: opts.sql }), p);
-    return Array.from(rows);
+    const query = async () => {
+        const sql = await ctx.fns.procs.db.conn();
+        const p = opts.params == null ? [] : Array.isArray(opts.params) ? opts.params : [opts.params];
+        const rows = await sql.unsafe(ctx.fns.procs.db.toPg({ sql: opts.sql }), p);
+        return Array.from(rows);
+    };
+
+    // hyper-code2: tracing is OPTIONAL here. Reading it off ctx.fns directly
+    // made every query — and therefore the whole process, including the REPL
+    // used to fix things — fail the moment the telemetry module was absent or
+    // not yet loaded. Observability must never be able to take down the thing
+    // it observes.
+    const telemetry: any = (ctx.fns.procs as any).telemetry;
+    if (typeof telemetry?.span !== "function") return await query();
+    const attrs = typeof telemetry.dbAttrs === "function" ? telemetry.dbAttrs({ sql: opts.sql }) : {};
+    return await telemetry.span({ name: "db.query", attrs, fn: query });
 }

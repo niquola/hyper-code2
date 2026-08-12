@@ -53,5 +53,22 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     const stopBtn = busy
         ? `<form method="POST" action="/agent/${encodeURIComponent(agentId)}/stop" class="inline"><button title="stop this run" ${ctx.fns.procs.ui.attr({ action: "stop", entity: "agent", id: agentId })} class="text-xs px-1 py-0.5 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50"><i class="ph ph-stop-circle align-middle"></i></button></form>`
         : '';
-    return `<div id="status-bar" hx-get="${url}" hx-trigger="every 1s" hx-swap="outerHTML" class="flex items-center gap-2">${statusBadge}${tokensBadge}${stopBtn}</div>`;
+    // The SSE stream is the real trigger (it dispatches hyper-tick on every
+    // agent event); the timer is only a safety net. A busy agent still refreshes
+    // often enough to keep its elapsed counter honest, but an idle one costs one
+    // request every half minute instead of one per second — three widgets each
+    // polling once a second was what made a burst of clicks queue behind the
+    // browser's six sockets.
+    // A live region: the shared stream tells it when its agent moved, and the
+    // interval is only a watchdog. A running agent keeps a short one so the
+    // elapsed counter stays honest; an idle one costs a request every half
+    // minute instead of one per second.
+    return ctx.fns.ui.live({
+        id: "status-bar",
+        url,
+        topic: `agent:${agentId}`,
+        every: busy ? 5 : 30,
+        attrs: 'class="flex items-center gap-2"',
+        html: `${statusBadge}${tokensBadge}${stopBtn}`,
+    });
 }

@@ -45,6 +45,7 @@
     ],
     "prod": {
       "procs/log": {},
+      "procs/telemetry": {},
       "procs/db": {
         "url": "postgres://hyper:hyper@localhost:54393/hyper"
       },
@@ -57,15 +58,16 @@
     },
     "modules": {
       "browser": {},
+      "duckdb": {},
       "google-local": {
         "path": "plugins/google"
       },
-      "telegram": {},
-      "gh": {},
       "youtube": {},
       "gplaces": {},
       "gcs": {},
-      "tts": {}
+      "tts": {},
+      "telegram": {},
+      "gh": {}
     }
   }
 }
