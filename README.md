@@ -10,6 +10,26 @@ The agent acts by emitting `§eval` / `§write:<path>` / `§bash` / `§html` mar
 
 **All sessions are in Postgres and fully agent-accessible.** Every turn's messages and UI events for every agent are rows in the `hyper` Postgres (paradedb, `~/.hyper/docker-compose.yml`). The agent reads its own + other agents' history with a one-liner: `§eval\nctx.fns.procs.db.select({ sql: "SELECT … FROM messages …" })`. Useful for recalling prior work, mining patterns, or building custom indexes.
 
+
+## UI architecture: HTMX first
+
+The UI is server-rendered HTML. Native HTML handles local behaviour, HTMX handles server interaction, and a small amount of delegated JavaScript is reserved for transient UX that cannot be expressed declaratively.
+
+```text
+Postgres write → narrow SSE invalidation topic → ui.live region → HTMX fragment GET → DOM swap
+```
+
+Conventions:
+
+- use `<details>`, `<dialog>`, forms and native validation before JavaScript;
+- use HTMX for form submits, lazy fragments, paging and live refreshes;
+- render each fragment/row on the server only once—browser JS must not duplicate templates;
+- submit repeated form controls with `FormData.getAll()` instead of constructing hidden JSON;
+- keep JavaScript for scroll anchoring, keyboard shortcuts, resize, and local reorder/remove only;
+- do not mix Datastar or another reactive framework into the HTMX lifecycle.
+
+Examples in the current UI: Plan `+` loads a server-rendered task row with HTMX; tool details load into a native `<dialog>` with HTMX; chat and Meta refresh on separate live topics.
+
 ## What it is
 
 A tiny HTTP server that hosts a multi-agent chat. Each agent has four markers it can emit:

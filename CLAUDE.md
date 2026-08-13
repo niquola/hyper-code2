@@ -169,3 +169,24 @@ Vendored `src/procs/` is upstream code: keep local patches minimal and marked wi
 ## Git helpers
 
 `ctx.fns.git.run/stage/commit/push/status/stageCommitPush({ ... })` — use these from agent code instead of ad-hoc shell (they handle `$`-filenames and take an optional `dir` for temp-repo tests).
+
+
+## UI: HTMX first
+
+The browser UI is server-rendered HTML with HTMX. Do not add Datastar, Alpine, React, or a second reactive/runtime layer without an explicit architecture migration.
+
+Choose the smallest mechanism in this order:
+
+1. **Native HTML/CSS** for local state and behaviour: `<details>`, `<dialog>`, forms, validation, focus, hover.
+2. **HTMX** for anything that reads or writes server state: forms, fragment loading, lazy details, paging, and live-region refreshes.
+3. **Small delegated JavaScript** only for transient browser behaviour HTML/HTMX cannot express cleanly: chat scroll anchoring, Enter-to-send, unsaved row reordering/removal, panel resize.
+
+Rules:
+
+- Server templates are the single source of markup. Never duplicate a row/card template in browser JavaScript.
+- Prefer ordinary named form controls and `FormData.getAll()` over hidden JSON assembled on submit.
+- A `+` that adds server-defined markup should be `hx-get` + `hx-swap="beforeend"`.
+- Prefer native `<dialog>` with an HTMX target over hand-built modal DOM/fetch/focus code.
+- Live state uses `ui.live`: Postgres is authoritative, SSE topics invalidate, HTMX fetches current HTML. Keep topics narrow (`agent:<id>`, `agent-meta:<id>`, `agents`).
+- Browser scripts must use event delegation when their targets can be replaced by HTMX. Do not bind/re-mount handlers on every fragment swap.
+- Do not use JavaScript `fetch()` where an HTMX attribute describes the same request and swap.

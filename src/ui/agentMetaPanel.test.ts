@@ -15,11 +15,24 @@ test("agent meta panel is a topic-addressed live region", () => {
     expect(html).toContain('hx-get="/ui/agent/eh/meta"');
     expect(html).toContain('data-live-topic="agent-meta:eh"');
 });
+test("collapses an inactive goal and opens an enabled goal", () => {
+    const ctx: any = { fns: {
+        procs: { ui: { escape: escapeHtml } },
+        ui: { live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
+    } };
+    const inactive = render(ctx, null, { agent: { id: "eh", goal: { statement: "done", enabled: false, status: "achieved", checks: [] } } as any });
+    expect(inactive).toContain('<details  class="group');
+    expect(inactive).not.toContain('<details open class="group');
+    const active = render(ctx, null, { agent: { id: "eh", goal: { statement: "work", enabled: true, status: "active", checks: [] } } as any });
+    expect(active).toContain('<details open class="group');
+});
+
+
 
 test("renders the plan below goal with instructions and time", () => {
     const ctx: any = { fns: {
         procs: { ui: { escape: escapeHtml } },
-        ui: { live: (o: any) => o.html },
+        ui: { live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
     } };
     const html = render(ctx, null, { agent: { id: "eh", goal: null, scratchpad: { plan: {
         title: "Ship it", tasks: [{ id: "api", title: "Build API", instructions: "Detailed requirements", status: "active", elapsedMs: 5000, activeSince: null }],
@@ -34,7 +47,7 @@ test("renders the plan below goal with instructions and time", () => {
 test("escapes plan content and renders archive/delete controls inside the scroll panel", () => {
     const ctx: any = { fns: {
         procs: { ui: { escape: escapeHtml } },
-        ui: { live: (o: any) => o.html },
+        ui: { live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
     } };
     const html = render(ctx, null, { agent: { id: "a/b", goal: null, scratchpad: { plan: {
         title: "<Plan>", tasks: [{ id: "x", title: "<Task>", instructions: "<script>bad()</script>", status: "active", elapsedMs: 0 }],
@@ -55,7 +68,7 @@ test("escapes plan content and renders archive/delete controls inside the scroll
 test("renders a safe editor with immutable active and removable pending tasks", () => {
     const ctx: any = { fns: {
         procs: { ui: { escape: escapeHtml } },
-        ui: { live: (o: any) => o.html },
+        ui: { live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
     } };
     const html = render(ctx, null, { agent: { id: "eh", goal: null, scratchpad: { plan: {
         title: "Edit me", tasks: [
@@ -66,9 +79,11 @@ test("renders a safe editor with immutable active and removable pending tasks", 
     expect(html).toContain("data-plan-editor");
     expect(html).toContain('name="action" value="update"');
     expect(html).not.toContain("Edit plan");
-    expect(html).toContain('aria-label="Plan title"');
-    expect(html).toContain('aria-label="Add task"');
-    expect(html).toContain("data-plan-add");
+    expect(html).toContain('name="title"');
+    expect(html).toContain('name="task_id"');
+    expect(html).toContain('name="task_title"');
+    expect(html).toContain('name="task_instructions"');
+    expect(html).toContain('hx-get="/ui/agent/eh/plan/task"');
     const active = html.slice(html.indexOf('data-task-id="active"'), html.indexOf('data-task-id="later"'));
     const pending = html.slice(html.indexOf('data-task-id="later"'));
     expect(active).not.toContain("data-plan-remove");

@@ -138,18 +138,23 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
             : '';
         const title = String(meta.label + ' ' + meta.subject).trim();
 
-        // One tool call is one button and one icon. Arguments, result and their
-        // expensive highlighted markup are fetched only when the button is
-        // clicked; chat.js caches the fragment by URL for subsequent opens.
+        // The transcript carries only a compact trigger. HTMX fetches the
+        // expensive highlighted body directly into the shared native dialog.
         return '<button type="button" class="tool tool-tucked shrink-0 rounded-full border ' + cardStyle + '"'
             + ' data-tool="' + esc(ev.name || 'tool') + '"'
             + ' data-title="' + esc(title) + '"'
-            + (bodyUrl ? ' data-body="' + esc(bodyUrl) + '"' : '')
+            + (bodyUrl ? ' hx-get="' + esc(bodyUrl) + '" hx-target="#tool-dialog-body" hx-swap="innerHTML"' : '')
+            + ' hx-on::before-request="document.getElementById(\'tool-dialog-title\').textContent=this.dataset.title; document.getElementById(\'tool-dialog-body\').innerHTML=\'<div class=&quot;text-sm text-gray-400&quot;>loading…</div>\'; document.getElementById(\'tool-dialog\').showModal()"'
             + (ev.isError ? ' data-error="1"' : '')
             + ' title="' + esc(title) + '" aria-label="' + esc(title) + '">'
             + '<i class="ph ' + esc(meta.icon) + '" aria-hidden="true"></i>'
             + '</button>';
     }
+
+    if (ev.type === "plan_activation") {
+        return `<div class="mx-auto max-w-[90%] rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800"><div class="flex items-center gap-1.5 font-medium"><i class="ph ph-list-checks"></i> Plan task injected</div><div class="mt-1 font-medium leading-5">${esc(ev.title ?? ev.taskId ?? "Task")}</div>${ev.instructions ? `<div class="mt-1 whitespace-pre-wrap leading-5 opacity-80">${esc(ev.instructions)}</div>` : ""}</div>`;
+    }
+
 
     if (ev.type === "goal_activation") {
         return `<div class="mx-auto max-w-[90%] rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-800"><div class="flex items-center gap-1.5 font-medium"><i class="ph ph-target"></i> Goal enabled · ${Number(ev.iterations ?? 3)} iterations</div><div class="mt-1 leading-5 opacity-80">${esc(ev.text ?? "")}</div></div>`;

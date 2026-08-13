@@ -30,8 +30,9 @@ describe("agent.renderEventHtml", () => {
     expect(evalHtml).toContain('data-title="eval 1 + 1"');
     expect(evalHtml).toContain("1 + 1");
     expect(evalHtml).toContain("ph-brackets-curly");
-    expect(evalHtml).toContain('data-body="/agent/a/tool/7"');
-    expect(evalHtml).not.toContain('hx-get=');
+    expect(evalHtml).toContain('hx-get="/agent/a/tool/7"');
+    expect(evalHtml).toContain('hx-target="#tool-dialog-body"');
+    expect(evalHtml).toContain("showModal()");
     expect(evalHtml).not.toContain('tool-label');
     expect(evalHtml).not.toContain('tool-subject');
     expect(evalHtml).not.toContain('tool-size');
@@ -44,7 +45,7 @@ describe("agent.renderEventHtml", () => {
     const writeHtml = await renderEventHtml(ctx, { type: "tool_call", name: "write", argsHtml: "<pre>x</pre>", resultHtml: "<pre>ok</pre>", result: "ok", args: { path: "src/foo.ts", content: "x" }, isError: false, ts: Date.now(), idx: 8 }, { agentId: "a" });
     expect(writeHtml).toContain("src/foo.ts");
     expect(writeHtml).not.toContain("<details");
-    expect(writeHtml).toContain('data-body="/agent/a/tool/8"');
+    expect(writeHtml).toContain('hx-get="/agent/a/tool/8"');
     expect(writeHtml).toContain("tool-tucked");
 
     expect(writeHtml).toContain("border-gray-500");
@@ -79,6 +80,15 @@ describe("agent.renderEventHtml", () => {
     const legacy = await renderEventHtml(ctx, { type: "tool_call", name: "evalCode", argsHtml: "<pre>a</pre>", resultHtml: "<pre>b</pre>", result: "b", args: { code: "a" }, isError: false });
     expect(legacy).toContain("evalCode");
   });
+
+  test("renders plan task injections as visible system cards", async () => {
+    const html = await renderEventHtml(ctx, { type: "plan_activation", taskId: "t1", title: "Build it", instructions: "Use the API" });
+    expect(html).toContain("Plan task injected");
+    expect(html).toContain("Build it");
+    expect(html).toContain("Use the API");
+    expect(html).toContain("ph-list-checks");
+  });
+
 
   test("renders assistant as left bubble with htmx delete buttons when agentId given", async () => {
     const html = await renderEventHtml(ctx, { type: "assistant", html: "<p>ok</p>", usage: { prompt_tokens: 1234, total_tokens: 1300 }, messageIdx: 7 }, { agentId: 'a1' });

@@ -31,18 +31,31 @@ describe("POST /agent/:id/plan", () => {
     test("updates a structured plan and reports validation errors", async () => {
         const calls: any[] = [];
         const agent = { id: "a1" };
-        const ctx: any = { state: { agent: { a1: agent } }, fns: { session: {
+        const ctx: any = { state: { agent: { a1: agent } }, fns: {
+          session: {
             load: () => null,
-            updatePlan: (opts: any) => calls.push(opts),
-        } } };
+            updatePlan: (opts: any) => { calls.push(opts); return { plan: { tasks: [{ id: "a", title: "A", instructions: "Do it", status: "active" }] } }; },
+            appendMessage: (opts: any) => { calls.push(["message", opts]); return { idx: 0 }; },
+            appendEvent: (opts: any) => { calls.push(["event", opts]); },
+            syncAgentState: () => {},
+          },
+          procs: { db: { run: (opts: any) => { calls.push(["db", opts]); } } },
+          agent: { wakeWorker: () => calls.push(["wake"]) },
+        } };
         const req = new Request("http://x/agent/a1/plan", { method: "POST", body: new URLSearchParams({
-            action: "update", plan: JSON.stringify({ title: "Edited", tasks: [{ id: "a", title: "A" }] }),
+            action: "update", title: "Edited", task_id: "a", task_title: "A", task_instructions: "",
         }) });
         expect((await route(ctx, null, { req, params: { id: "a1" } })).status).toBe(204);
-        expect(calls[0]).toEqual({ agent, title: "Edited", tasks: [{ id: "a", title: "A" }] });
+        expect(calls[0]).toEqual({ agent, title: "Edited", tasks: [{ id: "a", title: "A", instructions: "" }] });
+        expect(calls[1][0]).toBe("message");
+        expect(calls[1][1].message).toMatchObject({ role: "user", message_type: "plan_activation" });
+        expect(calls[1][1].message.content).toContain("Task ID: a");
+        expect(calls[2][0]).toBe("event");
+        expect(calls[2][1].event).toMatchObject({ type: "plan_activation", taskId: "a", title: "A", messageIdx: 0 });
+        expect(calls.some(call => call[0] === "wake")).toBe(true);
 
         ctx.fns.session.updatePlan = () => { throw new Error("bad plan"); };
-        const bad = new Request("http://x/agent/a1/plan", { method: "POST", body: new URLSearchParams({ action: "update", plan: "{}" }) });
+        const bad = new Request("http://x/agent/a1/plan", { method: "POST", body: new URLSearchParams({ action: "update" }) });
         const response = await route(ctx, null, { req: bad, params: { id: "a1" } });
         expect(response.status).toBe(400);
         expect(await response.text()).toBe("bad plan");

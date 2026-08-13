@@ -20,6 +20,19 @@ describe("session.updatePlan", () => {
         expect(result.plan.tasks[1]).toMatchObject({ status: "pending", elapsedMs: 0 });
     });
 
+    test("activates the first added task when extending a completed plan", async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: "mock:test" });
+        await ctx.fns.session.plan({ agent, tasks: [{ id: "a", title: "A" }] });
+        await ctx.fns.session.done({ agent, id: "a" });
+        const result = await ctx.fns.session.updatePlan({ agent, tasks: [
+            { id: "a", title: "A" }, { id: "b", title: "B", instructions: "Do B" },
+        ] });
+        expect(result.plan.tasks[1]).toMatchObject({ id: "b", status: "active" });
+        expect(result.plan.tasks[1].activeSince).toBeNumber();
+    });
+
+
     test("rejects removal or reordering of active and done tasks", async () => {
         const ctx: any = await mkTestCtx();
         const agent = await ctx.fns.agent.start({ model: "mock:test" });

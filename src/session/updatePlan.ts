@@ -53,6 +53,17 @@ export default async function (
             };
         });
         plan.title = String(opts.title ?? plan.title ?? "").trim().slice(0, 300);
+        // A completed plan can be extended from the UI. The first newly added
+        // task must become active; leaving every new row pending produces a
+        // plan that looks saved but can never run or advance.
+        if (!plan.tasks.some((task: any) => task.status === "active")) {
+            const next = plan.tasks.find((task: any) => task.status === "pending");
+            if (next) {
+                next.status = "active";
+                next.startedAt ??= now;
+                next.activeSince = now;
+            }
+        }
         plan.updatedAt = now;
         return plan;
     } });

@@ -1,0 +1,18 @@
+export default function (ctx: Context, _session: Session | null, opts: { task: any; autofocus?: boolean }): string {
+    const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
+    const task = opts.task ?? {};
+    const status = String(task.status ?? 'pending');
+    const active = status === 'active';
+    const icon = status === 'done' ? 'ph-check-circle text-emerald-500' : active ? 'ph-circle-notch text-indigo-500' : 'ph-circle text-gray-300';
+    const elapsed = Math.max(0, Number(task.elapsedMs ?? 0)) + (active && task.activeSince ? Math.max(0, Date.now() - Number(task.activeSince)) : 0);
+    const seconds = Math.floor(elapsed / 1000);
+    const time = seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+    return `<div data-plan-task data-task-id="${esc(task.id)}" data-task-status="${esc(status)}" class="rounded-lg ${active ? 'bg-indigo-50 p-2' : 'px-2 py-1'}">
+      <input type="hidden" name="task_id" value="${esc(task.id)}">
+      <div class="flex items-start gap-2 text-xs"><i class="ph ${icon} mt-2"></i><div class="min-w-0 flex-1">
+        <input name="task_title" maxlength="300" value="${esc(task.title ?? '')}" required ${opts.autofocus ? 'autofocus' : ''} placeholder="Task title" aria-label="Task title" class="w-full border-0 bg-transparent p-0 ${status === 'done' ? 'text-gray-400 line-through' : active ? 'font-medium text-indigo-900' : 'text-gray-600'} outline-none focus:ring-0">
+        <textarea name="task_instructions" maxlength="12000" rows="${active ? 3 : opts.autofocus ? 2 : 1}" placeholder="Detailed instructions" aria-label="Task instructions" class="mt-1 w-full resize-y border-0 bg-transparent p-0 text-[11px] leading-4 ${active ? 'text-indigo-700' : 'text-gray-500'} outline-none focus:ring-0">${esc(task.instructions ?? '')}</textarea>
+        <code class="block truncate text-[9px] text-gray-300">${esc(task.id)}</code>
+      </div><div class="flex shrink-0 items-center gap-0.5"><span class="text-[10px] text-gray-400">${time}</span>${status === 'pending' ? `<button type="button" data-plan-move="up" title="Move up" class="rounded p-1 text-gray-400 hover:bg-gray-100"><i class="ph ph-arrow-up"></i></button><button type="button" data-plan-move="down" title="Move down" class="rounded p-1 text-gray-400 hover:bg-gray-100"><i class="ph ph-arrow-down"></i></button><button type="button" data-plan-remove title="Remove task" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><i class="ph ph-x"></i></button>` : ''}</div></div>
+    </div>`;
+}

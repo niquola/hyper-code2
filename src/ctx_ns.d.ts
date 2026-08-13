@@ -625,6 +625,7 @@ declare global {
             openAgent: Injected<typeof import("./ui/openAgent").default>;
             openFile: Injected<typeof import("./ui/openFile").default>;
             pending: Injected<typeof import("./ui/pending").default>;
+            planTaskRow: Injected<typeof import("./ui/planTaskRow").default>;
             reflectionDropdown: Injected<typeof import("./ui/reflectionDropdown").default>;
             script: Injected<typeof import("./ui/script").default>;
             sendToAgent: Injected<typeof import("./ui/sendToAgent").default>;
