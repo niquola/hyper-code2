@@ -1,0 +1,12 @@
+{
+  "name": "tasks",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "Tasks",
+    "icon": "ph-check-square",
+    "optional": true,
+    "description": "Minimal task tracker with one attached agent chat per task."
+  }
+}

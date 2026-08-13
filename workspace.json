@@ -6,6 +6,7 @@
     "gcs": {},
     "tts": {},
     "telegram": {},
-    "gh": {}
+    "gh": {},
+    "tasks": {}
   }
 }

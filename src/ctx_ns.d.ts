@@ -567,6 +567,13 @@ declare global {
             uptime: Injected<typeof import("../.hyper/skill/uptime").default>;
             wordCount: Injected<typeof import("./skill/wordCount").default>;
         };
+        tasks: {
+            create: Injected<typeof import("../plugins/tasks/src/tasks/create").default>;
+            get: Injected<typeof import("../plugins/tasks/src/tasks/get").default>;
+            list: Injected<typeof import("../plugins/tasks/src/tasks/list").default>;
+            setStatus: Injected<typeof import("../plugins/tasks/src/tasks/setStatus").default>;
+            start: Injected<typeof import("../plugins/tasks/src/tasks/start").default>;
+        };
         telegram: {
             contacts: Injected<typeof import("../plugins/telegram/src/telegram/contacts").default>;
             createFolder: Injected<typeof import("../plugins/telegram/src/telegram/createFolder").default>;
@@ -744,6 +751,9 @@ declare global {
         }
         namespace session {
             type Bm25Hit = import("./session/Bm25Hit").Bm25Hit;
+        }
+        namespace tasks {
+            type Task = import("../plugins/tasks/src/tasks/Task").Task;
         }
         namespace tools {
             type Content = import("./tools/Content").Content;
