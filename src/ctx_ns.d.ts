@@ -131,17 +131,6 @@ declare global {
             stat: Injected<typeof import("./files/stat").default>;
             write: Injected<typeof import("./files/write").default>;
         };
-        gcal: {
-            api: Injected<typeof import("../plugins/google/src/gcal/api").default>;
-            calendars: Injected<typeof import("../plugins/google/src/gcal/calendars").default>;
-            create: Injected<typeof import("../plugins/google/src/gcal/create").default>;
-            del: Injected<typeof import("../plugins/google/src/gcal/del").default>;
-            event: Injected<typeof import("../plugins/google/src/gcal/event").default>;
-            events: Injected<typeof import("../plugins/google/src/gcal/events").default>;
-            freebusy: Injected<typeof import("../plugins/google/src/gcal/freebusy").default>;
-            rsvp: Injected<typeof import("../plugins/google/src/gcal/rsvp").default>;
-            update: Injected<typeof import("../plugins/google/src/gcal/update").default>;
-        };
         gcs: {
             api: Injected<typeof import("../plugins/gcs/src/gcs/api").default>;
             buckets: Injected<typeof import("../plugins/gcs/src/gcs/buckets").default>;
@@ -155,15 +144,6 @@ declare global {
             put: Injected<typeof import("../plugins/gcs/src/gcs/put").default>;
             remove: Injected<typeof import("../plugins/gcs/src/gcs/remove").default>;
             upload: Injected<typeof import("../plugins/gcs/src/gcs/upload").default>;
-        };
-        gdoc: {
-            api: Injected<typeof import("../plugins/google/src/gdoc/api").default>;
-            append: Injected<typeof import("../plugins/google/src/gdoc/append").default>;
-            create: Injected<typeof import("../plugins/google/src/gdoc/create").default>;
-            doc: Injected<typeof import("../plugins/google/src/gdoc/doc").default>;
-            meta: Injected<typeof import("../plugins/google/src/gdoc/meta").default>;
-            search: Injected<typeof import("../plugins/google/src/gdoc/search").default>;
-            upload: Injected<typeof import("../plugins/google/src/gdoc/upload").default>;
         };
         gh: {
             api: Injected<typeof import("../plugins/gh/src/gh/api").default>;
@@ -191,30 +171,6 @@ declare global {
             stageCommitPush: Injected<typeof import("./git/stageCommitPush").default>;
             status: Injected<typeof import("./git/status").default>;
         };
-        gmail: {
-            api: Injected<typeof import("../plugins/google/src/gmail/api").default>;
-            attachments: Injected<typeof import("../plugins/google/src/gmail/attachments").default>;
-            download: Injected<typeof import("../plugins/google/src/gmail/download").default>;
-            draft: Injected<typeof import("../plugins/google/src/gmail/draft").default>;
-            drafts: Injected<typeof import("../plugins/google/src/gmail/drafts").default>;
-            filterCreate: Injected<typeof import("../plugins/google/src/gmail/filterCreate").default>;
-            filterDelete: Injected<typeof import("../plugins/google/src/gmail/filterDelete").default>;
-            filters: Injected<typeof import("../plugins/google/src/gmail/filters").default>;
-            get: Injected<typeof import("../plugins/google/src/gmail/get").default>;
-            labelCreate: Injected<typeof import("../plugins/google/src/gmail/labelCreate").default>;
-            labels: Injected<typeof import("../plugins/google/src/gmail/labels").default>;
-            list: Injected<typeof import("../plugins/google/src/gmail/list").default>;
-            modify: Injected<typeof import("../plugins/google/src/gmail/modify").default>;
-            reply: Injected<typeof import("../plugins/google/src/gmail/reply").default>;
-            send: Injected<typeof import("../plugins/google/src/gmail/send").default>;
-            trash: Injected<typeof import("../plugins/google/src/gmail/trash").default>;
-            unsubscribe: Injected<typeof import("../plugins/google/src/gmail/unsubscribe").default>;
-        };
-        google: {
-            accounts: Injected<typeof import("../plugins/google/src/google/accounts").default>;
-            reauth: Injected<typeof import("../plugins/google/src/google/reauth").default>;
-            token: Injected<typeof import("../plugins/google/src/google/token").default>;
-        };
         gplaces: {
             api: Injected<typeof import("../plugins/gplaces/src/gplaces/api").default>;
             details: Injected<typeof import("../plugins/gplaces/src/gplaces/details").default>;
@@ -222,38 +178,6 @@ declare global {
             photo: Injected<typeof import("../plugins/gplaces/src/gplaces/photo").default>;
             search: Injected<typeof import("../plugins/gplaces/src/gplaces/search").default>;
             types: Injected<typeof import("../plugins/gplaces/src/gplaces/types").default>;
-        };
-        gsheets: {
-            api: Injected<typeof import("../plugins/google/src/gsheets/api").default>;
-            append: Injected<typeof import("../plugins/google/src/gsheets/append").default>;
-            clear: Injected<typeof import("../plugins/google/src/gsheets/clear").default>;
-            create: Injected<typeof import("../plugins/google/src/gsheets/create").default>;
-            info: Injected<typeof import("../plugins/google/src/gsheets/info").default>;
-            list: Injected<typeof import("../plugins/google/src/gsheets/list").default>;
-            read: Injected<typeof import("../plugins/google/src/gsheets/read").default>;
-            write: Injected<typeof import("../plugins/google/src/gsheets/write").default>;
-        };
-        gtasks: {
-            add: Injected<typeof import("../plugins/google/src/gtasks/add").default>;
-            api: Injected<typeof import("../plugins/google/src/gtasks/api").default>;
-            clear: Injected<typeof import("../plugins/google/src/gtasks/clear").default>;
-            complete: Injected<typeof import("../plugins/google/src/gtasks/complete").default>;
-            del: Injected<typeof import("../plugins/google/src/gtasks/del").default>;
-            get: Injected<typeof import("../plugins/google/src/gtasks/get").default>;
-            listAdd: Injected<typeof import("../plugins/google/src/gtasks/listAdd").default>;
-            listDel: Injected<typeof import("../plugins/google/src/gtasks/listDel").default>;
-            listUpdate: Injected<typeof import("../plugins/google/src/gtasks/listUpdate").default>;
-            lists: Injected<typeof import("../plugins/google/src/gtasks/lists").default>;
-            move: Injected<typeof import("../plugins/google/src/gtasks/move").default>;
-            tasks: Injected<typeof import("../plugins/google/src/gtasks/tasks").default>;
-            update: Injected<typeof import("../plugins/google/src/gtasks/update").default>;
-        };
-        gworkspace: {
-            api: Injected<typeof import("../plugins/google/src/gworkspace/api").default>;
-            groups: Injected<typeof import("../plugins/google/src/gworkspace/groups").default>;
-            members: Injected<typeof import("../plugins/google/src/gworkspace/members").default>;
-            user: Injected<typeof import("../plugins/google/src/gworkspace/user").default>;
-            users: Injected<typeof import("../plugins/google/src/gworkspace/users").default>;
         };
         llm: {
             anthropicOAuthConstants: Injected<typeof import("./llm/anthropicOAuthConstants").default>;
