@@ -88,6 +88,7 @@ ${opts.headExtra ?? ""}
 </div>
 <div id="modal"></div>
 ${ctx.fns.ui.navMenu({})}
+<div id="secure-input-host" hx-get="/secureInput/current" hx-trigger="load, secure-input-refresh from:body" hx-swap="innerHTML"></div>
 <dialog id="tool-dialog" class="m-auto max-h-[82vh] w-[min(48rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-gray-200 bg-white p-0 shadow-2xl backdrop:bg-gray-950/40 backdrop:backdrop-blur-[1px]">
   <div class="flex max-h-[82vh] flex-col">
     <div class="flex shrink-0 items-center gap-3 border-b border-gray-200 px-5 py-3.5"><h2 id="tool-dialog-title" class="min-w-0 flex-1 truncate font-mono text-sm font-semibold text-gray-800">tool</h2><form method="dialog"><button title="Close" aria-label="Close" class="flex size-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"><i class="ph ph-x text-lg"></i></button></form></div>

@@ -19,7 +19,7 @@ Read-only access to the user's personal Telegram account through GramJS/MTProto.
 - `telegram.folder({ id })` — chats explicitly included in a folder.
 - `telegram.participants({ chat, limit? })` — members of a group/channel.
 
-- `telegram.reauth({ timeoutMs? })` — interactive login: asks for the Telegram code and optional 2FA password in a browser popup, then writes the resulting StringSession directly to 1Password vault `hyper`. Use when the saved session is expired or duplicated.
+- `telegram.reauth({ timeoutMs?, force? })` — idempotent login check. By default it returns `alreadyAuthorized: true` without opening a popup when the saved session is valid. If the session is invalid, it asks for the Telegram code and optional 2FA password in a browser popup and writes the resulting StringSession directly to 1Password vault `hyper`. Use `force: true` only for explicit credential rotation. Cancel terminates the entire login attempt.
 
 The live MTProto client and session are internal and are never returned by plugin functions.
 

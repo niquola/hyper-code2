@@ -513,6 +513,7 @@ declare global {
         };
         secureInput: {
             prompt: Injected<typeof import("./secureInput/prompt").default>;
+            render: Injected<typeof import("./secureInput/render").default>;
         };
         session: {
             appendAssistantEvent: Injected<typeof import("./session/appendAssistantEvent").default>;

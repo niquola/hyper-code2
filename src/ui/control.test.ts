@@ -55,4 +55,22 @@ describe('ui control helpers', () => {
     expect((ctx.state as any).openedFiles).toEqual(['src/x.ts']);
     expect(emitted[0]).toEqual({ type: 'ui.navigate', path: '/files?path=src%2Fx.ts' });
   });
+
+  test('secure-input SSE bridge only triggers the HTMX host', async () => {
+    const { ctx } = await mkCtx();
+    const script = await ctx.fns.ui.controlScript({});
+    expect(script).toContain('secure-input-refresh');
+    expect(script).not.toContain("createElement('input')");
+    expect(ctx.state.procs.http.routes['/secureInput/prompt/:id']?.POST).toBeFunction();
+  });
+
+
+  test('secure-input styling lives in the server-rendered HTMX fragment', async () => {
+    const { ctx } = await mkCtx();
+    const html = ctx.fns.secureInput.render({ prompt: { id: 'p1', name: 'test-1', title: 'Test', message: 'Enter', kind: 'text', maxlength: 20 } });
+    expect(html).toContain('border border-gray-300');
+    expect(html).toContain('bg-blue-600');
+    expect(html).toContain('hx-post="/secureInput/prompt/p1"');
+  });
+
 });
