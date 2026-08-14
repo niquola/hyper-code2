@@ -64,18 +64,30 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         }
     } catch { /* not logged in or unreachable — omit */ }
 
-    // Claude Code (Anthropic subscription) — only if user has a valid token in
-    // the macOS keychain. Anthropic actively rejects sonnet/opus for non-CLI
-    // OAuth clients with 429 (per-model anti-fraud), so we only expose haiku
-    // here. For sonnet/opus use the `anthropic:` provider with an API key.
+    // Claude subscription models. We cannot query an account-specific model
+    // catalogue from the Messages API, so expose the current Anthropic aliases
+    // for every connected subscription source. Availability still depends on
+    // the user's plan and Anthropic policy; an unsupported choice fails clearly.
+    const claudeModels = [
+        "claude-haiku-4-5",
+        "claude-sonnet-4-5",
+        "claude-sonnet-4-6",
+        "claude-opus-4-5",
+        "claude-opus-4-6",
+        // Confirmed against the installed Claude Code 2.1.232 CLI: both full
+        // IDs complete requests and are reported verbatim in stream-json.
+        "claude-opus-5",
+        "claude-fable-5",
+    ];
     try {
         const tok = await ctx.fns.llm.refreshClaudeCode?.({});
-        if (tok) {
-            out["claude-code"] = [
-                "claude-code:claude-haiku-4-5-20251001",
-            ];
-        }
+        if (tok) out["claude-code"] = claudeModels.map(id => `claude-code:${id}`);
     } catch { /* no keychain access — omit */ }
+
+    try {
+        const managed = await ctx.fns.llm.anthropicOAuthStatus?.({});
+        if (managed?.connected) out["anthropic-oauth"] = claudeModels.map(id => `anthropic-oauth:${id}`);
+    } catch { /* migration unavailable / not connected — omit */ }
 
     return out;
 }

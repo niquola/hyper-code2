@@ -10,7 +10,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
             const titles = form.getAll("task_title").map(String);
             const instructions = form.getAll("task_instructions").map(String);
             if (ids.length !== titles.length || ids.length !== instructions.length) throw new Error("Invalid plan rows");
-            const tasks = ids.map((taskId, index) => ({ id: taskId, title: titles[index], instructions: instructions[index] }));
+            const tasks = ids.map((taskId, index) => ({ id: taskId, title: titles[index]!, instructions: instructions[index] }));
             const result = await ctx.fns.session.updatePlan({ agent, title: String(form.get("title") ?? ""), tasks });
             const active = result.plan?.tasks?.find((task: any) => task.status === "active");
             if (active) {

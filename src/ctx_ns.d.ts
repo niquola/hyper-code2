@@ -241,13 +241,25 @@ declare global {
             users: Injected<typeof import("../plugins/google/src/gworkspace/users").default>;
         };
         llm: {
+            anthropicOAuthConstants: Injected<typeof import("./llm/anthropicOAuthConstants").default>;
+            anthropicOAuthStatus: Injected<typeof import("./llm/anthropicOAuthStatus").default>;
+            completeAnthropicOAuth: Injected<typeof import("./llm/completeAnthropicOAuth").default>;
             connectFetch: Injected<typeof import("./llm/connectFetch").default>;
+            decryptOAuthSecret: Injected<typeof import("./llm/decryptOAuthSecret").default>;
+            encryptOAuthSecret: Injected<typeof import("./llm/encryptOAuthSecret").default>;
+            exchangeAnthropicOAuth: Injected<typeof import("./llm/exchangeAnthropicOAuth").default>;
+            getAnthropicOAuthToken: Injected<typeof import("./llm/getAnthropicOAuthToken").default>;
             listModels: Injected<typeof import("./llm/listModels").default>;
+            logoutAnthropicOAuth: Injected<typeof import("./llm/logoutAnthropicOAuth").default>;
+            oauthEncryptionKey: Injected<typeof import("./llm/oauthEncryptionKey").default>;
+            parseAnthropicAuthorizationInput: Injected<typeof import("./llm/parseAnthropicAuthorizationInput").default>;
             parseSSE: Injected<typeof import("./llm/parseSSE").default>;
             refreshClaudeCode: Injected<typeof import("./llm/refreshClaudeCode").default>;
             refreshCodex: Injected<typeof import("./llm/refreshCodex").default>;
             refreshKimiCode: Injected<typeof import("./llm/refreshKimiCode").default>;
             resolveEndpoint: Injected<typeof import("./llm/resolveEndpoint").default>;
+            saveAnthropicOAuth: Injected<typeof import("./llm/saveAnthropicOAuth").default>;
+            startAnthropicOAuth: Injected<typeof import("./llm/startAnthropicOAuth").default>;
             stream: Injected<typeof import("./llm/stream").default>;
             streamAnthropic: Injected<typeof import("./llm/streamAnthropic").default>;
             streamCodex: Injected<typeof import("./llm/streamCodex").default>;

@@ -13,9 +13,8 @@ export default async function (
     const { agent } = opts;
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
 
-    // buildLlmRequest handles the claude-code anti-fraud header (kept in
-    // system) and moves the rest of the instruction body into messages
-    // (option A — "system-as-messages").
+    // buildLlmRequest keeps the required Claude Code identity in the top-level
+    // system field for both externally managed and hyper-code2-managed OAuth.
     const { system, messages: convo } = await ctx.fns.agent.buildLlmRequest({ agent });
 
     const body: any = {
@@ -34,9 +33,10 @@ export default async function (
         "content-type": "application/json",
         "anthropic-version": "2023-06-01",
     };
-    // Subscription tokens are refreshed lazily (each has ~15min–1h TTL):
-    //   kimi-coding   → ~/.kimi/credentials/kimi-code.json
-    //   claude-code   → macOS keychain "Claude Code-credentials"
+    // Subscription tokens are refreshed lazily immediately before sending:
+    //   kimi-coding      → ~/.kimi/credentials/kimi-code.json
+    //   claude-code      → macOS keychain "Claude Code-credentials"
+    //   anthropic-oauth  → encrypted Postgres credential
     let apiKey = ep.apiKey;
     if (ep.provider === "kimi-coding") {
         const fresh = await ctx.fns.llm.refreshKimiCode({});
@@ -44,21 +44,26 @@ export default async function (
     } else if (ep.provider === "claude-code") {
         const fresh = await ctx.fns.llm.refreshClaudeCode({});
         if (fresh) apiKey = fresh;
+    } else if (ep.provider === "anthropic-oauth") {
+        apiKey = await ctx.fns.llm.getAnthropicOAuthToken({});
     }
+
+    const claudeSubscription = ep.provider === "claude-code" || ep.provider === "anthropic-oauth";
     if (apiKey) {
-        if (apiKey.startsWith("sk-ant-oat") || ep.provider === "kimi-coding") {
+        // Authentication semantics come from the selected provider, not from a
+        // token-prefix heuristic. This prevents accidental billing/auth changes.
+        if (claudeSubscription || ep.provider === "kimi-coding") {
             headers["authorization"] = `Bearer ${apiKey}`;
         } else {
             headers["x-api-key"] = apiKey;
         }
     }
-    // Claude Code subscription requires identity headers that match what the
-    // official `claude` CLI sends; otherwise the OAuth token is rejected or
-    // the request gets flagged. Headers below mirror the CLI 2.1.x reverse-
-    // engineering. Subject to change — every value is env-overridable.
-    if (ep.provider === "claude-code") {
+    // Both subscription sources must identify as Claude Code. Keep this one
+    // shared block so managed OAuth and official-CLI credential reuse cannot
+    // drift. Environment names remain backwards-compatible.
+    if (claudeSubscription) {
         const cliVersion = ctx.env.CLAUDE_CODE_CLI_VERSION ?? "2.1.126";
-        const baseBeta = ["oauth-2025-04-20", "interleaved-thinking-2025-05-14", "prompt-caching-scope-2026-01-05"];
+        const baseBeta = ["claude-code-20250219", "oauth-2025-04-20", "fine-grained-tool-streaming-2025-05-14", "interleaved-thinking-2025-05-14"];
         headers["anthropic-beta"] = ctx.env.CLAUDE_CODE_ANTHROPIC_BETA ?? baseBeta.join(",");
         headers["user-agent"] = ctx.env.CLAUDE_CODE_USER_AGENT ?? `claude-cli/${cliVersion} (external, sdk-cli)`;
         headers["x-app"] = "cli";

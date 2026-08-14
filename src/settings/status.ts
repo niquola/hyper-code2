@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<{
     openai: { set: boolean };
     anthropic: { set: boolean };
+    anthropicOAuth: { connected: boolean; expiresAt: number | null; needsReconnect: boolean; loginStatus: "idle" | "pending" | "exchanging" | "failed"; error: string | null };
     kimi: { set: boolean };
     groq: { set: boolean };
     openrouter: { set: boolean };
@@ -36,10 +37,12 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         }
     } catch { /* not logged in */ }
     const codexPending = (ctx.state as any).settings?.codex?.status === "pending";
+    const anthropicOAuth = await ctx.fns.llm.anthropicOAuthStatus({});
 
     return {
         openai: { set: !!env.OPENAI_API_KEY },
         anthropic: { set: !!env.ANTHROPIC_API_KEY },
+        anthropicOAuth,
         kimi: { set: !!env.KIMI_API_KEY },
         groq: { set: !!env.GROQ_API_KEY },
         openrouter: { set: !!env.OPENROUTER_API_KEY },

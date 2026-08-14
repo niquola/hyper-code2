@@ -82,4 +82,14 @@ describe("ai.resolveEndpoint", () => {
         expect(r.url).toBe("https://api.anthropic.com/v1/messages");
         expect(r.apiKey).toBeNull();
     });
+    test("anthropic-oauth: prefix → managed subscription Anthropic endpoint", async () => {
+        const r = await resolve(mkCtx(), null, { model: "anthropic-oauth:claude-sonnet-4-6" });
+        expect(r.provider).toBe("anthropic-oauth");
+        expect(r.api).toBe("anthropic");
+        expect(r.modelId).toBe("claude-sonnet-4-6");
+        expect(r.url).toBe("https://api.anthropic.com/v1/messages");
+        expect(r.apiKey).toBeNull();
+    });
+
+
 });

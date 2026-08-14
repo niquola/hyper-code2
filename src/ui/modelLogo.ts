@@ -12,7 +12,7 @@ export default function (ctx: Context, _session: Session | null, opts: { model?:
 
     const path = key.startsWith('codex:') || key.startsWith('openai:') || key.startsWith('openai/') || key.includes('gpt-')
         ? openai
-        : key.startsWith('claude-code:') || key.startsWith('anthropic:') || key.includes('claude')
+        : key.startsWith('claude-code:') || key.startsWith('anthropic:') || key.startsWith('anthropic-oauth:') || key.includes('claude')
             ? anthropic
             : key.startsWith('kimi:') || key.startsWith('moonshot:') || key.includes('kimi')
                 ? kimi

@@ -56,7 +56,7 @@ export default async function (
 
     let system = '';
     let bodyText = fullPrompt + statusBlock;
-    if (ep.provider === 'claude-code') {
+    if (ep.provider === 'claude-code' || ep.provider === 'anthropic-oauth') {
         system = claudeCodeHeader;
         if (bodyText.startsWith(claudeCodeHeader)) {
             bodyText = bodyText.slice(claudeCodeHeader.length).trimStart();
