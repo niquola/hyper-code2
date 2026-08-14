@@ -25,7 +25,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
       id: `agent-meta-${agent.id}`,
       url: `/ui/agent/${encodeURIComponent(agent.id)}/meta`,
       topic: `agent-meta:${agent.id}`,
-      every: 60,
+      every: 0,
       tag: 'aside',
       attrs: 'class="flex h-full w-80 shrink-0 flex-col border-l border-gray-300 bg-gray-50"',
       html: `
@@ -50,6 +50,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
           <form hx-post="/agent/${encodeURIComponent(agent.id)}/automation" hx-swap="none" hx-trigger="change delay:200ms" class="mt-3 space-y-3">
             ${ctx.fns.ui.toggle({ label: 'Reflection', name: 'reflectionEnabled', enabled: agent.reflectionEnabled !== false, hint: 'Periodic conversation analysis and nudges' })}
             ${ctx.fns.ui.toggle({ label: 'Sleep', name: 'sleepEnabled', enabled: agent.sleepEnabled !== false, hint: 'Idle context consolidation after 15 minutes' })}
+            ${ctx.fns.ui.toggle({ label: 'Function RAG', name: 'functionRagEnabled', enabled: agent.functionRagEnabled === true, hint: 'Retrieve relevant runtime functions for each user prompt' })}
           </form>
         </section>
 

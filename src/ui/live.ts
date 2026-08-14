@@ -37,17 +37,17 @@ export default function (
         /** Endpoint URL. */ url: string;
         /** Value used for the topic option. */ topic: string;
         /** Rendered HTML content. */ html?: string;
-        /** Value used for the every option. */ every?: number;
+        /** Value used for the every option. Set 0 to disable the watchdog for editable regions. */ every?: number;
         /** Value used for the attrs option. */ attrs?: string;
         /** Value used for the tag option. */ tag?: string;
         /** Value used for the swap option. */ swap?: string;
         /** HTML for the popup trigger. */ trigger?: string },
 ): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
-    const every = Math.max(5, opts.every ?? 30);
+    const every = opts.every === 0 ? 0 : Math.max(5, opts.every ?? 30);
     const tag = /^[a-z][a-z0-9-]*$/i.test(opts.tag ?? '') ? opts.tag! : 'div';
     const swap = opts.swap ?? 'outerHTML';
-    const trigger = [opts.trigger, 'hyper-live from:body', `every ${every}s`].filter(Boolean).join(', ');
+    const trigger = [opts.trigger, 'hyper-live from:body', every ? `every ${every}s` : ''].filter(Boolean).join(', ');
     // A caller may aim its region somewhere else; only fill in the default when
     // it did not, because the first attribute of a name is the one that counts.
     const target = /\bhx-target\s*=/.test(opts.attrs ?? "") ? "" : ` hx-target="this"`;
