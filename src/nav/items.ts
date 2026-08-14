@@ -22,6 +22,7 @@ export default async function (
 
     const pages: types.nav.Item[] = [
         { label: "search transcripts", href: "/search", hint: "page" },
+        { label: "functions", href: "/functions", hint: "page · searchable runtime API documentation" },
         { label: "files", href: "/files", hint: "page" },
         { label: "settings", href: "/settings", hint: "page" },
         { label: "LLM connections", href: "/llms", hint: "page · models and authentication" },
