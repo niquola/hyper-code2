@@ -46,6 +46,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
         `- your agent id: ${agent.id}`,
         "- storage: Postgres — ctx.fns.procs.db.* (never bare Bun.sql)",
         "",
+        "- durable wake-ups: await ctx.fns.agent.wakeIn({ id: agent.id, delayMs, reason }) or wakeAt({ id: agent.id, at, reason }); cancelWake({ id: agent.id })",
+        "- conditional wake: wakeUpWhen({ id: agent.id, predicate: 'file.exists'|'db.rows'|'http.ok'|'runtime.fn', opts, reason, everyMs?, timeoutMs? }); runtime.fn opts: { name: 'module.function', args, callTimeoutMs? }; default polling is 5m",
+        "- for reusable project-local procedures, prefer .hyper/<module>/<fn>.ts runtime functions; do not pass arbitrary code to durable watches",
     ].join("\n");
 
     return core + "\n\n" + tools + pluginBlock + perAgentBlock + runtime;

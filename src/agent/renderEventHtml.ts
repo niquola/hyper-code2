@@ -156,6 +156,16 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
     }
 
 
+    if (ev.type === "wake_up") {
+        const watched = !!ev.watchId;
+        const ready = ev.watchStatus === "ready";
+        const title = watched ? (ready ? "Condition met" : "Condition timed out") : "Scheduled wake-up";
+        const icon = watched ? (ready ? "ph-check-circle" : "ph-timer") : "ph-alarm";
+        const result = ev.result == null ? "" : JSON.stringify(ev.result, null, 2);
+        return `<div class="mx-auto max-w-[90%] overflow-hidden rounded-xl border border-sky-200 bg-sky-50 text-xs text-sky-900"><div class="flex items-center gap-2 border-b border-sky-100 px-3 py-2 font-medium"><i class="ph ${icon} text-sky-600"></i><span>${title}</span>${watched ? `<span class="ml-auto rounded-full bg-sky-100 px-1.5 py-0.5 font-mono text-[9px] text-sky-600">watch</span>` : ""}</div><div class="px-3 py-2.5"><div class="leading-5 text-sky-800">${esc(ev.reason ?? ev.summary ?? "")}</div>${result ? `<details class="mt-2"><summary class="cursor-pointer text-[10px] font-medium text-sky-600">Result</summary><pre class="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-sky-100 bg-white/70 p-2 font-mono text-[10px] leading-4 text-gray-600">${esc(result)}</pre></details>` : ""}</div></div>`;
+    }
+
+
     if (ev.type === "goal_activation") {
         return `<div class="mx-auto max-w-[90%] rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-800"><div class="flex items-center gap-1.5 font-medium"><i class="ph ph-target"></i> Goal enabled · ${Number(ev.iterations ?? 3)} iterations</div><div class="mt-1 leading-5 opacity-80">${esc(ev.text ?? "")}</div></div>`;
     }

@@ -48,6 +48,10 @@ export default async function (ctx: Context, session: Session | null, opts: { cu
   .shiki { background: transparent !important; }
   .assistant pre.shiki { padding: .6em .8em; border-radius: 6px; overflow-x: auto; margin: .4em 0; font-size: 12.5px; line-height: 1.45; }
   .tool pre.shiki { padding: 0; margin: 0; overflow-x: auto; }
+  .ui-toggle-track { position: relative; display: block; flex: none; width: 40px; height: 20px; box-sizing: border-box; border-radius: 9999px; background: rgb(229 231 235); transition: background-color .15s ease, box-shadow .15s ease; }
+  .ui-toggle-thumb { position: absolute; top: 2px; display: block; width: 16px; height: 16px; border-radius: 9999px; background: white; box-shadow: 0 1px 2px rgb(0 0 0 / .18); transition: left .15s ease; }
+  .ui-toggle-input:focus-visible + span.ui-toggle-track { box-shadow: 0 0 0 2px rgb(199 210 254); }
+
 </style>
 ${((ctx.state as any).procs?.styles ?? []).map((st: any) => `<link rel="stylesheet" href="${esc(st.href)}">`).join("\n")}
 ${opts.headExtra ?? ""}
@@ -58,6 +62,7 @@ ${opts.headExtra ?? ""}
 <script src="/agent/chat.js" defer></script>
 <script src="/ui/meta.js" defer></script>
 <script src="/screen/client.js" defer></script>
+<script src="/ui/wake-timer.js" defer></script>
 </head>
 <body class="bg-gray-100 text-gray-900 text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div id="frame" class="relative flex h-screen">

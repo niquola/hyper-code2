@@ -211,12 +211,14 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         // provider (429 / connection errors) and Postgres serialising row writes.
         let drained = 0;
         await recoverStaleRuns(ctx, Date.now()).catch(() => undefined);
-        while (true) {
+        await ctx.fns.agent.deliverWakes({ now: Date.now() }).catch((error: any) => console.error('wake delivery failed:', error));
+        await ctx.fns.agent.pollWatches({ now: Date.now() }).catch((error: any) => console.error('watch polling failed:', error));
         const lastSleepScan = Number((ctx.state as any).lastSleepScan ?? 0);
         if (Date.now() - lastSleepScan >= 60_000) {
             (ctx.state as any).lastSleepScan = Date.now();
             await ctx.fns.agent.sleepIdle({}).catch((error: any) => console.error('sleep scan failed:', error));
         }
+        while (true) {
             const id = await claimOne(ctx, Date.now());
             if (!id) break;
             drained++;
@@ -234,8 +236,12 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
             // No work in flight. Sleep until either a wake signal lands or
             // the soonest scheduled `next_run_at` is due.
             const next = ((await ctx.fns.procs.db.select({
-                sql: 'SELECT MIN(next_run_at) AS next FROM agents WHERE run_state = ? AND next_run_at IS NOT NULL AND archived_at IS NULL',
-                params: ['idle'],
+                sql: `SELECT LEAST(
+                        COALESCE((SELECT MIN(next_run_at) FROM agents WHERE run_state = ? AND next_run_at IS NOT NULL AND archived_at IS NULL), ?),
+                        COALESCE((SELECT MIN(wake_at) FROM agents WHERE wake_at IS NOT NULL AND archived_at IS NULL), ?),
+                        COALESCE((SELECT MIN(next_check_at) FROM agent_watches WHERE status = 'active'), ?)
+                      ) AS next`,
+                params: ['idle', Date.now() + MAX_IDLE_MS, Date.now() + MAX_IDLE_MS, Date.now() + MAX_IDLE_MS],
             })) as any[])[0];
             const nextMs = next?.next ? Number(next.next) - Date.now() : MAX_IDLE_MS;
             const wait = Math.max(50, Math.min(MAX_IDLE_MS, nextMs));
@@ -246,8 +252,12 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
             // for the earlier of a wake and the next due time — never a blind
             // MAX_IDLE_MS sleep that accidentally serialises agents.
             const next = ((await ctx.fns.procs.db.select({
-                sql: 'SELECT MIN(next_run_at) AS next FROM agents WHERE run_state = ? AND next_run_at IS NOT NULL AND archived_at IS NULL',
-                params: ['idle'],
+                sql: `SELECT LEAST(
+                        COALESCE((SELECT MIN(next_run_at) FROM agents WHERE run_state = ? AND next_run_at IS NOT NULL AND archived_at IS NULL), ?),
+                        COALESCE((SELECT MIN(wake_at) FROM agents WHERE wake_at IS NOT NULL AND archived_at IS NULL), ?),
+                        COALESCE((SELECT MIN(next_check_at) FROM agent_watches WHERE status = 'active'), ?)
+                      ) AS next`,
+                params: ['idle', Date.now() + MAX_IDLE_MS, Date.now() + MAX_IDLE_MS, Date.now() + MAX_IDLE_MS],
             })) as any[])[0];
             const nextMs = next?.next ? Number(next.next) - Date.now() : MAX_IDLE_MS;
             await waitForWork(ctx, Math.max(50, Math.min(MAX_IDLE_MS, nextMs)));

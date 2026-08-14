@@ -23,6 +23,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
         sleepEnabled: row.sleep_enabled !== false && row.sleep_enabled !== 0 && row.sleep_enabled !== 'f',
         goal: row.goal == null ? null : (typeof row.goal === 'string' ? JSON.parse(row.goal) : row.goal),
         subscribers: new Set(),
+        wakeAt: row.wake_at == null ? null : Number(row.wake_at),
+        wakeReason: row.wake_reason == null ? null : String(row.wake_reason),
         waiters: [],
         isStreaming: false,
         abortController: null,

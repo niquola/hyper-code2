@@ -32,6 +32,8 @@ export default async function (
         sleepEnabled: true,
         goal: null,
         drainPromise: null,
+        wakeAt: null,
+        wakeReason: null,
     };
     (ctx.state as any).agent ??= {};
     (ctx.state as any).agent[id] = agent;

@@ -47,6 +47,13 @@ export default function (ctx: Context, _session: Session | null, opts: { agent: 
           </form>
         </section>
 
+        <details class="group mt-3 rounded-lg border border-gray-200 bg-white shadow-sm">
+          <summary class="grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50"><i class="ph ph-alarm text-indigo-500"></i><span class="min-w-0 flex-1 text-sm font-medium text-gray-700">Wake-up</span>${agent.wakeAt ? ctx.fns.ui.wakeTimer({ agent }) : `<span class="text-[10px] text-gray-400">off</span>`}<i class="ph ph-caret-down text-[10px] text-gray-400 transition-transform group-open:rotate-180"></i></summary>
+          <div class="border-t border-gray-100 px-3 pb-3 pt-2">
+          ${agent.wakeAt ? `<div class="truncate text-[11px] leading-5 text-gray-500" title="${esc(agent.wakeReason ?? '')}">${esc(agent.wakeReason ?? '')}</div><form hx-post="/agent/${encodeURIComponent(agent.id)}/wake" hx-swap="none" class="mt-2"><input type="hidden" name="action" value="cancel"><button class="rounded border border-gray-200 px-2 py-1 text-[10px] text-gray-500 hover:bg-red-50 hover:text-red-600">Cancel</button></form>` : `<form hx-post="/agent/${encodeURIComponent(agent.id)}/wake" hx-swap="none" class="space-y-2"><input type="hidden" name="action" value="set"><input name="reason" value="Continue scheduled work" maxlength="1000" aria-label="Wake reason" class="w-full rounded border border-gray-300 px-2 py-1 text-[11px] text-gray-700"><div class="flex items-center gap-1"><input name="minutes" type="number" min="1" max="10080" value="5" aria-label="Wake in minutes" class="w-16 rounded border border-gray-300 px-2 py-1 text-[11px] text-gray-700"><span class="text-[10px] text-gray-400">min</span><button name="preset" value="5" class="rounded bg-gray-100 px-2 py-1 text-[10px] text-gray-500">5m</button><button name="preset" value="60" class="rounded bg-gray-100 px-2 py-1 text-[10px] text-gray-500">1h</button><button class="ml-auto rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-[10px] text-indigo-700">Set</button></div></form>`}
+          </div>
+        </details>
+
         ${tasks.length ? `<section class="mt-4 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
           <form data-plan-editor hx-post="/agent/${encodeURIComponent(agent.id)}/plan" hx-swap="none" class="space-y-3">
             <input type="hidden" name="action" value="update">

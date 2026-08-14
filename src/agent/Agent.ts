@@ -27,4 +27,6 @@ export type Agent = {
     sleepEnabled?: boolean;
     goal?: Record<string, any> | null;
     drainPromise?: Promise<any> | null;
+    wakeAt?: number | null;
+    wakeReason?: string | null;
 };

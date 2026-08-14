@@ -188,6 +188,17 @@ describe("agent.renderEventHtml", () => {
     expect(html).toContain("border-orange-200");
   });
 
+  test("renders conditional wake as a compact card with collapsible result", async () => {
+    const html = await renderEventHtml(ctx, { type: "wake_up", watchId: "w1", watchStatus: "ready", reason: "Email arrived", result: { subject: "Hello", snippet: "Body" } });
+    expect(html).toContain("Condition met");
+    expect(html).toContain(">watch</span>");
+    expect(html).toContain("<summary");
+    expect(html).toContain("Result");
+    expect(html).toContain('&quot;subject&quot;: &quot;Hello&quot;');
+    expect(html).not.toContain("Wake condition met:");
+  });
+
+
 });
 
 describe("agent.renderEventHtml — errors", () => {
