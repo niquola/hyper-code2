@@ -43,3 +43,36 @@ test("opens the folded subagent group when current agent is inside it", async ()
     expect(html).toMatch(/<details[^>]*open/);
     expect(html).toContain("1 subagent");
 });
+
+
+test("the workdir heading links into the file browser, swapping only #main", async () => {
+    const agents = [
+        { id: "a1", model: "m", title: "one", workspaceDir: "/Users/x/repo", runState: "idle", unread: 0, archivedAt: null, parentId: null },
+    ];
+    const ctx = { fns: { session: { list: async () => agents }, procs: { ui: { escape: ({ text }: any) => String(text), attr } }, ui: { modelLogo: () => "logo" } } } as any;
+    const html = await render(ctx, null, {});
+
+    const encoded = encodeURIComponent("/Users/x/repo");
+    expect(html).toContain(`href="/files?path=${encoded}"`);
+    expect(html).toContain(`hx-get="/files?path=${encoded}"`);
+    // Same swap contract as an agent link: the rail is outside #main and must
+    // not be redrawn by its own navigation.
+    expect(html).toContain(`hx-get="/files?path=${encoded}" hx-target="#main" hx-swap="innerHTML" hx-push-url="true"`);
+    // Basename is the label, the full path is the tooltip.
+    expect(html).toContain(">repo</span>");
+    expect(html).toContain("Explorer");
+    expect(html).toContain("ph-folder-open");
+    expect(html).toContain('title="/Users/x/repo"');
+    expect(html).toContain('data-action="open" data-entity="workdir"');
+});
+
+test("an agent with no workdir gets a heading but not a link", async () => {
+    const agents = [
+        { id: "a1", model: "m", title: "one", workspaceDir: null, runState: "idle", unread: 0, archivedAt: null, parentId: null },
+    ];
+    const ctx = { fns: { session: { list: async () => agents }, procs: { ui: { escape: ({ text }: any) => String(text), attr } }, ui: { modelLogo: () => "logo" } } } as any;
+    const html = await render(ctx, null, {});
+
+    expect(html).toContain("(no workdir)");
+    expect(html).not.toContain("/files?path=");
+});

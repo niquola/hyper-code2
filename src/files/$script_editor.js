@@ -81,6 +81,17 @@
     ];
 
     const host = document.getElementById("cm-editor");
+    // On an htmx swap the script re-runs while a previous editor may still be
+    // mounted in a host that has just been replaced. Mounting a second view
+    // into the same node stacks two editors, and the old one keeps its autosave
+    // timer pointed at the PREVIOUS file. Bail if the host is gone, clear it if
+    // it is not.
+    if (!host) return;
+    if (window.__cmView) {
+        try { window.__cmView.destroy(); } catch { /* already gone with its node */ }
+        window.__cmView = null;
+    }
+    host.replaceChildren();
     let editor = new EditorView({
         state: EditorState.create({ doc: cfg.content, extensions }),
         parent: host,

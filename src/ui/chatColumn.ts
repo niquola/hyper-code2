@@ -75,7 +75,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
         ?.slice('Reflection nudge: '.length) ?? '';
     // header names THIS agent and holds its controls, nothing more.
     return `
-<header class="px-3 py-2 border-b border-gray-300 flex items-center gap-2 text-xs bg-gray-200 shadow-sm">
+<header class="flex h-8 shrink-0 items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 text-xs text-gray-700">
   ${ctx.fns.ui.modelLogo({ model: agent.model })}
   <span class="font-mono font-medium text-gray-800">${esc(String(agent.title ?? id).slice(0, 40) || id)} <span class="text-gray-400">(${esc(id)})</span></span>
   ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}

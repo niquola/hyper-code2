@@ -47,10 +47,12 @@ describe('ui control helpers', () => {
     expect(emitted[0].type).toBe('ui.notify');
   });
 
-  test('openFile resolves and opens file', async () => {
-    const { ctx } = await mkCtx();
+  test('openFile resolves, records and navigates to the Files screen', async () => {
+    const { ctx, emitted } = await mkCtx();
     const res = await ctx.fns.ui.openFile({ path: 'src/x.ts' });
     expect(res.opened).toBe('src/x.ts');
+    expect(res.url).toBe('/files?path=src%2Fx.ts');
     expect((ctx.state as any).openedFiles).toEqual(['src/x.ts']);
+    expect(emitted[0]).toEqual({ type: 'ui.navigate', path: '/files?path=src%2Fx.ts' });
   });
 });

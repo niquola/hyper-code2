@@ -27,56 +27,89 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
 async function renderDir(ctx: Context, path: string) {
     const entries = await ctx.fns.files.list({ path });
     const crumbs = breadcrumbs(path);
-    const rows = entries.map(e => {
-        const full = path ? `${path}/${e.name}` : e.name;
-        const icon = e.isDir ? "📁" : "📄";
-        return `<a href="/files?path=${encodeURIComponent(full)}" class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 border-b border-gray-100 text-sm">
-<span>${icon}</span><span class="font-mono text-gray-700">${esc(e.name)}${e.isDir ? "/" : ""}</span>
+    const rows = entries.map((e, index) => {
+        // Joining an absolute parent must not double the slash: "/" + "Users".
+        const full = path ? `${path.replace(/\/$/, "")}/${e.name}` : e.name;
+        const icon = e.isDir ? "ph-folder text-gray-500" : fileIcon(e.name);
+        return `<a href="/files?path=${encodeURIComponent(full)}" class="group grid min-h-9 grid-cols-[minmax(0,1fr)_7rem] items-center border-t border-gray-200 px-4 text-sm hover:bg-gray-50 ${index === 0 ? "border-t-0" : ""}">
+<span class="flex min-w-0 items-center gap-3"><i class="ph ${icon} text-base"></i><span class="truncate text-gray-900 group-hover:text-blue-600 group-hover:underline">${esc(e.name)}</span></span>
+<span class="text-right text-xs text-gray-400">${e.isDir ? "Directory" : fileKind(e.name)}</span>
 </a>`;
     }).join("");
-    const body = `
-<div class="px-6 py-4 border-b border-gray-200 text-sm">${crumbs}</div>
-<div class="flex-1 overflow-y-auto">${rows || '<div class="p-6 text-gray-400">(empty)</div>'}</div>`;
+    const body = `<div class="flex-1 overflow-y-auto bg-white px-5 py-5">
+<div class="mx-auto w-full max-w-5xl">
+  <div class="mb-4 flex min-w-0 items-center gap-2 text-sm text-gray-600">${crumbs}</div>
+  <div class="overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm">
+    <div class="flex h-10 items-center gap-2 border-b border-gray-300 bg-gray-50 px-4">
+      <i class="ph ph-folder-open text-gray-500"></i><span class="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">${esc(path ? basename(path) || path : "workspace")}</span>
+      <span class="text-xs text-gray-500">${entries.length} item${entries.length === 1 ? "" : "s"}</span>
+    </div>
+    <div>${rows || '<div class="px-4 py-10 text-center text-sm text-gray-500">This directory is empty.</div>'}</div>
+  </div>
+</div>
+</div>`;
     return { title: path || "files", main: page(body) };
 }
 
 async function renderFile(ctx: Context, path: string, tabParam: string) {
-    const content = await ctx.fns.files.read({ path });
     const name = basename(path);
     const ext = extname(name).slice(1).toLowerCase();
     const isMd = ext === "md" || ext === "markdown";
     const isHtml = ext === "html" || ext === "htm";
-    const tab = tabParam || (isMd ? "preview" : "code");
+    const isImage = IMAGE_EXT.has(ext);
+    const isVideo = VIDEO_EXT.has(ext);
+    const isAudio = AUDIO_EXT.has(ext);
+    const isPdf = ext === "pdf";
+    const isMedia = isImage || isVideo || isAudio || isPdf;
+    const tab = isMedia ? "preview" : (tabParam || (isMd || isHtml ? "preview" : "code"));
     const shikiLang = SHIKI_EXT[ext] ?? "text";
     const cmLang = CM_EXT[ext] ?? null;
+    // Binary media must never pass through files.read(), which decodes as UTF-8.
+    const content = isMedia ? "" : await ctx.fns.files.read({ path });
 
     const tabCls = (id: string) => id === tab
-        ? "px-2.5 py-0.5 text-xs font-medium text-gray-900 bg-white border border-gray-300 rounded"
-        : "px-2.5 py-0.5 text-xs text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded cursor-pointer";
+        ? "border-b-2 border-orange-500 px-3 py-2 text-sm font-semibold text-gray-900"
+        : "border-b-2 border-transparent px-3 py-2 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900";
     const tabLink = (id: string, label: string) =>
         `<a href="/files?path=${encodeURIComponent(path)}&tab=${id}" class="${tabCls(id)}">${label}</a>`;
 
     const tabs: string[] = [];
-    if (isMd) tabs.push(tabLink("preview", "Preview"));
-    if (isHtml) tabs.push(tabLink("preview", "Preview"));
-    tabs.push(tabLink("code", "Code"));
-    tabs.push(tabLink("edit", "Edit"));
+    if (isMd || isHtml || isMedia) tabs.push(tabLink("preview", "Preview"));
+    if (!isMedia) {
+        tabs.push(tabLink("code", "Code"));
+        tabs.push(tabLink("edit", "Edit"));
+    }
 
     let contentEl = "";
-    let headExtra = "";
-    if (tab === "preview" && isMd) {
+    const rawUrl = `/files/raw?path=${encodeURIComponent(path)}`;
+    if (tab === "preview" && isImage) {
+        contentEl = `<div class="flex flex-1 items-center justify-center overflow-auto bg-[linear-gradient(45deg,#e5e7eb_25%,transparent_25%),linear-gradient(-45deg,#e5e7eb_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e5e7eb_75%),linear-gradient(-45deg,transparent_75%,#e5e7eb_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0px] p-8"><img src="${rawUrl}" alt="${esc(name)}" class="max-h-full max-w-full object-contain shadow-lg" loading="eager"></div>`;
+    } else if (tab === "preview" && isVideo) {
+        contentEl = `<div class="flex flex-1 items-center justify-center overflow-auto bg-gray-950 p-6"><video src="${rawUrl}" class="max-h-full max-w-full" controls preload="metadata"></video></div>`;
+    } else if (tab === "preview" && isAudio) {
+        contentEl = `<div class="flex flex-1 flex-col items-center justify-center gap-5 bg-gray-50 p-8"><i class="ph ph-waveform text-6xl text-indigo-400"></i><div class="text-sm font-medium text-gray-600">${esc(name)}</div><audio src="${rawUrl}" class="w-full max-w-xl" controls preload="metadata"></audio></div>`;
+    } else if (tab === "preview" && isPdf) {
+        contentEl = `<iframe src="${rawUrl}" title="${esc(name)}" class="flex-1 w-full border-0 bg-gray-100"></iframe>`;
+    } else if (tab === "preview" && isMd) {
         const html = await ctx.fns.markdown.render({ source: content });
         contentEl = `<div class="flex-1 overflow-auto p-6"><div class="prose prose-sm max-w-none">${html}</div></div>`;
     } else if (tab === "preview" && isHtml) {
         contentEl = `<iframe srcdoc="${esc(content)}" class="flex-1 w-full border-0" sandbox="allow-scripts"></iframe>`;
     } else if (tab === "edit") {
-        headExtra = `<script>window.__editor = ${JSON.stringify({
+        // The editor's bootstrap rides INSIDE main, not in headExtra: an htmx
+        // request gets the fragment only, and the whole <head> is thrown away
+        // with it. Reaching this page through the rail (a swap into #main)
+        // therefore produced an empty editor pane and no way to notice why.
+        // htmx re-inserts <script> nodes it finds in swapped content and keeps
+        // their order, so the config and the loader run here exactly as they
+        // did from the head on a cold page load.
+        contentEl = `<div id="cm-editor" class="flex-1 overflow-hidden"></div>
+<script>window.__editor = ${JSON.stringify({
             saveUrl: `/files?path=${encodeURIComponent(path)}`,
             content,
             lang: cmLang,
         })};</script>
-<script src="/files/editor.js" defer></script>`;
-        contentEl = `<div id="cm-editor" class="flex-1 overflow-hidden"></div>`;
+<script src="/files/editor.js"></script>`;
     } else {
         const html = await ctx.fns.markdown.highlight({ code: content, lang: shikiLang });
         contentEl = `<div class="flex-1 overflow-auto text-xs bg-white [&_pre]:m-0 [&_pre]:rounded-none [&_pre]:p-4">${html}</div>`;
@@ -84,34 +117,62 @@ async function renderFile(ctx: Context, path: string, tabParam: string) {
 
     const crumbs = breadcrumbs(path);
     const body = `
-<div class="border-b border-gray-200 bg-gray-50 shrink-0 px-4 py-1.5 flex items-center gap-2">
-  <span class="text-xs font-mono text-gray-700 truncate mr-2">${esc(path)}</span>
-  ${tabs.join("")}
-  <span id="save-status" class="text-xs hidden"></span>
-  ${tab === "edit" ? `<label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer ml-2"><input type="checkbox" id="vim-toggle" class="w-3 h-3">vim</label>` : ""}
-  <span class="flex-1"></span>
-  <span class="text-xs text-gray-400 shrink-0">${content.length} chars · ${content.split("\n").length} lines</span>
+<div class="shrink-0 border-b border-gray-300 bg-white px-5 pt-4">
+  <div class="mb-2 flex min-w-0 items-center gap-2 text-sm">${crumbs}</div>
+  <div class="flex min-w-0 items-center gap-2">
+    <i class="ph ${fileIcon(name)} text-gray-500"></i>
+    <span class="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">${esc(name)}</span>
+    <span id="save-status" class="text-xs hidden"></span>
+    ${tab === "edit" ? `<label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer"><input type="checkbox" id="vim-toggle" class="w-3 h-3">vim</label>` : ""}
+    <span class="shrink-0 text-xs text-gray-400">${isMedia ? ext.toUpperCase() : `${content.length} chars · ${content.split("\n").length} lines`}</span>
+  </div>
+  <nav class="mt-2 flex items-end gap-1">${tabs.join("")}</nav>
 </div>
 ${tab === "edit" ? `<div id="vim-status" class="hidden bg-gray-800 text-gray-100 text-xs px-3 py-0.5 font-mono shrink-0"></div>` : ""}
-<div class="px-4 py-2 border-b border-gray-200 text-xs">${crumbs}</div>
 ${contentEl}`;
 
-    return { title: path, main: page(body), headExtra };
+    return { title: path, main: page(body) };
 }
 
 function page(body: string): string {
     return `<div class="flex-1 flex flex-col overflow-hidden">${body}</div>`;
 }
 
+// Breadcrumbs for a path that may be RELATIVE to the workspace or ABSOLUTE.
+// An absolute path splits into a leading empty segment ("/a/b" -> ["", "a", "b"]),
+// which used to render as a link with no label; and every crumb below it has to
+// keep the leading slash, or the second crumb would point at a relative path
+// resolved against a different base. The rail links a workdir by its absolute
+// path, so this is the normal case now, not a corner one.
 function breadcrumbs(path: string): string {
-    const parts = path ? path.split("/") : [];
-    const links = [`<a href="/files" class="text-blue-600 hover:underline">workspace</a>`];
+    const absolute = path.startsWith("/");
+    const parts = path.split("/").filter(Boolean);
+    const root = absolute
+        ? `<a href="/files?path=%2F" class="font-semibold text-blue-600 hover:underline">/</a>`
+        : `<a href="/files" class="font-semibold text-blue-600 hover:underline">workspace</a>`;
+    const links = [root];
     for (let i = 0; i < parts.length; i++) {
-        const sub = parts.slice(0, i + 1).join("/");
-        links.push(`<a href="/files?path=${encodeURIComponent(sub)}" class="text-blue-600 hover:underline">${esc(parts[i]!)}</a>`);
+        const sub = (absolute ? "/" : "") + parts.slice(0, i + 1).join("/");
+        links.push(`<a href="/files?path=${encodeURIComponent(sub)}" class="font-semibold text-blue-600 hover:underline">${esc(parts[i]!)}</a>`);
     }
-    return links.join(` <span class="text-gray-400">/</span> `);
+    return links.join(` <i class="ph ph-caret-right text-[10px] text-gray-400"></i> `);
 }
+
+function fileIcon(name: string): string {
+    const ext = extname(name).slice(1).toLowerCase();
+    if (IMAGE_EXT.has(ext)) return "ph-image text-gray-400";
+    if (VIDEO_EXT.has(ext)) return "ph-video text-gray-400";
+    if (AUDIO_EXT.has(ext)) return "ph-music-note text-gray-400";
+    if (ext === "pdf") return "ph-file-pdf text-gray-400";
+    if (["ts", "tsx", "js", "jsx", "json", "css", "html", "md", "py", "go", "rs"].includes(ext)) return "ph-file-code text-gray-400";
+    return "ph-file text-gray-400";
+}
+
+function fileKind(name: string): string {
+    const ext = extname(name).slice(1).toLowerCase();
+    return ext ? `${ext.toUpperCase()} file` : "File";
+}
+
 
 function esc(s: any): string {
     return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]!));
@@ -129,3 +190,8 @@ const CM_EXT: Record<string, string> = {
     py: "python", rs: "rust", go: "go", java: "java", yaml: "yaml", yml: "yaml",
     xml: "xml",
 };
+
+
+const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "avif", "svg", "bmp", "ico"]);
+const VIDEO_EXT = new Set(["mp4", "webm", "mov", "m4v", "ogv"]);
+const AUDIO_EXT = new Set(["mp3", "wav", "ogg", "oga", "m4a", "aac", "flac", "opus"]);

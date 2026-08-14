@@ -9,8 +9,13 @@ export default function (
     opts: { path: string; broadcast?: boolean },
 ): string[] {
     const path = opts.path;
-    if (!path) return ((ctx.state as any).files?.open ?? []) as string[];
-    const s = (ctx.state as any).files ?? ((ctx.state as any).files = { open: [] });
+    // `ctx.state.files` is shared with files.rgPath, which creates it to cache the
+    // ripgrep lookup. So the namespace can already exist with no `open` list in
+    // it — any grep before the first open used to make this throw on
+    // `s.open.includes`, taking the whole /files page down with it.
+    const s = ((ctx.state as any).files ??= {});
+    s.open ??= [];
+    if (!path) return s.open as string[];
     if (!s.open.includes(path)) s.open.push(path);
     if (opts.broadcast !== false) {
         ctx.fns.procs?.events?.emit?.({ event: { type: "files.open", path } });

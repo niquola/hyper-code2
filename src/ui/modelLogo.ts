@@ -1,6 +1,6 @@
 // Compact provider mark for chat headers. The full model id stays out of the
 // header's visual flow and is available through the native hover tooltip.
-export default function (ctx: Context, _session: Session | null, opts: { model?: string | null; active?: boolean; bare?: boolean }): string {
+export default function (ctx: Context, _session: Session | null, opts: { model?: string | null; active?: boolean; bare?: boolean; compact?: boolean }): string {
     const model = String(opts.model ?? '?');
     const esc = (value: string) => ctx.fns.procs.ui.escape({ text: value });
     const key = model.toLowerCase();
@@ -19,12 +19,15 @@ export default function (ctx: Context, _session: Session | null, opts: { model?:
                 : null;
 
     const motion = opts.active ? ' animate-spin' : '';
+    const markSize = opts.compact ? 'size-2.5' : 'size-3.5';
     const mark = path
-        ? `<svg viewBox="0 0 24 24" class="size-3.5 fill-current${motion}" aria-hidden="true"><path d="${path}"></path></svg>`
-        : `<i class="ph ph-cpu size-3.5 text-sm${motion}" aria-hidden="true"></i>`;
+        ? `<svg viewBox="0 0 24 24" class="${markSize} fill-current${motion}" aria-hidden="true"><path d="${path}"></path></svg>`
+        : `<i class="ph ph-cpu ${markSize} ${opts.compact ? 'text-xs' : 'text-sm'}${motion}" aria-hidden="true"></i>`;
 
+    const frameSize = opts.compact ? 'size-4' : 'size-6';
+    const tone = opts.compact ? 'text-gray-400' : 'text-gray-600';
     const frame = opts.bare
-        ? 'inline-flex size-6 shrink-0 items-center justify-center text-gray-600'
-        : 'inline-flex size-6 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600';
+        ? `inline-flex ${frameSize} shrink-0 items-center justify-center ${tone}`
+        : `inline-flex ${frameSize} shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white ${tone}`;
     return `<span class="${frame}" title="${esc(model)}" aria-label="Model: ${esc(model)}">${mark}</span>`;
 }

@@ -69,7 +69,7 @@ ${opts.headExtra ?? ""}
       swap: "innerHTML",
       trigger: "load, rail-refresh",
       every: 60,
-      attrs: `class="shrink-0 w-60 border-r border-gray-300 bg-gray-100 flex flex-col" ${ctx.fns.procs.ui.attr({ section: "agents" })}`,
+      attrs: `class="shrink-0 w-64 border-r border-gray-200 bg-gray-50 flex flex-col" ${ctx.fns.procs.ui.attr({ section: "agents" })}`,
   })}
   <!-- No htmx attributes on this container. htmx inherits hx-target, hx-swap
        and hx-push-url into EVERY descendant, and #main holds live content (the
