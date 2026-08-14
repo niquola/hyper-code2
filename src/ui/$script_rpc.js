@@ -40,7 +40,8 @@
             }
             const method = elt.getAttribute('hx-popup');
             const title = elt.getAttribute('title') || elt.getAttribute('aria-label') || method;
-            window.hyperPopup?.loading(title, 'rpc');
+            const secureSubmit = method === 'secureInput.submit';
+            if (!secureSubmit) window.hyperPopup?.loading(title, 'rpc');
             htmx.ajax('POST', '/rpc', { source: elt, target: '#app-popup-body', swap: 'innerHTML', values: { method, params: JSON.stringify(params) } });
         }
     };

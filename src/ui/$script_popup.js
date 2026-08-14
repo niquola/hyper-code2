@@ -5,10 +5,14 @@
     if (window.__hyperPopupInstalled) return;
     window.__hyperPopupInstalled = true;
 
+    let returnFocus = null;
+
     window.hyperPopup = {
         open(title = '', kind = '') {
             const dialog = document.getElementById('app-popup');
             const heading = document.getElementById('app-popup-title');
+            const active = document.activeElement;
+            if (!dialog?.contains(active) && active && active !== document.body) returnFocus = active;
             if (heading) heading.textContent = title;
             if (dialog && kind) dialog.dataset.popupKind = kind;
             if (dialog && !dialog.open) dialog.showModal();
@@ -17,6 +21,9 @@
             const dialog = document.getElementById('app-popup');
             if (dialog?.open) dialog.close();
             if (dialog) delete dialog.dataset.popupKind;
+            const focusTarget = returnFocus?.isConnected ? returnFocus : document.getElementById('input');
+            returnFocus = null;
+            focusTarget?.focus();
         },
         loading(title = '', kind = '') {
             this.open(title, kind);
@@ -39,4 +46,34 @@
         const dialog = document.getElementById('app-popup');
         if (!body.innerHTML.trim() && dialog?.dataset.popupKind) window.hyperPopup.close();
     });
+
+
+    // Secure-input events belong to the popup subsystem. control.js only owns
+    // generic runtime UI actions and must not duplicate this lifecycle.
+    const applySecureInputEvent = event => {
+        const detail = event.detail;
+        if (detail?.type !== 'secure-input.prompt' && detail?.type !== 'secure-input.prompt.closed') return;
+        document.body.dispatchEvent(new Event('secure-input-refresh'));
+    };
+    document.addEventListener('hyper-events', applySecureInputEvent);
+    document.addEventListener('hyper-ui-event', applySecureInputEvent);
+
+    // Escape is cancellation for a secure prompt, not merely visual closure.
+    document.getElementById('app-popup')?.addEventListener('cancel', event => {
+        const dialog = event.currentTarget;
+        if (dialog?.dataset.popupKind !== 'secure-input') return;
+        event.preventDefault();
+        document.querySelector('#app-popup-body [data-secure-cancel]')?.click();
+    });
+
+
+    document.getElementById('app-popup-close')?.addEventListener('click', () => {
+        const dialog = document.getElementById('app-popup');
+        if (dialog?.dataset.popupKind === 'secure-input') {
+            document.querySelector('#app-popup-body [data-secure-cancel]')?.click();
+            return;
+        }
+        window.hyperPopup.close();
+    });
+
 })();

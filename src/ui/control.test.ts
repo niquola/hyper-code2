@@ -56,10 +56,11 @@ describe('ui control helpers', () => {
     expect(emitted[0]).toEqual({ type: 'ui.navigate', path: '/files?path=src%2Fx.ts' });
   });
 
-  test('secure-input SSE bridge only triggers the HTMX host', async () => {
+  test('secure-input SSE lifecycle is owned by popup.js, not legacy control.js', async () => {
     const { ctx } = await mkCtx();
     const script = await ctx.fns.ui.controlScript({});
-    expect(script).toContain('secure-input-refresh');
+    expect(script).not.toContain('secure-input-refresh');
+    expect(script).not.toContain('secureInputReturnFocus');
     expect(script).not.toContain("createElement('input')");
     expect(ctx.fns.secureInput.submit).toBeFunction();
     expect(ctx.fns.secureInput.current).toBeFunction();

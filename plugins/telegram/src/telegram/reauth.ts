@@ -8,6 +8,18 @@ import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions";
 import { computeCheck } from "telegram/Password";
 
+type ReauthFlight = {
+    promise: Promise<any>;
+    client?: TelegramClient;
+    startedAt: number;
+    deadlineAt: number;
+    generation: number;
+};
+type ReauthSingleton = { flight?: ReauthFlight; generation: number };
+const reauthKey = Symbol.for("hyper-code2.telegram.reauth.singleton");
+const globalState = globalThis as typeof globalThis & { [reauthKey]?: ReauthSingleton };
+const reauthSingleton = (globalState[reauthKey] ??= { generation: 0 });
+
 async function opSecret(ref: string) {
     const path = [`${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin", process.env.PATH ?? ""].join(":");
     const proc = Bun.spawn(["op", "read", "--no-newline", ref], { stdout: "pipe", stderr: "pipe", env: { ...process.env, PATH: path } });
@@ -73,6 +85,7 @@ async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: 
  * browser prompts after the human pressed Cancel.
  */
     const client = new TelegramClient(new StringSession(""), config.apiId, String(config.apiHash), { connectionRetries: 5 });
+    if (reauthSingleton.flight) reauthSingleton.flight.client = client;
     try {
         await client.connect();
         const credentials = { apiId: config.apiId, apiHash: String(config.apiHash) };
@@ -132,16 +145,9 @@ async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: 
 
 
 /**
- * Reauth is single-flight. An interrupted tool call may leave async work alive;
- * retries must join that work rather than stack secure-input prompts.
- */
-/**
- * Reauthorizes the Telegram client session.
- *
- * @param ctx Runtime context.
- * @param session Active session, when available.
- * @param [opts] Operation options.
- * @returns The operation result.
+ * Reauth is process-wide single-flight. The singleton is stored under
+ * Symbol.for(), so hot reloads and different runtime contexts cannot start a
+ * second Telegram authorization flow or invalidate its auth key.
  */
 export default async function (ctx: Context, _session: Session | null, opts?: {
         /** Authorization timeout in milliseconds. */
@@ -149,13 +155,35 @@ export default async function (ctx: Context, _session: Session | null, opts?: {
         /** Whether to force reauthorization. */
         force?: boolean;
     }) {
-    const state = ((ctx.state as any).telegram ??= {});
-    if (state.reauth) return await state.reauth;
-    const flight = performReauth(ctx, opts);
-    state.reauth = flight;
+    const now = Date.now();
+    const active = reauthSingleton.flight;
+    if (active) {
+        if (now <= active.deadlineAt) return await active.promise;
+        // A timed-out caller must not leave a hidden GramJS connection alive.
+        delete reauthSingleton.flight;
+        await active.client?.disconnect().catch(() => {});
+    }
+
+    const timeoutMs = Math.max(30_000, Math.min(opts?.timeoutMs ?? 300_000, 900_000));
+    const generation = ++reauthSingleton.generation;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const raw = performReauth(ctx, { ...opts, timeoutMs });
+    const promise = Promise.race([
+        raw,
+        new Promise<never>((_, reject) => {
+            timer = setTimeout(async () => {
+                await reauthSingleton.flight?.client?.disconnect().catch(() => {});
+                reject(new Error("Telegram reauthorization timed out"));
+            }, timeoutMs + 15_000);
+        }),
+    ]);
+    const flight: ReauthFlight = { promise, startedAt: now, deadlineAt: now + timeoutMs + 15_000, generation };
+    reauthSingleton.flight = flight;
+
     try {
-        return await flight;
+        return await promise;
     } finally {
-        if (state.reauth === flight) delete state.reauth;
+        if (timer) clearTimeout(timer);
+        if (reauthSingleton.flight?.generation === generation) delete reauthSingleton.flight;
     }
 }
