@@ -23,9 +23,8 @@ export default async function (
     if (module.skill) {
         const text = await Bun.file(module.skill).text().catch(() => null);
         if (text !== null) {
-            const rendered = await ctx.fns.procs.hooks.first({ name: "procs.ui.markdown", opts: { text } })
-                ?? `<pre class="overflow-x-auto whitespace-pre-wrap font-mono text-xs text-base-content/80">${esc(text)}</pre>`;
-            skillHtml = `<section class="mt-7"><div class="mb-3 flex items-center justify-between gap-3"><div><h2 class="font-medium">SKILL.md</h2><p class="mt-0.5 text-xs text-base-content/50">Instructions available to the agent</p></div><a href="/procs/modules/skill?name=${encodeURIComponent(module.name)}" class="text-xs text-base-content/45 hover:text-primary">Open separately <i class="ph ph-arrow-up-right"></i></a></div><article class="prose prose-sm max-w-none rounded-xl border border-base-300 bg-base-100 px-5 py-4 text-base-content">${rendered}</article></section>`;
+            const rendered = await ctx.fns.markdown.render({ source: text });
+            skillHtml = `<section class="mt-7"><div class="mb-3 flex items-center justify-between gap-3"><div><h2 class="font-medium">SKILL.md</h2><p class="mt-0.5 text-xs text-base-content/50">Instructions available to the agent</p></div><a href="/procs/modules/skill?name=${encodeURIComponent(module.name)}" class="text-xs text-base-content/45 hover:text-primary">Open separately <i class="ph ph-arrow-up-right"></i></a></div><article class="md-preview prose prose-sm max-w-none rounded-xl border border-base-300 bg-base-100 px-5 py-4 text-base-content">${rendered}</article></section>`;
         }
     }
     return { title: module.label, main: `<div class="p-6 sm:p-8"><section ${ctx.fns.procs.ui.attr({ page: "plugin", id: name })} class="max-w-4xl pb-10">

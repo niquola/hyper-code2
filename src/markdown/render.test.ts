@@ -18,6 +18,25 @@ describe("markdown.render", () => {
         expect(html).toContain("<strong>bold</strong>");
         expect(html).toContain("<ul>");
     });
+    test("YAML frontmatter renders as a metadata table", async () => {
+        const ctx = mkCtx();
+        const html = await render(ctx, null, { source: `---\nname: google\ndescription: "Search & mail"\ntags:\n  - gmail\n  - calendar\n---\n\n# Google` });
+        expect(html).toContain('class="md-frontmatter"');
+        expect(html).toContain("<th>name</th><td>google</td>");
+        expect(html).toContain("Search &amp; mail");
+        expect(html).toContain("- gmail");
+        expect(html).toContain("<h1>Google</h1>");
+        expect(html).not.toContain("<hr>");
+    });
+
+    test("invalid YAML frontmatter remains ordinary markdown", async () => {
+        const ctx = mkCtx();
+        const html = await render(ctx, null, { source: "---\nname: [broken\n---\n\nbody" });
+        expect(html).not.toContain('class="md-frontmatter"');
+        expect(html).toContain("body");
+    });
+
+
 
     test("code block gets shiki-highlighted", async () => {
         const ctx = mkCtx();
