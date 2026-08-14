@@ -37,4 +37,16 @@ describe('ui.reflectionDropdown', () => {
     });
 
 
+
+    // A model that was asked for a list of reasons can answer with a sentence.
+    // The stored row keeps that shape forever, and rendering it must not take
+    // the agent page down with ".map is not a function".
+    test('survives a string where a list was promised', () => {
+        const html = render(ctx(), null, { agent: agent({
+            activity: {}, tasks: 'just started', mistakes: 'none so far',
+            userSatisfaction: { level: 'satisfied', trend: 'stable', reasons: 'the user said thanks' },
+        }) });
+        expect(html).toContain('the user said thanks');
+        expect(html).toContain('just started');
+    });
 });

@@ -58,6 +58,13 @@ export default async function (
             const openTasks = state.tasks.filter((task: any) => task?.status !== "done");
             const doneTasks = state.tasks.filter((task: any) => task?.status === "done").slice(-5);
             state.tasks = [...openTasks, ...doneTasks];
+            // A model asked for a list of reasons happily answers with one
+            // sentence instead. Store the shape the readers were promised, so a
+            // single loose answer cannot break the page that renders it.
+            const reasons = state.userSatisfaction.reasons;
+            state.userSatisfaction.reasons = Array.isArray(reasons)
+                ? reasons.map((x: any) => String(x)).filter(Boolean)
+                : typeof reasons === "string" && reasons.trim() ? [reasons.trim()] : [];
             if (state.reflectionNudge && typeof state.reflectionNudge === "object") {
                 const text = String(state.reflectionNudge.text ?? "").trim().slice(0, 500);
                 const reason = String(state.reflectionNudge.reason ?? "").trim().slice(0, 500);
