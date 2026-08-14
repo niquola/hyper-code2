@@ -141,7 +141,8 @@ src/
 
   llm/                            ctx.fns.llm.* — stream dispatch + OAuth refreshers + streamMock
   settings/                       ctx.fns.settings.* — DB-backed runtime settings ($loader_setting.ts)
-  files/ ui/ markdown/ git/ dev/ events/ skill/ tools/
+  files/                         ctx.fns.files.* + GET /files — GitHub-style browser, editor, media preview (docs/files-ui.md)
+  ui/ markdown/ git/ dev/ events/ skill/ tools/
 
 .runtime/                         port, repl-token (0600), signing key — gitignored
 .hyper/                           runtime-writable overlay, gitignored

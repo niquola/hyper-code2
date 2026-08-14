@@ -134,6 +134,7 @@ Vendored `src/procs/` is upstream code: keep local patches minimal and marked wi
 - **Toasts are agent-scoped**: `ui.notify({agentId})` rides the event; the client (ui/controlScript) drops toasts whose agentId differs from `document.body.dataset.agentId`. Toasts without an agentId stay global.
 - `GET /agent/:id` is the agent's overview/passport page (right pane) and sets the current agent.
 - ⌘K palette (`ui.navMenu` island + `nav.items` + `GET /nav/items`): agents, built-in pages, and every mounted module's top-level GET pages. Module tabs come from procs modules metadata (`m.tab`), uniskill-style: mount a module → it shows up in nav.
+- **Files UI** (`GET /files`, implementation and route contract in `docs/files-ui.md`): centered GitHub-style directory browser with relative and absolute breadcrumbs, text Code/Edit tabs, Markdown/HTML preview, and browser-native image/video/audio/PDF preview through `GET /files/raw`. To visibly open a file from server code, call `ctx.fns.ui.openFile({ path })`; `ctx.fns.files.open({ path })` only maintains open-file state and is not browser navigation.
 
 ## Transcript storage invariants
 
