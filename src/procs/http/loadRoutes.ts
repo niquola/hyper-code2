@@ -3,6 +3,10 @@
 // everything else uses, and only owns the two things a loader cannot — that the
 // rebuild starts empty (a deleted file must leave no handler behind) and that
 // the swap is atomic (a request mid-rebuild must not see a half-built table).
+/**
+ * Perform load routes for the http subsystem.
+ * @param opts.strict The strict value used by the operation.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { strict?: boolean } = {}) {
     // A rebuild rescans; a production bundle has no filesystem to scan, so it
     // reuses the list boot.apply was given.

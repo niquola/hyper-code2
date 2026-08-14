@@ -1,7 +1,12 @@
+/** Set title for the runtime. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; title: string },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Human-readable title. */
+    title: string },
 ): Promise<string> {
     const title = String(opts.title ?? "").trim().slice(0, 120);
     const result = await ctx.fns.procs.db.run({

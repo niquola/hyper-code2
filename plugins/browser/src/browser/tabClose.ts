@@ -1,8 +1,15 @@
 // Close a Chrome page by named plugin session or explicit target id.
+/**
+ * Closes a browser tab by session or target identifier.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { session?: string; targetId?: string },
+    opts: {
+  /** Logical browser session whose tab should be closed. */
+  session?: string;
+  /** Browser target identifier to close. */
+  targetId?: string },
 ): Promise<{ closed: string }> {
     const sessions: Map<string, any> | undefined = (ctx.state as any).cdp?.sessions;
     const handle = opts.session ? sessions?.get(opts.session) : null;

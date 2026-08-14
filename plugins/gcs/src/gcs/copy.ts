@@ -1,11 +1,28 @@
-// gcs.copy — copy (or move) an object between buckets/names.
-//   ctx.fns.gcs.copy({ srcBucket, srcObject, dstBucket, dstObject })
-//   ctx.fns.gcs.copy({ ..., move: true })  // copy then delete the source
+/**
+ * gcs.copy — copy (or move) an object between buckets/names.
+ *   ctx.fns.gcs.copy({ srcBucket, srcObject, dstBucket, dstObject })
+ *   ctx.fns.gcs.copy({ ..., move: true })  // copy then delete the source
+ */
+/**
+ * Copies or moves a Google Cloud Storage object.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
 export default async function (ctx: Context, session: Session | null, opts: {
-    srcBucket: string; srcObject: string;
-    dstBucket: string; dstObject: string;
-    move?: boolean;
-}) {
+        /** Source bucket name. */
+        srcBucket: string;
+        /** Source object name. */
+        srcObject: string;
+        /** Destination bucket name. */
+        dstBucket: string;
+        /** Destination object name. */
+        dstObject: string;
+        /** Whether to delete the source after copying. */
+        move?: boolean;
+    }) {
     const { srcBucket, srcObject, dstBucket, dstObject } = opts ?? ({} as any);
     if (!srcBucket || !srcObject || !dstBucket || !dstObject)
         throw new Error("srcBucket, srcObject, dstBucket, dstObject are required");

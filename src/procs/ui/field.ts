@@ -1,6 +1,21 @@
 // One input. The name is what `page.fill({ form, values })` uses, and it is also
 // written as `data-field` so a control that is not a native input (a menu, a
 // custom widget) can still be found by the same name.
+/**
+ * Perform field for the ui subsystem.
+ * @param opts.name The target name.
+ * @param opts.value The value to apply.
+ * @param opts.placeholder The placeholder value used by the operation.
+ * @param opts.type The kind of value.
+ * @param opts.options The options value used by the operation.
+ * @param opts.class CSS classes to apply.
+ * @param opts.ariaLabel The aria label value used by the operation.
+ * @param opts.min The min value used by the operation.
+ * @param opts.max The max value used by the operation.
+ * @param opts.step The step value used by the operation.
+ * @param opts.maxlength The maxlength value used by the operation.
+ * @param opts.pattern The matching pattern.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     name: string; value?: string; placeholder?: string; type?: string;
     options?: Array<string | { value: string; label: string }>; class?: string; ariaLabel?: string;

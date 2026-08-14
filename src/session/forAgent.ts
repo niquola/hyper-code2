@@ -1,7 +1,10 @@
+/** For agent for the runtime. */
 export default function (
     _ctx: Context,
     session: Session | null,
-    opts: { agent: types.agent.Agent },
+    opts: {
+        /** Live agent instance to operate on. */
+    agent: types.agent.Agent },
 ): Session {
     return {
         ...(session ?? {}),

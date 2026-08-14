@@ -3,10 +3,28 @@ function parseJson(text: string): any {
     return JSON.parse(trimmed);
 }
 
+/**
+ * Schedules a background reflection over an agent's recent conversation.
+ *
+ * A temporary child agent updates structured activity, tasks, satisfaction,
+ * mistakes, and a short actionable nudge in `agents.reflection`.
+ *
+ * @see docs/reflection.md
+  * @param opts.agent Agent whose state is read or updated.
+ * @param opts.every Optional cadence override.
+*/
+
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { agent: types.agent.Agent; every?: number },
+    opts: {
+
+        /** Agent whose conversation should be reflected. */
+        agent: types.agent.Agent;
+
+        /** Minimum number of new user messages. @default 3 @minimum 1 */
+        every?: number;
+    },
 ): Promise<{ started: boolean; reason?: string }> {
     const parent = opts.agent;
     const every = Math.max(1, opts.every ?? 3);

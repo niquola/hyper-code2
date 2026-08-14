@@ -7,6 +7,7 @@
 // will observe the flag, clear it, and resolve immediately instead of
 // waiting for the 30 s safety poll. That race used to silently stall
 // the second-of-two pending agents until the timeout fired.
+/** Wake worker for the runtime. */
 export default function (ctx: Context, _session: Session | null, _opts?: {}): void {
     (ctx.state as any).workerWakePending = true;
     const set: Set<() => void> | undefined = (ctx.state as any).workerWakeWaiters;

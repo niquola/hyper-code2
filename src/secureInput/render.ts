@@ -1,5 +1,10 @@
 // Render secure input into the permanent application popup. Dynamic text is
 // escaped; the secret itself only travels in the subsequent form POST.
+/**
+ * Renders the secure-input popup for an active prompt.
+ * @param opts.prompt Prompt metadata to render.
+ * @param opts.error Optional validation error.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { prompt: any; error?: string }): string {
     const p = opts.prompt;
     const esc = (v: unknown) => ctx.fns.procs.ui.escape({ text: String(v ?? '') });

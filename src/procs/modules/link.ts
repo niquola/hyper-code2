@@ -16,6 +16,11 @@
 import { mkdir, symlink, lstat, readlink, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 
+/**
+ * Link the modules subsystem operation.
+ * @param opts.name The target name.
+ * @param opts.folder The optional destination folder.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { name: string; folder?: string }): Promise<{ linked: string | null; why?: string }> {
     const workdir = ctx.fns.procs.project.workdir({});
     const record = (ctx.state.procs?.modules ?? []).find((m: any) => m.name === opts.name);

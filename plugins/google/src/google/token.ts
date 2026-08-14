@@ -1,5 +1,11 @@
 // Google OAuth tokens and client credentials live in 1Password. Values are
 // resolved only at runtime and cached in memory until shortly before expiry.
+/**
+ * Resolve a valid Google OAuth access token.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: { account?: string }) {
     let account = opts?.account ?? ctx.env.GOOGLE_ACCOUNT;
     if (!account) {

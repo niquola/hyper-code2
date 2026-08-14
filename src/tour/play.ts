@@ -28,6 +28,12 @@
 // timer, pages changed under whoever was reading, and there was nothing to press
 // to stop, repeat or slow down. Steps are the same shape; only who plays them
 // changed.
+/**
+ * Starts an interactive browser tour and reports routes omitted by it.
+ * @param opts.steps Ordered tour steps to present.
+ * @param opts.guided Whether the tour should advance automatically at first.
+ * @param opts.title Optional title displayed by the tour panel.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { steps: types.tour.Step[]; guided?: boolean; title?: string }) {
     const steps = (opts.steps ?? []).filter(Boolean);
     if (!steps.length) throw new Error("a tour needs steps");

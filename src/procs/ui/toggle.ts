@@ -1,6 +1,16 @@
 // A switch — on or off, applied at once. It carries the verb (`data-action`) and
 // the field name (`data-field`); `post`/`get` wire the flip to htmx, the hidden
 // input carries the value a form reads.
+/**
+ * Perform toggle for the ui subsystem.
+ * @param opts.action The action URL.
+ * @param opts.name The target name.
+ * @param opts.on The on value used by the operation.
+ * @param opts.label The display label.
+ * @param opts.post The post value used by the operation.
+ * @param opts.get The get value used by the operation.
+ * @param opts.vals The vals value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {action: string; name?: string; on?: boolean; label?: string; post?: string; get?: string; vals?: Record<string, any> }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const hx = opts.post ? `hx-post="${esc(opts.post)}"` : opts.get ? `hx-get="${esc(opts.get)}"` : "";

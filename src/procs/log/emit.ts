@@ -5,6 +5,13 @@ const LEVEL_NUM: Record<string, number> = { error: 0, warn: 1, info: 2, debug: 3
 const COLORS: Record<string, string> = { debug: "\x1b[36m", info: "\x1b[32m", warn: "\x1b[33m", error: "\x1b[31m" };
 const RESET = "\x1b[0m";
 
+/**
+ * Emit the log subsystem operation.
+ * @param opts.severity The record severity.
+ * @param opts.event The event payload.
+ * @param opts.msg The human-readable log message.
+ * @param opts.attrs Attributes attached to the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     severity: string;
     event: string;

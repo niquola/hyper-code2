@@ -7,6 +7,13 @@
 // body: object → JSON; string / FormData / URLSearchParams → sent as-is.
 import { makeRequestCtx } from "../../$main";
 
+/**
+ * Perform dispatch for the http subsystem.
+ * @param opts.method The HTTP method.
+ * @param opts.url The target URL.
+ * @param opts.body The HTTP body.
+ * @param opts.headers The HTTP headers.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,

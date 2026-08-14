@@ -1,7 +1,17 @@
+/** Set automation for the runtime.  * @param opts.id Target agent identifier.
+ * @param opts.reflectionEnabled Whether automatic reflection is enabled.
+ * @param opts.sleepEnabled Whether automatic sleep is enabled.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; reflectionEnabled: boolean; sleepEnabled: boolean },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Reflection enabled used by the operation. */
+    reflectionEnabled: boolean;
+        /** Sleep enabled used by the operation. */
+    sleepEnabled: boolean },
 ): Promise<{ reflectionEnabled: boolean; sleepEnabled: boolean }> {
     const reflectionEnabled = !!opts.reflectionEnabled;
     const sleepEnabled = !!opts.sleepEnabled;

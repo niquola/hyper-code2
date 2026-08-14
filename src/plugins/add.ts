@@ -1,8 +1,9 @@
 // Add a catalogue, git, npm, or explicitly configured plugin.
+/** Adds and mounts a configured plugin. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { name: string; git?: string; npm?: string; config?: Record<string, any> },
+    opts: { /** Runtime, plugin, or tool name. */ name: string; /** Value for git. */ git?: string; /** Value for npm. */ npm?: string; /** Value for config. */ config?: Record<string, any> },
 ) {
     const name = String(opts.name ?? "").trim();
     if (!name) throw new Error("plugins.add: name is required");

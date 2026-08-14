@@ -44,6 +44,10 @@ async function preprocessMermaid(ctx: Context, text: string): Promise<string> {
     return out;
 }
 
+/**
+ * Renders Markdown to sanitized, highlighted HTML.
+ * @param opts.source Markdown or Mermaid source.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { source: string }): Promise<string> {
     let source = opts.source;
     const frontmatter = frontmatterTable(source);

@@ -1,6 +1,14 @@
 // Get a single task by id. `list` defaults to the first task list.
 // ctx.fns.gtasks.get({ task, list?, account? })
 // → full task object from the Tasks API
+/**
+ * Get a Google Task.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.task - Google Task identifier.
+ * @param opts.list - Task-list identifier; defaults to the first list where supported.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { task: string; list?: string; account?: string }) {
     let list = opts.list;
     if (!list) {

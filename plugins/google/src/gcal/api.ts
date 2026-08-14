@@ -1,6 +1,16 @@
 // Generic Google Calendar API call: ctx.fns.gcal.api({ path: "/users/me/calendarList" })
 // Base: https://www.googleapis.com/calendar/v3
 // `query` is an object of querystring params (auto URL-encoded).
+/**
+ * Call an arbitrary Google Calendar API endpoint.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.path - API-relative path or local destination path, as applicable.
+ * @param opts.method - HTTP method; defaults to the operation-specific method.
+ * @param opts.body - Request body or message body, as applicable.
+ * @param opts.query - Search query.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

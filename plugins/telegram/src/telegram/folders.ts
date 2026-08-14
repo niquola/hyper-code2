@@ -30,9 +30,11 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// List chat folders (dialog filters). ctx.fns.telegram.folders({})
-// → [{ id, title, emoji, includePeers, excludePeers, pinnedPeers, flags }]
-//   flags: contacts | non-contacts | groups | channels | bots | exclude-muted | exclude-read | exclude-archived
+/**
+ * List chat folders (dialog filters). ctx.fns.telegram.folders({})
+ * → [{ id, title, emoji, includePeers, excludePeers, pinnedPeers, flags }]
+ *   flags: contacts | non-contacts | groups | channels | bots | exclude-muted | exclude-read | exclude-archived
+ */
 import { Api } from "telegram";
 
 function folderTitle(filter: any): string {
@@ -40,7 +42,17 @@ function folderTitle(filter: any): string {
     return filter.title?.text || filter.title?.toString() || "Untitled";
 }
 
-export default async function (ctx: Context, session: Session | null, _opts?: {}) {
+/**
+ * Lists Telegram chat folders.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, _opts?: {
+
+    }) {
     const client = await connected(ctx);
     const result: any = await client.invoke(new Api.messages.GetDialogFilters());
     const filters = result.filters || result;

@@ -3,10 +3,11 @@ async function readAll(stream?: ReadableStream<Uint8Array> | null): Promise<stri
     return await new Response(stream).text();
 }
 
+/** Runs a Git command in a workspace directory. */
 export default async function (
     _ctx: Context,
     session: Session | null,
-    opts: { args: string[]; dir?: string; allowFailure?: boolean },
+    opts: { /** Command-line arguments. */ args: string[]; /** Git working directory. */ dir?: string; /** Value for allowFailure. */ allowFailure?: boolean },
 ): Promise<types.git.Result> {
     const args = opts.args;
     const proc = Bun.spawn(["git", ...args], {

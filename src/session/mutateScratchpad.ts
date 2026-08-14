@@ -1,9 +1,16 @@
+/** Mutate scratchpad for the runtime. */
 export default async function <T>(
     ctx: Context,
     _session: Session | null,
     opts: {
+
+        /** Agent identifier. */
         id: string;
+
+        /** Mutate used by the operation. */
         mutate: (scratchpad: Record<string, any>, now: number) => T | Promise<T>;
+
+        /** Retries used by the operation. */
         retries?: number;
     },
 ): Promise<{ scratchpad: Record<string, any>; result: T; ts: number }> {

@@ -1,9 +1,11 @@
-// gcs.ensureBuckets — create the two personal buckets if missing.
-//   ctx.fns.gcs.ensureBuckets({})            // create both if absent
-//   ctx.fns.gcs.ensureBuckets({ location: "EU" })
-// Both use uniform bucket-level access. The public bucket gets an allUsers ->
-// objectViewer IAM binding so objects are world-readable via their https URL.
-// Returns a per-bucket status. Idempotent.
+/**
+ * gcs.ensureBuckets — create the two personal buckets if missing.
+ *   ctx.fns.gcs.ensureBuckets({})            // create both if absent
+ *   ctx.fns.gcs.ensureBuckets({ location: "EU" })
+ * Both use uniform bucket-level access. The public bucket gets an allUsers ->
+ * objectViewer IAM binding so objects are world-readable via their https URL.
+ * Returns a per-bucket status. Idempotent.
+ */
 const PROJECT = "atomic-ehr";
 const PRIVATE_BUCKET = "niquola-private";
 const PUBLIC_BUCKET = "niquola-public";
@@ -14,7 +16,9 @@ async function ensureOne(ctx: Context, name: string, isPublic: boolean, project:
     try {
         exists = await ctx.fns.gcs.api({ route: "GET /b/{bucket}", params: { bucket: name } });
     } catch (e: any) {
-        if (!/ 40[34]:/.test(String(e?.message))) throw e; // 404 not found / 403 no access
+        if (!/ 40[34]:/.test(String(e?.message))) throw e; /**
+ * 404 not found / 403 no access
+ */
     }
     if (!exists) {
         await ctx.fns.gcs.api({
@@ -30,7 +34,9 @@ async function ensureOne(ctx: Context, name: string, isPublic: boolean, project:
         created = true;
     }
     if (isPublic) {
-        // Add allUsers -> roles/storage.objectViewer (merge into existing policy).
+        /**
+ * Add allUsers -> roles/storage.objectViewer (merge into existing policy).
+ */
         const policy = await ctx.fns.gcs.api({ route: "GET /b/{bucket}/iam", params: { bucket: name } });
         const bindings = policy.bindings ?? [];
         let b = bindings.find((x: any) => x.role === "roles/storage.objectViewer");
@@ -47,7 +53,20 @@ async function ensureOne(ctx: Context, name: string, isPublic: boolean, project:
     return { bucket: name, created, public: isPublic };
 }
 
-export default async function (ctx: Context, session: Session | null, opts?: { project?: string; location?: string }) {
+/**
+ * Ensures the configured personal buckets exist.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts?: {
+        /** Google Cloud project identifier. */
+        project?: string;
+        /** Bucket location. */
+        location?: string;
+    }) {
     const project = opts?.project ?? PROJECT;
     const location = opts?.location ?? "US";
     return {

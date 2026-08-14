@@ -1,5 +1,11 @@
 // A round mark for a person — their initials on a soft accent, or a photo when
 // there is one. The same one the patient scope bar wears, made a component.
+/**
+ * Perform avatar for the ui subsystem.
+ * @param opts.name The target name.
+ * @param opts.src The src value used by the operation.
+ * @param opts.size The size value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {name?: string; src?: string; size?: "sm" | "md" | "lg" }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     // daisyUI styles `.avatar > div`, and it sizes nothing itself: a child that

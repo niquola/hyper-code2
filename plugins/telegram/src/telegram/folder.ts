@@ -30,9 +30,11 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// Chats inside a folder, sorted by unreadCount desc. ctx.fns.telegram.folder({ id })
-//   id: folder id (number) from telegram.folders.
-// → [{ id, title, type, unreadCount, lastMessage }]  (same shape as dialogs)
+/**
+ * Chats inside a folder, sorted by unreadCount desc. ctx.fns.telegram.folder({ id })
+ *   id: folder id (number) from telegram.folders.
+ * → [{ id, title, type, unreadCount, lastMessage }]  (same shape as dialogs)
+ */
 import { Api } from "telegram";
 
 function chatType(entity: any): string {
@@ -43,7 +45,18 @@ function chatType(entity: any): string {
     return cn.toLowerCase();
 }
 
-export default async function (ctx: Context, session: Session | null, opts: { id: number }) {
+/**
+ * Gets a Telegram chat folder by identifier.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+        /** Numeric identifier. */
+        id: number;
+    }) {
     if (opts?.id === undefined || opts?.id === null) throw new Error("folder: opts.id required (folder id from telegram.folders)");
     const client = await connected(ctx);
     const filtersResult: any = await client.invoke(new Api.messages.GetDialogFilters());

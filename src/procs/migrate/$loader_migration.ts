@@ -2,6 +2,10 @@
 // pending in id order and records it. Replacing in place rather than pushing is
 // what lets a migration be hot-reloaded while it is still pending.
 
+/**
+ * Load loader migration declarations into the runtime.
+ * @param opts.entries The loader entries to register.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { entries: any[] }): Promise<void> {
     for (const entry of opts.entries) {
         const mod = entry.fn ?? (await import(entry.abs + `?t=${Date.now()}`)).default;

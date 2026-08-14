@@ -2,10 +2,17 @@ function parseJson(text: string): any {
     return JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
 }
 
+/** Check goal for the runtime.  * @param opts.agent Agent whose state is read or updated.
+ * @param opts.candidateAnswer Candidate answer evaluated against the goal.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { agent: types.agent.Agent; candidateAnswer: string },
+    opts: {
+        /** Live agent instance to operate on. */
+    agent: types.agent.Agent;
+        /** Candidate answer used by the operation. */
+    candidateAnswer: string },
 ): Promise<{ status: "achieved" | "continue" | "needs_user" | "blocked"; reason: string; nextStep?: string; evidence?: string[] }> {
     const goal = opts.agent.goal;
     if (!goal?.enabled || !goal?.statement) return { status: "achieved", reason: "goal disabled" };

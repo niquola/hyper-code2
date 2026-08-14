@@ -11,6 +11,12 @@
 // host's layout on a full load, the fragment plus the chrome on a swap. `what`
 // is the thing that was looked for in the words of whoever looked (`patient
 // seed-anna`), because "Not Found" alone never says *what* was not found.
+/**
+ * Perform not found for the ui subsystem.
+ * @param opts.what The what value used by the operation.
+ * @param opts.url The target URL.
+ * @param opts.back The back value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { what?: string; url?: string; back?: { label: string; href: string } }) {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const what = opts.what?.trim();

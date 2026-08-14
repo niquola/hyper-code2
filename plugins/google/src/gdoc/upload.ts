@@ -2,6 +2,15 @@
 // ctx.fns.gdoc.upload({ path: "/tmp/report.pdf", name?: "Report.pdf", public?: false })
 // → { id, name, link, downloadLink, size }
 // `public: true` grants anyone-with-link reader access (default false — private).
+/**
+ * Upload content as a Google document.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.path - API-relative path or local destination path, as applicable.
+ * @param opts.name - Resource name.
+ * @param opts.public - Whether the created document should receive public link access.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

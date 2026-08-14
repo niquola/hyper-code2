@@ -11,10 +11,11 @@
 // A tool with no snippet is callable but unadvertised. `only` narrows the set —
 // that is the prompt diet: a disabled tool costs zero prefix tokens instead of
 // sitting in the preamble of every request forever.
+/** Builds the tool instructions included in a model prompt. */
 export default function (
     ctx: Context,
     _session: Session | null,
-    opts: { protocol?: "markers" | "json"; only?: string[] } = {},
+    opts: { /** Value for protocol. */ protocol?: "markers" | "json"; /** Value for only. */ only?: string[] } = {},
 ): string {
     const protocol = opts.protocol ?? "markers";
     let tools = ctx.fns.tools.list({});

@@ -1,4 +1,14 @@
-export default async function (ctx: Context, _session: Session | null, opts: { agentId: string; text: string; open?: boolean }) {
+/** Performs the ui.sendToAgent runtime operation. */
+/**
+ * Send text to an agent from the browser UI.
+ * @param opts.agentId Target agent identifier.
+ * @param opts.text Text to send.
+ * @param opts.open Whether to open the target agent after the operation.
+ */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Identifier of the agent whose scoped setting is used. */ agentId: string;
+        /** Text to send to the agent. */ text: string;
+        /** Whether to open the agent after sending. */ open?: boolean }) {
     const agent = (ctx.state as any).agent?.[opts.agentId];
     if (!agent) throw new Error('agent not found: ' + opts.agentId);
     const text = (opts.text ?? '').trim();

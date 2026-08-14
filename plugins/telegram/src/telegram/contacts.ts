@@ -30,10 +30,12 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// Telegram contacts / user lookup (people, not messages).
-//   ctx.fns.telegram.contacts({})                 → all my saved contacts
-//   ctx.fns.telegram.contacts({ query: "Pavel" }) → contacts.Search: matching users (name/@username), incl. global public
-// → [{ id, name, username, phone, mutualContact, contact }]
+/**
+ * Telegram contacts / user lookup (people, not messages).
+ *   ctx.fns.telegram.contacts({})                 → all my saved contacts
+ *   ctx.fns.telegram.contacts({ query: "Pavel" }) → contacts.Search: matching users (name/@username), incl. global public
+ * → [{ id, name, username, phone, mutualContact, contact }]
+ */
 import { Api } from "telegram";
 
 const user = (u: any) => ({
@@ -46,12 +48,27 @@ const user = (u: any) => ({
     bot: !!u.bot,
 });
 
-export default async function (ctx: Context, _session: Session | null, opts?: { query?: string; limit?: number }) {
+/**
+ * Lists saved contacts or searches Telegram users.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, _session: Session | null, opts?: {
+        /** Search query. */
+        query?: string;
+        /** Maximum number of results to return. */
+        limit?: number;
+    }) {
     const client = await connected(ctx);
     if (opts?.query) {
         const r: any = await client.invoke(new Api.contacts.Search({ q: opts.query, limit: opts.limit ?? 20 }));
         const ids = new Set([...(r.myResults ?? []), ...(r.results ?? [])].map((p: any) => (p.userId ?? p.channelId ?? p.chatId)?.toString()));
-        // rank: users referenced in results first, then any other returned user
+        /**
+ * rank: users referenced in results first, then any other returned user
+ */
         const users = (r.users ?? []).map(user);
         return users.sort((a: any, b: any) => (ids.has(b.id) ? 1 : 0) - (ids.has(a.id) ? 1 : 0));
     }

@@ -1,11 +1,25 @@
+/** Finish task for the runtime.  * @param opts.agent Agent whose state is read or updated.
+ * @param opts.summary Concise summary of completed work or compacted context.
+ * @param opts.result Optional detailed result returned to the parent.
+ * @param opts.wakeParent Whether to queue the parent after task completion.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
 // Mark a delegated task as finished and notify the parent if awaiting
- /**
+
+        /**
   * Completes a delegated task, stores the result, and wakes the parent if in await mode.
   */
-    opts: { agent: types.agent.Agent; summary: string; result?: any; wakeParent?: boolean },
+    opts: {
+        /** Live agent instance to operate on. */
+    agent: types.agent.Agent;
+        /** Concise summary of the operation or result. */
+    summary: string;
+        /** Optional task result returned to the parent. */
+    result?: any;
+        /** Wake parent used by the operation. */
+    wakeParent?: boolean },
 ): Promise<{ ok: true; parentId: string | null; summary: string; waiterFound: boolean }> {
     const { agent } = opts;
     const meta = agent.scratchpad?.delegateTask;

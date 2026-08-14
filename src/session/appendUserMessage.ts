@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts: { id: string; text: string; ts?: number }) {
+/** Append user message for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string;
+        /** Text used by the operation. */
+text: string;
+        /** Ts used by the operation. */
+ts?: number }) {
     const { id, text } = opts;
     // A user turn with no text is never valid: it carries nothing for the model
     // and persists as a NULL-content row that later 400s the Anthropic call

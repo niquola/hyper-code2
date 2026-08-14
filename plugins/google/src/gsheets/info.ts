@@ -1,5 +1,12 @@
 // Spreadsheet metadata: title + tabs with dimensions.
 // ctx.fns.gsheets.info({ id: "1Bxi..." })
+/**
+ * Get spreadsheet metadata.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.id - Resource identifier.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { id: string; account?: string }) {
     if (!opts?.id) throw new Error("gsheets.info: id is required");
     const result = await ctx.fns.gsheets.api({

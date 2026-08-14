@@ -18,6 +18,11 @@ export async function getHL(): Promise<Highlighter> {
     return _hl;
 }
 
+/**
+ * Highlights source code as HTML.
+ * @param opts.code Code to evaluate in the browser.
+ * @param opts.lang Source language identifier.
+ */
 export default async function (_ctx: Context, _session: Session | null, opts: { code: string; lang: string }): Promise<string> {
     const safeCode = String(opts.code ?? "");
     const safeLang = String(opts.lang ?? "text");

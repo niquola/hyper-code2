@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+/** Handles the id statusbar get HTTP route.  * @param opts.req Incoming HTTP request.
+ * @param opts.params Route path parameters.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Incoming HTTP request. */
+req: Request;
+        /** Values bound to the operation. */
+params: Record<string, string> }) {
     const id = opts.params.id!;
     // Guard against polls for missing/archived agents — without this the
     // statusbar 200s on non-existent ids while page and events.html 404,

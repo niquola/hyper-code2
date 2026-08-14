@@ -7,6 +7,10 @@
 //
 // Markdown is rendered by the host's canonical markdown.render helper, shared
 // with chat messages, file previews, and plugin pages.
+/**
+ * Handle the GET request for the modules route.
+ * @param opts.req The incoming HTTP request.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const name = new URL(opts.req.url).searchParams.get("name") ?? "";

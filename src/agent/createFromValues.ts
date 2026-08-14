@@ -1,6 +1,25 @@
 import { resolve } from 'node:path';
 
-export default async function (ctx: Context, _session: Session | null, opts: { title?: string; workspaceDir?: string; createWorkspaceDir?: string; model?: string; promptPreset?: string | string[]; systemPrompt?: string }): Promise<{ agent?: any; confirmation?: { dir: string; values: Record<string, any> }; error?: string }> {
+/** Create from values for the runtime.  * @param opts.title Human-readable agent title.
+ * @param opts.workspaceDir Workspace directory assigned to the agent.
+ * @param opts.createWorkspaceDir Whether to create a missing workspace directory.
+ * @param opts.model Model identifier to use.
+ * @param opts.promptPreset System-prompt preset name.
+ * @param opts.systemPrompt Additional system instructions.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Human-readable title. */
+title?: string;
+        /** Workspace dir used by the operation. */
+workspaceDir?: string;
+        /** Create workspace dir used by the operation. */
+createWorkspaceDir?: string;
+        /** Model identifier. */
+model?: string;
+        /** Prompt preset used by the operation. */
+promptPreset?: string | string[];
+        /** Additional system instructions. */
+systemPrompt?: string }): Promise<{ agent?: any; confirmation?: { dir: string; values: Record<string, any> }; error?: string }> {
     const requestedWorkspace = String(opts.workspaceDir ?? '');
     try {
         const workspaceDir = await ctx.fns.workspace.normalize({ dir: requestedWorkspace, create: opts.createWorkspaceDir === '1' });

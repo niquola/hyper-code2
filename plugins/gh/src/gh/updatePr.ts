@@ -1,9 +1,21 @@
 // Update pull-request metadata/state. Requires explicit confirmation.
+/** Update pull-request metadata or state after explicit confirmation.
+ * @param ctx Runtime context.
+ * @param _session Unused session supplied by the procedural runtime.
+ * @param opts Pull-request changes.
+ * @returns The updated GitHub pull-request resource.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: {
-    owner: string; repo: string; n: number;
-    title?: string; body?: string; state?: "open" | "closed";
-    base?: string; maintainerCanModify?: boolean; confirm?: boolean;
-}) {
+    /** Repository owner or organization login. */ owner: string;
+    /** Repository name. */ repo: string;
+    /** Pull-request number. */ n: number;
+    /** Replacement title. */ title?: string;
+    /** Replacement Markdown body. */ body?: string;
+    /** Replacement open/closed state. */ state?: "open" | "closed";
+    /** Replacement target branch. */ base?: string;
+    /** Whether maintainers may modify the source branch. */ maintainerCanModify?: boolean;
+    /** Must be `true` after explicit user approval. */ confirm?: boolean;
+}): Promise<any> {
     if (!opts?.owner || !opts.repo || !opts.n) throw new Error("gh.updatePr requires owner, repo and n");
     const changes = [opts.title, opts.body, opts.state, opts.base, opts.maintainerCanModify];
     if (changes.every(v => v === undefined)) throw new Error("gh.updatePr requires at least one change");

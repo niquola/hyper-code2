@@ -17,10 +17,17 @@ const META: Record<string, { icon: string; label: string }> = {
     html:  { icon: "ph-browser",         label: "html" },
 };
 
+/** Tool meta for the runtime.  * @param opts.name Tool or operation name.
+ * @param opts.args Tool arguments.
+*/
 export default function (
     _ctx: Context,
     _session: Session | null,
-    opts: { name: string; args?: any },
+    opts: {
+        /** Name of the target resource or runtime function. */
+    name: string;
+        /** Arguments supplied to the target runtime function. */
+    args?: any },
 ): { icon: string; label: string; subject: string } {
     const name = String(opts.name ?? "tool");
     const args = opts.args ?? {};

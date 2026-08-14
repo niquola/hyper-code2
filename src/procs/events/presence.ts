@@ -5,6 +5,9 @@
 // Presence is counted, not flagged: one person with three tabs is one person,
 // and closing one tab does not make them leave. That refcount is the whole
 // trick — it is what makes "who is here" survive a reload.
+/**
+ * Report presence for the events subsystem.
+ */
 export default function (ctx: Context, _session: Session | null, _opts?: {}) {
     return [...(ctx.state.procs?.events?.presence ?? new Map()).values()]
         .map(p => ({ id: p.id, name: p.name, tabs: p.tabs }))

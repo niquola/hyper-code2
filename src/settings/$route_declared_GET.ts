@@ -1,4 +1,7 @@
-export default async function (ctx: Context, _session: Session | null, _opts: { req: Request; params: Record<string, string> }) {
+/** Handles the HTTP route declared GET endpoint. */
+export default async function (ctx: Context, _session: Session | null, _opts: {
+        /** Incoming HTTP request. */ req: Request;
+        /** Route parameters captured from the request path. */ params: Record<string, string> }) {
     const items = await ctx.fns.settings.declared({});
     const form = await ctx.fns.settings.renderDeclaredForm({});
     const main = `

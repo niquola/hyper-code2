@@ -1,7 +1,9 @@
-// Re-authorize the personal MTProto session. Telegram sends a login code to the
-// user's Telegram app; code and optional 2FA password are collected through a
-// modal form in the current hyper-code browser tab. The resulting StringSession
-// is written directly to 1Password and never returned or persisted on disk.
+/**
+ * Re-authorize the personal MTProto session. Telegram sends a login code to the
+ * user's Telegram app; code and optional 2FA password are collected through a
+ * modal form in the current hyper-code browser tab. The resulting StringSession
+ * is written directly to 1Password and never returned or persisted on disk.
+ */
 import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions";
 import { computeCheck } from "telegram/Password";
@@ -29,8 +31,12 @@ async function saveSession(session: string) {
 }
 
 async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: boolean }) {
-    // Idempotent by default: a valid cached/saved session wins and no login
-    // code is sent. `force` is intentionally explicit for true key rotation.
+    /**
+ * Idempotent by default: a valid cached/saved session wins and no login
+ */
+    /**
+ * code is sent. `force` is intentionally explicit for true key rotation.
+ */
     if (!opts?.force) {
         try {
             const me: any = await ctx.fns.telegram.me({});
@@ -57,18 +63,30 @@ async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: 
     if (old) await old.disconnect().catch(() => {});
     state.client = null;
 
-    // Direct finite auth flow. Do not use TelegramClient.start(): GramJS wraps
-    // phoneCode/password in hidden while(true) retry loops, which can recreate
-    // browser prompts after the human pressed Cancel.
+    /**
+ * Direct finite auth flow. Do not use TelegramClient.start(): GramJS wraps
+ */
+    /**
+ * phoneCode/password in hidden while(true) retry loops, which can recreate
+ */
+    /**
+ * browser prompts after the human pressed Cancel.
+ */
     const client = new TelegramClient(new StringSession(""), config.apiId, String(config.apiHash), { connectionRetries: 5 });
     try {
         await client.connect();
         const credentials = { apiId: config.apiId, apiHash: String(config.apiHash) };
         const sent = await client.sendCode(credentials, String(config.phone));
 
-        // A previous emergency stop may have blocked prompts in live state.
-        // We only clear it after SendCode succeeds and this single finite flow
-        // owns the interaction.
+        /**
+ * A previous emergency stop may have blocked prompts in live state.
+ */
+        /**
+ * We only clear it after SendCode succeeds and this single finite flow
+ */
+        /**
+ * owns the interaction.
+ */
         const secureState = ((ctx.state as any).secureInput ??= {});
         delete secureState.disabled;
         delete secureState.cancelledUntil;
@@ -113,9 +131,24 @@ async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: 
 }
 
 
-// Reauth is single-flight. An interrupted tool call may leave async work alive;
-// retries must join that work rather than stack secure-input prompts.
-export default async function (ctx: Context, _session: Session | null, opts?: { timeoutMs?: number; force?: boolean }) {
+/**
+ * Reauth is single-flight. An interrupted tool call may leave async work alive;
+ * retries must join that work rather than stack secure-input prompts.
+ */
+/**
+ * Reauthorizes the Telegram client session.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, _session: Session | null, opts?: {
+        /** Authorization timeout in milliseconds. */
+        timeoutMs?: number;
+        /** Whether to force reauthorization. */
+        force?: boolean;
+    }) {
     const state = ((ctx.state as any).telegram ??= {});
     if (state.reauth) return await state.reauth;
     const flight = performReauth(ctx, opts);

@@ -6,10 +6,16 @@
 // `function_call` ITEM and its answer is a `function_call_output` item, paired
 // by call_id. So an assistant turn that both talked and called tools becomes
 // several items, in order.
+/** Performs the llm.toCodexInput runtime operation. */
+/**
+ * Convert our canonical transcript → OpenAI Responses API `input` items.
+ * @param opts.messages Conversation messages to convert.
+ */
 export default function (
     _ctx: Context,
     _session: Session | null,
-    opts: { messages: { role: string; content?: any; tool_calls?: any[]; tool_call_id?: string }[] },
+    opts: {
+        /** Conversation messages to convert. */ messages: { role: string; content?: any; tool_calls?: any[]; tool_call_id?: string }[] },
 ): { instructions: string; input: any[] } {
     const messages = opts.messages;
     let instructions = "";

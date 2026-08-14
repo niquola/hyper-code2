@@ -1,6 +1,10 @@
 // Dispatch argv to a $cli_<command>.ts handler (collected into ctx.state.procs?.cli).
 // `$cli_db_seed.ts` → command `db:seed`. No command / --help → list commands.
 //   bun script/cli.ts <command> [--flag value] [positionals]
+/**
+ * Run the cli subsystem operation.
+ * @param opts.argv The argv value used by the operation.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { argv: string[] }) {
     const { command, opts: parsed } = ctx.fns.procs.cli.parse({ argv: opts.argv });
     const commands = ctx.state.procs?.cli ?? {};

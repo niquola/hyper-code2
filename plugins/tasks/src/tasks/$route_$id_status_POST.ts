@@ -1,3 +1,13 @@
+/**
+ * Updates a task status from submitted form data and redirects to the task.
+ *
+ * @param ctx - Runtime context used to update the task.
+ * @param _session - Unused request session.
+ * @param opts - HTTP route options.
+ * @param opts.req - Incoming request containing the new status.
+ * @param opts.params - Route parameters containing the task identifier.
+ * @returns A validation response or redirect to the updated task.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
     const form = await opts.req.formData();
     const status = String(form.get('status') ?? '');

@@ -5,6 +5,14 @@ const TONE = {
     warning: "text-warning", danger: "text-error",
 } as const;
 
+/**
+ * Perform stat for the ui subsystem.
+ * @param opts.label The display label.
+ * @param opts.value The value to apply.
+ * @param opts.sub The sub value used by the operation.
+ * @param opts.tone The tone value used by the operation.
+ * @param opts.role The role value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {label: string; value: string | number; sub?: string; tone?: keyof typeof TONE; role?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const tone = opts.tone ? ` ${TONE[opts.tone]}` : "";

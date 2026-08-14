@@ -1,7 +1,14 @@
+/** Render events html for the runtime.  * @param opts.events Agent events to render.
+ * @param opts.agentId Target agent identifier.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { events: any[]; agentId: string },
+    opts: {
+        /** Events to persist or render. */
+    events: any[];
+        /** Agent id used by the operation. */
+    agentId: string },
 ): Promise<string> {
     const { events, agentId } = opts;
 
@@ -26,4 +33,4 @@ export default async function (
             }
         }),
     )).join("\n");
-} 
+}

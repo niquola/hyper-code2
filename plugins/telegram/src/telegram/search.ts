@@ -30,11 +30,26 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// Global message search across all chats. ctx.fns.telegram.search({ query, max?: 20 })
-// → [{ id, date, sender, text }]  (sender = chat/user name where match lives)
+/**
+ * Global message search across all chats. ctx.fns.telegram.search({ query, max?: 20 })
+ * → [{ id, date, sender, text }]  (sender = chat/user name where match lives)
+ */
 import { Api } from "telegram";
 
-export default async function (ctx: Context, session: Session | null, opts: { query: string; max?: number }) {
+/**
+ * Searches messages across Telegram dialogs.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+        /** Search query. */
+        query: string;
+        /** Maximum number of results to return. */
+        max?: number;
+    }) {
     if (!opts?.query) throw new Error("search: opts.query required");
     const client = await connected(ctx);
     const result: any = await client.invoke(new Api.messages.SearchGlobal({

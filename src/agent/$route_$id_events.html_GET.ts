@@ -4,7 +4,14 @@
 // No long-poll: #msg-tail is a standard live region on `agent:<id>`.
 // The shared topic-filtered SSE client triggers its HTMX refresh, while a
 // 30-second watchdog repairs a notification missed during disconnection.
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+/** Handles the id events.html get HTTP route.  * @param opts.req Incoming HTTP request.
+ * @param opts.params Route path parameters.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Incoming HTTP request. */
+req: Request;
+        /** Values bound to the operation. */
+params: Record<string, string> }) {
     const id = opts.params.id!;
     const url = new URL(opts.req.url);
     const offset = Math.max(0, Number(url.searchParams.get('offset') ?? '0') || 0);

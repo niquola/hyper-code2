@@ -1,5 +1,7 @@
-// Public credential metadata: list configured Zulip instance names, never values.
-// Secrets are resolved privately inside zulip.api and are not returned by any fn.
+/**
+ * Public credential metadata: list configured Zulip instance names, never values.
+ * Secrets are resolved privately inside zulip.api and are not returned by any fn.
+ */
 async function op(args: string[]) {
     const paths = [process.env.PATH, `${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin"].filter(Boolean).join(":");
     const proc = Bun.spawn(["op", ...args], { env: { ...process.env, PATH: paths }, stdout: "pipe", stderr: "pipe" });
@@ -12,7 +14,18 @@ async function op(args: string[]) {
     return stdout;
 }
 
-export default async function (ctx: Context, _session: Session | null, _opts?: { list?: boolean }) {
+/**
+ * Gets metadata about configured Zulip credentials.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, _session: Session | null, _opts?: {
+        /** Reserved option for credential listing. */
+        list?: boolean;
+    }) {
     const state = ((ctx.state as any).zulip ??= { creds: {}, instances: null });
     if (state.instances) return state.instances as string[];
     const vault = ctx.env.ZULIP_OP_VAULT || "hyper";

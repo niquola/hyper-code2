@@ -1,7 +1,8 @@
 import { basename } from "node:path";
 
 // POST /plugins/load — mount a plugin straight from a local folder and hot-load it.
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
+/** Handles the corresponding HTTP route. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Incoming HTTP request. */ req: Request }) {
     const form = await opts.req.formData();
     const rawPath = String(form.get("path") ?? "").trim();
     const requestedName = String(form.get("name") ?? "").trim();

@@ -15,6 +15,9 @@ const hasTypes = (n: Node): boolean => Object.keys(n.types).length > 0 || Object
 const IDENT = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const k = (s: string): string => IDENT.test(s) ? s : JSON.stringify(s);
 
+/**
+ * Generate gen types for the dev subsystem.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     const srcDir = resolve(ctx.fns.procs.project.projectRoot({}), "src"); // app's src (where ctx_ns.d.ts lives)
     const entries = await ctx.fns.procs.project.scan({});

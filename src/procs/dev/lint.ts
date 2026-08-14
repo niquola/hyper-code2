@@ -15,6 +15,10 @@
 import { segments } from "../project/classify";
 const IDENT = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
+/**
+ * Lint the dev subsystem operation.
+ * @param opts.silent Whether to suppress console output.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: { silent?: boolean }) {
     const entries = await ctx.fns.procs.project.scan({});
     const errors: string[] = [];

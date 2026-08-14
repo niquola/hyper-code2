@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts: { id: string; messages: any[]; ts?: number }): Promise<{ count: number }> {
+/** Replace messages for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string;
+        /** Messages to persist or process. */
+messages: any[];
+        /** Ts used by the operation. */
+ts?: number }): Promise<{ count: number }> {
     const { id, messages } = opts;
     const ts = opts.ts ?? Date.now();
     await ctx.fns.procs.db.run({ sql: 'DELETE FROM messages WHERE agent_id = ?', params: [id] });

@@ -1,4 +1,7 @@
-export default async function (ctx: Context, _session: Session | null, opts: { id: string }): Promise<number> {
+/** Get max event idx for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string }): Promise<number> {
     const { id } = opts;
     const row = ((await ctx.fns.procs.db.select({
         sql: 'SELECT MAX(idx) AS max_idx, COUNT(*) AS n FROM events WHERE agent_id = ?',

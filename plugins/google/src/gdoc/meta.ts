@@ -1,6 +1,13 @@
 // Drive file metadata for any file id (doc, sheet, pdf, folder…).
 // Accepts a bare id or a docs/drive URL.
 // ctx.fns.gdoc.meta({ id: "1Bxi...Ms" })
+/**
+ * Get Google document metadata.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.id - Resource identifier.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { id: string; account?: string }) {
     const id = extractId(opts.id);
     const url = new URL(`https://www.googleapis.com/drive/v3/files/${id}`);

@@ -1,10 +1,25 @@
-// List users (members) of a Zulip instance, optionally only those subscribed to
-// a given channel. Without `channel` → all org members. With `channel` → fetch
-// the stream's subscriber ids and filter the member list.
-//   ctx.fns.zulip.users({ instance: "fhir" })
-//   ctx.fns.zulip.users({ channel: "implementers", instance: "fhir" })
-// → [{ id, email, name, isBot, isActive }]
-export default async function (ctx: Context, session: Session | null, opts?: { channel?: string; instance?: string }) {
+/**
+ * List users (members) of a Zulip instance, optionally only those subscribed to
+ * a given channel. Without `channel` → all org members. With `channel` → fetch
+ * the stream's subscriber ids and filter the member list.
+ *   ctx.fns.zulip.users({ instance: "fhir" })
+ *   ctx.fns.zulip.users({ channel: "implementers", instance: "fhir" })
+ * → [{ id, email, name, isBot, isActive }]
+ */
+/**
+ * Lists Zulip users, optionally scoped to a channel.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts?: {
+        /** Zulip channel name. */
+        channel?: string;
+        /** Configured Zulip instance name. */
+        instance?: string;
+    }) {
     const instance = opts?.instance;
     const data = await ctx.fns.zulip.api({ path: "/users", instance });
     const all = (data.members || []).map((m: any) => ({

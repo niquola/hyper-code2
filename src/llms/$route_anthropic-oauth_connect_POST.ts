@@ -1,4 +1,7 @@
-export default async function (ctx: Context, _session: Session | null, _opts: { req: Request; params: Record<string, string> }) {
+/** Handles the HTTP route anthropic-oauth connect POST endpoint. */
+export default async function (ctx: Context, _session: Session | null, _opts: {
+        /** Incoming HTTP request. */ req: Request;
+        /** Route parameters captured from the request path. */ params: Record<string, string> }) {
     const login = await ctx.fns.llm.startAnthropicOAuth({});
     // Keep the user on hyper-code2 so the manual fallback and status are always
     // available; the connections page opens the safe authorization URL.

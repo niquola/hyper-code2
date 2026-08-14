@@ -1,5 +1,11 @@
 // Page through a long list. `href(page)` builds the link for each page, so the
 // page you are on is in the URL and shareable; prev/next disable at the ends.
+/**
+ * Perform pagination for the ui subsystem.
+ * @param opts.page The page value used by the operation.
+ * @param opts.pages The pages value used by the operation.
+ * @param opts.href The href value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {page: number; pages: number; href: (page: number) => string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     if (opts.pages <= 1) return "";

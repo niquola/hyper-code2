@@ -1,4 +1,5 @@
-export default async function (ctx: Context, _session: Session | null, opts: { dir?: string; staged?: boolean; summary?: boolean } = {}) {
+/** Returns a structured Git working-tree status. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Git working directory. */ dir?: string; /** Whether to inspect staged changes only. */ staged?: boolean; /** Whether to return summary output. */ summary?: boolean } = {}) {
     const raw = await ctx.fns.git.run({ args: ["status", "--porcelain=v1", "-z", ...(opts.staged ? ["--untracked-files=no"] : [])], dir: opts.dir });
     const modified = new Set<string>();
     const staged = new Set<string>();

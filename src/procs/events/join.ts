@@ -4,6 +4,9 @@
 // Without a session (AUTH=off) everyone is the same anonymous person, which is
 // the truth: the workspace has no way to tell them apart and pretending
 // otherwise would put ghosts in the bar.
+/**
+ * Join the events subsystem operation.
+ */
 export default function (ctx: Context, session: Session | null, _opts?: {}): () => void {
     const user = (session as any)?.user;
     const id = user?.sub ?? "local";

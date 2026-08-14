@@ -1,7 +1,14 @@
+/**
+ * Creates a new task.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { description: string; workspaceMode?: "default" | "isolated" },
+    opts: {
+  /** Task instructions or description. */
+  description: string;
+  /** Workspace strategy: reuse the default workspace or create an isolated one. */
+  workspaceMode?: "default" | "isolated" },
 ): Promise<types.tasks.Task> {
     const description = String(opts.description ?? "").trim();
     if (!description) throw new Error("tasks.create: description is required");

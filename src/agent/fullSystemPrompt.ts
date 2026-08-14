@@ -18,7 +18,11 @@ import { resolve } from "node:path";
 
 const CORE_PATH = resolve(import.meta.dir, "SYSTEM_PROMPT_CORE.txt");
 
-export default async function (ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }): Promise<string> {
+/** Full system prompt for the runtime.  * @param opts.agent Agent whose state is read or updated.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Live agent instance to operate on. */
+agent: types.agent.Agent }): Promise<string> {
     const { agent } = opts;
     const core = await Bun.file(CORE_PATH).text();
     const tools = ctx.fns.tools.promptSection({ protocol: "json", only: agent.tools });

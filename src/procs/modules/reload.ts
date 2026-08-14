@@ -2,6 +2,9 @@
 // system is that installing one is an edit to workspace.json plus this call —
 // no restart, no lost chat session. Root fns live on the ROOT ctx, so walk up to
 // it before reloading; a REPL eval runs two prototypes below.
+/**
+ * Reload the modules subsystem operation.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     let root: any = ctx;
     while (Object.getPrototypeOf(root) !== Object.prototype) root = Object.getPrototypeOf(root);

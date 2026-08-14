@@ -1,4 +1,5 @@
-export default async function (ctx: Context, _session: Session | null, opts: { path: string }): Promise<string> {
+/** Reads a workspace file as text. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Workspace-relative path. */ path: string }): Promise<string> {
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     const abs = ctx.fns.files.resolveSafe({ path: opts.path });
     const stat = await Bun.file(abs).stat();

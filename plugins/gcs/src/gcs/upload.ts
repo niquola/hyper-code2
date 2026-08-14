@@ -1,8 +1,10 @@
-// gcs.upload — upload to a bucket (simple media upload).
-//   ctx.fns.gcs.upload({ bucket, object, content: "hi", contentType: "text/plain" })
-//   ctx.fns.gcs.upload({ bucket, object, file: "/path/local.pdf" })  // reads local file
-// content may be a string, Uint8Array, or (for JSON) a plain object -> stringified.
-// Returns the object resource. Prefer gcs.put/{putJson} for the personal buckets.
+/**
+ * gcs.upload — upload to a bucket (simple media upload).
+ *   ctx.fns.gcs.upload({ bucket, object, content: "hi", contentType: "text/plain" })
+ *   ctx.fns.gcs.upload({ bucket, object, file: "/path/local.pdf" })  // reads local file
+ * content may be a string, Uint8Array, or (for JSON) a plain object -> stringified.
+ * Returns the object resource. Prefer gcs.put/{putJson} for the personal buckets.
+ */
 const UPLOAD_BASE = "https://storage.googleapis.com/upload/storage/v1";
 
 async function accessToken(ctx: Context) {
@@ -16,13 +18,26 @@ async function accessToken(ctx: Context) {
     cache.token = token; cache.expiry = Date.now() + 3_500_000; return token;
 }
 
+/**
+ * Uploads content to a Google Cloud Storage bucket.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
 export default async function (ctx: Context, session: Session | null, opts: {
-    bucket: string;
-    object: string;
-    content?: string | Uint8Array | object;
-    file?: string;
-    contentType?: string;
-}) {
+        /** Bucket name. */
+        bucket: string;
+        /** Object name. */
+        object: string;
+        /** Content to upload or message content. */
+        content?: string | Uint8Array | object;
+        /** Local file path to upload. */
+        file?: string;
+        /** Request or object media type. */
+        contentType?: string;
+    }) {
     if (!opts?.bucket || !opts?.object) throw new Error("bucket and object are required");
     const token = await accessToken(ctx);
 

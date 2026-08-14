@@ -1,9 +1,19 @@
 // Wait until some event is appended for this agent, or until timeoutMs elapses, or until signal aborts.
 // Resolves with { woken: true | false }. Designed for long-poll handlers.
+/** Wait for event for the runtime.  * @param opts.agentId Target agent identifier.
+ * @param opts.timeoutMs Maximum wait or watch lifetime in milliseconds.
+ * @param opts.signal Optional cancellation signal.
+*/
 export default function (
     ctx: Context,
     _session: Session | null,
-    opts: { agentId: string; timeoutMs: number; signal?: AbortSignal },
+    opts: {
+        /** Agent id used by the operation. */
+    agentId: string;
+        /** Maximum wait duration in milliseconds. */
+    timeoutMs: number;
+        /** Signal used by the operation. */
+    signal?: AbortSignal },
 ): Promise<{ woken: boolean }> {
     const { agentId, timeoutMs, signal } = opts;
     const map: Map<string, Set<() => void>> = ((ctx.state as any).eventWaiters ??= new Map());

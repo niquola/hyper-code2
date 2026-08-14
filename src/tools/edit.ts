@@ -8,10 +8,11 @@
 // Two families, deliberately not mixed in one call: literal replacement
 // (oldText/newText — no anchors to fetch, must match exactly once) and anchored
 // line ops (anchor/endAnchor/text — refused outright if the anchor moved).
+/** Implements structured workspace file edits. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { path: string; edits: types.tools.EditOp[] },
+    opts: { /** Workspace-relative path. */ path: string; /** Structured edit operations. */ edits: types.tools.EditOp[] },
 ): Promise<string> {
     const ops = opts.edits.map((e, i) => toOp(e, i));
     const r = await ctx.fns.files.applyEdits({ path: opts.path, ops });

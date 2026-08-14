@@ -12,6 +12,22 @@ const TONE = {
     ghost: "btn-ghost", success: "btn-success", warning: "btn-warning", neutral: "btn-neutral",
 } as const;
 
+/**
+ * Perform button for the ui subsystem.
+ * @param opts.action The action URL.
+ * @param opts.label The display label.
+ * @param opts.entity The entity value used by the operation.
+ * @param opts.id The target identifier.
+ * @param opts.post The post value used by the operation.
+ * @param opts.get The get value used by the operation.
+ * @param opts.vals The vals value used by the operation.
+ * @param opts.target The operation target.
+ * @param opts.tone The tone value used by the operation.
+ * @param opts.title The display title.
+ * @param opts.disabled The disabled value used by the operation.
+ * @param opts.name The target name.
+ * @param opts.value The value to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     action: string; label: string; entity?: string; id?: string;
     post?: string; get?: string; vals?: Record<string, any>; target?: string;

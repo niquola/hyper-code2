@@ -17,6 +17,12 @@
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 
+/**
+ * Perform route for the dev subsystem.
+ * @param opts.url The target URL.
+ * @param opts.method The HTTP method.
+ * @param opts.title The display title.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { url: string; method?: string; title?: string }) {
     const method = (opts.method ?? "GET").toUpperCase();
     const url = (opts.url ?? "").trim();

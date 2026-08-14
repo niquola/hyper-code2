@@ -1,4 +1,12 @@
-export default function (ctx: Context, _session: Session | null, opts: { task: any; autofocus?: boolean }): string {
+/** Performs the ui.planTaskRow runtime operation. */
+/**
+ * Render an editable plan task row with status and elapsed time.
+ * @param opts.task Plan task data to render.
+ * @param opts.autofocus Whether to focus the task editor.
+ */
+export default function (ctx: Context, _session: Session | null, opts: {
+        /** Plan task to render. */ task: any;
+        /** Whether the task input should receive focus. */ autofocus?: boolean }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const task = opts.task ?? {};
     const status = String(task.status ?? 'pending');

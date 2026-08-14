@@ -9,6 +9,11 @@ const typeValidators: Record<string, (v: any) => boolean> = {
     map: (v) => !!v && typeof v === "object" && !Array.isArray(v),
 };
 
+/**
+ * Validate the config subsystem operation.
+ * @param opts.schema The value schema.
+ * @param opts.config Configuration values to apply.
+ */
 export default function (_ctx: Context, _session: Session | null, opts: { schema: ConfigSchema; config: Record<string, any> }) {
     const { schema, config } = opts;
     const errors: string[] = [];

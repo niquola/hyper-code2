@@ -1,10 +1,23 @@
 // Search Google, then read several result pages concurrently in independent
 // background tabs. Returns evidence, not a synthesized answer — the calling
 // agent compares sources and draws conclusions itself.
+/**
+ * Searches the web and reads a bounded set of result pages.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { query: string; pages?: number; maxCharsPerPage?: number; session?: string; keepOpen?: boolean },
+    opts: {
+  /** Research query. */
+  query: string;
+  /** Maximum number of result pages to read. */
+  pages?: number;
+  /** Maximum characters retained from each page. */
+  maxCharsPerPage?: number;
+  /** Base logical browser session name. */
+  session?: string;
+  /** Whether to leave research tabs open. */
+  keepOpen?: boolean },
 ) {
     const pages = Math.max(1, Math.min(Number(opts.pages ?? 4), 8));
     const base = opts.session || "research";

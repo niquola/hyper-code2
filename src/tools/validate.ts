@@ -12,10 +12,11 @@
 //
 // Semantics a schema cannot express ("either path+edits or script") belong in
 // the tool's own `validate:` function, not here.
+/** Validates tool arguments against a registered schema. */
 export default function (
     _ctx: Context,
     _session: Session | null,
-    opts: { schema: any; args: any },
+    opts: { /** JSON schema used for validation. */ schema: any; /** Command-line arguments. */ args: any },
 ): { ok: boolean; errors: string[] } {
     const errors: string[] = [];
     check(opts.args, opts.schema ?? {}, "", errors);

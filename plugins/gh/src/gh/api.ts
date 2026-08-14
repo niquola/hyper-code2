@@ -1,7 +1,11 @@
 // Generic GitHub REST API call. Authentication stays private: environment first,
 // then the local `gh auth token` keyring integration. This function never returns
 // or logs the token. Non-GET methods require confirm:true.
-async function accessToken(ctx: Context) {
+/** Resolve and cache a GitHub access token without exposing it to callers.
+ * @param ctx Runtime context containing environment and plugin state.
+ * @returns The authenticated GitHub access token.
+ */
+async function accessToken(ctx: Context): Promise<string> {
     const cache = ((ctx.state as any).gh ??= {} as { token?: string });
     if (cache.token) return cache.token;
     const env = ctx.env.GH_TOKEN || ctx.env.GITHUB_TOKEN;
@@ -13,20 +17,34 @@ async function accessToken(ctx: Context) {
     return cache.token = token;
 }
 
+/** Call a GitHub REST API endpoint using authenticated credentials.
+ * @param ctx Runtime context.
+ * @param _session Unused session supplied by the procedural runtime.
+ * @param opts Request options.
+ * @returns The decoded JSON response, text response, or `null` for HTTP 204.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
     opts: {
+        /** HTTP method and GitHub API path, for example `GET /repos/{owner}/{repo}`. */
         route: string;
+        /** Values substituted into `{name}` placeholders in the route path. */
         path?: Record<string, string | number>;
+        /** Query-string parameters appended to the request URL. */
         params?: Record<string, string | number | boolean>;
+        /** JSON-serializable request body. */
         body?: any;
+        /** Additional HTTP headers; these may override the defaults. */
         headers?: Record<string, string>;
+        /** Requested page size, clamped to GitHub's range of 1 through 100. */
         per_page?: number;
+        /** One-based result page to request. */
         page?: number;
+        /** Must be `true` for methods other than GET and HEAD. */
         confirm?: boolean;
     },
-) {
+): Promise<any> {
     const match = String(opts?.route ?? "").match(/^([A-Z]+)\s+(\/[^\s]*)$/);
     if (!match) throw new Error("gh.api: route must be like GET /repos/{owner}/{repo}");
     const method = match[1]!;

@@ -4,7 +4,8 @@ const SKIP_NAMES = new Set(["node_modules", ".git", ".DS_Store"]);
 
 // List a directory's immediate children, relative to workspace root.
 // Dirs first, alphabetical. Skips node_modules / .git / .DS_Store.
-export default async function (ctx: Context, _session: Session | null, opts: { path?: string } = {}): Promise<Array<{
+/** Lists the immediate children of a workspace directory. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Workspace-relative path. */ path?: string } = {}): Promise<Array<{
     name: string;
     isDir: boolean;
 }>> {

@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+/** Handles the id automation post HTTP route.  * @param opts.req Incoming HTTP request.
+ * @param opts.params Route path parameters.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Incoming HTTP request. */
+req: Request;
+        /** Values bound to the operation. */
+params: Record<string, string> }) {
     const form = await opts.req.formData();
     try {
         await ctx.fns.agent.setAutomation({

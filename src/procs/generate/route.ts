@@ -1,6 +1,13 @@
 // Scaffold a new route file, register it, broadcast reload.
 //   ctx.fns.procs.generate.route({ module: "todo", method: "GET" })            → GET /todo
 //   ctx.fns.procs.generate.route({ module: "todo", path: "$id", method: "GET" }) → GET /todo/:id
+/**
+ * Perform route for the generate subsystem.
+ * @param opts.module The module value used by the operation.
+ * @param opts.path The filesystem or route path.
+ * @param opts.method The HTTP method.
+ * @param opts.body The HTTP body.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { module: string; path?: string; method: string; body?: string }) {
     const { module: mod, path = "", method } = opts;
     const METHODS = new Set(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]);

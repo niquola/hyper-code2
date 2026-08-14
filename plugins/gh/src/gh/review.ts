@@ -1,13 +1,27 @@
 // Submit a pull-request review. APPROVE and REQUEST_CHANGES have repository
 // workflow consequences, so every review event requires explicit confirmation.
+/** Submit a pull-request review after explicit confirmation.
+ * @param ctx Runtime context.
+ * @param _session Unused session supplied by the procedural runtime.
+ * @param opts Review submission options.
+ * @returns The created GitHub pull-request review resource.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: {
-    owner: string; repo: string; n: number;
-    event: "APPROVE" | "REQUEST_CHANGES" | "COMMENT";
-    body?: string;
-    commitId?: string;
-    comments?: Array<{ path: string; line: number; side?: "LEFT" | "RIGHT"; body: string }>;
-    confirm?: boolean;
-}) {
+    /** Repository owner or organization login. */ owner: string;
+    /** Repository name. */ repo: string;
+    /** Pull-request number. */ n: number;
+    /** Review action to submit. */ event: "APPROVE" | "REQUEST_CHANGES" | "COMMENT";
+    /** Optional overall Markdown review body. */ body?: string;
+    /** Commit SHA to review. */ commitId?: string;
+    /** Inline review comments attached to changed lines. */
+    comments?: Array<{
+        /** Repository-relative file path. */ path: string;
+        /** Line number in the diff side being commented on. */ line: number;
+        /** Diff side; omitted values are sent as `RIGHT`. */ side?: "LEFT" | "RIGHT";
+        /** Markdown inline-comment body. */ body: string;
+    }>;
+    /** Must be `true` after explicit user approval. */ confirm?: boolean;
+}): Promise<any> {
     if (!opts?.owner || !opts.repo || !opts.n || !opts.event) throw new Error("gh.review requires owner, repo, n and event");
     if (!(["APPROVE", "REQUEST_CHANGES", "COMMENT"] as string[]).includes(opts.event)) throw new Error("gh.review event must be APPROVE, REQUEST_CHANGES or COMMENT");
     if ((opts.event === "REQUEST_CHANGES" || opts.event === "COMMENT") && !opts.body && !opts.comments?.length) {

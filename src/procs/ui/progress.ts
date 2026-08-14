@@ -7,6 +7,14 @@ const TONE = {
     warning: "progress-warning", danger: "progress-error",
 } as const;
 
+/**
+ * Perform progress for the ui subsystem.
+ * @param opts.value The value to apply.
+ * @param opts.max The max value used by the operation.
+ * @param opts.label The display label.
+ * @param opts.tone The tone value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {value: number; max?: number; label?: string; tone?: keyof typeof TONE; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const max = opts.max ?? 100;

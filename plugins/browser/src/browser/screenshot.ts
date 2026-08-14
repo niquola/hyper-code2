@@ -1,9 +1,19 @@
 import { resolve } from "node:path";
 
+/**
+ * Captures a screenshot of the current page.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,
-    opts: { session?: string; path?: string; fullPage?: boolean } = {},
+    opts: {
+        /** Logical browser session name. */
+        session?: string;
+        /** Destination file path. */
+        path?: string;
+        /** Whether to capture the entire scrollable page. */
+        fullPage?: boolean;
+    } = {},
 ): Promise<string> {
     const result = await ctx.fns.cdp.send({
         session: opts.session,

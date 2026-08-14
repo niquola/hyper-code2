@@ -1,10 +1,32 @@
+/**
+ * Creates a visible multi-step work plan for an agent.
+ *
+ * Task IDs are stable identifiers used by `session.done` and plan updates.
+ */
+
 export default async function (
     ctx: Context,
     session: Session | null,
     opts: {
+
+        /** Agent that owns the plan; defaults to the current session agent. */
         agent?: types.agent.Agent;
+
+        /** Short user-visible plan title. */
         title?: string;
-        tasks: Array<{ id: string; title: string; instructions?: string }>;
+
+        /** Ordered tasks; the first task becomes active immediately. */
+        tasks: Array<{
+
+        /** Stable task identifier. */
+            id: string;
+
+        /** Short user-visible task title. */
+            title: string;
+
+        /** Detailed execution guidance. */
+            instructions?: string;
+        }>;
     },
 ): Promise<any> {
     const agent = opts.agent ?? (session as any)?.agent;

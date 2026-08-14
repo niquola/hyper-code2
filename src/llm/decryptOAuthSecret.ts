@@ -1,7 +1,17 @@
+/** Performs the llm.decryptOAuthSecret runtime operation. */
+/**
+ * Decrypt a stored OAuth credential field.
+ * @param opts.provider OAuth provider identifier.
+ * @param opts.field Credential field being encrypted or decrypted.
+ * @param opts.envelope Encrypted credential envelope.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { provider: string; field: "access" | "refresh"; envelope: string },
+    opts: {
+        /** Model provider name. */ provider: string;
+        /** Value used for the field option. */ field: "access" | "refresh";
+        /** Value used for the envelope option. */ envelope: string },
 ): Promise<string> {
     let parsed: any;
     try { parsed = JSON.parse(opts.envelope); } catch { throw new Error("OAuth credential cannot be decrypted"); }

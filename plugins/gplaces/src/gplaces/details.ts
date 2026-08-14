@@ -10,11 +10,18 @@ const PRICE: Record<string, string> = {
     PRICE_LEVEL_VERY_EXPENSIVE: "$$$$",
 };
 
+/**
+ * Fetches details for a Google Place.
+ */
 export default async function (ctx: Context, session: Session | null, opts: {
-    id: string;
-    lang?: string;
-    reviews?: boolean;
-    photos?: boolean;
+        /** Google Place identifier or resource name. */
+        id: string;
+        /** Response language code. */
+        lang?: string;
+        /** Whether to include reviews. */
+        reviews?: boolean;
+        /** Whether to include photo metadata. */
+        photos?: boolean;
 }) {
     if (!opts?.id) throw new Error("id is required");
     const cleanId = opts.id.replace(/^places\//, "");

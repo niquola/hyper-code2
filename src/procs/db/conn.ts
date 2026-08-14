@@ -10,6 +10,9 @@
 // suite).
 import { SQL } from "bun";
 
+/**
+ * Perform conn for the db subsystem.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<SQL> {
     const st = ((ctx.state.procs ??= {} as any).db ??= {});
     if (st.sql) return st.sql;

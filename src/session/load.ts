@@ -1,4 +1,7 @@
-export default async function (ctx: Context, _session: Session | null, opts: { id: string }): Promise<types.agent.Agent | null> {
+/** Load for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string }): Promise<types.agent.Agent | null> {
     const { id } = opts;
     const rows = (await ctx.fns.procs.db.select({ sql: 'SELECT * FROM agents WHERE id = ? AND archived_at IS NULL', params: [id] })) as any[];
     const row = rows[0];

@@ -3,6 +3,12 @@
 // carries the raw state.
 // daisyUI's `status` is exactly this dot, and `status-*` carries the colour.
 const TONE: Record<string, string> = { running: "status-success", ready: "status-success", ok: "status-success", active: "status-success", completed: "status-success", crashed: "status-error", error: "status-error", failed: "status-error", starting: "status-warning", restarting: "status-warning", draft: "status-warning", idle: "status-neutral", stopped: "status-neutral" };
+/**
+ * Perform status dot for the ui subsystem.
+ * @param opts.status The status value.
+ * @param opts.label The display label.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {status: string; label?: string; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const tone = TONE[opts.status?.toLowerCase()] ?? "status-neutral";

@@ -1,7 +1,12 @@
+/** Remove plan for the runtime. */
 export default async function (
     ctx: Context,
     session: Session | null,
-    opts: { agent?: types.agent.Agent; archive?: boolean },
+    opts: {
+        /** Live agent instance to operate on. */
+    agent?: types.agent.Agent;
+        /** Whether removed data should be archived. */
+    archive?: boolean },
 ): Promise<{ ok: boolean; archived: boolean }> {
     const agent = opts.agent ?? (session as any)?.agent;
     if (!agent?.id) throw new Error("removePlan: agent is required");

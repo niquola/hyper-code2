@@ -2,10 +2,23 @@
 // Uses the user's real Chrome session, so regional settings and existing consent
 // state are preserved. Selectors deliberately anchor on result h3 elements and
 // discover the enclosing snippet instead of depending on one brittle container.
+/**
+ * Runs a Google web search and returns structured results.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { query: string; count?: number; session?: string; language?: string; keepOpen?: boolean },
+    opts: {
+  /** Search query. */
+  query: string;
+  /** Maximum number of results to return. */
+  count?: number;
+  /** Logical browser session name. */
+  session?: string;
+  /** Google interface language code. */
+  language?: string;
+  /** Whether to leave the search tab open. */
+  keepOpen?: boolean },
 ) {
     const query = String(opts.query ?? "").trim();
     if (!query) throw new Error("browser.googleSearch: query is required");

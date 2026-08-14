@@ -1,7 +1,17 @@
+/** Set sleep active for the runtime.  * @param opts.id Target agent identifier.
+ * @param opts.active Whether the sleep revision is active.
+ * @param opts.revision Optional sleep-context revision.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; active: boolean; revision?: number },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Whether the feature is active. */
+    active: boolean;
+        /** Revision used by the operation. */
+    revision?: number },
 ): Promise<{ active: boolean; revision: number | null }> {
     const row = ((await ctx.fns.procs.db.select({ sql: "SELECT sleep_context FROM agents WHERE id = ? AND archived_at IS NULL", params: [opts.id] })) as any[])[0];
     if (!row) throw new Error(`agent not found: ${opts.id}`);

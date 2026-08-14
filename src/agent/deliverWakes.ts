@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts?: { now?: number; limit?: number }): Promise<{ delivered: string[] }> {
+/** Deliver wakes for the runtime.  * @param opts.now Timestamp used as the current time.
+ * @param opts.limit Maximum records to process.
+*/
+export default async function (ctx: Context, _session: Session | null, opts?: {
+        /** Now used by the operation. */
+now?: number;
+        /** Maximum number of results to return. */
+limit?: number }): Promise<{ delivered: string[] }> {
     const now = Math.floor(opts?.now ?? Date.now());
     const limit = Math.max(1, Math.min(20, opts?.limit ?? 10));
     const rows = (await ctx.fns.procs.db.select({

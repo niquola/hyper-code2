@@ -1,4 +1,7 @@
 // `bun script/cli.ts fns` — list the registered functions (ctx.fns.*).
+/**
+ * Run the cli fns command-line operation.
+ */
 export default function (ctx: Context, _session: Session | null, _opts: any) {
     const out: string[] = [];
     walk((ctx.state as any).registry, [], out);

@@ -7,6 +7,12 @@ import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { collectStateFile, dottedName, isLoaded } from "../boot/load";
 
+/**
+ * Perform def for the dev subsystem.
+ * @param opts.name The target name.
+ * @param opts.rel The rel value used by the operation.
+ * @param opts.code The code to process.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { name?: string; rel?: string; code: string }) {
     let rel = opts.rel;
     if (!rel && opts.name) {

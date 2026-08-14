@@ -8,6 +8,12 @@ const THEME = "github-light";
 const LANGS = ["typescript", "tsx", "json", "css", "html", "bash", "shellscript"];
 const ALIASES: Record<string, string> = { ts: "typescript", js: "typescript", jsx: "tsx", sh: "shellscript", bash: "shellscript", jsonc: "json" };
 
+/**
+ * Perform code for the ui subsystem.
+ * @param opts.code The code to process.
+ * @param opts.lang The lang value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: {code: string; lang?: string; class?: string }): Promise<string> {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const hl = await highlighter(ctx);

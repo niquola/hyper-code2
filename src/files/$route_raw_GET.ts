@@ -2,7 +2,8 @@ import { stat } from "node:fs/promises";
 import { extname } from "node:path";
 
 // GET /files/raw?path=... — stream a file for browser-native media previews.
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
+/** Handles the corresponding HTTP route. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Incoming HTTP request. */ req: Request }) {
     const url = new URL(opts.req.url);
     const path = url.searchParams.get("path") ?? "";
     const abs = ctx.fns.files.resolveSafe({ path });

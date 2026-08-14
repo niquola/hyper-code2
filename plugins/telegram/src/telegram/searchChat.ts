@@ -30,15 +30,32 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// telegram.searchChat — server-side full-text search WITHIN one chat (MTProto
-// messages.Search). Unlike telegram.search (global SearchGlobal), this is scoped
-// to a peer and pages via offsetId, so you can pull every match for a term.
-//   ctx.fns.telegram.searchChat({ chat: "-1001448431624", query: "память" })
-//   ctx.fns.telegram.searchChat({ chat: "@durov", query: "hi", max: 200 })
-// → [{ id, date, text }] newest→oldest. `max` caps total (paginates in 100s).
+/**
+ * telegram.searchChat — server-side full-text search WITHIN one chat (MTProto
+ * messages.Search). Unlike telegram.search (global SearchGlobal), this is scoped
+ * to a peer and pages via offsetId, so you can pull every match for a term.
+ *   ctx.fns.telegram.searchChat({ chat: "-1001448431624", query: "память" })
+ *   ctx.fns.telegram.searchChat({ chat: "@durov", query: "hi", max: 200 })
+ * → [{ id, date, text }] newest→oldest. `max` caps total (paginates in 100s).
+ */
 import { Api } from "telegram";
 
-export default async function (ctx: Context, _session: Session | null, opts: { chat: string | number; query: string; max?: number }) {
+/**
+ * Searches messages within a Telegram chat.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Chat identifier or username. */
+        chat: string | number;
+        /** Search query. */
+        query: string;
+        /** Maximum number of results to return. */
+        max?: number;
+    }) {
     if (opts?.chat === undefined || opts?.chat === null) throw new Error("searchChat: opts.chat required");
     if (!opts?.query) throw new Error("searchChat: opts.query required");
     const client = await connected(ctx);

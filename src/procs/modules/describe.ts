@@ -2,6 +2,12 @@
 // the manager and the agent's index show. The sentence falls back to the
 // `description:` a SKILL.md already carries in its frontmatter, so a module that
 // is also a skill writes it once.
+/**
+ * Describe the modules subsystem operation.
+ * @param opts.dir The directory to inspect.
+ * @param opts.name The target name.
+ * @param opts.manifest The module manifest.
+ */
 export default async function (_ctx: Context, _session: Session | null, opts: { dir: string; name: string; manifest: any }): Promise<{ label: string; icon: string; description: string; place: "left" | "right"; skill: string | null; preview: { files: string; fn: string } | null }> {
     const skill = `${opts.dir}/SKILL.md`;
     const head = await Bun.file(skill).text().then(text => text.slice(0, 800)).catch(() => null);

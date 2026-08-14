@@ -1,4 +1,5 @@
-export default function (ctx: Context, _session: Session | null, opts: { line: number; text: string }): types.files.ReadAnchorLine {
+/** Formats text with stable line anchors. */
+export default function (ctx: Context, _session: Session | null, opts: { /** One-based line number. */ line: number; /** Text content. */ text: string }): types.files.ReadAnchorLine {
     const hash = ctx.fns.files.lineHash({ line: opts.line, text: opts.text });
     return {
         line: opts.line,

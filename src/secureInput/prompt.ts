@@ -1,6 +1,15 @@
 // Ask the human for transient sensitive input in the browser UI. The value travels
 // directly from a popup form to an in-memory Promise: never through the LLM,
 // transcript, tool arguments/results, scratchpad, DB, logs, or filesystem.
+/**
+ * Prompts the user for transient sensitive input without exposing the value to the transcript.
+ * @param opts.title Prompt title.
+ * @param opts.name Optional prompt display name.
+ * @param opts.message Optional explanatory prompt text.
+ * @param opts.kind Input control kind.
+ * @param opts.timeoutMs Maximum wait in milliseconds.
+ * @param opts.maxlength Maximum accepted input length.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,

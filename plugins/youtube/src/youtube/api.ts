@@ -1,9 +1,16 @@
 // Generic YouTube Data API v3 GET. The API key stays in 1Password and is
 // injected here; there is intentionally no public key() function.
+/**
+ * Calls a YouTube Data API v3 endpoint.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { endpoint: string; params?: Record<string, string | number | undefined> },
+    opts: {
+  /** YouTube Data API endpoint name. */
+  endpoint: string;
+  /** Endpoint query parameters. */
+  params?: Record<string, string | number | undefined> },
 ) {
     if (!opts?.endpoint || !/^[a-zA-Z0-9_-]+$/.test(opts.endpoint)) throw new Error("youtube.api: valid endpoint required");
     const cache = ((ctx.state as any).youtube ??= {} as { key?: string });

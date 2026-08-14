@@ -1,6 +1,7 @@
 // agent module boot: rehydrate persisted agents into ctx.state.agent, then
 // start the single in-process worker that drains agent runs. Listed in
 // package.json procs.prod after procs/migrate so the schema is ready.
+/** Initializes the agent runtime when the namespace starts. */
 export default async function (ctx: Context, _session: Session | null, _config?: unknown) {
     const rehydrated = await ctx.fns.session.loadAll({});
     ctx.fns.procs.log.info({ event: "agent.rehydrated", msg: `${rehydrated.loaded} agent(s)` });

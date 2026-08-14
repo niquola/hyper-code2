@@ -1,7 +1,14 @@
+/** Update scratchpad for the runtime. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; scratchpad: Record<string, any>; ts?: number },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Scratchpad state to persist. */
+    scratchpad: Record<string, any>;
+        /** Ts used by the operation. */
+    ts?: number },
 ): Promise<{ ok: boolean }> {
     const { id, scratchpad } = opts;
     const ts = opts.ts ?? Date.now();

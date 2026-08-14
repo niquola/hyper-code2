@@ -1,3 +1,9 @@
+/**
+ * Runs TypeScript checking and records a compact result.
+ * @param opts.files Files or directories to test or typecheck.
+ * @param opts.verbose Whether to include verbose output tails.
+ * @param opts.agent Agent whose scratchpad stores or locates the run.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { files?: string[]; verbose?: boolean; agent?: any } = {}) {
     await Bun.write('.hyper/_runtime/logs/.keep', '');
     const ts = new Date().toISOString().replace(/[:.]/g, '-');

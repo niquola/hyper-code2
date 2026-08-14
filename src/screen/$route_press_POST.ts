@@ -8,6 +8,10 @@
 // workspace answers by putting one line of fact in the chat agent's queue. In
 // a host where nobody answers (no agent), the press simply dissolves: a tour
 // with no guide has nobody to tell.
+/**
+ * Receives a guided-tour control press from the browser.
+ * @param opts.req Incoming HTTP request.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
     const said: any = await opts.req.json().catch(() => null);
     if (!said?.pressed) return new Response(null, { status: 204 });

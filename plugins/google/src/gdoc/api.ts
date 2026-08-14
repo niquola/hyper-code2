@@ -3,6 +3,15 @@
 //   https://www.googleapis.com/drive/v3/files
 //   https://docs.googleapis.com/v1/documents/<id>
 // ctx.fns.gdoc.api({ url: "https://docs.googleapis.com/v1/documents/<id>" })
+/**
+ * Call an arbitrary Google Docs or Drive API endpoint.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.url - URL used by the operation.
+ * @param opts.method - HTTP method; defaults to the operation-specific method.
+ * @param opts.body - Request body or message body, as applicable.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { url: string; method?: string; body?: object; account?: string }) {
     const { access_token } = await ctx.fns.google.token({ account: opts.account });
     const res = await fetch(opts.url, {

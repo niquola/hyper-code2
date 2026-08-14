@@ -1,4 +1,5 @@
-export default async function (ctx: Context, _session: Session | null, opts: { message: string; dir?: string; allowEmpty?: boolean }) {
+/** Creates a Git commit. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Commit message. */ message: string; /** Git working directory. */ dir?: string; /** Whether an empty commit is allowed. */ allowEmpty?: boolean }) {
     const message = opts.message;
     if (!message?.trim()) throw new Error("commit message required");
     const args = ["commit", "-m", message];

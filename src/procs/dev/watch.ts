@@ -17,6 +17,9 @@ import { watch } from "node:fs";
 import { resolve } from "node:path";
 import { collectStateFile, dottedName, isLoaded } from "../boot/load";
 
+/**
+ * Watch the dev subsystem operation.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     const st = ctx.state as any;
     if (st.watcher) return { watching: 'already' };

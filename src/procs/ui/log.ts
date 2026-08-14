@@ -1,6 +1,12 @@
 // A scrollback of log lines — a service's output, a build. Newest at the bottom,
 // the box scrolls, stderr is tinted. `stream` (an SSE url) makes it live: htmx 4's
 // SSE extension streams unnamed events through the normal swap pipeline.
+/**
+ * Perform log for the ui subsystem.
+ * @param opts.lines The lines value used by the operation.
+ * @param opts.stream The stream value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {lines?: Array<string | { text: string; stream?: string }>; stream?: string; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const line = (l: any) => {

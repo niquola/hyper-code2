@@ -21,6 +21,11 @@ import projectRootFn from "../project/projectRoot";
 //
 // Read on the bootstrap path (project/modules imports it directly), so it takes
 // the workdir rather than reaching for ctx.fns.
+/**
+ * Reads effective module declarations from the host package and workspace manifest.
+ * Workspace declarations override host declarations; `false` explicitly excludes a module.
+ * @param opts.workdir Workspace directory containing the optional `workspace.json` manifest.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { workdir: string }): Promise<Record<string, Record<string, any> | false>> {
     const app = await Bun.file(`${projectRootFn(ctx, session, {})}/package.json`).json()
         .then((pkg: any) => pkg.procs?.modules ?? pkg.proc?.modules ?? {})

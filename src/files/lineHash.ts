@@ -1,4 +1,5 @@
-export default function (_ctx: Context, _session: Session | null, opts: { line: number; text: string }): string {
+/** Computes the stable hash for a source line. */
+export default function (_ctx: Context, _session: Session | null, opts: { /** One-based line number. */ line: number; /** Text content. */ text: string }): string {
     const input = `${opts.line}:${opts.text}`;
     const n = Bun.hash(input);
     const s = n.toString(36);

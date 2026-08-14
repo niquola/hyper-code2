@@ -35,6 +35,10 @@ export function injectClassDefs(code: string): string {
     return code + "\n" + defs.join("\n");
 }
 
+/**
+ * Renders Mermaid source as an SVG data URL.
+ * @param opts.source Markdown or Mermaid source.
+ */
 export default async function (_ctx: Context, _session: Session | null, opts: { source: string }): Promise<string> {
     const svg = await renderMermaid(injectClassDefs(opts.source), {
         bg: "#ffffff",

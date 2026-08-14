@@ -1,5 +1,9 @@
 // Roll back the most recently applied migration (or N via opts.steps), running
 // its down(ctx) and removing it from _migrations.
+/**
+ * Perform down for the migrate subsystem.
+ * @param opts.steps The steps value used by the operation.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: { steps?: number }) {
     const steps = opts?.steps ?? 1;
     // Match up/status: ensure the bookkeeping table exists so down() on a fresh

@@ -2,6 +2,13 @@
 // Accepts a bare doc id or any docs.google.com URL.
 // ctx.fns.gdoc.doc({ id: "1Bxi...Ms" })
 // → { id, title, text, markdown }
+/**
+ * Get a Google document.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.id - Resource identifier.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { id: string; account?: string }) {
     const id = extractId(opts.id);
     const doc = await ctx.fns.gdoc.api({ url: `https://docs.googleapis.com/v1/documents/${id}`, account: opts?.account });

@@ -1,5 +1,15 @@
 // Move/reorder a task within its list (as subtask of `parent` and/or after `previous`).
 // `list` defaults to the first list. ctx.fns.gtasks.move({ task, list?, parent?, previous?, account? }) → moved task
+/**
+ * Move or reorder a Google Task.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.task - Google Task identifier.
+ * @param opts.list - Task-list identifier; defaults to the first list where supported.
+ * @param opts.parent - Parent task identifier.
+ * @param opts.previous - Previous sibling task identifier used for ordering.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { task: string; list?: string; parent?: string; previous?: string; account?: string }) {
     if (!opts?.task) throw new Error("task id is required");
     let list = opts.list;

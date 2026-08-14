@@ -4,6 +4,10 @@
 //   ctx.fns.procs.repl.load({ name: "genTypes" })      → reload a root $name.ts fn
 import { bindSelf, setPath, source } from "../boot/load";
 
+/**
+ * Load the repl subsystem operation.
+ * @param opts.name The target name.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { name: string }) {
     const target = opts.name;
 

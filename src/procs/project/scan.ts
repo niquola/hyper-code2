@@ -11,6 +11,10 @@ function isIgnoredPath(rel: string): boolean {
 
 export type ScanEntry = ProjectEntry & { root: string; rootDir: string; namespace: string; module: string; projectRel: string; abs: string; fn?: any };
 
+/**
+ * Scans every discovered source root and classifies its runtime files.
+ * Returns absolute locations plus root, namespace, module, and project-relative metadata.
+ */
 export default async function (ctx: Context, session: Session | null, _opts?: {}): Promise<ScanEntry[]> {
     // ctx.fns.procs.modules.discover may not be registered yet on the first bootstrap
     // pass (loadFns calls scan to populate the registry) — fall back to a

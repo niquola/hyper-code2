@@ -1,7 +1,22 @@
-// Mark messages as read via a narrow (is:unread, optionally scoped to a channel).
-// WRITE — clears unread flags on the user's Zulip. ctx.fns.zulip.markRead({ channel?, instance? })
-// → { updated } (number of messages marked read)
-export default async function (ctx: Context, session: Session | null, opts?: { channel?: string; instance?: string }) {
+/**
+ * Mark messages as read via a narrow (is:unread, optionally scoped to a channel).
+ * WRITE — clears unread flags on the user's Zulip. ctx.fns.zulip.markRead({ channel?, instance? })
+ * → { updated } (number of messages marked read)
+ */
+/**
+ * Marks matching Zulip messages as read.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts?: {
+        /** Zulip channel name. */
+        channel?: string;
+        /** Configured Zulip instance name. */
+        instance?: string;
+    }) {
     const narrow: { operator: string; operand: string }[] = [];
     if (opts?.channel) narrow.push({ operator: "channel", operand: opts.channel });
     narrow.push({ operator: "is", operand: "unread" });

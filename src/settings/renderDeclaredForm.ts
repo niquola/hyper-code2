@@ -51,6 +51,7 @@ function renderRow(item: any): string {
 </tr>`;
 }
 
+/** Renders the declared-settings form as an HTML fragment. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string> {
     const items = await ctx.fns.settings.declared({});
     const byModule = new Map<string, any[]>();

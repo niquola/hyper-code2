@@ -6,10 +6,19 @@
 // the renderer produced back then — improve the rendering and history kept the
 // old look forever. Now every read renders fresh, so a change applies to the
 // entire transcript at once, and events carry data (not markup).
+/** Append event with html for the runtime. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; type: string; payload?: any; ts?: number },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Entry or operation type. */
+    type: string;
+        /** Payload used by the operation. */
+    payload?: any;
+        /** Ts used by the operation. */
+    ts?: number },
 ): Promise<{ idx: number }> {
     const event = { type: opts.type, ...(opts.payload ?? {}) } as any;
     return ctx.fns.session.appendEvent({ id: opts.id, event, ts: opts.ts });

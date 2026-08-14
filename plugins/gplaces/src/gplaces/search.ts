@@ -9,6 +9,12 @@ const PRICE: Record<string, string> = {
     PRICE_LEVEL_VERY_EXPENSIVE: "$$$$",
 };
 
+/**
+ * Reduces a Places API result to the public search-result shape.
+ *
+ * @param p - Raw Google Places result.
+ * @returns Selected place summary fields.
+ */
 function short(p: any) {
     return {
         id: p.id,
@@ -25,17 +31,30 @@ function short(p: any) {
     };
 }
 
+/**
+ * Searches Google Places using a text query.
+ */
 export default async function (ctx: Context, session: Session | null, opts: {
-    query: string;
-    lang?: string;
-    region?: string;
-    max?: number;
-    lat?: number;
-    lng?: number;
-    radius?: number;
-    type?: string;
-    openNow?: boolean;
-    minRating?: number;
+        /** Place search query. */
+        query: string;
+        /** Response language code. */
+        lang?: string;
+        /** Region code used to bias results. */
+        region?: string;
+        /** Maximum number of places to return. */
+        max?: number;
+        /** Latitude used for location bias. */
+        lat?: number;
+        /** Longitude used for location bias. */
+        lng?: number;
+        /** Location-bias radius in metres. */
+        radius?: number;
+        /** Google place type filter. */
+        type?: string;
+        /** Whether to return only places currently open. */
+        openNow?: boolean;
+        /** Minimum accepted user rating. */
+        minRating?: number;
 }) {
     if (!opts?.query) throw new Error("query is required");
     const body: any = {

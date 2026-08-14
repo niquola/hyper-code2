@@ -1,10 +1,27 @@
 // Exchange an authorization code or rotating refresh token. Errors are
 // deliberately sanitized: token endpoint bodies can contain secrets.
+/**
+ * Exchange an Anthropic authorization code or refresh token for OAuth credentials.
+ * @param opts.grant OAuth grant type that selects the exchange payload.
+ * @param opts.code Authorization code returned by Anthropic.
+ * @param opts.state OAuth state returned with the authorization code.
+ * @param opts.verifier PKCE verifier created when authorization started.
+ * @param opts.redirectUri Redirect URI used for the authorization request.
+ * @param opts.refreshToken Refresh token used to rotate credentials.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { grant: "authorization_code"; code: string; state: string; verifier: string; redirectUri: string }
-        | { grant: "refresh_token"; refreshToken: string },
+    opts: {
+        /** Authorization-code grant discriminator. */ grant: "authorization_code";
+        /** Authorization code returned by Anthropic. */ code: string;
+        /** OAuth state returned with the authorization code. */ state: string;
+        /** PKCE verifier created when authorization started. */ verifier: string;
+        /** Redirect URI used for the authorization request. */ redirectUri: string;
+    } | {
+        /** Refresh-token grant discriminator. */ grant: "refresh_token";
+        /** Refresh token used to rotate credentials. */ refreshToken: string;
+    },
 ): Promise<{ access: string; refresh: string | null; expiresAt: number; scopes: string | null }> {
     const c = ctx.fns.llm.anthropicOAuthConstants({});
     const body: any = opts.grant === "authorization_code" ? {

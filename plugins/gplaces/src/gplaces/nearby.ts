@@ -9,6 +9,12 @@ const PRICE: Record<string, string> = {
     PRICE_LEVEL_VERY_EXPENSIVE: "$$$$",
 };
 
+/**
+ * Reduces a Places API result to the public nearby-result shape.
+ *
+ * @param p - Raw Google Places result.
+ * @returns Selected place summary fields.
+ */
 function short(p: any) {
     return {
         id: p.id,
@@ -25,15 +31,26 @@ function short(p: any) {
     };
 }
 
+/**
+ * Searches for places near geographic coordinates.
+ */
 export default async function (ctx: Context, session: Session | null, opts: {
-    lat: number;
-    lng: number;
-    radius?: number;
-    types?: string[];
-    excludeTypes?: string[];
-    lang?: string;
-    max?: number;
-    rank?: "DISTANCE" | "POPULARITY";
+        /** Centre latitude. */
+        lat: number;
+        /** Centre longitude. */
+        lng: number;
+        /** Search radius in metres. */
+        radius?: number;
+        /** Included Google place types. */
+        types?: string[];
+        /** Excluded Google place types. */
+        excludeTypes?: string[];
+        /** Response language code. */
+        lang?: string;
+        /** Maximum number of places to return. */
+        max?: number;
+        /** Result ranking strategy. */
+        rank?: "DISTANCE" | "POPULARITY";
 }) {
     if (opts?.lat === undefined || opts?.lng === undefined) throw new Error("lat and lng are required");
     const body: any = {

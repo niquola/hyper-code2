@@ -1,6 +1,12 @@
 // A button group — a segmented control for one choice among a few: a filter
 // toolbar, a view switch. Each item is a link (the selection lives in the URL)
 // or, given a `name`, a set of buttons the form posts. The chosen one is raised.
+/**
+ * Perform segmented for the ui subsystem.
+ * @param opts.items The items value used by the operation.
+ * @param opts.value The value to apply.
+ * @param opts.name The target name.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {items: Array<{ label: string; value: string; href?: string }>; value?: string; name?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     // daisyUI's `join` is the button group: it squares the inner corners itself,

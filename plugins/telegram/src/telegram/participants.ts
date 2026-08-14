@@ -30,15 +30,32 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// List members of a Telegram group/channel.
-//   ctx.fns.telegram.participants({ chat: "HS BOT | Самураи умеют отдыхать" })  // by title
-//   ctx.fns.telegram.participants({ chat: 123456 })                             // by id
-// → [{ id, name, username, phone, bot }]
-export default async function (ctx: Context, _session: Session | null, opts: { chat: string | number; limit?: number }) {
+/**
+ * List members of a Telegram group/channel.
+ *   ctx.fns.telegram.participants({ chat: "HS BOT | Самураи умеют отдыхать" })  // by title
+ *   ctx.fns.telegram.participants({ chat: 123456 })                             // by id
+ * → [{ id, name, username, phone, bot }]
+ */
+/**
+ * Lists participants in a Telegram chat.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Chat identifier or username. */
+        chat: string | number;
+        /** Maximum number of results to return. */
+        limit?: number;
+    }) {
     const client = await connected(ctx);
     let entity: any = opts.chat;
     if (typeof opts.chat === "string" && !/^-?\d+$/.test(opts.chat)) {
-        // resolve by dialog title
+        /**
+ * resolve by dialog title
+ */
         const dialogs = await client.getDialogs({ limit: 500 });
         const d = dialogs.find((x: any) => (x.title || x.name || "").trim() === opts.chat) ||
                   dialogs.find((x: any) => (x.title || x.name || "").toLowerCase().includes(String(opts.chat).toLowerCase()));

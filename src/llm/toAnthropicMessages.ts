@@ -21,7 +21,13 @@
 //      and every tool_use needs exactly one result.
 //      → consecutive tool results coalesce into a single user message, ahead
 //        of any prose the same turn produced.
-export default function (ctx: Context, _session: Session | null, opts: { messages: any[] }): any[] {
+/** Performs the llm.toAnthropicMessages runtime operation. */
+/**
+ * Convert our canonical transcript into Anthropic messages[] form. System.
+ * @param opts.messages Conversation messages to convert.
+ */
+export default function (ctx: Context, _session: Session | null, opts: {
+        /** Conversation messages to convert. */ messages: any[] }): any[] {
     const out: { role: "user" | "assistant"; content: any[] }[] = [];
 
     const push = (role: "user" | "assistant", block: any) => {

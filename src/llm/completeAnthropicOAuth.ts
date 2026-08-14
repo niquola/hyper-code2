@@ -1,7 +1,17 @@
+/** Performs the llm.completeAnthropicOAuth runtime operation. */
+/**
+ * Complete Anthropic OAuth using an authorization response.
+ * @param opts.input Authorization response text or URL.
+ * @param opts.code JavaScript source to evaluate in the browser.
+ * @param opts.state OAuth state value.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { input?: string; code?: string; state?: string },
+    opts: {
+        /** Authorization response, callback URL, or code to parse. */ input?: string;
+        /** JavaScript or TypeScript source to evaluate. */ code?: string;
+        /** OAuth state value used to validate the callback. */ state?: string },
 ): Promise<{ ok: true }> {
     const store: any = (ctx.state as any).llm?.anthropicOAuth;
     const parsed = opts.input != null ? ctx.fns.llm.parseAnthropicAuthorizationInput({ input: opts.input }) : { code: opts.code ?? null, state: opts.state ?? null };

@@ -3,6 +3,18 @@
 // `parent`/`previous` position the task as a subtask / after another task.
 // ctx.fns.gtasks.add({ title, list?, notes?, due?, parent?, previous?, account? })
 // → created task object
+/**
+ * Add a task to a Google Tasks list.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.title - Resource title.
+ * @param opts.list - Task-list identifier; defaults to the first list where supported.
+ * @param opts.notes - Task notes.
+ * @param opts.due - Task due date or timestamp.
+ * @param opts.parent - Parent task identifier.
+ * @param opts.previous - Previous sibling task identifier used for ordering.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

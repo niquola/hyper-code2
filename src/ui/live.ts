@@ -16,10 +16,32 @@
 // `hx-target="#main"` for its boosted links would answer its own poll by
 // replacing the whole pane — the region eats the page that contains it. Saying
 // "this" out loud costs one attribute and cannot be broken from above.
+/** Performs the ui.live runtime operation. */
+/**
+ * A LIVE REGION: a fragment that re-fetches itself when the server says its.
+ * @param opts.id Stable DOM region identifier.
+ * @param opts.url URL to fetch or connect to.
+ * @param opts.topic Live-update topic to subscribe to.
+ * @param opts.html Initial or inner HTML content.
+ * @param opts.every Fallback refresh interval in milliseconds.
+ * @param opts.attrs Additional HTML attributes.
+ * @param opts.tag HTML element name for the live region.
+ * @param opts.swap HTMX swap strategy.
+ * @param opts.trigger HTMX trigger expression.
+ */
 export default function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; url: string; topic: string; html?: string; every?: number; attrs?: string; tag?: string; swap?: string; trigger?: string },
+    opts: {
+        /** Identifier of the target agent. */ id: string;
+        /** Endpoint URL. */ url: string;
+        /** Value used for the topic option. */ topic: string;
+        /** Rendered HTML content. */ html?: string;
+        /** Value used for the every option. */ every?: number;
+        /** Value used for the attrs option. */ attrs?: string;
+        /** Value used for the tag option. */ tag?: string;
+        /** Value used for the swap option. */ swap?: string;
+        /** HTML for the popup trigger. */ trigger?: string },
 ): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const every = Math.max(5, opts.every ?? 30);

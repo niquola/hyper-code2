@@ -7,6 +7,10 @@
 //
 // An htmx request gets the page fragment instead of the whole document, plus
 // whatever chrome the host keeps in step with it — see `chrome` below.
+/**
+ * Perform to response for the http subsystem.
+ * @param opts.value The value to apply.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { value: any }): Promise<Response> {
     const v = opts.value;
     if (v instanceof Response) return v;

@@ -5,6 +5,10 @@ import { resolve, basename } from "node:path";
 import { existsSync } from "node:fs";
 import { Glob } from "bun";
 
+/**
+ * Synchronize sync for the dev subsystem.
+ * @param opts.rel The rel value used by the operation.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { rel: string }) {
     const entry = ctx.fns.procs.project.classify({ rel: opts.rel });
 

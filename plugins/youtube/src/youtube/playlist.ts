@@ -1,6 +1,13 @@
 // List videos in a playlist (by id or URL), enriched with full video details.
 // ctx.fns.youtube.playlist({ id: "PLRqwX-V7Uu6ZF9C0YMKuns9sLDzK6zoiV", max: 20 })
-export default async function (ctx: Context, session: Session | null, opts: { id: string; max?: number }) {
+/**
+ * Fetches metadata and videos from a YouTube playlist.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+  /** YouTube playlist identifier or URL. */
+  id: string;
+  /** Maximum number of playlist items to return. */
+  max?: number }) {
     let playlistId = opts.id;
     if (playlistId.includes("youtube.com")) {
         const p = await ctx.fns.youtube.parse({ url: playlistId });

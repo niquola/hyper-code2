@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts: { agentId: string; idx: number }): Promise<Response> {
+/** Tool details for the runtime.  * @param opts.agentId Target agent identifier.
+ * @param opts.idx Transcript index of the tool call.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent id used by the operation. */
+agentId: string;
+        /** Zero-based message or event index. */
+idx: number }): Promise<Response> {
     const id = String(opts.agentId ?? '');
     const idx = Number(opts.idx);
     if (!id || !Number.isInteger(idx)) return new Response('bad tool event', { status: 400 });

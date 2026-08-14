@@ -5,6 +5,12 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+/**
+ * Removes WebVTT metadata, timestamps, tags, and repeated caption fragments.
+ *
+ * @param vtt - Raw WebVTT subtitle text.
+ * @returns Clean plain-text transcript.
+ */
 function cleanVtt(vtt: string): string {
     const lines = vtt.split(/\r?\n/);
     const out: string[] = [];
@@ -25,7 +31,14 @@ function cleanVtt(vtt: string): string {
     return out.join(" ").replace(/\s{2,}/g, " ").trim();
 }
 
-export default async function (ctx: Context, _session: Session | null, opts: { id: string; lang?: string }) {
+/**
+ * Downloads and cleans a YouTube video transcript.
+ */
+export default async function (ctx: Context, _session: Session | null, opts: {
+  /** YouTube video identifier or URL. */
+  id: string;
+  /** Preferred subtitle language code. */
+  lang?: string }) {
     const id = (opts.id || "").match(/[\w-]{11}/)?.[0] || opts.id;
     const lang = opts.lang || "en";
     const dir = mkdtempSync(join(tmpdir(), "yt-"));

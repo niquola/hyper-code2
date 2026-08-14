@@ -8,6 +8,10 @@
 // So the tab volunteers it: one beacon per settle, no answer wanted, and the
 // server keeps the last one. It is a fact about a browser, so it can be stale by
 // a click; anything that must be exact still asks.
+/**
+ * Receives the browser’s current screen state.
+ * @param opts.req Incoming HTTP request.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
     const said: any = await opts.req.json().catch(() => null);
     if (said?.url) {

@@ -5,6 +5,11 @@ const TONE = {
     warning: "badge-warning", danger: "badge-error",
 } as const;
 
+/**
+ * Perform tags for the ui subsystem.
+ * @param opts.items The items value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {items: Array<{ label: string; value?: string; removeUrl?: string; tone?: keyof typeof TONE }>; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     return `<div class="flex flex-wrap gap-1.5 ${opts.class ?? ""}" ${ctx.fns.procs.ui.attr({ role: "tags" })}>

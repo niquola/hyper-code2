@@ -43,6 +43,10 @@ process.on("SIGINT", () => stop().then(() => process.exit(0)));
 process.on("SIGTERM", () => stop().then(() => process.exit(0)));
 `;
 
+/**
+ * Build the dev subsystem operation.
+ * @param opts.outdir The outdir value used by the operation.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: { outdir?: string }) {
     // Never ship a bundle with name collisions / invalid names.
     const lint = await ctx.fns.procs.dev.lint({});

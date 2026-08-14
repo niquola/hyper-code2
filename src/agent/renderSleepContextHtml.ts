@@ -1,7 +1,17 @@
+/** Render sleep context html for the runtime.  * @param opts.sleepContext Persisted sleep context.
+ * @param opts.events Agent events to render.
+ * @param opts.agentId Target agent identifier.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { sleepContext: Record<string, any>; events: any[]; agentId: string },
+    opts: {
+        /** Sleep context used by the operation. */
+    sleepContext: Record<string, any>;
+        /** Events to persist or render. */
+    events: any[];
+        /** Agent id used by the operation. */
+    agentId: string },
 ): Promise<string> {
     const sleep = ctx.fns.agent.normalizeSleepContext({ sleepContext: opts.sleepContext });
     if (sleep?.mode !== "compact") return "";

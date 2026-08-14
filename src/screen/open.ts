@@ -12,6 +12,20 @@
 // read is the same `readScreen` — every entity, action, form and notice, off the
 // `data-*` markers the kit puts on — and it costs a round trip that was going to
 // be made anyway. `read: false` for the rare case where the answer cannot matter.
+/**
+ * Opens a URL or described UI entity and optionally reads the resulting screen.
+ * @param opts.entity Entity kind used to identify the UI element.
+ * @param opts.id Prompt or UI entity identifier.
+ * @param opts.action Action marker used to identify the UI control.
+ * @param opts.form Stable form identifier.
+ * @param opts.field Field marker used to identify the UI control.
+ * @param opts.role Semantic role used to identify the UI element.
+ * @param opts.section Named page section.
+ * @param opts.url URL to open.
+ * @param opts.show Whether to animate the browser interaction.
+ * @param opts.settleMs Post-navigation paint delay in milliseconds.
+ * @param opts.read Whether to read and include the resulting screen.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { url?: string } & types.screen.Descriptor & { show?: boolean; settleMs?: number; read?: boolean }) {
     const verb = opts.url ? "go" : "open";
     const result: any = await ctx.fns.screen.eval({ code: `return await window.page.${verb}(${JSON.stringify(opts)})`, timeoutMs: 20_000 });

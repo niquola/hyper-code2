@@ -1,5 +1,11 @@
 // A tiny line — a trend in the space of a word. Points are plotted edge to edge;
 // the tone tints the stroke. No axes, no labels — the number lives elsewhere.
+/**
+ * Perform sparkline for the ui subsystem.
+ * @param opts.values The values to process.
+ * @param opts.tone The tone value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (_ctx: Context, _session: Session | null, opts: { values: number[]; tone?: "info" | "success" | "warning" | "danger"; class?: string }): string {
     const v = opts.values.filter(n => typeof n === "number");
     if (v.length < 2) return `<svg class="${opts.class ?? "h-8 w-24"}" aria-hidden="true"></svg>`;

@@ -2,6 +2,14 @@
 // full-width, tappable, the chosen one ringed in brand — which is what a
 // questionnaire's answer options want; `"list"` is the plain stacked radios.
 // Every radio shares `name` and the group carries `data-field` for page.fill.
+/**
+ * Perform radio group for the ui subsystem.
+ * @param opts.name The target name.
+ * @param opts.value The value to apply.
+ * @param opts.options The options value used by the operation.
+ * @param opts.layout The layout value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     name: string; value?: string; options: Array<{ value: string; label: string }>; layout?: "list" | "cards"; class?: string;
 }): string {

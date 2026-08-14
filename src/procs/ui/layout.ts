@@ -7,6 +7,12 @@
 // overrides the framework's (the app root is scanned last), which is how the
 // workspace gets its chat column and the EHR its clinical nav. Overriding it is
 // the normal case; this exists so that not overriding it still works.
+/**
+ * Perform layout for the ui subsystem.
+ * @param opts.title The display title.
+ * @param opts.main The main value used by the operation.
+ * @param opts.headExtra The head extra value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {title?: string; main: string; headExtra?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     return `<!doctype html>

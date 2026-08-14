@@ -1,7 +1,14 @@
+/** Watch predicate for the runtime.  * @param opts.predicate Conditional wake predicate type.
+ * @param opts.opts Predicate-specific options.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { predicate: string; opts: Record<string, any> },
+    opts: {
+        /** Predicate used to decide when the agent should wake. */
+    predicate: string;
+        /** Options forwarded to the selected operation. */
+    opts: Record<string, any> },
 ): Promise<{ ready: boolean; result?: any }> {
     const input = opts.opts ?? {};
     switch (opts.predicate) {

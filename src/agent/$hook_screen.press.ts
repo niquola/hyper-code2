@@ -2,7 +2,23 @@
 // one line of fact into the CURRENT agent's queue, so the guide's next turn is
 // their next move. No current agent → the press dissolves (a tour with no
 // guide has nobody to tell).
-export default async function (ctx: Context, _session: Session | null, opts: { pressed: string; say: string; stuck?: string; url: string; at: string }) {
+/** Handles the screen.press runtime hook.  * @param opts.pressed Control selected by the user.
+ * @param opts.say Tour-step instruction shown to the user.
+ * @param opts.stuck Optional control the user could not find.
+ * @param opts.url Page URL where the interaction occurred.
+ * @param opts.at Absolute Unix timestamp in milliseconds.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Pressed used by the operation. */
+pressed: string;
+        /** Say used by the operation. */
+say: string;
+        /** Stuck used by the operation. */
+stuck?: string;
+        /** Url used by the operation. */
+url: string;
+        /** Timestamp at which to wake the agent. */
+at: string }) {
     // The tab that raised the keypress says which agent it is showing; falling
     // back to a server-global "current agent" delivered presses to whatever
     // someone else had open.

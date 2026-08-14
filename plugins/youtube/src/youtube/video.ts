@@ -2,6 +2,12 @@
 // ctx.fns.youtube.video({ id: "dQw4w9WgXcQ" }) → object
 // ctx.fns.youtube.video({ id: ["id1","id2"] }) → array
 // A youtube.com / youtu.be URL is resolved via youtube.parse.
+/**
+ * Formats an ISO 8601 YouTube duration as minutes/seconds or hours/minutes/seconds.
+ *
+ * @param iso - ISO 8601 duration, if available.
+ * @returns Display-ready duration, or an empty string when unavailable.
+ */
 function dur(iso?: string): string {
     if (!iso) return "";
     const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -10,6 +16,12 @@ function dur(iso?: string): string {
     const h = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
     return h > 0 ? `${h}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : `${mm}:${String(ss).padStart(2, "0")}`;
 }
+/**
+ * Formats a numeric count using compact K/M suffixes.
+ *
+ * @param n - Decimal count returned by YouTube, if available.
+ * @returns Compact count or undefined when absent.
+ */
 function count(n?: string): string | undefined {
     if (n === undefined) return undefined;
     const num = parseInt(n);
@@ -17,6 +29,12 @@ function count(n?: string): string | undefined {
     if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
     return String(num);
 }
+/**
+ * Converts a raw YouTube video resource to the plugin's concise result shape.
+ *
+ * @param v - Raw YouTube Data API video resource.
+ * @returns Formatted video metadata.
+ */
 function fmt(v: any) {
     const s = v.snippet, c = v.contentDetails, st = v.statistics;
     return {
@@ -37,7 +55,12 @@ function fmt(v: any) {
     };
 }
 
-export default async function (ctx: Context, session: Session | null, opts: { id: string | string[] }) {
+/**
+ * Fetches metadata for one or more YouTube videos.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+  /** YouTube video identifier, URL, or list of identifiers. */
+  id: string | string[] }) {
     const raw = Array.isArray(opts.id) ? opts.id : [opts.id];
     const ids = await Promise.all(raw.map(async (x) => {
         if (typeof x === "string" && (x.includes("youtube.com") || x.includes("youtu.be"))) {

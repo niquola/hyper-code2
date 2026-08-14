@@ -1,5 +1,10 @@
 // A unified diff, coloured by the one thing that matters at a glance — the line
 // that went in and the line that went out. The patch is git's own output.
+/**
+ * Perform diff for the ui subsystem.
+ * @param opts.patch The patch value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {patch: string; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     if (!opts.patch.trim()) return `<div class="px-4 py-3 text-xs text-base-content/60">no textual change</div>`;

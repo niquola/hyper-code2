@@ -2,6 +2,16 @@
 // ctx.fns.gcal.freebusy({ from?, to?, days?, calendars?, account? })
 //   calendars : array of calendarIds (default ["primary"]).
 //   from/to   : ISO datetimes; defaults from = now, to = from + days (default 7).
+/**
+ * Query free/busy information for calendars.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.from - Sender address or filter criterion.
+ * @param opts.to - Recipient address or addresses.
+ * @param opts.days - Number of days in the query window.
+ * @param opts.calendars - Calendar IDs to query; defaults to the primary calendar.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

@@ -15,10 +15,14 @@
 // Returns:
 //   { system: string, messages: Message[] }  — both ready to feed to a
 //   streamer. messages is [bootstrap-user, bootstrap-ack, ...transcript].
+/** Build llm request for the runtime.  * @param opts.agent Agent whose state is read or updated.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { agent: types.agent.Agent },
+    opts: {
+        /** Live agent instance to operate on. */
+    agent: types.agent.Agent },
 ): Promise<{ system: string; messages: any[] }> {
     const { agent } = opts;
     const fullPrompt = await ctx.fns.agent.fullSystemPrompt({ agent });

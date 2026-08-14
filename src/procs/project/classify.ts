@@ -37,6 +37,10 @@ export type ProjectEntry = {
     reason?: string;              // skip
 };
 
+/**
+ * Classifies one source-relative file path according to the procedural filename grammar.
+ * @param opts.rel POSIX-style path relative to a discovered source root.
+ */
 export default function (_ctx: Context, _session: Session | null, opts: { rel: string }): ProjectEntry {
     const rel = opts.rel;
     const moduleDir = dirname(rel);

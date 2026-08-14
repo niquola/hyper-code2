@@ -1,6 +1,11 @@
 // A nested tree — a file listing, a resource structure. Folders are <details>
 // (open/close with no JS), leaves are links. `open` expands a branch.
 type Node = { label: string; icon?: string; href?: string; children?: Node[]; open?: boolean; id?: string };
+/**
+ * Perform tree for the ui subsystem.
+ * @param opts.nodes The nodes value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {nodes: Node[]; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     return `<ul class="text-sm ${opts.class ?? ""}" ${ctx.fns.procs.ui.attr({ role: "tree" })}>${opts.nodes.map(n => node(ctx, n)).join("")}</ul>`;

@@ -1,7 +1,19 @@
+/** Performs the llm.saveAnthropicOAuth runtime operation. */
+/**
+ * Encrypt and persist Anthropic OAuth credentials.
+ * @param opts.access OAuth access token.
+ * @param opts.refresh OAuth refresh token.
+ * @param opts.expiresAt Access-token expiration time as a Unix timestamp in milliseconds.
+ * @param opts.scopes Granted OAuth scopes.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { access: string; refresh: string; expiresAt: number; scopes?: string | null },
+    opts: {
+        /** Value used for the access option. */ access: string;
+        /** Value used for the refresh option. */ refresh: string;
+        /** Token expiration time. */ expiresAt: number;
+        /** Value used for the scopes option. */ scopes?: string | null },
 ): Promise<{ ok: true }> {
     const provider = "anthropic-oauth";
     const [accessEnc, refreshEnc] = await Promise.all([

@@ -3,6 +3,10 @@
 // server), returns pass/fail + the tail of the output.
 //   ctx.fns.procs.dev.test({})                 → whole suite
 //   ctx.fns.procs.dev.test({ filter: "math" }) → bun test's path/name filter
+/**
+ * Test the dev subsystem operation.
+ * @param opts.filter The filter value used by the operation.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: { filter?: string }) {
     const args = ["test", ...(opts?.filter ? [opts.filter] : [])];
     const proc = Bun.spawn(["bun", ...args], {

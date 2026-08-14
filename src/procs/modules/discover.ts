@@ -47,6 +47,10 @@ export type Root = {
     plugin?: boolean;
 };
 
+/**
+ * Discovers the source roots mounted into this process in override order.
+ * Includes framework and host roots plus enabled core, project, platform, and external modules.
+ */
 export default async function (ctx: Context, session: Session | null, _opts?: {}): Promise<Root[]> {
     const coreSrc = resolve(import.meta.dir, "../..");     // the framework's src root — this file lives in src/procs/modules/
     const projectRoot = projectRootFn(ctx, session, {});   // boot({root}) / proc's repo root

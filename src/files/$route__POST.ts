@@ -1,6 +1,7 @@
 // POST /files?path=... — save content (from <textarea name="content">).
 // Redirects back to GET /files?path=... so the browser shows the fresh state.
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+/** Handles the corresponding HTTP route. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Incoming HTTP request. */ req: Request; /** Route parameters. */ params: Record<string, string> }) {
     const url = new URL(opts.req.url);
     const path = url.searchParams.get("path") ?? "";
     if (!path) return new Response("missing ?path", { status: 400 });

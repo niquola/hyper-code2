@@ -6,6 +6,14 @@
 // `right` is what belongs TO the heading rather than to the page under it — a
 // help button, a switch over the whole screen. `ui.box` calls the same slot the
 // same thing.
+/**
+ * Perform page for the ui subsystem.
+ * @param opts.page The page value used by the operation.
+ * @param opts.title The display title.
+ * @param opts.lead The lead value used by the operation.
+ * @param opts.right The right value used by the operation.
+ * @param opts.main The main value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {page: string; title?: string; lead?: string; right?: string; main: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     // The heading is the biggest thing on the page and the sentence under it is

@@ -1,4 +1,7 @@
 // Introspect: { hookName: [registered ids] }.
+/**
+ * List the hooks subsystem operation.
+ */
 export default function (ctx: Context, _session: Session | null, _opts?: {}) {
     const points = ctx.state.procs?.hooks?.points ?? {};
     const handlers = ctx.state.procs?.hooks?.handlers ?? {};

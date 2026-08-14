@@ -4,10 +4,17 @@
 // the caller says which grammar fits (ctx.fns.agent.toolLang knows: a read of a
 // .py file is Python, bash output is plain text). Defaults to text rather than
 // JavaScript — colouring prose as code is worse than not colouring it.
+/** Highlight result for the runtime.  * @param opts.output Tool output or source text to process.
+ * @param opts.lang Syntax-highlighting language.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { output: string; lang?: string },
+    opts: {
+        /** Output used by the operation. */
+    output: string;
+        /** Lang used by the operation. */
+    lang?: string },
 ): Promise<string> {
     const { output } = opts;
     const trimmed = output.trim();

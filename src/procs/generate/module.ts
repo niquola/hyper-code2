@@ -1,5 +1,9 @@
 // Scaffold a whole module: a fn + an index route listing it.
 //   ctx.fns.procs.generate.module({ name: "todo" })
+/**
+ * Perform module for the generate subsystem.
+ * @param opts.name The target name.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { name: string }) {
     const name = opts.name;
     const fn = await ctx.fns.procs.generate.fn({ module: name, name: "list" });

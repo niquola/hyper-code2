@@ -1,4 +1,9 @@
-export default async function (ctx: Context, _session: Session | null, opts: { query: string; limit?: number }): Promise<Array<{
+/** Search for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Search query. */
+query: string;
+        /** Maximum number of results to return. */
+limit?: number }): Promise<Array<{
     agentId: string;
     idx: number;
     role: string;

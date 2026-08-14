@@ -1,9 +1,23 @@
-// Execute read-only DuckDB SQL and return a bounded JSON result.
+/**
+ * Executes read-only DuckDB SQL and returns a bounded JSON result.
+ *
+ * Statements with write, extension, attachment, or side-effect keywords are
+ * rejected. Use `duckdb.ndjson` when a file-oriented query builder is enough.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { sql: string; db?: string; maxRows?: number; timeout?: number },
-) {
+    opts: {
+        /** Read-only DuckDB SQL statement. */
+        sql: string;
+        /** Optional DuckDB database file; defaults to an in-memory database. */
+        db?: string;
+        /** Maximum returned rows, clamped to 1–10,000. @default 1000 @minimum 1 @maximum 10000 */
+        maxRows?: number;
+        /** DuckDB process timeout in seconds. @default 30 @minimum 1 @maximum 300 */
+        timeout?: number;
+    },
+): Promise<{ rows: any[]; rowCount: number; truncated: boolean }> {
     const sql = String(opts.sql ?? "").trim();
     if (!sql) throw new Error("duckdb.query: sql is required");
     // A semicolon inside a string is legal, so this is deliberately a keyword

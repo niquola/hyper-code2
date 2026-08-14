@@ -1,3 +1,7 @@
+/** Performs the llm.anthropicOAuthStatus runtime operation. */
+/**
+ * Report whether Anthropic OAuth credentials are configured.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<{
     connected: boolean; expiresAt: number | null; needsReconnect: boolean;
     loginStatus: "idle" | "pending" | "exchanging" | "failed"; error: string | null;

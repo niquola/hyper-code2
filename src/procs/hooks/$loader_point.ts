@@ -8,6 +8,10 @@
 // `services/$point_service.ts` then covers `services.service.aidbox`,
 // `services.service.voice` and anything else a provider names itself — the
 // open-ended case, where the point is a protocol and the suffix is who answers.
+/**
+ * Load loader point declarations into the runtime.
+ * @param opts.entries The loader entries to register.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { entries: any[] }): Promise<void> {
     const points = ((ctx.state.procs.hooks ??= {}).points ??= {});
     for (const entry of opts.entries) {

@@ -1,7 +1,19 @@
+/** Performs the ui.createAgent runtime operation. */
+/**
+ * Create an agent and optionally open or seed its conversation.
+ * @param opts.model Model identifier.
+ * @param opts.systemPrompt System prompt for the new agent.
+ * @param opts.open Whether to open the target agent after the operation.
+ * @param opts.startText Initial user message for the new agent.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { model?: string; systemPrompt?: string; open?: boolean; startText?: string } = {},
+    opts: {
+        /** Model identifier to use. */ model?: string;
+        /** Value used for the system prompt option. */ systemPrompt?: string;
+        /** Whether to open the agent after sending. */ open?: boolean;
+        /** Value used for the start text option. */ startText?: string } = {},
 ) {
     // Priority: explicit opts.model > declared setting (DB → env → default).
     const fromSettings = await ctx.fns?.settings?.getString?.({

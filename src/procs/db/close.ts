@@ -1,4 +1,7 @@
 // Close + forget this ctx's pool (next db.* reopens lazily).
+/**
+ * Close the db subsystem operation.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     const st = ctx.state.procs?.db;
     if (st?.sql) {

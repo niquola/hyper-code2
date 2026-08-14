@@ -1,5 +1,16 @@
 // Complete one span: bounded in-memory ring plus buffered NDJSON. Records carry
 // OTel field names where practical, so an exporter can be added without changing callers.
+/**
+ * Record the telemetry subsystem operation.
+ * @param opts.name The target name.
+ * @param opts.started The started value used by the operation.
+ * @param opts.traceId The trace identifier.
+ * @param opts.spanId The span identifier.
+ * @param opts.parentSpanId The parent span identifier.
+ * @param opts.status The status value.
+ * @param opts.attrs Attributes attached to the operation.
+ * @param opts.error The error to report.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     name: string; started: number; traceId?: string; spanId?: string; parentSpanId?: string;
     status?: "ok" | "error"; attrs?: Record<string, any>; error?: any;

@@ -1,6 +1,12 @@
 // Channel info by id (UC...), @handle, or URL.
 // ctx.fns.youtube.channel({ id: "@Google" })
 // ctx.fns.youtube.channel({ id: "UCVHFbqXqoYvEWM1Ddxl0QDg" })
+/**
+ * Formats a numeric count using compact K/M suffixes.
+ *
+ * @param n - Decimal count returned by YouTube, if available.
+ * @returns Compact count or undefined when absent.
+ */
 function count(n?: string): string | undefined {
     if (n === undefined) return undefined;
     const num = parseInt(n);
@@ -9,7 +15,12 @@ function count(n?: string): string | undefined {
     return String(num);
 }
 
-export default async function (ctx: Context, session: Session | null, opts: { id: string }) {
+/**
+ * Fetches metadata for a YouTube channel.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+  /** YouTube channel identifier, handle, or URL. */
+  id: string }) {
     let arg = opts.id;
     if (arg.includes("youtube.com")) {
         const p = await ctx.fns.youtube.parse({ url: arg });

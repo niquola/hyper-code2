@@ -13,6 +13,11 @@
 // to the ordinary route, passing the agent along in a header for the layout.
 //   /a/eh          → /agent/eh
 //   /a/eh/files    → /files      (rendered with eh's chat beside it)
+/**
+ * Re-dispatches agent-scoped URLs to their underlying page with agent context.
+ * @param opts.req Incoming agent-scoped HTTP request.
+ */
+
 export default async function (
     ctx: Context,
     _session: Session | null,

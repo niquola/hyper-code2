@@ -1,7 +1,12 @@
+/**
+ * Fetches a task by its identifier.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string },
+    opts: {
+  /** Task identifier. */
+  id: string },
 ): Promise<types.tasks.Task | null> {
     const rows = await ctx.fns.procs.db.select({
         sql: `SELECT id::text, description, status, agent_id AS "agentId",

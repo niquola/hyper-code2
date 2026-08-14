@@ -3,6 +3,10 @@ import { getPath } from "../boot/load";
 // (ctx, state) — the state its $start returned (ctx.state.<module>) — to tear
 // down (close connections, stop the server). Errors are logged, not fatal.
 //   ctx.fns.procs.lifecycle.stop({})
+/**
+ * Stops started modules in reverse lifecycle order and clears lifecycle state.
+ * Stop-hook failures are logged and do not prevent remaining modules from stopping.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     const started: string[] = ctx.state.procs?.lifecycle?.started ?? [];
     const entries = await ctx.fns.procs.project.scan({});

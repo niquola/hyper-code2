@@ -3,10 +3,20 @@
 // ~/.codex/auth.json — refreshCodex() is called first to ensure freshness.
 // Same return shape as streamOpenAI / streamAnthropic so the dispatcher in
 // stream.ts can swap providers transparently.
+/** Performs the llm.streamCodex runtime operation. */
+/**
+ * OpenAI Responses API streamer for the ChatGPT subscription via Codex backend.
+ * @param opts.agent Agent associated with the operation.
+ * @param opts.signal Abort signal for cancelling the request.
+ * @param opts.onEvent Callback invoked for each normalized stream event.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { agent: types.agent.Agent; signal?: AbortSignal; onEvent?: (ev: any) => void },
+    opts: {
+        /** Agent associated with the operation. */ agent: types.agent.Agent;
+        /** Abort signal for cancelling the operation. */ signal?: AbortSignal;
+        /** Callback invoked for each streamed model event. */ onEvent?: (ev: any) => void },
 ): Promise<{
     text: string;
     thinking: string;

@@ -1,16 +1,25 @@
 // Search YouTube. Default type "video"; for video results it enriches each hit
 // with full stats (views/duration/likes) via youtube.video.
 // ctx.fns.youtube.search({ query: "bun javascript runtime", max: 3 })
+/**
+ * Searches YouTube for videos, channels, or playlists.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,
     opts: {
-        query: string;
-        max?: number;
-        type?: "video" | "channel" | "playlist";
-        order?: "date" | "rating" | "relevance" | "viewCount";
-        channelId?: string;
-        duration?: "short" | "medium" | "long";
+                /** YouTube search query. */
+                query: string;
+                /** Maximum number of results to return. */
+                max?: number;
+                /** Resource type to search for. */
+                type?: "video" | "channel" | "playlist";
+                /** YouTube result ordering. */
+                order?: "date" | "rating" | "relevance" | "viewCount";
+                /** Restrict results to a channel identifier. */
+                channelId?: string;
+                /** Restrict videos by duration category. */
+                duration?: "short" | "medium" | "long";
     }
 ) {
     const data = await ctx.fns.youtube.api({

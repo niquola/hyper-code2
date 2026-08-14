@@ -1,4 +1,13 @@
-export default async function (ctx: Context, _session: Session | null, opts: { id: string; fromIdx?: number; beforeIdx?: number; limit?: number }): Promise<any[]> {
+/** Get events for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string;
+        /** First index included in the operation. */
+fromIdx?: number;
+        /** Before idx used by the operation. */
+beforeIdx?: number;
+        /** Maximum number of results to return. */
+limit?: number }): Promise<any[]> {
     const { id } = opts;
     const fromIdx = Number(opts.fromIdx ?? 0);
     const beforeIdx = opts.beforeIdx == null ? null : Math.max(0, Number(opts.beforeIdx));

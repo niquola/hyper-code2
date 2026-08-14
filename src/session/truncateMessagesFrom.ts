@@ -11,7 +11,12 @@
 // Walks back if `from` lands inside a marker pair so we never leave half a pair:
 // assistant §eval / §write:<path> / §bash / §html → user §result:* / §error:*.
 // Marker format lives in one place — ctx.fns.agent.markerKind.
-export default async function (ctx: Context, _session: Session | null, opts: { id: string; from: number }): Promise<{ ok: boolean; from?: number; reason?: string }> {
+/** Truncate messages from for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string;
+        /** From used by the operation. */
+from: number }): Promise<{ ok: boolean; from?: number; reason?: string }> {
     const { id, from } = opts;
     if (!Number.isInteger(from) || from < 0) return { ok: false, reason: "invalid idx" };
 

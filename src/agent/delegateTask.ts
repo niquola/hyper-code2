@@ -1,3 +1,11 @@
+/** Delegate task for the runtime.  * @param opts.parent Parent agent that delegates the task.
+ * @param opts.task Concise task to assign or perform.
+ * @param opts.forkContext Whether the child inherits parent transcript context.
+ * @param opts.instructions Additional instructions for completing the task.
+ * @param opts.mode Delegation execution mode.
+ * @param opts.responseFormat Expected completed-task response format.
+ * @param opts.autoArchive Whether to archive the child after completion.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
@@ -7,12 +15,26 @@ export default async function (
  * In "async" mode, spawns the child and returns immediately.
  */
     opts: {
+
+        /** Parent agent delegating the task. */
         parent: types.agent.Agent;
+
+        /** Task instructions. */
         task: string;
+
+        /** Whether to inherit the parent transcript. */
         forkContext?: boolean;
+
+        /** Instructions used by the operation. */
         instructions?: string;
+
+        /** Operation mode. */
         mode?: "await" | "async";
+
+        /** Response format used by the operation. */
         responseFormat?: "text" | "json" | "report" | { kind: "report" | "json"; fields?: string[] };
+
+        /** Auto archive used by the operation. */
         autoArchive?: boolean;
     },
 ): Promise<{ childId: string; summary?: string; result?: any; started?: true }> {

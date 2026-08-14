@@ -2,6 +2,10 @@
 // become { _: [positionals], flag: value }. `--k v` / `--k=v` / `--flag` (bool)
 // / `-x`. Numeric-looking values stay strings (config-style coercion is the
 // command's job).
+/**
+ * Parse the cli subsystem operation.
+ * @param opts.argv The argv value used by the operation.
+ */
 export default function (_ctx: Context, _session: Session | null, opts: { argv: string[] }) {
     const argv = opts.argv;
     const command = argv[0] && !argv[0].startsWith("-") ? argv[0] : undefined;

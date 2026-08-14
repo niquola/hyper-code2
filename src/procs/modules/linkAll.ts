@@ -16,6 +16,9 @@
 import { readdir, lstat, readlink } from "node:fs/promises";
 import { resolve } from "node:path";
 
+/**
+ * Perform link all for the modules subsystem.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<{ linked: string[]; dropped: string[] }> {
     const workdir = ctx.fns.procs.project.workdir({});
     // Only a host that supervises somebody else's project has a project to link

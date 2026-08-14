@@ -5,6 +5,7 @@
 // quietly fetching an executable from the network is a different proposition).
 // The answer is cached including the miss, so a machine without rg does not pay
 // a PATH lookup per search.
+/** Normalizes a path reported by ripgrep. */
 export default function (ctx: Context, _session: Session | null, _opts: {} = {}): string | null {
     const state = ((ctx.state as any).files ??= {});
     if (state.rgPath === undefined) {

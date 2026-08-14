@@ -3,6 +3,10 @@
 // at /auth/sso) end at the same cookie — this workspace's own signed token — so
 // verification is one path. Returns null when there is nobody; the caller
 // decides whether that matters.
+/**
+ * Perform authenticate for the auth subsystem.
+ * @param opts.req The incoming HTTP request.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
     const name = ctx.fns.procs.config.resolve({ module: "procs/auth" }).cookie;
     const token = new Bun.CookieMap(opts.req.headers.get("cookie") ?? "").get(name);

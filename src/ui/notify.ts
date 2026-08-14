@@ -5,10 +5,26 @@
 // a failed command. `bodyHtml` is the same detail already syntax-highlighted,
 // which is what a tool call sends: a shell command reads as a command and a
 // file reads as its language, in the corner as much as in the transcript.
+/** Performs the ui.notify runtime operation. */
+/**
+ * Push a toast to every open tab.
+ * @param opts.message Notification title or message.
+ * @param opts.body Response byte stream or notification body.
+ * @param opts.bodyHtml HTML notification body.
+ * @param opts.level Notification severity.
+ * @param opts.html Initial or inner HTML content.
+ * @param opts.agentId Target agent identifier.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { message: string; body?: string; bodyHtml?: string; level?: 'info' | 'warn' | 'error'; html?: string; agentId?: string },
+    opts: {
+        /** Notification message. */ message: string;
+        /** Request body sent to the model endpoint. */ body?: string;
+        /** Value used for the body html option. */ bodyHtml?: string;
+        /** Value used for the level option. */ level?: 'info' | 'warn' | 'error';
+        /** Rendered HTML content. */ html?: string;
+        /** Identifier of the agent whose scoped setting is used. */ agentId?: string },
 ) {
     const event = {
         type: 'ui.notify',

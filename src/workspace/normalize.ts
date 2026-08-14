@@ -1,10 +1,11 @@
 import { resolve } from "node:path";
 import { mkdir, stat } from "node:fs/promises";
 
+/** Validates and normalizes a workspace directory. */
 export default async function (
     _ctx: Context,
     _session: Session | null,
-    opts: { dir?: string; create?: boolean },
+    opts: { /** Git working directory. */ dir?: string; /** Whether to create the directory when absent. */ create?: boolean },
 ): Promise<string> {
     const dir = resolve(opts.dir?.trim() || process.cwd());
     let info = await stat(dir).catch(() => null);

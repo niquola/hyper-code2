@@ -2,6 +2,9 @@
 // lines intact; failures drop diagnostics and never touch application work.
 import { appendFile } from "node:fs/promises";
 
+/**
+ * Flush the telemetry subsystem operation.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     const st = ctx.state.procs?.telemetry as types.procs.telemetry.State | undefined;
     if (!st?.buffer.length) return;

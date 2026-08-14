@@ -2,6 +2,7 @@
 // Pure read — never refreshes a token. Used by the settings page.
 import { readFileSync } from "node:fs";
 
+/** Returns a snapshot of provider credentials and login flows. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<{
     openai: { set: boolean };
     anthropic: { set: boolean };

@@ -4,6 +4,16 @@
 // releasing the slider updates it. The ends are labelled with the bounds; the
 // group carries data-field like ui.field. A range always has a value, so an
 // untouched slider sits — and submits — at the middle of its scale.
+/**
+ * Perform range for the ui subsystem.
+ * @param opts.name The target name.
+ * @param opts.value The value to apply.
+ * @param opts.min The min value used by the operation.
+ * @param opts.max The max value used by the operation.
+ * @param opts.step The step value used by the operation.
+ * @param opts.class CSS classes to apply.
+ * @param opts.ariaLabel The aria label value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     name: string; value?: number | string; min?: number; max?: number; step?: number; class?: string; ariaLabel?: string;
 }): string {

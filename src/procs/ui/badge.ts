@@ -8,6 +8,12 @@ const TONE = {
     warning: "badge-warning", danger: "badge-error",
 } as const;
 
+/**
+ * Perform badge for the ui subsystem.
+ * @param opts.text The text to process.
+ * @param opts.tone The tone value used by the operation.
+ * @param opts.role The role value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {text: string; tone?: keyof typeof TONE; role?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     return `<span class="badge badge-soft badge-sm ${TONE[opts.tone ?? "neutral"]}" ${ctx.fns.procs.ui.attr({ role: opts.role })}>${esc(opts.text)}</span>`;

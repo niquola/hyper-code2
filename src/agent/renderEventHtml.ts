@@ -42,7 +42,14 @@ function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = 
         + '</div>';
 }
 
-export default async function (_ctx: Context, _session: Session | null, opts: { event: any; agentId?: string }): Promise<string> {
+/** Render event html for the runtime.  * @param opts.event Agent event to render.
+ * @param opts.agentId Target agent identifier.
+*/
+export default async function (_ctx: Context, _session: Session | null, opts: {
+        /** Event to persist or render. */
+event: any;
+        /** Agent id used by the operation. */
+agentId?: string }): Promise<string> {
 
 function messageTime(ts: any): string {
     const value = Number(ts);

@@ -14,10 +14,20 @@ const isAssistantInvocation = (_ctx: Context, m: any): boolean =>
 const isToolResult = (_ctx: Context, m: any): boolean =>
     m?.role === "tool" || m?.tool_call_id != null;
 
+/** Compact for the runtime.  * @param opts.agent Agent whose state is read or updated.
+ * @param opts.summary Concise summary of completed work or compacted context.
+ * @param opts.message Optional message retained with the summary.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { agent: types.agent.Agent; summary: string; message?: number },
+    opts: {
+        /** Live agent instance to operate on. */
+    agent: types.agent.Agent;
+        /** Concise summary of the operation or result. */
+    summary: string;
+        /** Message to persist or process. */
+    message?: number },
 ): Promise<{ replaced: boolean; from?: number; before?: number; after?: number; resultIdx?: number }> {
     const { agent, summary: summaryRaw, message: from } = opts;
     await ctx.fns?.session?.syncAgentState?.({ agent });

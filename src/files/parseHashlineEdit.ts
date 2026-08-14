@@ -16,7 +16,8 @@ function parseJsonStrings(input: string, line: string): [string, string] {
         throw new Error(`replace expects two JSON strings: ${line}`);
     }
 }
-export default function (_ctx: Context, _session: Session | null, opts: { input: string }): { path: string; ops: types.files.EditHashlineOp[] } {
+/** Parses the textual hashline edit format. */
+export default function (_ctx: Context, _session: Session | null, opts: { /** Text input to parse. */ input: string }): { path: string; ops: types.files.EditHashlineOp[] } {
     const raw = String(opts.input ?? "").replaceAll("\r\n", "\n");
     const lines = raw.split("\n");
     let i = 0;

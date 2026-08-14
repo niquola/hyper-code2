@@ -2,6 +2,18 @@
 // `page.fill({ form })` and `page.submit({ form })` find it and `page.state`
 // lists its fields. `post`/`get` are the htmx wiring; the pane is the target
 // unless something narrower is given.
+/**
+ * Perform form for the ui subsystem.
+ * @param opts.form The form value used by the operation.
+ * @param opts.body The HTTP body.
+ * @param opts.post The post value used by the operation.
+ * @param opts.get The get value used by the operation.
+ * @param opts.target The operation target.
+ * @param opts.swap The HTML swap strategy.
+ * @param opts.pushUrl The push url value used by the operation.
+ * @param opts.trigger The event trigger.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     form: string; body: string; post?: string; get?: string;
     target?: string; swap?: string; pushUrl?: boolean; trigger?: string; class?: string;

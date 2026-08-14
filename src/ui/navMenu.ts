@@ -1,5 +1,6 @@
 // Compact global menu prototype. It remains server/HTMX-owned: the default
 // overview and filtered results both come from GET /nav/items.
+/** Performs the ui.navMenu runtime operation. */
 export default function (_ctx: Context, _session: Session | null, _opts?: {}): string {
     return `<div id="nav-overlay" class="hidden fixed inset-0 z-50 bg-gray-950/35 p-3 backdrop-blur-[1px]" onclick="if(event.target===this)window.__navClose()">
   <div role="dialog" aria-modal="true" aria-label="Global menu" class="flex h-full w-full flex-col overflow-hidden rounded-xl border border-gray-300 bg-white shadow-2xl">

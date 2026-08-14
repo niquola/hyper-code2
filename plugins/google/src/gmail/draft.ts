@@ -1,4 +1,13 @@
 // Create a draft. ctx.fns.gmail.draft({ to, subject, body })
+/**
+ * Create a Gmail draft.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.to - Recipient address or addresses.
+ * @param opts.subject - Message subject.
+ * @param opts.body - Request body or message body, as applicable.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { to: string; subject: string; body: string; account?: string }) {
     const raw = Buffer.from([
         `To: ${opts.to}`,

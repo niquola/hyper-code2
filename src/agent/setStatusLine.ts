@@ -1,7 +1,17 @@
+/** Set status line for the runtime.  * @param opts.id Target agent identifier.
+ * @param opts.text Plain-text transcript fallback.
+ * @param opts.every Optional cadence override.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; text: string; every?: number },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Text used by the operation. */
+    text: string;
+        /** Every used by the operation. */
+    every?: number },
 ): Promise<{ text: string; every: number }> {
     const text = String(opts.text ?? "").trim().slice(0, 500);
     const every = Math.max(1, Math.min(100, Math.floor(Number(opts.every ?? 1) || 1)));

@@ -11,10 +11,23 @@ function compactMessage(message: any, index: number) {
     };
 }
 
+/** Sleep for the runtime.  * @param opts.agent Agent whose state is read or updated.
+ * @param opts.force Whether to bypass normal compaction thresholds.
+ * @param opts.minMessages Minimum transcript size before compaction.
+ * @param opts.tailUserTurns Recent user turns preserved verbatim.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { agent: types.agent.Agent; force?: boolean; minMessages?: number; tailUserTurns?: number },
+    opts: {
+        /** Live agent instance to operate on. */
+    agent: types.agent.Agent;
+        /** Whether to perform the operation even when normally skipped. */
+    force?: boolean;
+        /** Min messages used by the operation. */
+    minMessages?: number;
+        /** Tail user turns used by the operation. */
+    tailUserTurns?: number },
 ): Promise<{ started: boolean; reason?: string }> {
     const parent = opts.agent;
     if (parent.scratchpad?.delegateTask?.taskKind) return { started: false, reason: "delegated child" };

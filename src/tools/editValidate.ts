@@ -8,10 +8,11 @@
 // don't" is a oneOf, which strict decoding does not accept, and "oldText must
 // not be empty" is not expressible at all. Better to say it in the one place
 // that can say it precisely, in words the model can act on.
+/** Validates semantic constraints for edit operations. */
 export default function (
     _ctx: Context,
     _session: Session | null,
-    opts: { args: { path?: string; edits?: types.tools.EditOp[] } },
+    opts: { /** Command-line arguments. */ args: { path?: string; edits?: types.tools.EditOp[] } },
 ): string[] {
     const edits = opts.args?.edits ?? [];
     const errors: string[] = [];

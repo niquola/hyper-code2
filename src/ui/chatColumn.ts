@@ -3,7 +3,13 @@
 // is harness, pages on the right are product. Extracted from the old
 // /agent/:id page; the long-poll (#msg-tail), statusbar poll and chat.js
 // behaviors are unchanged.
-export default async function (ctx: Context, _session: Session | null, opts: { agentId: string }): Promise<string> {
+/** Performs the ui.chatColumn runtime operation. */
+/**
+ * The agent chat as ONE self-contained column (header + transcript + composer),.
+ * @param opts.agentId Target agent identifier.
+ */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Identifier of the agent whose scoped setting is used. */ agentId: string }): Promise<string> {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const id = opts.agentId;
 

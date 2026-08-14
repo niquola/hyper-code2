@@ -7,6 +7,10 @@
 // Services it was the sole reason for (auto-merged from provides, no explicit
 // services.<name> with config) drop off the Services tab after track; a still-
 // running process is stopped first so nothing holds the port.
+/**
+ * Remove the modules subsystem operation.
+ * @param opts.name The target name.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { name: string }) {
     const file = `${ctx.fns.procs.project.workdir({})}/workspace.json`;
     const manifest = await Bun.file(file).json().catch(() => ({} as any));

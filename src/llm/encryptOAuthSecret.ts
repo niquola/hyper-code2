@@ -1,7 +1,17 @@
+/** Performs the llm.encryptOAuthSecret runtime operation. */
+/**
+ * Encrypt an OAuth credential field for storage.
+ * @param opts.provider OAuth provider identifier.
+ * @param opts.field Credential field being encrypted or decrypted.
+ * @param opts.value Plain-text credential value.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { provider: string; field: "access" | "refresh"; value: string },
+    opts: {
+        /** Model provider name. */ provider: string;
+        /** Value used for the field option. */ field: "access" | "refresh";
+        /** Setting value. */ value: string },
 ): Promise<string> {
     const raw = await ctx.fns.llm.oauthEncryptionKey({});
     const keyBytes = Uint8Array.from(raw);

@@ -1,7 +1,17 @@
+/** Sleep idle for the runtime.  * @param opts.idleMs Minimum idle duration in milliseconds.
+ * @param opts.minMessages Minimum transcript size before compaction.
+ * @param opts.limit Maximum records to process.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { idleMs?: number; minMessages?: number; limit?: number },
+    opts: {
+        /** Idle ms used by the operation. */
+    idleMs?: number;
+        /** Min messages used by the operation. */
+    minMessages?: number;
+        /** Maximum number of results to return. */
+    limit?: number },
 ): Promise<{ started: string[] }> {
     const idleMs = Math.max(60_000, opts.idleMs ?? 15 * 60_000);
     const minMessages = Math.max(4, opts.minMessages ?? 20);

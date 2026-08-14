@@ -9,7 +9,12 @@
 // stay aligned with their events. The resulting idx gap is harmless (reads are
 // ORDER BY idx, appends use MAX(idx)+1). Marker format lives in one place —
 // ctx.fns.agent.markerKind.
-export default async function (ctx: Context, _session: Session | null, opts: { id: string; idx: number }): Promise<{ ok: boolean; reason?: string }> {
+/** Delete message at for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string;
+        /** Zero-based message or event index. */
+idx: number }): Promise<{ ok: boolean; reason?: string }> {
     const { id, idx } = opts;
     if (!Number.isInteger(idx) || idx < 0) return { ok: false, reason: "invalid idx" };
 

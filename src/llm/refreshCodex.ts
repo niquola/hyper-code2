@@ -8,6 +8,10 @@ import { readFileSync, writeFileSync } from "node:fs";
 const OAUTH_HOST = "https://auth.openai.com";
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"; // codex client id (from JWT aud)
 
+/** Performs the llm.refreshCodex runtime operation. */
+/**
+ * Refresh credentials managed by Codex.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string | null> {
     const home = ctx.env.HOME ?? process.env.HOME ?? "";
     const path = `${home}/.codex/auth.json`;

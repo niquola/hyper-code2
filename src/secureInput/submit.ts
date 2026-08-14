@@ -1,3 +1,9 @@
+/**
+ * Resolves or cancels an active secure-input prompt.
+ * @param opts.id Prompt or UI entity identifier.
+ * @param opts.value Submitted transient value.
+ * @param opts.cancel Whether to cancel instead of submit.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { id: string; value?: string; cancel?: string | boolean }): Response {
     const id = String(opts.id ?? '');
     const prompt = (ctx.state as any).secureInput?.prompts?.get(id);

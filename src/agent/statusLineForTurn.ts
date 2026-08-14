@@ -1,7 +1,11 @@
+/** Status line for turn for the runtime.  * @param opts.agent Agent whose state is read or updated.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { agent: types.agent.Agent },
+    opts: {
+        /** Live agent instance to operate on. */
+    agent: types.agent.Agent },
 ): Promise<string> {
     const agent = opts.agent;
     const userText = String(agent.statusLine ?? "").trim();

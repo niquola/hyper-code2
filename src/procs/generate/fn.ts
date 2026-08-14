@@ -1,6 +1,12 @@
 // Scaffold a new function file, hot-load it, regenerate types.
 //   ctx.fns.procs.generate.fn({ module: "todo", name: "list" })
 //   → src/todo/list.ts registered as ctx.fns.todo.list
+/**
+ * Perform fn for the generate subsystem.
+ * @param opts.module The module value used by the operation.
+ * @param opts.name The target name.
+ * @param opts.body The HTTP body.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { module: string; name: string; body?: string }) {
     const { module: mod, name } = opts;
     if (!/^[a-zA-Z_][\w/]*$/.test(mod) || !/^[a-zA-Z_]\w*$/.test(name)) {

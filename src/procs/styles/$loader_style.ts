@@ -1,6 +1,10 @@
 // `<module>/$style_<name>.css` — a Tailwind input, compiled against the whole
 // scan, cached, and served at the path its name spells. The framework's own
 // stylesheet leads and a module's cascades over it, so the order is the layout's.
+/**
+ * Load loader style declarations into the runtime.
+ * @param opts.entries The loader entries to register.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { entries: any[] }): Promise<void> {
     const routes = (ctx.state.procs.http.routes ??= {});
     const styles = (ctx.state.procs.styles ??= []);

@@ -1,3 +1,10 @@
+/**
+ * Reads the tail of a development test or typecheck log.
+ * @param opts.path Log path.
+ * @param opts.run Run selector or log descriptor.
+ * @param opts.tail Maximum number of trailing lines.
+ * @param opts.agent Agent whose scratchpad stores or locates the run.
+ */
 export default async function (_ctx: Context, _session: Session | null, opts: { path?: string; run?: 'last'; tail?: number; agent?: any } = {}) {
     const path = opts.path || (opts.run === 'last' ? opts.agent?.scratchpad?.dev?.lastTestRun?.logPath : null);
     if (!path) throw new Error('no log path');

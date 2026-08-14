@@ -1,9 +1,13 @@
 type ListOpts = {
+    /** Restricts results to a setting namespace. */
     module?: string;
+    /** Restricts results to a scope category. */
     scopeType?: string;
+    /** Restricts results to a scope identifier. */
     scopeId?: string | null;
 };
 
+/** Lists persisted settings matching optional scope filters. */
 export default async function (ctx: Context, _session: Session | null, opts: ListOpts = {}): Promise<Array<{
     module: string;
     scopeType: string;

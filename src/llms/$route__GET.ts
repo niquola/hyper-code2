@@ -1,6 +1,9 @@
 // Unified LLM connections surface. Managed Anthropic OAuth is fully wired;
 // other providers retain their existing settings/login flows.
-export default async function (ctx: Context, _session: Session | null, _opts: { req: Request; params: Record<string, string> }) {
+/** Handles the HTTP route  GET endpoint. */
+export default async function (ctx: Context, _session: Session | null, _opts: {
+        /** Incoming HTTP request. */ req: Request;
+        /** Route parameters captured from the request path. */ params: Record<string, string> }) {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: String(s ?? "") });
     const status = await ctx.fns.settings.status({});
     const oauth = status.anthropicOAuth;

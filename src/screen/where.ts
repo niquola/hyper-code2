@@ -10,6 +10,10 @@
 //
 // `stale` is the honest part: a tab that has said nothing for a while may be
 // closed, on another window, or looking at something else entirely.
+/**
+ * Returns the most recently reported browser location.
+  * @param opts.staleAfterMs Stale After Ms.
+*/
 export default function (ctx: Context, _session: Session | null, opts?: { staleAfterMs?: number }) {
     const here = (ctx.state.screen as any)?.here;
     if (!here) return null;

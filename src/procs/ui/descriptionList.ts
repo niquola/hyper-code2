@@ -1,5 +1,11 @@
 // Key/value facts about one thing — a patient, a resource. Two columns on a
 // wide pane, one when narrow. `html` for a value that is a link or a badge.
+/**
+ * Perform description list for the ui subsystem.
+ * @param opts.items The items value used by the operation.
+ * @param opts.cols The cols value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {items: Array<{ term: string; detail?: string; html?: string; role?: string }>; cols?: 1 | 2; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const cols = opts.cols === 1 ? "" : " sm:grid-cols-2";

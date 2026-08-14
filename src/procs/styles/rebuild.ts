@@ -3,6 +3,9 @@
 // built css, and the `styles` event bumps the <link> so it lands without a full
 // page reload. Failures are logged, not thrown — a broken $style must not take
 // dev.sync down with it.
+/**
+ * Perform rebuild for the styles subsystem.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<void> {
     for (const style of ctx.state.procs?.styles ?? []) {
         try { await ctx.fns.procs.styles.build({ abs: style.abs, key: style.key, force: true }); }

@@ -7,6 +7,13 @@
 //   modules.add({ name: "billing", git: "https://github.com/acme/x" })    // external repo
 //   modules.add({ name: "labs", path: "./tools/labs" })                   // shipped by the project
 //   modules.add({ name: "aidbox", config: { license: "…" } })             // configure a mounted one
+/**
+ * Add the modules subsystem operation.
+ * @param opts.name The target name.
+ * @param opts.git The Git repository URL.
+ * @param opts.path The filesystem or route path.
+ * @param opts.config Configuration values to apply.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { name: string; git?: string; path?: string; config?: Record<string, any> }) {
     if (ctx.fns.procs.env.mode() === "prod") throw new Error("modules.add is dev-only (it loads third-party code)");
     const name = opts.name.trim();

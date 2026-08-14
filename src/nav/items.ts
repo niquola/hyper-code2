@@ -1,6 +1,11 @@
 // Resources available in the global menu: core pages, agent chats, and the
 // installed plugins themselves. Plugin routes are discovered through search
 // providers rather than dumped into the default overview.
+/**
+ * Lists navigation destinations for core pages, plugins, and agent chats.
+ * @param opts.q Optional case-insensitive filter applied to labels, URLs, and hints.
+ * @param opts.limit Maximum number of navigation items to return.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,

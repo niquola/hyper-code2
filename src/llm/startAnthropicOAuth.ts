@@ -1,9 +1,15 @@
 import { createServer } from "node:http";
 
+/** Performs the llm.startAnthropicOAuth runtime operation. */
+/**
+ * Start the Anthropic OAuth authorization flow.
+ * @param opts.listen Whether to listen locally for the OAuth callback.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts?: { listen?: boolean },
+    opts?: {
+        /** Value used for the listen option. */ listen?: boolean },
 ): Promise<{ authorizationUrl: string; expiresAt: number; callbackListening: boolean }> {
     const state = randomBase64Url(32);
     const verifier = randomBase64Url(32);

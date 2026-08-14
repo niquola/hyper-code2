@@ -8,10 +8,11 @@
 // search that is technically more general.
 import { relative } from "node:path";
 
+/** Finds workspace files matching a glob pattern. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { pattern: string; path?: string; limit?: number; noIgnore?: boolean; hidden?: boolean; timeout?: number },
+    opts: { /** Glob or search pattern. */ pattern: string; /** Workspace-relative path. */ path?: string; /** Maximum number of results. */ limit?: number; /** Whether to include ignored files. */ noIgnore?: boolean; /** Whether to include hidden paths. */ hidden?: boolean; /** Timeout in seconds. */ timeout?: number },
 ): Promise<string[]> {
     const root = ctx.fns.files.resolveSafe({ path: "" });
     const abs = ctx.fns.files.resolveSafe({ path: opts.path ?? "" });

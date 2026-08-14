@@ -6,6 +6,10 @@
 // somebody's files.
 import { lstat, unlink } from "node:fs/promises";
 
+/**
+ * Unlink the modules subsystem operation.
+ * @param opts.name The target name.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { name: string }): Promise<{ unlinked: boolean }> {
     const at = `${ctx.fns.procs.project.workdir({})}/.claude/skills/${opts.name}`;
     const there = await lstat(at).catch(() => null);

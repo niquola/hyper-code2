@@ -6,6 +6,15 @@
 //
 // `href` makes the row a link — page.open({entity,id}) follows it — and htmx
 // swaps the pane rather than reloading the window.
+/**
+ * Perform row for the ui subsystem.
+ * @param opts.entity The entity value used by the operation.
+ * @param opts.id The target identifier.
+ * @param opts.status The status value.
+ * @param opts.href The href value used by the operation.
+ * @param opts.cells The cells value used by the operation.
+ * @param opts.right The right value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     entity: string; id: string; status?: string; href?: string;
     cells: Array<{ role: string; text?: string; html?: string; class?: string; title?: string }>;

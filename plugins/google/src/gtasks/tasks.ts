@@ -1,6 +1,18 @@
 // List tasks of a task list. `list` defaults to the first task list (@default).
 // ctx.fns.gtasks.tasks({ list?, max?, completed?, hidden?, dueMin?, dueMax?, account? })
 // → [{ id, title, status, due?, completed?, notes?, parent?, position, updated }]
+/**
+ * List tasks in a Google Tasks list.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.list - Task-list identifier; defaults to the first list where supported.
+ * @param opts.max - Maximum number of results to return.
+ * @param opts.completed - Completion timestamp or completion state.
+ * @param opts.hidden - Whether hidden tasks should be included.
+ * @param opts.dueMin - Minimum task due timestamp.
+ * @param opts.dueMax - Maximum task due timestamp.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

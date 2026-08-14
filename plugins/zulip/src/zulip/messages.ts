@@ -1,14 +1,16 @@
-// Read / search messages via a Zulip narrow. Builds the narrow from the given
-// filters, fetches /messages, and maps each row to a flat shape with HTML
-// stripped from content.
-//   ctx.fns.zulip.messages({ channel: "implementers", topic: "US Core", instance: "fhir" })
-//   ctx.fns.zulip.messages({ query: "FHIR R5", channel: "implementers", instance: "fhir" })
-//   ctx.fns.zulip.messages({ unread: true, channel: "implementers", instance: "fhir" })
-// → [{ id, sender, email, content, topic, channel, timestamp, date }]
-//
-// Filters (all optional): channel, topic, sender (email), mentions (display name),
-// query (full-text), unread (only unread). With unread:true the anchor is "oldest"
-// and we page forward; otherwise anchor is "newest" and we page back (most recent).
+/**
+ * Read / search messages via a Zulip narrow. Builds the narrow from the given
+ * filters, fetches /messages, and maps each row to a flat shape with HTML
+ * stripped from content.
+ *   ctx.fns.zulip.messages({ channel: "implementers", topic: "US Core", instance: "fhir" })
+ *   ctx.fns.zulip.messages({ query: "FHIR R5", channel: "implementers", instance: "fhir" })
+ *   ctx.fns.zulip.messages({ unread: true, channel: "implementers", instance: "fhir" })
+ * → [{ id, sender, email, content, topic, channel, timestamp, date }]
+ *
+ * Filters (all optional): channel, topic, sender (email), mentions (display name),
+ * query (full-text), unread (only unread). With unread:true the anchor is "oldest"
+ * and we page forward; otherwise anchor is "newest" and we page back (most recent).
+ */
 function stripHtml(html: string): string {
     return String(html ?? "")
         .replace(/<[^>]*>/g, "")
@@ -20,17 +22,33 @@ function stripHtml(html: string): string {
         .trim();
 }
 
+/**
+ * Lists Zulip messages matching a narrow.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,
     opts?: {
+        /** Zulip channel name. */
         channel?: string;
+        /** Zulip topic name. */
         topic?: string;
+        /** Sender filter. */
         sender?: string;
+        /** Mention filter. */
         mentions?: string;
+        /** Search query. */
         query?: string;
+        /** Whether to restrict results to unread messages. */
         unread?: boolean;
+        /** Maximum number of results to return. */
         limit?: number;
+        /** Configured Zulip instance name. */
         instance?: string;
     },
 ) {

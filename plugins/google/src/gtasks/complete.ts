@@ -1,6 +1,15 @@
 // Mark a task completed (or, with done:false, reopen it). `list` defaults to the first task list.
 // ctx.fns.gtasks.complete({ task, list?, done?, account? })
 // → updated task object
+/**
+ * Mark a Google Task complete or incomplete.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.task - Google Task identifier.
+ * @param opts.list - Task-list identifier; defaults to the first list where supported.
+ * @param opts.done - Whether the task should be marked completed.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { task: string; list?: string; done?: boolean; account?: string }) {
     if (!opts.task) throw new Error("task id is required");
     let list = opts.list;

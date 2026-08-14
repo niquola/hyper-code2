@@ -19,7 +19,9 @@ const SOURCES: Record<string, { url: string; type: string }> = {
     "phosphor.ttf": { url: "https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/Phosphor.ttf", type: "font/ttf" },
 };
 
-export default async function (ctx: Context, _session: Session | null, opts: { params: Record<string, string> }) {
+/** Handles the HTTP route vendor :name GET endpoint. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Route parameters captured from the request path. */ params: Record<string, string> }) {
     const name = opts.params.name!;
     const source = SOURCES[name];
     if (!source) return new Response("unknown asset", { status: 404 });

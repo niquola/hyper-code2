@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent; clearQueue?: boolean }) {
+/** Stop for the runtime.  * @param opts.agent Agent whose state is read or updated.
+ * @param opts.clearQueue Whether to discard queued work.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Live agent instance to operate on. */
+agent: types.agent.Agent;
+        /** Clear queue used by the operation. */
+clearQueue?: boolean }) {
     const { agent } = opts;
     const clearQueue = opts.clearQueue === true;
     const now = Date.now();

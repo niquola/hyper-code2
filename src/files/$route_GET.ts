@@ -2,7 +2,8 @@ import { stat } from "node:fs/promises";
 import { basename, extname } from "node:path";
 
 // GET /files?path=... — directory listing OR file view (Preview/Code/Edit).
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+/** Handles the corresponding HTTP route. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Incoming HTTP request. */ req: Request; /** Route parameters. */ params: Record<string, string> }) {
     const url = new URL(opts.req.url);
     const path = url.searchParams.get("path") ?? "";
     const tab = url.searchParams.get("tab") ?? "";

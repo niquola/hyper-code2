@@ -1,6 +1,7 @@
 // Return models grouped by provider-prefix.
 // LM Studio is queried live; remote providers return a small curated static list.
 // Missing/unreachable providers are omitted silently.
+/** Performs the llm.listModels runtime operation. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<Record<string, string[]>> {
     const out: Record<string, string[]> = {};
 

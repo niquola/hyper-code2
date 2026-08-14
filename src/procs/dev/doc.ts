@@ -5,6 +5,11 @@
 //   ctx.fns.procs.dev.doc({ q: "token" })                → everything that matches
 import { getPath } from "../boot/load";
 
+/**
+ * Perform doc for the dev subsystem.
+ * @param opts.name The target name.
+ * @param opts.q The search query.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { name?: string; q?: string }) {
     if (opts.name) {
         const fn = getPath(ctx.state.registry, opts.name.split("."));

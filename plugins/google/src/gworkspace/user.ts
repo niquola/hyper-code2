@@ -1,4 +1,11 @@
 // Get one directory user by email or id. ctx.fns.gworkspace.user({ key: "pavel@health-samurai.io" })
+/**
+ * Get a Google Workspace user.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.key - User email, alias, or unique identifier.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { key: string; account?: string }) {
     const u = await ctx.fns.gworkspace.api({ path: `/users/${encodeURIComponent(opts.key)}?projection=full`, account: opts.account });
     return {

@@ -1,4 +1,8 @@
-export default function (_ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }) {
+/** Clear for the runtime.  * @param opts.agent Agent whose state is read or updated.
+*/
+export default function (_ctx: Context, _session: Session | null, opts: {
+        /** Live agent instance to operate on. */
+agent: types.agent.Agent }) {
     const { agent } = opts;
     try { agent.abortController?.abort(); } catch {}
     agent.abortController = null;

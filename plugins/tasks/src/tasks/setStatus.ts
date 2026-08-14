@@ -1,7 +1,14 @@
+/**
+ * Updates the status of an existing task.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; status: "todo" | "running" | "done" },
+    opts: {
+  /** Task identifier. */
+  id: string;
+  /** New task status. */
+  status: "todo" | "running" | "done" },
 ): Promise<types.tasks.Task> {
     if (!['todo', 'running', 'done'].includes(opts.status)) throw new Error("tasks.setStatus: invalid status");
     const rows = await ctx.fns.procs.db.select({

@@ -1,7 +1,34 @@
+/**
+ * Reads a potentially large file and returns a task-focused LLM summary.
+ *
+ * Use this instead of injecting a large document into the main agent context.
+  * @param opts.agent Agent whose state is read or updated.
+ * @param opts.file Source file path.
+ * @param opts.task Concise task to assign or perform.
+ * @param opts.maxChars Maximum source characters to include.
+ * @param opts.model Model identifier to use.
+*/
+
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { agent: types.agent.Agent; file: string; task: string; maxChars?: number; model?: string },
+    opts: {
+
+        /** Agent and model context used for the summarization call. */
+        agent: types.agent.Agent;
+
+        /** Workspace-relative or absolute source file. */
+        file: string;
+
+        /** Question the summary should answer. */
+        task: string;
+
+        /** Maximum source characters sent to the model. @default 120000 @minimum 1 */
+        maxChars?: number;
+
+        /** Optional model override. */
+        model?: string;
+    },
 ): Promise<{ file: string; summary: string; usage: any }> {
     const { agent } = opts;
     const file = String(opts?.file ?? '').trim();

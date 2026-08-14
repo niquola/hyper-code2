@@ -6,6 +6,10 @@
 // `?topics=agent:eh,agents` narrows the stream SERVER-side: a tab watching one
 // agent is not woken by every other agent's traffic. Global events (reload,
 // notify) still reach everybody — see procs.events.emit.
+/**
+ * Handle the GET request for the events route.
+ * @param opts.req The incoming HTTP request.
+ */
 export default async function (ctx: Context, session: Session, opts: { req: Request }) {
     const topics = (new URL(opts.req.url).searchParams.get("topics") ?? "")
         .split(",").map(t => t.trim()).filter(Boolean);

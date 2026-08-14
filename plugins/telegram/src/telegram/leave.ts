@@ -29,12 +29,27 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// WRITE: leave a chat/channel/group. ctx.fns.telegram.leave({ chat })
-//   chat: chat id (string/number) or @username.
-// → { id, left: true }
+/**
+ * WRITE: leave a chat/channel/group. ctx.fns.telegram.leave({ chat })
+ *   chat: chat id (string/number) or @username.
+ * → { id, left: true }
+ */
 import { Api } from "telegram";
 
-export default async function (ctx: Context, session: Session | null, opts: { chat: string | number; confirm?: boolean }) {
+/**
+ * Leaves a Telegram chat after write confirmation.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+        /** Chat identifier or username. */
+        chat: string | number;
+        /** Whether the caller confirmed the write operation. */
+        confirm?: boolean;
+    }) {
     if (opts?.chat === undefined || opts?.chat === null) throw new Error("leave: opts.chat required");
     if (opts.confirm !== true) throw new Error("telegram.leave is destructive; repeat with confirm: true after explicit user approval");
     const client = await connected(ctx);

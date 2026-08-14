@@ -14,6 +14,11 @@ const coercers: Record<string, (v: any) => any> = {
     map: (v) => { if (typeof v !== "string") return v; try { return JSON.parse(v); } catch { return v; } },
 };
 
+/**
+ * Perform coerce for the config subsystem.
+ * @param opts.schema The value schema.
+ * @param opts.config Configuration values to apply.
+ */
 export default function (_ctx: Context, _session: Session | null, opts: { schema: ConfigSchema; config: Record<string, any> }) {
     const { schema, config } = opts;
     const out: Record<string, any> = {};

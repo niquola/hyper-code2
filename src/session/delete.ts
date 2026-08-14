@@ -1,4 +1,7 @@
-export default async function (ctx: Context, _session: Session | null, opts: { id: string }): Promise<{ ok: boolean }> {
+/** Delete for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string }): Promise<{ ok: boolean }> {
     const { id } = opts;
     const res = await ctx.fns.procs.db.run({ sql: "DELETE FROM agents WHERE id = ?", params: [id] });
     const removed = res.changes > 0;

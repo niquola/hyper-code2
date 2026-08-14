@@ -1,9 +1,16 @@
 // Close named background tabs created for one task. Prefix mode is convenient
 // for research, whose tabs are `<base>-search` and `<base>-page-N`.
+/**
+ * Closes browser sessions selected by name or prefix.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { sessions?: string[]; prefix?: string },
+    opts: {
+  /** Exact logical session names to close. */
+  sessions?: string[];
+  /** Session-name prefix to close. */
+  prefix?: string },
 ): Promise<{ closed: string[] }> {
     const map: Map<string, any> = (ctx.state as any).cdp?.sessions ?? new Map();
     const names = opts.sessions?.length

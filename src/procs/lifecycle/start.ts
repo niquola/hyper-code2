@@ -13,6 +13,10 @@ import { setPath, getPath } from "../boot/load";
 // declares `"required": true`: without `procs/http` there is no host to keep
 // running, so those still roll back and throw.
 //   ctx.fns.procs.lifecycle.start({})
+/**
+ * Starts module lifecycle hooks in dependency order and records their state.
+ * Optional module failures produce a degraded result; required failures roll back and throw.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     const order: string[] = await ctx.fns.procs.lifecycle.order({});
     const entries = await ctx.fns.procs.project.scan({});

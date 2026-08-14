@@ -1,5 +1,6 @@
 // POST /plugins/reload — rescan project plugins without restarting the server.
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
+/** Handles the corresponding HTTP route. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Incoming HTTP request. */ req: Request }) {
     try {
         const modules = await ctx.fns.plugins.reload({});
         const count = modules.length;

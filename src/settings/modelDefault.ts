@@ -1,3 +1,4 @@
+/** Returns the configured default model identifier. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string> {
     return (await ctx.fns.settings?.getString?.({
         module: 'llm',

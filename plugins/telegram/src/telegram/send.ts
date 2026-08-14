@@ -29,12 +29,33 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// WRITE: send a text message to a chat. ctx.fns.telegram.send({ chat, text })
-//   chat: chat id (string/number) or @username; text: message body.
-//   parseMode: "html" | "md" — format `text` (e.g. <b>…</b>, <blockquote expandable>…</blockquote>).
-//   entities: pre-built MTProto entities (formattingEntities) — takes precedence over parseMode.
-// → { id, date }
-export default async function (ctx: Context, session: Session | null, opts: { chat: string | number; text: string; parseMode?: "html" | "md"; entities?: any[]; confirm?: boolean }) {
+/**
+ * WRITE: send a text message to a chat. ctx.fns.telegram.send({ chat, text })
+ *   chat: chat id (string/number) or @username; text: message body.
+ *   parseMode: "html" | "md" — format `text` (e.g. <b>…</b>, <blockquote expandable>…</blockquote>).
+ *   entities: pre-built MTProto entities (formattingEntities) — takes precedence over parseMode.
+ * → { id, date }
+ */
+/**
+ * Sends a Telegram message after write confirmation.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+        /** Chat identifier or username. */
+        chat: string | number;
+        /** Message text. */
+        text: string;
+        /** Message parse mode. */
+        parseMode?: "html" | "md";
+        /** Telegram message entities. */
+        entities?: any[];
+        /** Whether the caller confirmed the write operation. */
+        confirm?: boolean;
+    }) {
     if (opts?.chat === undefined || opts?.chat === null) throw new Error("send: opts.chat required");
     if (!opts?.text) throw new Error("send: opts.text required");
     if (opts.confirm !== true) throw new Error("telegram.send is a real write; repeat with confirm: true after explicit user approval");

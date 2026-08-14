@@ -30,11 +30,13 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// List chats/groups/channels (dialogs) ordered by recency.
-// ctx.fns.telegram.dialogs({ max?: 50 })
-// → [{ id, title, type, unreadCount, lastMessage }]
-//   type: supergroup | channel | group | user | <className lowercased>
-//   id is a string (channels/supergroups are negative, e.g. -1001184192226).
+/**
+ * List chats/groups/channels (dialogs) ordered by recency.
+ * ctx.fns.telegram.dialogs({ max?: 50 })
+ * → [{ id, title, type, unreadCount, lastMessage }]
+ *   type: supergroup | channel | group | user | <className lowercased>
+ *   id is a string (channels/supergroups are negative, e.g. -1001184192226).
+ */
 function chatType(entity: any): string {
     const cn = entity?.className || "Unknown";
     if (cn === "Channel") return entity.megagroup ? "supergroup" : "channel";
@@ -43,7 +45,18 @@ function chatType(entity: any): string {
     return cn.toLowerCase();
 }
 
-export default async function (ctx: Context, session: Session | null, opts?: { max?: number }) {
+/**
+ * Lists Telegram dialogs.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts?: {
+        /** Maximum number of results to return. */
+        max?: number;
+    }) {
     const client = await connected(ctx);
     const dialogs = await client.getDialogs({ limit: opts?.max ?? 50 });
     return dialogs.map((d: any) => ({

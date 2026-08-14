@@ -1,7 +1,8 @@
+/** Changes the current session workspace directory. */
 export default async function (
     ctx: Context,
     session: Session | null,
-    opts: { dir: string; agent?: types.agent.Agent },
+    opts: { /** Git working directory. */ dir: string; /** Agent associated with the operation. */ agent?: types.agent.Agent },
 ): Promise<string> {
     const agent = opts.agent ?? session?.agent;
     if (!agent) throw new Error("workspace.set requires an agent session");

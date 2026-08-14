@@ -1,9 +1,11 @@
-// gcs.api — call the GCS JSON API (Storage v1). Base: https://storage.googleapis.com/storage/v1
-//   ctx.fns.gcs.api({ route: "GET /b", query: { project: "atomic-ehr" } })
-//   ctx.fns.gcs.api({ route: "GET /b/{bucket}/o", params: { bucket: "niquola-public" } })
-//   ctx.fns.gcs.api({ route: "DELETE /b/{bucket}/o/{object}", params: { bucket, object } })
-// route: "<METHOD> <path>" (path {name} filled from params, encodeURIComponent'd).
-// A full https:// path hits any Google API. Returns parsed JSON (null on 204).
+/**
+ * gcs.api — call the GCS JSON API (Storage v1). Base: https://storage.googleapis.com/storage/v1
+ *   ctx.fns.gcs.api({ route: "GET /b", query: { project: "atomic-ehr" } })
+ *   ctx.fns.gcs.api({ route: "GET /b/{bucket}/o", params: { bucket: "niquola-public" } })
+ *   ctx.fns.gcs.api({ route: "DELETE /b/{bucket}/o/{object}", params: { bucket, object } })
+ * route: "<METHOD> <path>" (path {name} filled from params, encodeURIComponent'd).
+ * A full https:// path hits any Google API. Returns parsed JSON (null on 204).
+ */
 const BASE = "https://storage.googleapis.com/storage/v1";
 
 async function accessToken(ctx: Context) {
@@ -19,15 +21,30 @@ async function accessToken(ctx: Context) {
     cache.token = token; cache.expiry = Date.now() + 3_500_000; return token;
 }
 
+/**
+ * Performs an authenticated Google Cloud Storage API request.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
 export default async function (ctx: Context, session: Session | null, opts: {
-    route: string;
-    params?: Record<string, string | number | boolean>;
-    query?: Record<string, string | number | boolean>;
-    body?: any;
-    rawBody?: Uint8Array | Blob | string;
-    contentType?: string;
-    headers?: Record<string, string>;
-}) {
+        /** Google Cloud Storage API route. */
+        route: string;
+        /** Route parameters. */
+        params?: Record<string, string | number | boolean>;
+        /** Search query. */
+        query?: Record<string, string | number | boolean>;
+        /** JSON request body. */
+        body?: any;
+        /** Raw request body. */
+        rawBody?: Uint8Array | Blob | string;
+        /** Request or object media type. */
+        contentType?: string;
+        /** Additional HTTP headers. */
+        headers?: Record<string, string>;
+    }) {
     const token = await accessToken(ctx);
 
     const spaceIdx = opts.route.indexOf(" ");

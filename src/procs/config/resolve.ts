@@ -8,6 +8,11 @@ import { readFileSync } from "node:fs";
 
 const envify = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "_");
 
+/**
+ * Perform resolve for the config subsystem.
+ * @param opts.module The module value used by the operation.
+ * @param opts.schema The value schema.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { module: string; schema?: ConfigSchema }) {
     const mod = opts.module;
     // Schema comes from ctx.state.procs?.config?.schemas (collected from module/$config.ts

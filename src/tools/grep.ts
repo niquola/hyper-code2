@@ -11,12 +11,15 @@
 // ripgrep is missing so this search was slower and less thorough than it looks.
 const MAX_LINE = 400;
 
+/** Implements bounded workspace content search. */
 export default async function (
     ctx: Context,
     _session: Session | null,
     opts: {
-        pattern: string; path?: string; glob?: string; ignoreCase?: boolean; literal?: boolean;
-        context?: number; limit?: number; noIgnore?: boolean; hidden?: boolean; timeout?: number; hashline?: boolean;
+        /** Glob or search pattern. */
+        pattern: string; /** Workspace-relative path. */ path?: string; /** Glob restricting searched files. */ glob?: string; /** Whether matching is case-insensitive. */ ignoreCase?: boolean; /** Whether to treat the pattern as literal text. */ literal?: boolean;
+        /** Number of context lines around each match. */
+        context?: number; /** Maximum number of results. */ limit?: number; /** Whether to include ignored files. */ noIgnore?: boolean; /** Whether to include hidden paths. */ hidden?: boolean; /** Timeout in seconds. */ timeout?: number; /** Whether to emit stable line anchors. */ hashline?: boolean;
     },
 ): Promise<string> {
     const limit = Math.max(1, opts.limit ?? 50);

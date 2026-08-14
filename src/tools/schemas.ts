@@ -9,10 +9,11 @@
 // breaks the schema. It is legal only when every object says
 // additionalProperties:false and lists all its properties as required, so we
 // ask for it exactly when the declaration already satisfies that.
+/** Builds model-facing schemas for registered tools. */
 export default function (
     ctx: Context,
     _session: Session | null,
-    opts: { api: string; only?: string[] },
+    opts: { /** Value for api. */ api: string; /** Value for only. */ only?: string[] },
 ): any[] {
     let tools = ctx.fns.tools.list({});
     if (opts?.only?.length) tools = tools.filter((t: any) => opts.only!.includes(t.wireName) || opts.only!.includes(t.name));

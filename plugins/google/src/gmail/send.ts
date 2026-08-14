@@ -1,6 +1,19 @@
 // Send a plain-text email, optionally with attachments and CC/BCC.
 // ctx.fns.gmail.send({ to, subject, body, cc?, bcc?, attachments?: ["/path/file.pdf"], threadId?, account? })
 // `to`/`cc`/`bcc` may be a comma-separated string or an array. → { id, threadId }
+/**
+ * Send an email through Gmail.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.to - Recipient address or addresses.
+ * @param opts.subject - Message subject.
+ * @param opts.body - Request body or message body, as applicable.
+ * @param opts.cc - Carbon-copy recipient address or addresses.
+ * @param opts.bcc - Blind-carbon-copy recipient address or addresses.
+ * @param opts.attachments - Local file paths to attach.
+ * @param opts.threadId - Gmail thread identifier.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

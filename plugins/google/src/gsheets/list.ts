@@ -1,5 +1,13 @@
 // List Google Spreadsheets via the Drive API (most-recently-modified first).
 // ctx.fns.gsheets.list({ query: "budget", max: 20 })
+/**
+ * List spreadsheets accessible through Google Drive.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.query - Search query.
+ * @param opts.max - Maximum number of results to return.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts?: { query?: string; max?: number; account?: string }) {
     const url = new URL("https://www.googleapis.com/drive/v3/files");
     url.searchParams.set("pageSize", String(opts?.max ?? 20));

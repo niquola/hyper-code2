@@ -4,6 +4,14 @@
 // results endpoint renders. The endpoint at `url` receives `?name=<field>&q=<typed>`
 // and returns option rows (via ui.comboboxResults) — the search box is named `q`
 // so the typed value arrives as `q`, while the chosen value carries `name`.
+/**
+ * Perform combobox for the ui subsystem.
+ * @param opts.name The target name.
+ * @param opts.url The target URL.
+ * @param opts.value The value to apply.
+ * @param opts.placeholder The placeholder value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {name: string; url: string; value?: string; placeholder?: string; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const results = `cb-${opts.name.replace(/[^a-zA-Z0-9]/g, "")}`;

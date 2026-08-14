@@ -13,6 +13,7 @@ function encode(n: number): string {
     return out;
 }
 
+/** Next id for the runtime. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string> {
     const row = ((await ctx.fns.procs.db.select({ sql: 'SELECT value FROM kv WHERE key = ?', params: ['agent:idCounter'] })) as any[])[0];
     const next = Number(row?.value ?? 0) + 1;

@@ -1,4 +1,7 @@
-export default async function (ctx: Context, _session: Session | null, opts?: { includeArchived?: boolean }): Promise<Array<{
+/** List for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts?: {
+        /** Include archived used by the operation. */
+includeArchived?: boolean }): Promise<Array<{
     id: string;
     model: string;
     title: string;

@@ -198,6 +198,7 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
 
 }
 
+/** Worker loop for the runtime. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<void> {
     if ((ctx.state as any).workerLoopRunning) return;
     (ctx.state as any).workerLoopRunning = true;

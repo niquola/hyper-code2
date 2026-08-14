@@ -9,6 +9,11 @@
 // and a region rendered at the new lower number looked permanently behind —
 // which is how an idle page ended up making hundreds of requests a second.
 // With nothing to compare, there is nothing to disagree about.
+/**
+ * Emit the events subsystem operation.
+ * @param opts.event The event payload.
+ * @param opts.topic The event topic.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { event: any; topic?: string }): void {
     const subs: Set<any> = ((ctx.state.procs.events ??= {}) as any).subs ??= new Set();
     const topic = opts.topic;

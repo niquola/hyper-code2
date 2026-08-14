@@ -1,5 +1,10 @@
 // Plugin manager. Keep the primary surface about things a person can turn on
 // and off; framework/process internals live behind one disclosure at the end.
+/**
+ * Render panel for the modules subsystem.
+ * @param opts.message The informational message to display.
+ * @param opts.error The error to report.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { message?: string; error?: string }): Promise<string> {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const all = ctx.fns.procs.modules.list({});

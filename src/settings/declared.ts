@@ -10,6 +10,7 @@ type DeclaredItem = {
     source: 'db' | 'env' | 'default';
 };
 
+/** Lists declared settings with their resolved values and provenance. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<DeclaredItem[]> {
     const registry: Map<string, any> | undefined = (ctx.state as any).settings?.registry;
     if (!registry) return [];

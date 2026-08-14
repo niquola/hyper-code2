@@ -1,7 +1,16 @@
+/**
+ * Evaluates JavaScript in the current page.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { expression: string; session?: string; awaitPromise?: boolean },
+    opts: {
+  /** JavaScript expression to evaluate. */
+  expression: string;
+  /** Logical browser session name. */
+  session?: string;
+  /** Whether to await a promise returned by the expression. */
+  awaitPromise?: boolean },
 ): Promise<any> {
     const result = await ctx.fns.cdp.send({
         session: opts.session,

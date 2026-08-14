@@ -7,10 +7,20 @@
 // $tool_ declarations, exactly like a call made by hand from the REPL.
 //
 // The loop ends on a reply with no tool calls — pure prose back to the user.
+/** Run for the runtime.  * @param opts.agent Agent whose state is read or updated.
+ * @param opts.userText User text that starts the turn.
+ * @param opts.userMessageAlreadyAppended Whether the user message is already persisted.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { agent: types.agent.Agent; userText: string; userMessageAlreadyAppended?: boolean },
+    opts: {
+        /** Live agent instance to operate on. */
+    agent: types.agent.Agent;
+        /** User text used by the operation. */
+    userText: string;
+        /** User message already appended used by the operation. */
+    userMessageAlreadyAppended?: boolean },
 ) {
     const { agent, userText } = opts;
     const agentCtx: any = Object.create(ctx);

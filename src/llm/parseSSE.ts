@@ -12,10 +12,18 @@
 // agent's run forever — 141s of silence looked like a hang to the user. If no
 // chunk arrives within idleTimeoutMs (default 120s) the generator throws; the
 // run errors out, the statusbar shows it, the next message retries.
+/** Performs the llm.parseSSE runtime operation. */
+/**
+ * Shared Server-Sent-Events frame parser for every LLM stream path.
+ * @param opts.body Response byte stream or notification body.
+ * @param opts.idleTimeoutMs Maximum wait between stream chunks in milliseconds.
+ */
 export default async function* (
     _ctx: Context,
     _session: Session | null,
-    opts: { body: ReadableStream<Uint8Array>; idleTimeoutMs?: number },
+    opts: {
+        /** Request body sent to the model endpoint. */ body: ReadableStream<Uint8Array>;
+        /** Value used for the idle timeout ms option. */ idleTimeoutMs?: number },
 ): AsyncGenerator<{ event: string | null; data: string }> {
     const idleMs = opts.idleTimeoutMs ?? 120_000;
     const decoder = new TextDecoder();

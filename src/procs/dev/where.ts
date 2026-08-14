@@ -2,6 +2,10 @@
 //   ctx.fns.procs.dev.where({ name: "procs.http.dispatch" })  → { abs, rel, module }
 import { getPath } from "../boot/load";
 
+/**
+ * Locate where for the dev subsystem.
+ * @param opts.name The target name.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { name: string }) {
     const fn = getPath(ctx.state.registry, opts.name.split("."));
     if (typeof fn !== "function") throw new Error(`no such function: ${opts.name}`);

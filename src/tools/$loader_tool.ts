@@ -10,7 +10,8 @@
 // `.json` = the same fields, no prose. Collected into ctx.state.tools.registry
 // keyed "<module>.<name>"; re-running replaces entries in place, so dev.sync
 // hot-reloads a declaration the same way it reloads a fn.
-export default async function (ctx: Context, _session: Session | null, opts: { entries: any[] }): Promise<void> {
+/** Registers tool declarations discovered by the module loader. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Loader entries to register. */ entries: any[] }): Promise<void> {
     const st = ((ctx.state as any).tools ??= {});
     const registry: Map<string, any> = (st.registry ??= new Map());
 

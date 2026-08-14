@@ -2,6 +2,14 @@
 // Computes the end index from the doc body so text lands after current content.
 // ctx.fns.gdoc.append({ id: "1Bxi...Ms", text: "\nNew line" })
 // → { id, appended: <chars> }
+/**
+ * Append content to a Google document.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.id - Resource identifier.
+ * @param opts.text - Text content.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { id: string; text: string; account?: string }) {
     if (!opts?.id || opts?.text == null) throw new Error("id and text required");
     const id = (opts.id.match(/\/document\/d\/([a-zA-Z0-9_-]+)/) || [])[1] || opts.id.trim();

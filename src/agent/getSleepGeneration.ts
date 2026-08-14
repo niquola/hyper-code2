@@ -1,7 +1,17 @@
+/** Get sleep generation for the runtime.  * @param opts.sleepContext Persisted sleep context.
+ * @param opts.revision Optional sleep-context revision.
+ * @param opts.kind Result or generation category.
+*/
 export default function (
     ctx: Context,
     _session: Session | null,
-    opts: { sleepContext: any; revision?: number | null; kind?: "active" | "draft" | "latest" },
+    opts: {
+        /** Sleep context used by the operation. */
+    sleepContext: any;
+        /** Revision used by the operation. */
+    revision?: number | null;
+        /** Kind used by the operation. */
+    kind?: "active" | "draft" | "latest" },
 ): any | null {
     const sleep = ctx.fns.agent.normalizeSleepContext({ sleepContext: opts.sleepContext });
     if (!sleep) return null;

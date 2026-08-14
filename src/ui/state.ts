@@ -2,7 +2,13 @@
 // person is comes from the traffic they generate (src/$middleware.ts records it
 // on every page GET), because a browser cannot look at a page without asking us
 // for it. Two beacons used to report the same fact on a channel of their own.
-export default async function (ctx: Context, _session: Session | null, opts?: { staleAfterMs?: number }) {
+/** Performs the ui.state runtime operation. */
+/**
+ * Server-side view of the UI. Durable preferences come from Postgres; where the.
+ * @param opts.staleAfterMs Maximum age in milliseconds for recent browser activity.
+ */
+export default async function (ctx: Context, _session: Session | null, opts?: {
+        /** Maximum state age in milliseconds before it is considered stale. */ staleAfterMs?: number }) {
     const rows = await ctx.fns.procs.db.select({
         sql: "SELECT key, value FROM kv WHERE key IN (?, ?)",
         params: ["ui:rightPanelCollapsed", "ui:chatWidth"],

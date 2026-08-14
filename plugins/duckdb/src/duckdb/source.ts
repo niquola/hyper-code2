@@ -1,5 +1,17 @@
-// Resolve a local file to the DuckDB table expression that reads it.
-export default function (ctx: Context, _session: Session | null, opts: { path: string }): { path: string; table: string; format: string } {
+/**
+ * Resolves a supported local analytics file into a DuckDB table expression.
+ *
+ * Relative paths are resolved against the active workspace. The returned table
+ * expression safely quotes the path and selects the reader from its extension.
+ */
+export default function (
+    ctx: Context,
+    _session: Session | null,
+    opts: {
+        /** NDJSON, JSON, CSV, TSV, or Parquet file path. */
+        path: string;
+    },
+): { path: string; table: string; format: string } {
     const path = ctx.fns.workspace.resolve({ path: opts.path });
     const quoted = `'${path.replaceAll("'", "''")}'`;
     const lower = path.toLowerCase();

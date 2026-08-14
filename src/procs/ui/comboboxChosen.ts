@@ -2,6 +2,13 @@
 // hidden input carrying the value for the surrounding form, and a "change" control
 // that reopens the search (htmx swaps the widget back to `ui.combobox` via
 // `?reopen`). The results endpoint returns this for `?pick=<value>`.
+/**
+ * Perform combobox chosen for the ui subsystem.
+ * @param opts.name The target name.
+ * @param opts.url The target URL.
+ * @param opts.value The value to apply.
+ * @param opts.label The display label.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { name: string; url: string; value: string; label: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     return `<div class="relative" ${ctx.fns.procs.ui.attr({ field: opts.name })}>

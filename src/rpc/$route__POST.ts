@@ -1,5 +1,10 @@
 const BLOCKED = new Set(['__proto__', 'prototype', 'constructor']);
 
+/**
+ * Validates and dispatches an HTTP RPC request to a runtime function.
+ * @param opts.req Incoming RPC request.
+ */
+
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
     const req = opts.req;
     const origin = req.headers.get('origin');

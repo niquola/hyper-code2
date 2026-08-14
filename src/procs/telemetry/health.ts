@@ -1,4 +1,7 @@
 // Compact current tracer/process health for diagnosis from the REPL.
+/**
+ * Report health for the telemetry subsystem.
+ */
 export default function (ctx: Context, _session: Session | null, _opts?: {}) {
     const st = ctx.state.procs?.telemetry as types.procs.telemetry.State | undefined;
     const memory = process.memoryUsage();

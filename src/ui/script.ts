@@ -1,7 +1,17 @@
 // Emit <script src="..."> tag for a module script registered via the
 // $script_<name>.js convention. Target is dotted: "agent.chat" → /agent/chat.js.
 // Root-level "<name>" → /<name>.js.
-export default function (_ctx: Context, _session: Session | null, opts: { target: string; defer?: boolean; module?: boolean }): string {
+/** Performs the ui.script runtime operation. */
+/**
+ * Emit <script src="..."> tag for a module script registered via the.
+ * @param opts.target Dotted script target name.
+ * @param opts.defer Whether to add the defer attribute.
+ * @param opts.module Whether to emit a module script.
+ */
+export default function (_ctx: Context, _session: Session | null, opts: {
+        /** Script URL or target path. */ target: string;
+        /** Whether to add the defer attribute. */ defer?: boolean;
+        /** Whether to load the script as an ES module. */ module?: boolean }): string {
     const target = opts.target;
     const segs = target.split(".");
     const name = segs.pop()!;

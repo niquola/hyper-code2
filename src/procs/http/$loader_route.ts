@@ -3,6 +3,10 @@
 // table, handed all the route files at once.
 import { bindSelf } from "../boot/load";
 
+/**
+ * Load loader route declarations into the runtime.
+ * @param opts.entries The loader entries to register.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { entries: any[] }): Promise<void> {
     const routes = (ctx.state.procs.http.routes ??= {});
     for (const entry of opts.entries) {

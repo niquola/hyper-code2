@@ -1,6 +1,10 @@
 // `<module>/$script_<name>.js|css` — a browser asset, bundled on request and
 // served at the same path its name spells.
 
+/**
+ * Load loader script declarations into the runtime.
+ * @param opts.entries The loader entries to register.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { entries: any[] }): Promise<void> {
     const routes = (ctx.state.procs.http.routes ??= {});
     for (const entry of opts.entries) {

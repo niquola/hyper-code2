@@ -1,6 +1,18 @@
 // Update a task's fields (title/notes/due/status). `list` defaults to the first list.
 // `due`: "YYYY-MM-DD" (→ RFC3339 midnight UTC) or full RFC3339. status: needsAction|completed.
 // ctx.fns.gtasks.update({ task, list?, title?, notes?, due?, status?, account? }) → updated task
+/**
+ * Update a Google Task.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.task - Google Task identifier.
+ * @param opts.list - Task-list identifier; defaults to the first list where supported.
+ * @param opts.title - Resource title.
+ * @param opts.notes - Task notes.
+ * @param opts.due - Task due date or timestamp.
+ * @param opts.status - Task status.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { task: string; list?: string; title?: string; notes?: string; due?: string; status?: "needsAction" | "completed"; account?: string }) {
     if (!opts?.task) throw new Error("task id is required");
     let list = opts.list;

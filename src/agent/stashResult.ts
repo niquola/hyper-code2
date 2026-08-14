@@ -9,10 +9,20 @@ const LIMIT = 6_000;      // chars that may enter the transcript verbatim
 const PREVIEW = 2_500;    // chars of preview when stashing
 const KEEP = 6;           // stashed results retained per agent
 
+/** Stash result for the runtime.  * @param opts.agent Agent whose state is read or updated.
+ * @param opts.output Tool output or source text to process.
+ * @param opts.kind Result or generation category.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { agent: types.agent.Agent; output: string; kind: string },
+    opts: {
+        /** Live agent instance to operate on. */
+    agent: types.agent.Agent;
+        /** Output used by the operation. */
+    output: string;
+        /** Kind used by the operation. */
+    kind: string },
 ): Promise<string> {
     const { agent, kind } = opts;
     const output = String(opts.output ?? "");

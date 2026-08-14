@@ -30,9 +30,21 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// Current authorized user. ctx.fns.telegram.me({})
-// → { id, firstName, lastName, username, phone }
-export default async function (ctx: Context, session: Session | null, _opts?: {}) {
+/**
+ * Current authorized user. ctx.fns.telegram.me({})
+ * → { id, firstName, lastName, username, phone }
+ */
+/**
+ * Gets the authenticated Telegram user.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, _opts?: {
+
+    }) {
     const client = await connected(ctx);
     const me: any = await client.getMe();
     return {

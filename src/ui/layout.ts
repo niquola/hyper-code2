@@ -1,6 +1,18 @@
 // The app shell owns one ordinary URL-addressed page. Global navigation lives
 // in ui.navMenu; there is no persistent sidebar or hidden page state.
-export default async function (ctx: Context, session: Session | null, opts: { currentId?: string; title?: string; main: string; headExtra?: string }): Promise<string> {
+/** Performs the ui.layout runtime operation. */
+/**
+ * The app shell owns one ordinary URL-addressed page. Global navigation lives.
+ * @param opts.currentId Identifier of the currently selected agent.
+ * @param opts.title Displayed title.
+ * @param opts.main Main panel HTML.
+ * @param opts.headExtra Additional markup for the document head.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+        /** Identifier of the currently selected agent. */ currentId?: string;
+        /** Page title. */ title?: string;
+        /** Rendered main-page HTML. */ main: string;
+        /** Additional HTML to include in the document head. */ headExtra?: string }): Promise<string> {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
 
     // currentId only identifies the active agent to browser-side chat behavior.

@@ -2,6 +2,14 @@
 // is the button-group form: tappable buttons, each toggled on its own, the
 // chosen ones ringed — the multi-select twin of radioGroup's cards. Posts an
 // array (`name` repeated); the group carries `data-field`.
+/**
+ * Perform checkbox group for the ui subsystem.
+ * @param opts.name The target name.
+ * @param opts.value The value to apply.
+ * @param opts.options The options value used by the operation.
+ * @param opts.layout The layout value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     name: string; value?: string[]; options: Array<{ value: string; label: string }>; layout?: "list" | "cards"; class?: string;
 }): string {

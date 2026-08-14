@@ -7,19 +7,30 @@
 // limit is reached instead of searching the rest of the tree for nothing.
 import { relative } from "node:path";
 
+/** Searches workspace file contents. */
 export default async function (
     ctx: Context,
     _session: Session | null,
     opts: {
+        /** Glob or search pattern. */
         pattern: string;
+        /** Workspace-relative path. */
         path?: string;
+        /** Glob restricting searched files. */
         glob?: string;
+        /** Whether matching is case-insensitive. */
         ignoreCase?: boolean;
+        /** Whether to treat the pattern as literal text. */
         literal?: boolean;
+        /** Number of context lines around each match. */
         context?: number;
+        /** Maximum number of results. */
         limit?: number;
+        /** Whether to include ignored files. */
         noIgnore?: boolean;
+        /** Whether to include hidden paths. */
         hidden?: boolean;
+        /** Timeout in seconds. */
         timeout?: number;
     },
 ): Promise<types.files.GrepMatch[]> {

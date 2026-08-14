@@ -1,7 +1,11 @@
+/** Clear reflection nudge for the runtime.  * @param opts.id Target agent identifier.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string },
+    opts: {
+        /** Agent identifier. */
+    id: string },
 ): Promise<{ cleared: boolean }> {
     const row = ((await ctx.fns.procs.db.select({
         sql: "SELECT reflection FROM agents WHERE id = ? AND archived_at IS NULL",

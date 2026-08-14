@@ -1,8 +1,10 @@
-// Read direct messages (1:1 and group DMs) via narrow is:dm.
-//   ctx.fns.zulip.dms({ instance: "fhir", max: 20 })                        // recent DMs, any conversation
-//   ctx.fns.zulip.dms({ with: ["Josh Mandel", "Gino Canessa"], max: 30 })   // only threads including ALL named people
-//   ctx.fns.zulip.dms({ with: ["Josh Mandel"], group: false })              // only the 1:1 thread
-// → [{ id, date, sender, to: string[], content }] oldest→newest
+/**
+ * Read direct messages (1:1 and group DMs) via narrow is:dm.
+ *   ctx.fns.zulip.dms({ instance: "fhir", max: 20 })                        // recent DMs, any conversation
+ *   ctx.fns.zulip.dms({ with: ["Josh Mandel", "Gino Canessa"], max: 30 })   // only threads including ALL named people
+ *   ctx.fns.zulip.dms({ with: ["Josh Mandel"], group: false })              // only the 1:1 thread
+ * → [{ id, date, sender, to: string[], content }] oldest→newest
+ */
 function stripHtml(html: string): string {
     return String(html ?? "")
         .replace(/<[^>]*>/g, "")
@@ -14,13 +16,26 @@ function stripHtml(html: string): string {
         .trim();
 }
 
+/**
+ * Lists Zulip direct messages with optional participant filtering.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param [opts] Operation options.
+ * @returns The operation result.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: {
-    with?: string[];      // full names; thread must include ALL of them
-    group?: boolean;      // true → only group DMs (3+ people), false → only 1:1, omit → both
-    max?: number;         // messages to return after filtering (default 30)
-    fetch?: number;       // how many raw DMs to scan (default 200)
-    instance?: string;
-}) {
+        /** Participant full names that must all occur in the thread. */
+        with?: string[];
+        /** Whether to include group DMs, one-to-one DMs, or both when omitted. */
+        group?: boolean;
+        /** Maximum messages to return after filtering; defaults to 30. */
+        max?: number;
+        /** Number of raw direct messages to scan; defaults to 200. */
+        fetch?: number;
+        /** Configured Zulip instance name. */
+        instance?: string;
+    }) {
     const r = await ctx.fns.zulip.api({
         instance: opts?.instance,
         path: "/messages",
@@ -40,7 +55,9 @@ export default async function (ctx: Context, _session: Session | null, opts?: {
         });
     }
     if (opts?.group !== undefined) {
-        // display_recipient includes self → 1:1 has 2 entries, group has 3+
+        /**
+ * display_recipient includes self → 1:1 has 2 entries, group has 3+
+ */
         msgs = msgs.filter(m => (m.display_recipient?.length ?? 0) >= 3 === opts.group);
     }
 

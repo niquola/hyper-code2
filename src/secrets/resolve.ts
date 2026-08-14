@@ -3,6 +3,10 @@
 //   op://vault/item/field              — 1Password CLI
 // Literal values remain supported for backwards-compatible settings.
 // Sensitive values must never be logged or included in errors.
+/**
+ * Resolves an environment, 1Password, or legacy literal secret reference.
+ * @param opts.ref Secret reference to resolve, or an empty value for no secret.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,

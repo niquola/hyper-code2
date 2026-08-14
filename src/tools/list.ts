@@ -6,10 +6,11 @@
 // `write`), and a collision disambiguates both sides to "<module>_<name>".
 // Sorted by key, so the wire name a tool gets never depends on scan order —
 // and neither does the prefix cache that has those definitions baked into it.
+/** Lists registered model-callable tools. */
 export default function (
     ctx: Context,
     _session: Session | null,
-    _opts: { module?: string } = {},
+    _opts: { /** Value for module. */ module?: string } = {},
 ): any[] {
     const registry: Map<string, any> = (ctx.state as any).tools?.registry ?? new Map();
     const all = [...registry.values()].sort((a, b) => String(a.key).localeCompare(String(b.key)));

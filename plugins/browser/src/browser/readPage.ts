@@ -1,8 +1,19 @@
 // Read one page in a background Chrome session as compact structured text.
+/**
+ * Navigates to a URL and returns cleaned page content.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { url: string; session?: string; maxChars?: number; settleMs?: number },
+    opts: {
+  /** Absolute URL to read. */
+  url: string;
+  /** Logical browser session name. */
+  session?: string;
+  /** Maximum number of page characters to return. */
+  maxChars?: number;
+  /** Additional delay after navigation in milliseconds. */
+  settleMs?: number },
 ) {
     const url = String(opts.url ?? "").trim();
     if (!/^https?:\/\//i.test(url)) throw new Error("browser.readPage: absolute http(s) url is required");

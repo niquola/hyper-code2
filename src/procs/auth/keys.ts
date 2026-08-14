@@ -9,6 +9,9 @@ import { chmod, mkdir, writeFile } from "node:fs/promises";
 
 const ALG = { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" } as const;
 
+/**
+ * Perform keys for the auth subsystem.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<{ privateKey: CryptoKey; publicKey: CryptoKey; jwk: Awaited<ReturnType<typeof crypto.subtle.exportKey>> }> {
     const cached = (ctx.state.procs.auth ??= {}).keys;
     if (cached) return cached;

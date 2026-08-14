@@ -11,10 +11,13 @@
 // So a dangling call gets a synthetic answer saying what actually happened. The
 // history stays honest (the call really was made, its outcome really is
 // unknown) and the conversation continues.
+/** Repair tool pairs for the runtime. */
 export default function (
     _ctx: Context,
     _session: Session | null,
-    opts: { messages: any[] },
+    opts: {
+        /** Messages to persist or process. */
+    messages: any[] },
 ): { messages: any[]; repaired: { id: string; name: string; afterIdx: number }[] } {
     const messages = opts.messages ?? [];
     const answered = new Set(

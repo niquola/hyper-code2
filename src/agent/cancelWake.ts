@@ -1,4 +1,8 @@
-export default async function (ctx: Context, _session: Session | null, opts: { id: string }): Promise<{ cancelled: boolean }> {
+/** Cancel wake for the runtime.  * @param opts.id Target agent identifier.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string }): Promise<{ cancelled: boolean }> {
     const result = await ctx.fns.procs.db.run({
         sql: "UPDATE agents SET wake_at = NULL, wake_reason = NULL, updated_at = ? WHERE id = ? AND wake_at IS NOT NULL",
         params: [Date.now(), opts.id],

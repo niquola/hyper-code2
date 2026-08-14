@@ -3,6 +3,10 @@ import { dirname } from "node:path";
 
 // The encryption key never lives in Postgres. Production can inject a stable
 // base64 key; local installs get a permission-restricted key file.
+/** Performs the llm.oauthEncryptionKey runtime operation. */
+/**
+ * Load and validate the OAuth credential encryption key.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<Uint8Array> {
     const configured = ctx.env.HYPER_OAUTH_ENCRYPTION_KEY;
     if (configured) return decodeKey(configured);

@@ -1,5 +1,13 @@
 // gmail.labelCreate — create a Gmail label (idempotent: returns existing if same name). LIVE change.
 // Nested labels use "/" (e.g. "Junk/Archived"). ctx.fns.gmail.labelCreate({ account, name: "Junk/Archived" })
+/**
+ * Create a Gmail label.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ * @param opts.name - Resource name.
+ * @param opts.hide - When true, hide the label from Gmail message and label lists.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: {
     account?: string; name: string; hide?: boolean;    // hide = keep out of message list / label list
 }) {

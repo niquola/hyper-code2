@@ -3,6 +3,15 @@
 // page.fill/page.state drive it, and fires a real `change` so a self-updating
 // form (skip logic, live score) recomputes on pick. No client JS. An empty
 // first option is "no answer" — so a required-but-untouched select still fails.
+/**
+ * Select the ui subsystem operation.
+ * @param opts.name The target name.
+ * @param opts.value The value to apply.
+ * @param opts.options The options value used by the operation.
+ * @param opts.placeholder The placeholder value used by the operation.
+ * @param opts.class CSS classes to apply.
+ * @param opts.ariaLabel The aria label value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     name: string; value?: string; options: Array<{ value: string; label: string }>; placeholder?: string; class?: string; ariaLabel?: string;
 }): string {

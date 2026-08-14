@@ -1,5 +1,9 @@
 // The trail to where you are — patients / Anna Ivanova / PHQ-9. Each crumb but
 // the last is a link; the last is where you are.
+/**
+ * Perform breadcrumb for the ui subsystem.
+ * @param opts.items The items value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {items: Array<{ label: string; href?: string }> }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const last = opts.items.length - 1;

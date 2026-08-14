@@ -1,9 +1,16 @@
+/** Update plan for the runtime. */
 export default async function (
     ctx: Context,
     session: Session | null,
     opts: {
+
+        /** Live agent instance to operate on. */
         agent?: types.agent.Agent;
+
+        /** Human-readable title. */
         title?: string;
+
+        /** Ordered plan tasks. */
         tasks: Array<{ id: string; title: string; instructions?: string }>;
     },
 ): Promise<{ ok: true; plan: any }> {

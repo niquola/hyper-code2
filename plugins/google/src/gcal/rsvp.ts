@@ -1,6 +1,15 @@
 // Respond to an event invite (WRITE — sets your attendee responseStatus).
 // ctx.fns.gcal.rsvp({ id, status, calendarId?, account? })
 //   status : "accepted" | "declined" | "tentative"
+/**
+ * Respond to a Google Calendar invitation.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.id - Resource identifier.
+ * @param opts.status - Task status.
+ * @param opts.calendarId - Calendar identifier; defaults to the primary calendar where supported.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

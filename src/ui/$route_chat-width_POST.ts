@@ -1,5 +1,7 @@
 // POST /ui/chat-width — persist the user's preferred chat width in server kv.
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
+/** Handles the HTTP route chat-width POST endpoint. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Incoming HTTP request. */ req: Request }) {
     const body: any = await opts.req.json().catch(() => ({}));
     const width = Math.round(Number(body.width));
     if (!Number.isFinite(width) || width < 280 || width > 3000) return new Response("invalid width", { status: 400 });

@@ -1,6 +1,14 @@
 // Ask the human for a transient secret in the browser UI. The value travels
 // directly from a popup form to an in-memory Promise: never through the LLM,
 // transcript, tool arguments/results, scratchpad, DB, logs, or filesystem.
+/**
+ * Prompts the browser user for a transient secret without persisting or exposing it to the model.
+ * @param opts.title Heading displayed by the secret prompt.
+ * @param opts.message Optional explanatory text displayed with the prompt.
+ * @param opts.kind Input treatment to use for an OTP, password, or plain text value.
+ * @param opts.timeoutMs Maximum time to wait for an answer in milliseconds.
+ * @param opts.maxlength Maximum number of characters accepted by the input.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,

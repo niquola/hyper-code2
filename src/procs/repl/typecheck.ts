@@ -3,6 +3,11 @@
 // first call builds the project graph, subsequent virtual-file revisions reuse it.
 import { join } from "node:path";
 
+/**
+ * Type-check typecheck for the repl subsystem.
+ * @param opts.code The code to process.
+ * @param opts.bindings The bindings value used by the operation.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,

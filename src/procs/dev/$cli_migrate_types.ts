@@ -4,6 +4,10 @@
 import { rename } from "node:fs/promises";
 import { dirname, basename, resolve } from "node:path";
 
+/**
+ * Run the cli migrate types command-line operation.
+ * @param opts.dry The dry value used by the operation.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { dry?: boolean }): Promise<{ renamed: string[] }> {
     const renamed: string[] = [];
     const entries = await ctx.fns.procs.project.scan({});

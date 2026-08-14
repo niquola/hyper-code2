@@ -8,6 +8,10 @@
 //   ctx.fns.procs.generate.repl({ force: true }) → overwrite an existing one
 import { chmod } from "node:fs/promises";
 
+/**
+ * Perform repl for the generate subsystem.
+ * @param opts.force Whether to bypass normal safety checks.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: { force?: boolean }): Promise<{ written: string | null }> {
     const path = `${ctx.fns.procs.project.projectRoot({})}/script/repl.ts`;
     if (!opts?.force && await Bun.file(path).exists()) return { written: null };

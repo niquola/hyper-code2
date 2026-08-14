@@ -1,5 +1,8 @@
 import { makeRequestCtx } from "../../$main";
 
+/**
+ * Start the http subsystem.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     const port = (ctx.fns.procs.config.resolve({ module: "procs/http" }) as ConfigOf<typeof import("./$config").default>).port;
     const runtimeDir = ctx.fns.procs.project.runtimeDir({});

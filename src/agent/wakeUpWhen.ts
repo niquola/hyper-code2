@@ -1,7 +1,26 @@
+/** Wake up when for the runtime.  * @param opts.id Target agent identifier.
+ * @param opts.predicate Conditional wake predicate type.
+ * @param opts.opts Predicate-specific options.
+ * @param opts.reason Human-readable wake-up reason.
+ * @param opts.everyMs Polling interval in milliseconds.
+ * @param opts.timeoutMs Maximum wait or watch lifetime in milliseconds.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; predicate: "file.exists" | "db.rows" | "http.ok" | "runtime.fn"; opts: Record<string, any>; reason: string; everyMs?: number; timeoutMs?: number },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Predicate used to decide when the agent should wake. */
+    predicate: "file.exists" | "db.rows" | "http.ok" | "runtime.fn";
+        /** Options forwarded to the selected operation. */
+    opts: Record<string, any>;
+        /** Human-readable reason for the operation. */
+    reason: string;
+        /** Polling interval in milliseconds. */
+    everyMs?: number;
+        /** Maximum wait duration in milliseconds. */
+    timeoutMs?: number },
 ): Promise<{ watchId: string; nextCheckAt: number; timeoutAt: number }> {
     const agentRow = ((await ctx.fns.procs.db.select({ sql: "SELECT id FROM agents WHERE id = ? AND archived_at IS NULL", params: [opts.id] })) as any[])[0];
     if (!agentRow) throw new Error(`agent not found: ${opts.id}`);

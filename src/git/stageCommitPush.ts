@@ -1,7 +1,8 @@
+/** Stages changes, commits them, and optionally pushes. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { paths: string[]; message: string; dir?: string; push?: boolean; allowEmpty?: boolean; remote?: string; branch?: string },
+    opts: { /** Paths to stage. */ paths: string[]; /** Commit message. */ message: string; /** Git working directory. */ dir?: string; /** Whether to push after committing. */ push?: boolean; /** Whether an empty commit is allowed. */ allowEmpty?: boolean; /** Remote repository name. */ remote?: string; /** Remote branch name. */ branch?: string },
 ) {
     const staged = await ctx.fns.git.stage({ paths: opts.paths, dir: opts.dir });
     const committed = await ctx.fns.git.commit({ message: opts.message, dir: opts.dir, allowEmpty: opts.allowEmpty });

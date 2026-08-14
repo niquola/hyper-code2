@@ -2,6 +2,11 @@
 // which also keeps the name free for the type `db/Query.ts`.) params: array,
 // bound positionally. `?` placeholders are translated to Postgres $1..$n by
 // db.toPg, so call sites keep the portable `?` style.
+/**
+ * Select the db subsystem operation.
+ * @param opts.sql The SQL statement to execute.
+ * @param opts.params Values bound to query placeholders.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { sql: string; params?: any }): Promise<any[]> {
     const query = async () => {
         const sql = await ctx.fns.procs.db.conn();

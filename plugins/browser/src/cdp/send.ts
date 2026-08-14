@@ -1,8 +1,19 @@
 // Send one command over a named CDP page session with a bounded wait.
+/**
+ * Sends a command through a named Chrome DevTools Protocol session.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { method: string; params?: Record<string, any>; session?: string; timeoutMs?: number },
+    opts: {
+  /** CDP protocol method name. */
+  method: string;
+  /** Optional parameters for the CDP method. */
+  params?: Record<string, any>;
+  /** Logical browser session name. */
+  session?: string;
+  /** Maximum command duration in milliseconds. */
+  timeoutMs?: number },
 ): Promise<any> {
     const name = String(opts.session || "main");
     let handle = await ctx.fns.cdp.session({ name });

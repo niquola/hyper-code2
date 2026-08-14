@@ -1,3 +1,7 @@
+/**
+ * Returns a compact structural description of a value.
+ * @param opts.target Value to inspect.
+ */
 export default async function (_ctx: Context, _session: Session | null, opts: { target?: any } = {}) {
     const target = opts.target;
     return {

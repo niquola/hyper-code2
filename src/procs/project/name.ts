@@ -15,6 +15,9 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 
+/**
+ * Perform name for the project subsystem.
+ */
 export default function (ctx: Context, _session: Session | null, _opts?: {}): string {
     const workdir = ctx.fns.procs.project.workdir({});
     const declared = declaredIn(`${workdir}/package.json`) ?? declaredIn(`${workdir}/workspace.json`);

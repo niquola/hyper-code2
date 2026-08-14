@@ -1,4 +1,8 @@
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
+/** Handles the new post HTTP route.  * @param opts.req Incoming HTTP request.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Incoming HTTP request. */
+req: Request }) {
     const form = await opts.req.formData();
     const values: Record<string, any> = {};
     for (const [name, value] of form) {

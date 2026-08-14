@@ -1,3 +1,4 @@
+/** Rolls cryptographically random dice. */
 export default async function (
   _ctx: Context,
   _session: Session | null,

@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts: { id: string; events: any[]; ts?: number }): Promise<{ count: number }> {
+/** Replace events for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string;
+        /** Events to persist or render. */
+events: any[];
+        /** Ts used by the operation. */
+ts?: number }): Promise<{ count: number }> {
     const { id, events } = opts;
     const ts = opts.ts ?? Date.now();
     await ctx.fns.procs.db.run({ sql: 'DELETE FROM events WHERE agent_id = ?', params: [id] });

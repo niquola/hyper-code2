@@ -1,5 +1,14 @@
 // List messages by Gmail search query (metadata only, batched ×10).
 // ctx.fns.gmail.list({ query: "is:unread", max: 10 })
+/**
+ * List Gmail messages matching a search query.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.query - Search query.
+ * @param opts.q - Alias for `query`.
+ * @param opts.max - Maximum number of results to return.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts?: { query?: string; q?: string; max?: number; account?: string }) {
     const q = encodeURIComponent(opts?.query ?? opts?.q ?? "is:unread");
     const list = await ctx.fns.gmail.api({ path: `/messages?q=${q}&maxResults=${opts?.max ?? 20}`, account: opts?.account });

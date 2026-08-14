@@ -1,4 +1,10 @@
 // GET /nav/items?q=… — compact overview/search results for the global menu.
+/**
+ * Renders navigation menu items, optionally filtered by a search query.
+ * @param opts.req Incoming HTTP request containing the optional `q` query.
+ * @param opts.params Route parameters supplied by the HTTP runtime.
+ */
+
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
     const q = new URL(opts.req.url).searchParams.get("q")?.trim() ?? "";
     const items = await ctx.fns.nav.items({ q, limit: q ? 40 : 500 });

@@ -4,6 +4,17 @@
 //   db.sql({ select: ["id","title"], from: "todos",
 //            where: { done: 0, id: [1,2,3] }, orderBy: "id desc", limit: 10 })
 //   → { sql: "SELECT id, title FROM todos WHERE done = ? AND id IN (?, ?, ?) ORDER BY id desc LIMIT 10", params: [0,1,2,3] }
+/**
+ * Compiles the SELECT query DSL into injection-safe SQL and positional parameters.
+ * This function is pure and does not access the database.
+ * @param q Query describing the source table, selected columns, filters, ordering, and pagination.
+ * @param q.select Columns to select, or `*` for all columns.
+ * @param q.from Table to select from.
+ * @param q.where Column filters to apply.
+ * @param q.orderBy SQL ordering expression.
+ * @param q.limit Maximum number of rows to return.
+ * @param q.offset Number of rows to skip.
+ */
 export default function (_ctx: Context, _session: Session | null, q: types.procs.db.Query): { sql: string; params: any[] } {
     const cols = !q.select || q.select === "*" ? "*" : (Array.isArray(q.select) ? q.select.join(", ") : q.select);
     const params: any[] = [];

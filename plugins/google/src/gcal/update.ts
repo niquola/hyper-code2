@@ -16,6 +16,19 @@ function parseDateTime(str: string): { dateTime?: string; date?: string; timeZon
     return { dateTime: d.toISOString(), timeZone: tz };
 }
 
+/**
+ * Update a Google Calendar event.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.id - Resource identifier.
+ * @param opts.summary - Event or document summary/title.
+ * @param opts.start - Event start date/time.
+ * @param opts.end - Event end date/time.
+ * @param opts.description - Event description.
+ * @param opts.location - Event location.
+ * @param opts.calendarId - Calendar identifier; defaults to the primary calendar where supported.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

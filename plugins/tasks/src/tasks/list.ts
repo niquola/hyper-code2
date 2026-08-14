@@ -1,7 +1,12 @@
+/**
+ * Lists tasks, optionally filtered by status.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { status?: "todo" | "running" | "done" } = {},
+    opts: {
+  /** Optional task status filter. */
+  status?: "todo" | "running" | "done" } = {},
 ): Promise<types.tasks.Task[]> {
     return await ctx.fns.procs.db.select({
         sql: `SELECT id::text, description, status, agent_id AS "agentId",

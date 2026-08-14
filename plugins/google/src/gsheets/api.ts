@@ -4,6 +4,16 @@
 // Pass `url` (absolute) to hit any host, or `path` to append to the Sheets v4 base.
 //   ctx.fns.gsheets.api({ path: "/spreadsheets/<id>" })
 //   ctx.fns.gsheets.api({ url: "https://www.googleapis.com/drive/v3/files?..." })
+/**
+ * Call an arbitrary Google Sheets API endpoint.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.url - URL used by the operation.
+ * @param opts.path - API-relative path or local destination path, as applicable.
+ * @param opts.method - HTTP method; defaults to the operation-specific method.
+ * @param opts.body - Request body or message body, as applicable.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

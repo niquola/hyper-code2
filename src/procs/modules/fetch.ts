@@ -5,6 +5,10 @@
 // project's, so it stays updatable without ever entering the user's commits: a
 // fresh checkout gets its modules back from the manifest alone.
 import { appendFile, readFile } from "node:fs/promises";
+/**
+ * Fetch the modules subsystem operation.
+ * @param opts.name The target name.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: { name?: string }) {
     const workdir = ctx.fns.procs.project.workdir({});
     const declared = await ctx.fns.procs.modules.readDeclared({ workdir });

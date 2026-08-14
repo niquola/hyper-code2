@@ -1,3 +1,6 @@
+/**
+ * Lists open browser tabs and their target metadata.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     const browserUrl = String(ctx.env.CDP_BROWSER_URL || "http://127.0.0.1:9222").replace(/\/$/, "");
     const response = await fetch(`${browserUrl}/json`, { signal: AbortSignal.timeout(3000) });

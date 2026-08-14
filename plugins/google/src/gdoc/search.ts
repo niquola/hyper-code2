@@ -5,6 +5,15 @@
 // ctx.fns.gdoc.search({ query: "budget" })                 // docs named *budget*
 // ctx.fns.gdoc.search({ query: "report", docsOnly: false }) // any file named *report*
 // ctx.fns.gdoc.search({ query: "mimeType='application/pdf'", docsOnly: false })
+/**
+ * Search Google Drive for documents.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.query - Search query.
+ * @param opts.max - Maximum number of results to return.
+ * @param opts.docsOnly - Whether to restrict Drive search results to Google Docs.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

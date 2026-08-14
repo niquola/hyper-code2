@@ -1,3 +1,7 @@
+/** Performs the ui.newAgentPopup runtime operation. */
+/**
+ * Render the new-agent popup.
+ */
 export default async function (ctx: Context, session: Session | null, _opts: {}): Promise<Response> {
     const url = new URL(session?.req?.url ?? 'http://localhost/');
     url.pathname = '/agent/new';

@@ -1,6 +1,10 @@
 // Middleware whose path prefix matches `pathname`, in run order (most general
 // first). A prefix segment `:x` is a one-segment wildcard. Used by http/$start
 // and http/dispatch to run middleware before the route handler.
+/**
+ * Perform middleware for the http subsystem.
+ * @param opts.pathname The pathname value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { pathname: string }) {
     const all = ctx.state.procs?.http.middleware ?? [];
     const path = opts.pathname.split('/').filter(Boolean);

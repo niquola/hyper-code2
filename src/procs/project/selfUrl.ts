@@ -10,6 +10,10 @@
 //
 // Anything else — an absolute url, a path that is not the app's own — is left
 // exactly as it is.
+/**
+ * Perform self url for the project subsystem.
+ * @param opts.path The filesystem or route path.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { path?: string }): string | undefined {
     const ns = (ctx as any).namespace;
     if (!opts.path || !ns || ns === "app" || !opts.path.startsWith("/app/")) return opts.path;

@@ -1,7 +1,14 @@
+/**
+ * Extracts visible text from the page or a selected element.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { session?: string; selector?: string } = {},
+    opts: {
+  /** Logical browser session name. */
+  session?: string;
+  /** Optional CSS selector limiting text extraction. */
+  selector?: string } = {},
 ): Promise<string> {
     const selector = opts.selector ? JSON.stringify(opts.selector) : null;
     const expression = selector

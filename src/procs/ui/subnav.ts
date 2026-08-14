@@ -1,5 +1,12 @@
 // A sub-navigation — a list of links inside a page (the catalog's groups, a
 // settings menu). Vertical by default; each item is htmx so it swaps the pane.
+/**
+ * Perform subnav for the ui subsystem.
+ * @param opts.items The items value used by the operation.
+ * @param opts.current The current value used by the operation.
+ * @param opts.direction The direction value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {items: Array<{ label: string; href: string; id?: string; icon?: string }>; current?: string; direction?: "col" | "row"; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const wrap = opts.direction === "row" ? "flex items-center gap-1" : "space-y-0.5";

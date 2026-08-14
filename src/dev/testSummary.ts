@@ -1,3 +1,9 @@
+/**
+ * Summarizes a prior development test run.
+ * @param opts.run Run selector or log descriptor.
+ * @param opts.path Log path.
+ * @param opts.agent Agent whose scratchpad stores or locates the run.
+ */
 export default async function (_ctx: Context, _session: Session | null, opts: { run: 'last' | { path: string }; agent?: any }) {
     const run = opts.run;
     const meta = run === 'last' ? opts.agent?.scratchpad?.dev?.lastTestRun : null;

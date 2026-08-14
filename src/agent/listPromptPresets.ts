@@ -39,6 +39,7 @@ const PRESETS: Record<PromptPresetId, { label: string; text: string }> = {
   },
 };
 
+/** List prompt presets for the runtime. */
 export default async function (_ctx: Context, _session: Session | null, _opts?: {}) {
   return PRESETS;
 }

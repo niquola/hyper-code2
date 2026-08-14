@@ -1,13 +1,19 @@
 // Run a shell snippet in the agent's workspace. Secret references are resolved
 // into child-process environment variables and redacted from captured output.
+/** Runs a shell command in the agent workspace. */
 export default async function (
     ctx: Context,
     _session: Session | null,
     opts: {
+        /** Shell command to execute. */
         command: string;
+        /** Working directory relative to the workspace. */
         cwd?: string;
+        /** Additional environment variables. */
         env?: Record<string, string>;
+        /** Secret references exposed as environment variables. */
         secrets?: Record<string, string>;
+        /** Timeout in seconds. */
         timeout?: number;
     },
 ): Promise<{ output: string; isError: boolean }> {

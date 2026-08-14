@@ -2,7 +2,9 @@
 // ({ type, default, env?, title?, options?, … }). Collected into
 // ctx.state.settings.registry keyed "<module>.<key>", the map every
 // ctx.fns.settings.* resolver reads.
-export default async function (ctx: Context, _session: Session | null, opts: { entries: any[] }): Promise<void> {
+/** Loads setting runtime declarations. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Entries to load or persist. */ entries: any[] }): Promise<void> {
     const st = (((ctx.state as any).settings ??= {}));
     const registry: Map<string, any> = (st.registry ??= new Map());
     for (const e of opts.entries) {

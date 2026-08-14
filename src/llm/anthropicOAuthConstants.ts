@@ -1,3 +1,7 @@
+/** Performs the llm.anthropicOAuthConstants runtime operation. */
+/**
+ * Return constants used by the Anthropic OAuth flow.
+ */
 export default function (ctx: Context, _session: Session | null, _opts?: {}) {
     return {
         clientId: ctx.env.ANTHROPIC_OAUTH_CLIENT_ID ?? "9d1c250a-e61b-44d9-88ed-5944d1962f5e",

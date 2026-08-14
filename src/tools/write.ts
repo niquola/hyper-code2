@@ -4,10 +4,11 @@
 // The parse check is feedback, not a gate: the write stands either way, but a
 // code file that does not even parse is a mistake the model can fix NOW —
 // usually prose glued onto the end of the body.
+/** Implements the workspace file-writing tool. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { path: string; content: string },
+    opts: { /** Workspace-relative path. */ path: string; /** Content to write. */ content: string },
 ): Promise<string> {
     if (!opts.path.trim() || opts.path.includes("\u0000")) throw new Error("write needs a valid file path");
     await ctx.fns.files.write({ path: opts.path, content: opts.content });

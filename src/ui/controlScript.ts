@@ -1,3 +1,7 @@
+/** Performs the ui.controlScript runtime operation. */
+/**
+ * Return the browser control script markup.
+ */
 export default async function (_ctx: Context, _session: Session | null, _opts?: {}) {
     return [
         "(() => {",

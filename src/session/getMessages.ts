@@ -1,7 +1,12 @@
+/** Get messages for the runtime. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; includeExcluded?: boolean },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Whether to include entries excluded from the processing cursor. */
+    includeExcluded?: boolean },
 ): Promise<any[]> {
     const { id } = opts;
     const includeExcluded = opts.includeExcluded === true;

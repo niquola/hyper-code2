@@ -8,6 +8,9 @@
 // why. Only our own number is removed: a run that started after us owns the file.
 import { unlink } from "node:fs/promises";
 
+/**
+ * Stop the http subsystem and release its resources.
+ */
 export default async function (ctx: Context, _session: Session | null, _state?: any) {
     const s = ctx.state.procs?.http.server as any;
     if (s?.server?.stop) { s.server.stop(true); ctx.fns.procs.log.info({ event: "http.stopped", msg: "server stopped" }); }

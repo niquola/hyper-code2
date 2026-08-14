@@ -1,9 +1,16 @@
 // Human-readable edit preview for the tool dialog. The JSON envelope is useful
 // to a provider, not to a person: show each operation as a small diff card.
+/** Render edit args for the runtime.  * @param opts.path File path to read or render.
+ * @param opts.edits File edit operations to render.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { path?: string; edits?: types.tools.EditOp[] },
+    opts: {
+        /** Path to the target resource. */
+    path?: string;
+        /** Edits used by the operation. */
+    edits?: types.tools.EditOp[] },
 ): Promise<string> {
     const esc = (value: any) => ctx.fns.procs.ui.escape({ text: String(value ?? "") });
     const path = String(opts.path ?? "");

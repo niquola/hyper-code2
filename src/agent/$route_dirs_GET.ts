@@ -5,7 +5,11 @@
 import { readdir } from "node:fs/promises";
 import { dirname, basename } from "node:path";
 
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
+/** Handles the dirs get HTTP route.  * @param opts.req Incoming HTTP request.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Incoming HTTP request. */
+req: Request }) {
     const esc = (s: any) => String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]!));
     let q = String(new URL(opts.req.url).searchParams.get("q") ?? "").trim();
     if (!q) q = (ctx.env.HOME ?? "/") + "/";

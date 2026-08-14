@@ -9,6 +9,7 @@ import { resolve } from "node:path";
 // and write anywhere the process has permission, including ../ siblings and
 // absolute paths like /tmp or /Users/.../.claude. This deliberately
 // de-sandboxes the agent's file tools; only run agents you trust on this build.
-export default function (_ctx: Context, session: Session | null, opts: { path: string }): string {
+/** Resolves a path while preventing workspace traversal. */
+export default function (_ctx: Context, session: Session | null, opts: { /** Workspace-relative path. */ path: string }): string {
     return resolve(session?.agent?.workspaceDir ?? process.cwd(), opts.path || ".");
 }

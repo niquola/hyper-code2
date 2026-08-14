@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts: { id: string; event: any; ts?: number }): Promise<{ idx: number }> {
+/** Append event for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string;
+        /** Event to persist or render. */
+event: any;
+        /** Ts used by the operation. */
+ts?: number }): Promise<{ idx: number }> {
     const { id, event } = opts;
     const ts = opts.ts ?? Date.now();
     // idx is allocated IN the insert (one statement, RETURNING) and retried on

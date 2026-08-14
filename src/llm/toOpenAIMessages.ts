@@ -9,7 +9,13 @@
 // An assistant message that only called tools has no content — OpenAI accepts
 // null there, and some proxies reject "" — so the field is omitted rather than
 // sent empty.
-export default function (ctx: Context, _session: Session | null, opts: { messages: any[] }): any[] {
+/** Performs the llm.toOpenAIMessages runtime operation. */
+/**
+ * Convert our canonical transcript into OpenAI chat-completions messages[].
+ * @param opts.messages Conversation messages to convert.
+ */
+export default function (ctx: Context, _session: Session | null, opts: {
+        /** Conversation messages to convert. */ messages: any[] }): any[] {
     const out: any[] = [];
 
     for (const m of opts.messages) {

@@ -16,6 +16,12 @@ function formatArg(a: any): string {
     return typeof a === 'string' ? a : Bun.inspect(a);
 }
 
+/**
+ * Perform eval for the repl subsystem.
+ * @param opts.code The code to process.
+ * @param opts.bindings The bindings value used by the operation.
+ * @param opts.typecheck The typecheck value used by the operation.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

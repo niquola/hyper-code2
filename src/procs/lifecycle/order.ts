@@ -2,6 +2,9 @@
 // — its keys are the system modules; we start them in key order with "http"
 // last (so the server only accepts traffic after everything else initialized).
 // If proc.prod is absent, every module that has a $start.ts (http last).
+/**
+ * Perform order for the lifecycle subsystem.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string[]> {
     const projectRoot = ctx.fns.procs.project.projectRoot({});
     let mods: string[];

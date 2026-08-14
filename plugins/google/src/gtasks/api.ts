@@ -1,5 +1,14 @@
 // Generic Google Tasks API call: ctx.fns.gtasks.api({ path: "/users/@me/lists" })
 // Base: https://tasks.googleapis.com/tasks/v1
+/**
+ * Call an arbitrary Google Tasks API endpoint.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.path - API-relative path or local destination path, as applicable.
+ * @param opts.method - HTTP method; defaults to the operation-specific method.
+ * @param opts.body - Request body or message body, as applicable.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { path: string; method?: string; body?: object; account?: string }) {
     const { access_token } = await ctx.fns.google.token({ account: opts.account });
     const res = await fetch(`https://tasks.googleapis.com/tasks/v1${opts.path}`, {

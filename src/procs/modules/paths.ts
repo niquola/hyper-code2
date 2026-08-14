@@ -45,6 +45,10 @@ const PLUGIN_DEFAULTS: string[] = [];
 // belong to whoever wrote them. What the host itself ships is the rest.
 export type SearchPath = { dir: string; prefixed: boolean; plugin: boolean };
 
+/**
+ * Resolves existing, deduplicated module and plugin search paths.
+ * Honors `PROCS_PATH` and `PROCS_PLUGINS`, then package configuration and defaults.
+ */
 export default async function (ctx: Context, session: Session | null, _opts?: {}): Promise<SearchPath[]> {
     const root = projectRoot(ctx, session, {});
     const project = workdir(ctx, session, {});

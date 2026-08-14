@@ -6,10 +6,20 @@ function compactResult(value: any, maxChars = 16_000): any {
     return { truncated: true, originalChars: json.length, preview: json.slice(0, maxChars) };
 }
 
+/** Deliver watch for the runtime.  * @param opts.watchId Conditional watch identifier.
+ * @param opts.now Timestamp used as the current time.
+ * @param opts.claimed Whether the watch was already claimed.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { watchId: string; now?: number; claimed?: boolean },
+    opts: {
+        /** Watch identifier. */
+    watchId: string;
+        /** Now used by the operation. */
+    now?: number;
+        /** Claimed used by the operation. */
+    claimed?: boolean },
 ): Promise<{ status: "ready" | "waiting" | "timeout" | "missing"; result?: any }> {
     const now = opts.now ?? Date.now();
     let row: any;

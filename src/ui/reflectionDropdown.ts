@@ -5,7 +5,13 @@
 // taking the whole agent page down with `.map is not a function`.
 const list = (v: any): any[] => Array.isArray(v) ? v : (typeof v === "string" && v.trim() ? [v.trim()] : []);
 
-export default function (ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }): string {
+/** Performs the ui.reflectionDropdown runtime operation. */
+/**
+ * The reflection state is written by a model, and rows written before any.
+ * @param opts.agent Agent associated with the operation.
+ */
+export default function (ctx: Context, _session: Session | null, opts: {
+        /** Agent associated with the operation. */ agent: types.agent.Agent }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const agent = opts.agent;
     const reflection = agent.reflection?.state ?? null;

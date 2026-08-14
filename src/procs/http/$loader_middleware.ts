@@ -3,6 +3,10 @@
 // last, which is why this loader takes them all at once and sorts.
 import { bindSelf } from "../boot/load";
 
+/**
+ * Load loader middleware declarations into the runtime.
+ * @param opts.entries The loader entries to register.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { entries: any[] }): Promise<void> {
     const list = (ctx.state.procs.http.middleware ??= []);
     for (const entry of opts.entries) {

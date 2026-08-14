@@ -6,6 +6,15 @@
 function header(hs: any[], name: string): string | undefined {
     return hs?.find(h => h.name?.toLowerCase() === name.toLowerCase())?.value;
 }
+/**
+ * Inspect or apply a sender unsubscribe action.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ * @param opts.id - Resource identifier.
+ * @param opts.from - Sender address or filter criterion.
+ * @param opts.apply - When true, perform the unsubscribe action rather than only inspecting it.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: {
     account?: string; id?: string; from?: string; apply?: boolean;
 }) {

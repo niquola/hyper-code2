@@ -1,3 +1,13 @@
+/**
+ * Renders the task-list page.
+ *
+ * @param ctx - Runtime context used to query tasks and escape HTML.
+ * @param _session - Unused request session.
+ * @param opts - HTTP route options.
+ * @param opts.req - Incoming request whose query selects open or closed tasks.
+ * @param opts.params - Route parameters (unused by this collection route).
+ * @returns The rendered task-list HTML response.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
     const tasks = await ctx.fns.tasks.list({});
     const esc = (value: unknown) => ctx.fns.procs.ui.escape({ text: String(value ?? '') });
@@ -64,6 +74,12 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     };
 }
 
+/**
+ * Formats a timestamp as a compact age relative to now.
+ *
+ * @param ts - Unix timestamp in milliseconds.
+ * @returns Human-readable relative time.
+ */
 function relativeTime(ts: number): string {
     const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000));
     if (seconds < 60) return 'just now';

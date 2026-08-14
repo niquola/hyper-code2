@@ -1,7 +1,20 @@
+/** Set goal for the runtime.  * @param opts.id Target agent identifier.
+ * @param opts.statement Goal statement; empty clears the goal.
+ * @param opts.iterations Maximum goal-check iterations.
+ * @param opts.enabled Whether the goal is enabled.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; statement: string; iterations?: number; enabled?: boolean },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Statement used by the operation. */
+    statement: string;
+        /** Iterations used by the operation. */
+    iterations?: number;
+        /** Whether the feature is enabled. */
+    enabled?: boolean },
 ): Promise<any | null> {
     const statement = String(opts.statement ?? "").trim().slice(0, 2000);
     const iterations = Math.max(1, Math.min(10, Math.floor(Number(opts.iterations ?? 3) || 3)));

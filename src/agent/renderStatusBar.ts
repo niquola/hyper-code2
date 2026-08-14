@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts: { agentId: string; initialUsage?: any }): Promise<string> {
+/** Render status bar for the runtime.  * @param opts.agentId Target agent identifier.
+ * @param opts.initialUsage Initial token usage shown in the status bar.
+*/
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent id used by the operation. */
+agentId: string;
+        /** Initial usage used by the operation. */
+initialUsage?: any }): Promise<string> {
     const { agentId, initialUsage } = opts;
     let usage = initialUsage;
     const now = Date.now();

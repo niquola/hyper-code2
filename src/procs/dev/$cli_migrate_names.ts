@@ -14,6 +14,11 @@
 // Dry by default — it prints what it would do. `--write` applies it.
 import { Glob } from "bun";
 
+/**
+ * Run the cli migrate names command-line operation.
+ * @param opts.write The write value used by the operation.
+ * @param opts.dir The directory to inspect.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { write?: boolean; dir?: string }): Promise<{ files: string[]; calls: number }> {
     const root = opts.dir ?? ctx.fns.procs.project.workdir({});
     const registry: any = ctx.state.registry;

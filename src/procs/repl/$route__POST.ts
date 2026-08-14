@@ -10,6 +10,10 @@
 //   loopback      the socket peer must be local and not forwarded, so nothing
 //                 reaches this from the network even with a leaked token.
 //   production    NODE_ENV=production → 403 even from localhost
+/**
+ * Handle the POST request for the repl route.
+ * @param opts.req The incoming HTTP request.
+ */
 export default async function (ctx: Context, session: Session, opts: { req: Request }) {
     const env = ctx.env ?? {};
     if (env.NODE_ENV === "production") return new Response("repl disabled", { status: 403 });

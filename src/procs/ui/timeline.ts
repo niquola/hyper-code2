@@ -7,6 +7,11 @@ const TONE = {
     warning: "bg-warning", danger: "bg-error",
 } as const;
 
+/**
+ * Perform timeline for the ui subsystem.
+ * @param opts.items The items value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {items: Array<{ title: string; meta?: string; body?: string; tone?: keyof typeof TONE; icon?: string }>; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     return `<ol class="border-base-300 relative ml-2 border-l ${opts.class ?? ""}" ${ctx.fns.procs.ui.attr({ role: "timeline" })}>

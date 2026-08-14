@@ -11,6 +11,12 @@
 // another after a hot reload.
 import { mkdir } from "node:fs/promises";
 
+/**
+ * Build the styles subsystem operation.
+ * @param opts.abs The abs value used by the operation.
+ * @param opts.key The lookup key.
+ * @param opts.force Whether to bypass normal safety checks.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { abs: string; key: string; force?: boolean }): Promise<string> {
     const repo = ctx.fns.procs.project.projectRoot({});
     // What this run already compiled. Not a file check: the sheet is generated

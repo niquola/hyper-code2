@@ -4,6 +4,16 @@
 // workspace points at a cell the same way it does in a box of rows. `href` makes
 // the whole row a link; a column's `render` is for a cell that is a badge or a
 // link rather than text.
+/**
+ * Perform table for the ui subsystem.
+ * @param opts.columns The column definitions.
+ * @param opts.rows The rows to process.
+ * @param opts.entity The entity value used by the operation.
+ * @param opts.rowId The row id value used by the operation.
+ * @param opts.rowHref The row href value used by the operation.
+ * @param opts.empty The empty value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {
     columns: Array<{ key: string; label: string; class?: string; render?: (row: any) => string }>;
     rows: any[]; entity?: string; rowId?: string; rowHref?: (row: any) => string;

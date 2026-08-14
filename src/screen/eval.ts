@@ -7,6 +7,11 @@
 // send again once if the first attempt goes unanswered: a tab that reconnects
 // mid-flight (the stream retries with a backoff) would otherwise miss its only
 // chance.
+/**
+ * Evaluates code through the connected browser screen bridge.
+ * @param opts.code Code to evaluate in the browser.
+ * @param opts.timeoutMs Maximum wait in milliseconds.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { code: string; timeoutMs?: number }) {
     const page = (ctx.state.screen ??= { nextId: 1, pending: new Map() });
     const id = page.nextId++;

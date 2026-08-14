@@ -1,10 +1,15 @@
 type RemoveOpts = {
+    /** Setting namespace. */
     module: string;
+    /** Scope category. */
     scopeType: string;
+    /** Optional scope identifier. */
     scopeId?: string | null;
+    /** Setting key to remove. */
     key: string;
 };
 
+/** Removes one persisted setting override. */
 export default async function (ctx: Context, _session: Session | null, opts: RemoveOpts): Promise<{ ok: true }> {
     await ctx.fns.procs.db.run({
         sql: `DELETE FROM settings

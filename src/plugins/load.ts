@@ -1,7 +1,8 @@
 import { basename, resolve } from "node:path";
 
 // Mount a local plugin folder and hot-load its functions/routes.
-export default async function (ctx: Context, _session: Session | null, opts: { path: string; name?: string }) {
+/** Mounts and hot-loads a local plugin directory. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Workspace-relative path. */ path: string; /** Runtime, plugin, or tool name. */ name?: string }) {
     const path = String(opts.path ?? "").trim();
     if (!path) throw new Error("plugins.load: path is required");
     const workdir = ctx.fns.procs.project.workdir({});

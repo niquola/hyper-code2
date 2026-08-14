@@ -1,7 +1,26 @@
+/** Start for the runtime.  * @param opts.model Model identifier to use.
+ * @param opts.title Human-readable agent title.
+ * @param opts.workspaceDir Workspace directory assigned to the agent.
+ * @param opts.systemPrompt Additional system instructions.
+ * @param opts.parentId Optional parent agent identifier.
+ * @param opts.forkOffset Optional inherited parent transcript offset.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { model: string; title?: string; workspaceDir?: string; systemPrompt?: string; parentId?: string | null; forkOffset?: number | null },
+    opts: {
+        /** Model identifier. */
+    model: string;
+        /** Human-readable title. */
+    title?: string;
+        /** Workspace dir used by the operation. */
+    workspaceDir?: string;
+        /** Additional system instructions. */
+    systemPrompt?: string;
+        /** Parent id used by the operation. */
+    parentId?: string | null;
+        /** Fork offset used by the operation. */
+    forkOffset?: number | null },
 ): Promise<types.agent.Agent> {
     const id = await ctx.fns.agent.nextId({});
     const workspaceDir = opts.workspaceDir

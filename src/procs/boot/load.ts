@@ -14,6 +14,10 @@ const NOT_LOADED = new Set(["state", "lifecycle"]);
 // provides — `$hook_services.service.aidbox.ts` provides "aidbox".
 const SERVICE_HOOK = "services.service.";
 
+/**
+ * Load the boot subsystem operation.
+ * @param opts.strict The strict value used by the operation.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { strict?: boolean } = {}): Promise<void> {
     const { default: scan } = await import("../project/scan?t=" + Date.now());
     const { default: modules } = await import("../modules/discover?t=" + Date.now());

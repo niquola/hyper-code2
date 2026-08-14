@@ -1,7 +1,11 @@
+/** Normalize sleep context for the runtime.  * @param opts.sleepContext Persisted sleep context.
+*/
 export default function (
     _ctx: Context,
     _session: Session | null,
-    opts: { sleepContext: any },
+    opts: {
+        /** Sleep context used by the operation. */
+    sleepContext: any },
 ): { mode: "full" | "compact"; activeRevision: number | null; draftRevision: number | null; generations: any[] } | null {
     const sleep = opts.sleepContext;
     if (!sleep || typeof sleep !== "object") return null;

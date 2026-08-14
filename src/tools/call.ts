@@ -9,10 +9,11 @@
 // Never throws for a tool's own failure: a broken call is a message to the
 // model, not an exception for the run loop. An unknown name is reported the
 // same way, because in JSON mode the model picks the name itself.
+/** Validates and invokes a registered tool. */
 export default async function (
     ctx: Context,
     session: Session | null,
-    opts: { name: string; args?: any; agent?: types.agent.Agent },
+    opts: { /** Runtime, plugin, or tool name. */ name: string; /** Command-line arguments. */ args?: any; /** Agent associated with the operation. */ agent?: types.agent.Agent },
 ): Promise<{ output: string; content?: types.tools.Content[]; isError: boolean; terminal?: { type: 'html'; html: string; text: string } }> {
     const name = String(opts.name ?? "").trim();
     const all = ctx.fns.tools.list({});

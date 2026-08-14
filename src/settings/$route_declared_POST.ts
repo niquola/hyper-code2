@@ -8,7 +8,10 @@ function parseForType(raw: string, type?: string): any {
     return raw;
 }
 
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+/** Handles the HTTP route declared POST endpoint. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Incoming HTTP request. */ req: Request;
+        /** Route parameters captured from the request path. */ params: Record<string, string> }) {
     const fd = await opts.req.formData();
     const registry: Map<string, any> | undefined = (ctx.state as any).settings?.registry;
 

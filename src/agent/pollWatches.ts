@@ -1,4 +1,11 @@
-export default async function (ctx: Context, _session: Session | null, opts?: { now?: number; limit?: number }): Promise<{ processed: string[] }> {
+/** Poll watches for the runtime.  * @param opts.now Timestamp used as the current time.
+ * @param opts.limit Maximum records to process.
+*/
+export default async function (ctx: Context, _session: Session | null, opts?: {
+        /** Now used by the operation. */
+now?: number;
+        /** Maximum number of results to return. */
+limit?: number }): Promise<{ processed: string[] }> {
     const now = opts?.now ?? Date.now();
     const limit = Math.max(1, Math.min(20, opts?.limit ?? 5));
     const rows = await ctx.fns.procs.db.select({

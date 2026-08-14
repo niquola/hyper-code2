@@ -1,7 +1,8 @@
+/** Reads a workspace file with stable line anchors. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { path: string; startLine?: number; endLine?: number; maxLines?: number },
+    opts: { /** Workspace-relative path. */ path: string; /** First line to include, one-based. */ startLine?: number; /** Last line to include, inclusive. */ endLine?: number; /** Maximum number of lines to return. */ maxLines?: number },
 ): Promise<types.files.ReadHashlineResult> {
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     const content = await ctx.fns.files.read({ path: opts.path });

@@ -1,3 +1,6 @@
+/**
+ * Returns metadata for the currently active transient secure-input prompt.
+ */
 export default function (ctx: Context, _session: Session | null, _opts: {}): Response {
     const prompts: Map<string, any> | undefined = (ctx.state as any).secureInput?.prompts;
     const prompt = prompts?.values().next().value;

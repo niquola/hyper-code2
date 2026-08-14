@@ -25,6 +25,11 @@
 // **No browser.** A step's page is the one it opened on the way in, and the
 // cursor follows a click through the link it lands on, so the whole walk is
 // `http.dispatch` — the same path a request takes, minus the socket.
+/**
+ * Reviews tour targets and route coverage without driving a browser.
+ * @param opts.steps Ordered tour steps to inspect.
+ * @param opts.url Initial route used before a step opens another route.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { steps: types.tour.Step[]; url?: string }) {
     const steps = (opts.steps ?? []).filter(Boolean);
     if (!steps.length) throw new Error("a tour needs steps");

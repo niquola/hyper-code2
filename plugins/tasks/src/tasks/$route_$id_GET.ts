@@ -1,3 +1,13 @@
+/**
+ * Renders a task detail page.
+ *
+ * @param ctx - Runtime context used to load the task and escape HTML.
+ * @param _session - Unused request session.
+ * @param opts - HTTP route options.
+ * @param opts.req - Incoming request (currently unused).
+ * @param opts.params - Route parameters containing the task identifier.
+ * @returns The task HTML response or a 404 response.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
     const task = await ctx.fns.tasks.get({ id: opts.params.id! });
     if (!task) return new Response('Not found', { status: 404 });

@@ -29,13 +29,30 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// WRITE: create a new chat folder. ctx.fns.telegram.createFolder({ title, chats })
-//   title: folder name; chats: array of chat ids/@usernames to include.
-// Picks next free folder id automatically; unresolvable chats are skipped.
-// → { id, title, peers }
+/**
+ * WRITE: create a new chat folder. ctx.fns.telegram.createFolder({ title, chats })
+ *   title: folder name; chats: array of chat ids/@usernames to include.
+ * Picks next free folder id automatically; unresolvable chats are skipped.
+ * → { id, title, peers }
+ */
 import { Api } from "telegram";
 
-export default async function (ctx: Context, session: Session | null, opts: { title: string; chats: (string | number)[]; confirm?: boolean }) {
+/**
+ * Creates a Telegram chat folder after write confirmation.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+        /** Folder title. */
+        title: string;
+        /** Chat identifiers or usernames to include. */
+        chats: (string | number)[];
+        /** Whether the caller confirmed the write operation. */
+        confirm?: boolean;
+    }) {
     if (!opts?.title) throw new Error("createFolder: opts.title required");
     if (!opts?.chats?.length) throw new Error("createFolder: opts.chats required (at least one chat)");
     if (opts.confirm !== true) throw new Error("telegram.createFolder changes the account; repeat with confirm: true after explicit user approval");
@@ -51,7 +68,9 @@ export default async function (ctx: Context, session: Session | null, opts: { ti
         try {
             includePeers.push(await client.getInputEntity(String(chat)));
         } catch {
-            // skip unresolvable peers
+            /**
+ * skip unresolvable peers
+ */
         }
     }
 

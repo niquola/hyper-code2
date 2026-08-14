@@ -1,9 +1,18 @@
 // Ask a follow-up in an existing Google AI Mode conversation. Reusing the same
 // named CDP session is what preserves conversational context.
+/**
+ * Asks a follow-up question in an open Google AI conversation.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { question: string; session?: string; timeoutMs?: number },
+    opts: {
+  /** Follow-up question to submit. */
+  question: string;
+  /** Google AI browser session name. */
+  session?: string;
+  /** Maximum wait for the answer in milliseconds. */
+  timeoutMs?: number },
 ) {
     const question = String(opts.question ?? "").trim();
     if (!question) throw new Error("browser.googleAIFollowUp: question is required");

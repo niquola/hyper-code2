@@ -1,6 +1,12 @@
 // Parse agent.model "provider:modelId" → {url, apiKey, modelId, provider, api}.
 // "modelId" without prefix defaults to provider "lmstudio".
-export default async function (ctx: Context, _session: Session | null, opts: { model: string }): Promise<{
+/** Performs the llm.resolveEndpoint runtime operation. */
+/**
+ * Parse agent.model "provider:modelId" → {url, apiKey, modelId, provider, api}.
+ * @param opts.model Model identifier.
+ */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Model identifier to use. */ model: string }): Promise<{
     url: string;
     apiKey: string | null;
     modelId: string;

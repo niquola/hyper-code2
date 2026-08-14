@@ -1,3 +1,10 @@
+/**
+ * Runs focused Bun tests and records a compact result.
+ * @param opts.files Files or directories to test or typecheck.
+ * @param opts.verbose Whether to include verbose output tails.
+ * @param opts.maxFailures Maximum failure details to return.
+ * @param opts.agent Agent whose scratchpad stores or locates the run.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { files?: string[]; verbose?: boolean; maxFailures?: number; agent?: any } = {}) {
     const files = Array.isArray(opts.files) && opts.files.length > 0 ? opts.files : ['src'];
     const maxFailures = Number.isInteger(opts.maxFailures) ? Math.max(1, opts.maxFailures as number) : 3;

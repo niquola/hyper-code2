@@ -3,10 +3,15 @@
 // effective transcript — and stamp the matching UI events excludedFromLlm so
 // the chat can show "out of context". Nothing is deleted: events/messages stay
 // as the audit history. Near-tail edits are prefix-cache-cheap.
+/** Collapse failures for the runtime. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; messageIdxs: number[] },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Message idxs used by the operation. */
+    messageIdxs: number[] },
 ): Promise<{ collapsed: number }> {
     const idxs = [...new Set(opts.messageIdxs)].filter((n) => Number.isInteger(n) && n >= 0);
     if (idxs.length === 0) return { collapsed: 0 };

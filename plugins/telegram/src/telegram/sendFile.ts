@@ -29,10 +29,29 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// WRITE: send a file (as document) to a chat. ctx.fns.telegram.sendFile({ chat, path, caption? })
-//   chat: chat id (string/number) or @username; path: local file path.
-// → { id, date }
-export default async function (ctx: Context, session: Session | null, opts: { chat: string | number; path: string; caption?: string; confirm?: boolean }) {
+/**
+ * WRITE: send a file (as document) to a chat. ctx.fns.telegram.sendFile({ chat, path, caption? })
+ *   chat: chat id (string/number) or @username; path: local file path.
+ * → { id, date }
+ */
+/**
+ * Sends a file to a Telegram chat after write confirmation.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+        /** Chat identifier or username. */
+        chat: string | number;
+        /** Local file path or API path, depending on the operation. */
+        path: string;
+        /** Optional file caption. */
+        caption?: string;
+        /** Whether the caller confirmed the write operation. */
+        confirm?: boolean;
+    }) {
     if (opts?.chat === undefined || opts?.chat === null) throw new Error("sendFile: opts.chat required");
     if (!opts?.path) throw new Error("sendFile: opts.path required");
     if (opts.confirm !== true) throw new Error("telegram.sendFile is a real write; repeat with confirm: true after explicit user approval");

@@ -4,16 +4,38 @@ function sanitizeMessage(msg: any): any {
         content: String(msg.content ?? '').trimEnd(),
     };
 }
+/** Llm call for the runtime.  * @param opts.agent Agent whose state is read or updated.
+ * @param opts.user User message content for the model call.
+ * @param opts.system Optional system-prompt override.
+ * @param opts.model Model identifier to use.
+ * @param opts.temperature Provider sampling temperature.
+ * @param opts.max_tokens Maximum requested output tokens.
+ * @param opts.response_format Provider response-format configuration.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
     opts: {
+
+        /** Live agent instance to operate on. */
         agent: types.agent.Agent;
+
+        /** User used by the operation. */
         user: string;
+
+        /** System used by the operation. */
         system?: string;
+
+        /** Model identifier. */
         model?: string;
+
+        /** Temperature used by the operation. */
         temperature?: number;
+
+        /** Max tokens used by the operation. */
         max_tokens?: number;
+
+        /** Response format used by the operation. */
         response_format?: any;
     },
 ): Promise<{ text: string; finishReason: string | null; usage: any; raw: any }> {

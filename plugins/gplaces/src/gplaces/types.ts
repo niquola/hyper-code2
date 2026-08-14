@@ -9,6 +9,14 @@ const PLACE_TYPES = {
     outdoors: ["park", "beach", "gym", "golf_course"],
 };
 
+/**
+ * Lists supported Google Places type identifiers.
+ *
+ * @param ctx - Runtime context (unused).
+ * @param session - Calling session (unused).
+ * @param opts - Reserved options object.
+ * @returns Supported place type identifiers grouped by category.
+ */
 export default async function (ctx: Context, session: Session | null, opts?: {}) {
     return PLACE_TYPES;
 }

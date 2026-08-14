@@ -2,10 +2,14 @@ import { resolve } from "node:path";
 
 // Turn a local image into the provider-neutral content shape used by pi-mono:
 // base64 bytes plus a real MIME type. Paths are resolved in the agent workspace.
+/** Image content for the runtime.  * @param opts.path File path to read or render.
+*/
 export default async function (
     _ctx: Context,
     session: Session | null,
-    opts: { path: string },
+    opts: {
+        /** Path to the target resource. */
+    path: string },
 ): Promise<types.tools.Content> {
     const base = session?.agent?.workspaceDir || process.cwd();
     const path = resolve(base, opts.path);

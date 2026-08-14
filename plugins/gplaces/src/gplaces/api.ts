@@ -1,6 +1,18 @@
 // Generic Google Places API (New) call. The key stays private in 1Password.
+/**
+ * Calls the Google Places API with authentication and error handling.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: {
-    path: string; method?: string; body?: object; fieldMask?: string; lang?: string;
+        /** API path relative to the Places API root. */
+        path: string;
+  /** HTTP method. */
+  method?: string;
+  /** Optional JSON request body. */
+  body?: object;
+  /** Google Places response field mask. */
+  fieldMask?: string;
+  /** Response language code. */
+  lang?: string;
 }) {
     if (!opts?.path || !opts.path.startsWith("/")) throw new Error("gplaces.api: path must start with /");
     const cache = ((ctx.state as any).gplaces ??= {} as { apiKey?: string });

@@ -24,6 +24,16 @@ export const GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/admin.directory.group.readonly",
 ];
 
+/**
+ * Authorize or reauthorize a Google account.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ * @param opts.port - Local OAuth callback server port; defaults to 8089.
+ * @param opts.timeoutMs - Maximum milliseconds to wait for OAuth authorization.
+ * @param opts.cdp - Whether to drive authorization through CDP; defaults to true.
+ * @param opts.scopes - OAuth scopes to request; defaults to all scopes used by the plugin.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,

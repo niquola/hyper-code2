@@ -1,4 +1,10 @@
-export default function (ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }): string {
+/** Performs the ui.agentMetaPanel runtime operation. */
+/**
+ * Render the metadata panel for an agent.
+ * @param opts.agent Agent associated with the operation.
+ */
+export default function (ctx: Context, _session: Session | null, opts: {
+        /** Agent associated with the operation. */ agent: types.agent.Agent }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const agent = opts.agent;
     const goal = agent.goal ?? null;

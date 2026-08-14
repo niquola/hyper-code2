@@ -1,8 +1,20 @@
-// Internal DuckDB CLI runner. stdout is JSON; stderr/exit status stay explicit.
+/**
+ * Runs the DuckDB CLI and parses its JSON output.
+ *
+ * This is the low-level execution primitive used by the public query helpers.
+ * Non-zero exits and timeouts are surfaced as errors with DuckDB stderr.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { sql: string; db?: string; timeout?: number },
+    opts: {
+        /** SQL passed to the DuckDB CLI. */
+        sql: string;
+        /** Optional DuckDB database file; defaults to `:memory:`. */
+        db?: string;
+        /** Process timeout in seconds. @default 30 @minimum 1 @maximum 300 */
+        timeout?: number;
+    },
 ): Promise<any[]> {
     const bin = ctx.env.DUCKDB_BIN || "duckdb";
     const db = opts.db ? ctx.fns.workspace.resolve({ path: opts.db }) : ":memory:";

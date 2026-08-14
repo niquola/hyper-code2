@@ -1,12 +1,19 @@
 type SetOpts = {
+    /** Setting namespace. */
     module: string;
+    /** Scope category. */
     scopeType: string;
+    /** Optional scope identifier. */
     scopeId?: string | null;
+    /** Setting key to write. */
     key: string;
+    /** JSON-serializable setting value. */
     value: any;
+    /** Whether the stored row should be marked secret. */
     isSecret?: boolean;
 };
 
+/** Creates or updates one persisted setting override. */
 export default async function (ctx: Context, _session: Session | null, opts: SetOpts): Promise<{ ok: true }> {
     const now = Date.now();
     await ctx.fns.procs.db.run({

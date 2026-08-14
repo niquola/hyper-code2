@@ -1,4 +1,10 @@
-export default function (ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }): string {
+/** Performs the ui.wakeTimer runtime operation. */
+/**
+ * Render the wake-up timer controls for an agent.
+ * @param opts.agent Agent associated with the operation.
+ */
+export default function (ctx: Context, _session: Session | null, opts: {
+        /** Agent associated with the operation. */ agent: types.agent.Agent }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const wakeAt = Number(opts.agent.wakeAt ?? 0);
     if (!wakeAt) return `<span id="wake-timer-${esc(opts.agent.id)}" class="text-[10px] text-gray-400">not scheduled</span>`;

@@ -1,5 +1,6 @@
 // Public, compact plugin catalogue for agents and UI code. Framework internals
 // stay under procs.modules; callers normally start here.
+/** Lists mounted plugins. */
 export default function (ctx: Context, _session: Session | null, _opts?: {}) {
     return (ctx.fns.procs.modules.list({}) as any[])
         .filter((module: any) => module.plugin)

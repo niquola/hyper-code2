@@ -1,4 +1,7 @@
-export default async function (ctx: Context, _session: Session | null, opts: { agent: types.agent.Agent }): Promise<void> {
+/** Save for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Live agent instance to operate on. */
+agent: types.agent.Agent }): Promise<void> {
     const { agent } = opts;
     const now = Date.now();
     await ctx.fns.procs.db.run({

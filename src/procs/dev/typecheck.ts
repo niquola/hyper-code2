@@ -3,6 +3,10 @@
 // type errors. This is the missing half: call after defining typed code.
 //   ctx.fns.procs.dev.typecheck({})            → whole project
 //   ctx.fns.procs.dev.typecheck({ filter: "notes/" }) → only matching diagnostics
+/**
+ * Type-check typecheck for the dev subsystem.
+ * @param opts.filter The filter value used by the operation.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: { filter?: string }) {
     const proc = Bun.spawn(["bunx", "tsc", "--noEmit", "--pretty", "false"], {
         cwd: ctx.fns.procs.project.projectRoot({}), // the app's root (its tsconfig), not proc's

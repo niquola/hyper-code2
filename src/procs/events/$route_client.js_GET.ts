@@ -11,6 +11,10 @@ import { resolve } from "node:path";
 
 const PATH = resolve(import.meta.dir, "client.js");
 
+/**
+ * Handle the GET request for the events route.
+ * @param _opts.req The incoming HTTP request.
+ */
 export default async function (ctx: Context, _session: Session, _opts: { req: Request }) {
     const file = Bun.file(PATH);
     const body = ctx.env.NODE_ENV === "production" || !(await file.exists())

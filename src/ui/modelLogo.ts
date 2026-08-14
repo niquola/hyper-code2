@@ -1,6 +1,18 @@
 // Compact provider mark for chat headers. The full model id stays out of the
 // header's visual flow and is available through the native hover tooltip.
-export default function (ctx: Context, _session: Session | null, opts: { model?: string | null; active?: boolean; bare?: boolean; compact?: boolean }): string {
+/** Performs the ui.modelLogo runtime operation. */
+/**
+ * Compact provider mark for chat headers. The full model id stays out of the.
+ * @param opts.model Model identifier.
+ * @param opts.active Whether to render the active state.
+ * @param opts.bare Whether to omit the surrounding container.
+ * @param opts.compact Whether to use compact presentation.
+ */
+export default function (ctx: Context, _session: Session | null, opts: {
+        /** Model identifier to use. */ model?: string | null;
+        /** Whether to render the active state. */ active?: boolean;
+        /** Whether to omit the surrounding logo container. */ bare?: boolean;
+        /** Whether to render the compact variant. */ compact?: boolean }): string {
     const model = String(opts.model ?? '?');
     const esc = (value: string) => ctx.fns.procs.ui.escape({ text: value });
     const key = model.toLowerCase();

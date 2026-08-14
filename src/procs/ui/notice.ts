@@ -9,6 +9,11 @@ const TONE = {
     warning: "alert-warning", danger: "alert-error",
 } as const;
 
+/**
+ * Perform notice for the ui subsystem.
+ * @param opts.text The text to process.
+ * @param opts.tone The tone value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {text: string; tone?: keyof typeof TONE }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const tone = opts.tone ?? "info";

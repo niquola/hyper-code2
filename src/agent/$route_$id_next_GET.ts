@@ -8,7 +8,14 @@
 //
 // So the browser asks "who is next after me" and renders the answer. It keeps
 // no list, no index and no idea what order means.
-export default async function (ctx: Context, session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+/** Handles the id next get HTTP route.  * @param opts.req Incoming HTTP request.
+ * @param opts.params Route path parameters.
+*/
+export default async function (ctx: Context, session: Session | null, opts: {
+        /** Incoming HTTP request. */
+req: Request;
+        /** Values bound to the operation. */
+params: Record<string, string> }) {
     const from = opts.params.id!;
     const dir = new URL(opts.req.url).searchParams.get("dir") === "-1" ? -1 : 1;
 

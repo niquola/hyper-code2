@@ -11,6 +11,18 @@
 //
 // `iss` names the process that signed it, so a host that trusts another one can
 // tell whose key answered.
+/**
+ * Perform sign for the auth subsystem.
+ * @param opts.sub The sub value used by the operation.
+ * @param opts.name The target name.
+ * @param opts.email The email value used by the operation.
+ * @param opts.role The role value used by the operation.
+ * @param opts.days The days value used by the operation.
+ * @param opts.seconds The seconds value used by the operation.
+ * @param opts.kind The kind value used by the operation.
+ * @param opts.jti The jti value used by the operation.
+ * @param opts.iss The iss value used by the operation.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,

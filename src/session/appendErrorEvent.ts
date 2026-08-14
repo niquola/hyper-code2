@@ -4,7 +4,14 @@
 // they scroll: a run can fail while the reader is on another page. The toast
 // carries the full text as its body, so the detail is one glance away rather
 // than one dig away.
-export default async function (ctx: Context, _session: Session | null, opts: { id: string; error: string; ts?: number }) {
+/** Append error event for the runtime. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent identifier. */
+id: string;
+        /** Error associated with the operation. */
+error: string;
+        /** Ts used by the operation. */
+ts?: number }) {
     const appended = await ctx.fns.session.appendEventWithHtml({
         id: opts.id, type: "error", payload: { error: opts.error }, ts: opts.ts,
     });

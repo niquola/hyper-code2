@@ -1,4 +1,11 @@
 // Full message with decoded text body. ctx.fns.gmail.get({ id })
+/**
+ * Get a Gmail message and its decoded content.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.id - Resource identifier.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { id: string; account?: string }) {
     const msg = await ctx.fns.gmail.api({ path: `/messages/${opts.id}?format=full`, account: opts.account });
     const h = msg?.payload?.headers;

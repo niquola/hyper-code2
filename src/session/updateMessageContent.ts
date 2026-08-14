@@ -3,10 +3,19 @@
 // A tool result row is created the moment its call is — empty, marked pending —
 // so the transcript is never in a state a provider refuses. This is what turns
 // it into the real answer once the tool returns.
+/** Update message content for the runtime. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; idx: number; content: any; ts?: number },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Zero-based message or event index. */
+    idx: number;
+        /** Text content for the operation. */
+    content: any;
+        /** Ts used by the operation. */
+    ts?: number },
 ): Promise<{ changed: number }> {
     // Same shape rule as appendMessage: prose stays text, structured
     // (multimodal) content is stored as JSON in the same column.

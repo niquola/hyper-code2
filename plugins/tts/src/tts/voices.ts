@@ -1,4 +1,10 @@
 // List Google Cloud TTS voices. OAuth values stay private in 1Password.
+/**
+ * Resolves and caches a Google OAuth access token for voice-list calls.
+ *
+ * @param ctx - Runtime context used to resolve stored OAuth credentials.
+ * @returns A valid bearer access token.
+ */
 async function accessToken(ctx: Context) {
     const cache = ((ctx.state as any).tts ??= {} as { token?: { access_token: string; expires_at: number } });
     if (cache.token && Date.now() < cache.token.expires_at - 60_000) return cache.token.access_token;
@@ -18,7 +24,12 @@ async function accessToken(ctx: Context) {
     return cache.token.access_token;
 }
 
-export default async function (ctx: Context, _session: Session | null, opts?: { lang?: string }) {
+/**
+ * Lists available Google Cloud text-to-speech voices.
+ */
+export default async function (ctx: Context, _session: Session | null, opts?: {
+  /** Optional language-code prefix used to filter voices. */
+  lang?: string }) {
     const access_token = await accessToken(ctx);
     const url = `https://texttospeech.googleapis.com/v1/voices${opts?.lang ? `?languageCode=${encodeURIComponent(opts.lang)}` : ""}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${access_token}` } });

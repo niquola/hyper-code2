@@ -1,4 +1,7 @@
 // Authorized Google accounts are metadata stored separately from token values.
+/**
+ * List configured Google accounts.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     const raw = await ctx.fns.secrets.resolve({ ref: "op://hyper/google/accounts" });
     if (!raw) return [];

@@ -1,5 +1,13 @@
 // Create a new spreadsheet with optional named tabs (default one tab "Sheet1").
 // ctx.fns.gsheets.create({ title: "Q1 Report", sheets: ["Revenue","Expenses"] })
+/**
+ * Create a Google spreadsheet.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.title - Resource title.
+ * @param opts.sheets - Initial sheet names to create.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

@@ -1,6 +1,8 @@
 // POST /ui/state — browser beacon with current layout; GET-like callers use
 // ctx.fns.ui.state({}) to read the merged durable/live server snapshot.
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
+/** Handles the HTTP route state POST endpoint. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Incoming HTTP request. */ req: Request }) {
     const body: any = await opts.req.json().catch(() => null);
     if (!body) return new Response("invalid json", { status: 400 });
     const ui = {

@@ -11,6 +11,10 @@
 // So: only when a name in the message is genuinely a gap in the registry, and
 // only when the answer is short and certain. Everything else is returned
 // unexplained rather than guessed at — a wrong hint costs more than none.
+/**
+ * Perform explain for the repl subsystem.
+ * @param opts.error The error to report.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { error: any }): string | null {
     const message = String(opts.error?.message ?? opts.error ?? "");
 

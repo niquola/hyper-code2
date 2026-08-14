@@ -1,5 +1,7 @@
-// Generic Zulip REST call. Credentials are read privately from 1Password and
-// never cross the function boundary. GET uses query; POST/PATCH use form data.
+/**
+ * Generic Zulip REST call. Credentials are read privately from 1Password and
+ * never cross the function boundary. GET uses query; POST/PATCH use form data.
+ */
 async function opRead(ref: string) {
     const paths = [process.env.PATH, `${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin"].filter(Boolean).join(":");
     const proc = Bun.spawn(["op", "read", ref, "--no-newline"], {
@@ -40,10 +42,29 @@ async function resolveConfig(ctx: Context, requested?: string) {
     };
 }
 
+/**
+ * Performs an authenticated Zulip API request.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { path: string; method?: string; query?: Record<string, string>; form?: Record<string, string>; instance?: string },
+    opts: {
+        /** Local file path or API path, depending on the operation. */
+        path: string;
+        /** HTTP method. */
+        method?: string;
+        /** Search query. */
+        query?: Record<string, string>;
+        /** Form fields. */
+        form?: Record<string, string>;
+        /** Configured Zulip instance name. */
+        instance?: string;
+    },
 ) {
     if (!opts?.path) throw new Error("zulip.api: path required");
     const cfg = await resolveConfig(ctx, opts.instance);

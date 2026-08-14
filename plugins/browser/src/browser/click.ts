@@ -1,7 +1,14 @@
+/**
+ * Clicks the first element matching a CSS selector.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { selector: string; session?: string },
+    opts: {
+  /** CSS selector of the element to click. */
+  selector: string;
+  /** Logical browser session name. */
+  session?: string },
 ): Promise<boolean> {
     const selector = JSON.stringify(opts.selector);
     return !!await ctx.fns.browser.evaluate({

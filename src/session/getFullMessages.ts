@@ -1,7 +1,12 @@
+/** Get full messages for the runtime. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; includeExcluded?: boolean },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Whether to include entries excluded from the processing cursor. */
+    includeExcluded?: boolean },
 ): Promise<any[]> {
     const { id, includeExcluded } = opts;
     const rows = (await ctx.fns.procs.db.select({ sql: 'SELECT id, parent_id, fork_offset FROM agents WHERE id = ?', params: [id] })) as any[];

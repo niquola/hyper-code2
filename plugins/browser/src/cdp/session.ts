@@ -1,10 +1,17 @@
 // Return a live named CDP page websocket, attaching to a requested target or
 // creating a background tab. Runtime handles are deliberately in ctx.state,
 // never module globals, so hot reload does not fork the connection registry.
+/**
+ * Creates or reuses a Chrome DevTools Protocol session.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { name?: string; targetId?: string } = {},
+    opts: {
+  /** Logical session name used for reuse. */
+  name?: string;
+  /** Existing browser target identifier to attach to. */
+  targetId?: string } = {},
 ): Promise<any> {
     const name = String(opts.name || "main");
     const state = ((ctx.state as any).cdp ??= { sessions: new Map() });

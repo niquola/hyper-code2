@@ -1,4 +1,8 @@
 // POST /screen/result — a tab answering an injected evaluation.
+/**
+ * Receives the result of a browser screen command.
+ * @param opts.req Incoming HTTP request.
+ */
 export default async function (ctx: Context, _session: Session, opts: { req: Request }) {
     const { id, value, error } = await opts.req.json() as { id: number; value?: any; error?: string };
     const waiter = ctx.state.screen?.pending.get(id);

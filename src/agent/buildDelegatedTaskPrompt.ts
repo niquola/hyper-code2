@@ -36,7 +36,17 @@ function describeResponseFormat(responseFormat: any): string {
     return "Always include a short parent-facing summary string and a concise result if useful.";
 }
 
-export default function (_ctx: Context, _session: Session | null, opts: { task: string; instructions?: string; responseFormat?: any }) {
+/** Build delegated task prompt for the runtime.  * @param opts.task Concise task to assign or perform.
+ * @param opts.instructions Additional instructions for completing the task.
+ * @param opts.responseFormat Expected completed-task response format.
+*/
+export default function (_ctx: Context, _session: Session | null, opts: {
+        /** Task instructions. */
+task: string;
+        /** Instructions used by the operation. */
+instructions?: string;
+        /** Response format used by the operation. */
+responseFormat?: any }) {
     const extra = String(opts.instructions ?? "").trim();
 /**
  * Build the system prompt for a delegated task child agent.

@@ -6,6 +6,11 @@
 //   const t = ctx.fns.procs.env.fork({ mode: "test" });
 //   await t.fns.db.connect({});               // test db, separate from dev's
 //   const res = await t.fns.http.dispatch({ url: "/issues" });
+/**
+ * Perform fork for the env subsystem.
+ * @param opts.mode The operating mode.
+ * @param opts.env Environment variables for the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts?: { mode?: "test" | "dev" | "prod"; env?: Record<string, string | undefined> }): Context {
     const mode = opts?.mode ?? "test";
     const NODE_ENV = mode === "prod" ? "production" : mode === "test" ? "test" : "development";

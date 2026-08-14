@@ -1,4 +1,11 @@
 // One-shot sink for secrets.prompt. Never log the request or echo its value.
+/**
+ * Accepts or cancels a pending one-shot secret prompt.
+ * @param opts.req Incoming form submission containing the secret value or cancellation.
+ * @param opts.params Route parameters identifying the pending prompt.
+ * @param opts.params.id Pending prompt identifier.
+ */
+
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: { id: string } }) {
     const id = String(opts.params.id ?? "");
     const prompt = (ctx.state as any).secrets?.prompts?.get(id);

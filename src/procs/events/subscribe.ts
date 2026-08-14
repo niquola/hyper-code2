@@ -4,6 +4,11 @@
 // on the server: a tab watching one agent should not be woken by every other
 // agent's traffic. A subscriber that names no topics keeps hearing plain
 // broadcasts, which is what everything did before topics existed.
+/**
+ * Subscribe to subscribe for the events subsystem.
+ * @param opts.handler The callback invoked for each event.
+ * @param opts.topics Event topics to subscribe to.
+ */
 export default function (
     ctx: Context,
     _session: Session | null,

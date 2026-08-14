@@ -6,6 +6,10 @@ import projectRoot from "../project/projectRoot";
 // The working directory the workspace operates on — what the file manager
 // lists and agents edit. WORKDIR wins; otherwise it is the project root.
 // This is NOT where src/ and package.json are looked up (that is projectRoot).
+/**
+ * Returns the workspace directory used for file operations and agent edits.
+ * `WORKDIR` takes precedence and supports `~/`; otherwise the project root is used.
+ */
 export default function (ctx: Context, session: Session | null, _opts?: {}): string {
     const fromEnv = ctx.env.WORKDIR;
     if (fromEnv) return resolve(expandHome(fromEnv));

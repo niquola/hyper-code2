@@ -8,6 +8,15 @@
 // itself is `data-role="error"` inside it. So every failure is
 // `[data-field][data-invalid] [data-role="error"]`, and counting the invalid
 // fields is one selector.
+/**
+ * Perform control for the ui subsystem.
+ * @param opts.name The target name.
+ * @param opts.label The display label.
+ * @param opts.help The help value used by the operation.
+ * @param opts.error The error to report.
+ * @param opts.required The required value used by the operation.
+ * @param opts.control The control value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {name: string; label: string; help?: string; error?: string; required?: boolean; control: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     return `<div ${ctx.fns.procs.ui.attr({ field: opts.name })}${opts.error ? ` data-invalid="true" aria-invalid="true"` : ""}>

@@ -22,6 +22,19 @@
 // Empty values are dropped, so optional fields can be passed straight through.
 const KEYS = ["page", "section", "entity", "id", "status", "role", "form", "action"] as const;
 
+/**
+ * Renders escaped `data-*` attributes used to identify drivable UI elements.
+ * Null, undefined, and empty-string values are omitted.
+ * @param opts Marker values to render.
+ * @param opts.page Identifier for the page root.
+ * @param opts.section Identifier for a named page region.
+ * @param opts.entity Entity type represented by the element.
+ * @param opts.id Entity or action target identifier.
+ * @param opts.status Current entity status.
+ * @param opts.role Role of the element within an entity.
+ * @param opts.form Identifier for a form or form container.
+ * @param opts.action Action verb represented by a control.
+ */
 export default function (ctx: Context, _session: Session | null, opts: Partial<Record<(typeof KEYS)[number], string | number | null | undefined>> & Record<string, any>): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const out: string[] = [];

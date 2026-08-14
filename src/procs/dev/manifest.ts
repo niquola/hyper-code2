@@ -9,6 +9,10 @@
 //   ctx.fns.procs.dev.manifest({ out: ".runtime/build/manifest.ts" })
 import { resolve, relative } from "node:path";
 
+/**
+ * Generate manifest for the dev subsystem.
+ * @param opts.out The out value used by the operation.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: { out?: string }) {
     const entries = await ctx.fns.procs.project.scan({});
     const modules = await ctx.fns.procs.modules.discover({});

@@ -1,6 +1,11 @@
 // Run every hook registered under `name`, in registration order, each with the
 // current ctx+session and `opts`. Returns the array of results. Use for
 // fan-out extension points (on-request, collect-menu-items, …).
+/**
+ * Run every hook registered under `name`, in registration order, and return their results.
+ * @param opts.name The target name.
+ * @param opts.opts Options passed to each registered hook.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { name: string; opts?: any }) {
     warnIfUndeclared(ctx, opts.name);
     const map = ctx.state.procs?.hooks?.handlers?.[opts.name];

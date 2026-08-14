@@ -6,6 +6,11 @@
 //     argument, so the model gets a useful hint instead of a bare parse error.
 const DIAG_TRANSPILER = new Bun.Transpiler({ loader: "ts" });
 
+/**
+ * Evaluates TypeScript or JavaScript and returns captured output or structured content.
+ * @param opts.code Source code to evaluate.
+ * @param opts.agent Optional running agent made available to the evaluated code.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,

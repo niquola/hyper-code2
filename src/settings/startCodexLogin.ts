@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 const URL_RE = /(https?:\/\/[^\s\u001b]+)/;
 const CODE_RE = /(?:code|enter[^\n]*?)\s*\u001b\[[0-9;]*m([A-Z0-9]{4,5}-[A-Z0-9]{4,5})/i;
 
+/** Starts the Codex device-authentication flow. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<{
     user_code: string;
     verification_uri: string;

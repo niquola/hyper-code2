@@ -1,3 +1,12 @@
+/**
+ * Handles popup form submission for creating an agent and, when needed, asks to create its workspace.
+ * @param opts.title Human-readable agent title.
+ * @param opts.workspaceDir Workspace directory assigned to the agent.
+ * @param opts.createWorkspaceDir Whether to create a missing workspace directory (`"1"` to enable).
+ * @param opts.model Model identifier to use.
+ * @param opts.promptPreset System-prompt preset name or names.
+ * @param opts.systemPrompt Additional system instructions.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: any): Promise<Response> {
     const result = await ctx.fns.agent.createFromValues(opts);
     if (result.error) return new Response(result.error, { status: 400 });

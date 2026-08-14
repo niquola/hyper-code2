@@ -1,6 +1,10 @@
 // POST /modules/add — declare a module in workspace.json and mount it. A name
 // that resolves to nothing, a repo that will not clone: the reason comes back on
 // the page rather than as a 500, so the pane keeps whatever was typed.
+/**
+ * Handle the POST request for the modules route.
+ * @param opts.req The incoming HTTP request.
+ */
 export default async function (ctx: Context, _session: Session, opts: { req: Request }) {
     const form = await opts.req.formData();
     const name = String(form.get("name") ?? "").trim();

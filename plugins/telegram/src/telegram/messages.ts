@@ -30,11 +30,13 @@ async function connected(ctx: Context) {
     try { return await cache.connecting; } finally { cache.connecting = null; }
 }
 
-// Read message history of a chat (does NOT mark as read).
-// ctx.fns.telegram.messages({ chat: "-1001184192226", max?: 50 })
-//   chat: chat id (string or number) or @username.
-// Returns oldest→newest within the fetched window.
-// → [{ id, date, sender, text, replyTo }]
+/**
+ * Read message history of a chat (does NOT mark as read).
+ * ctx.fns.telegram.messages({ chat: "-1001184192226", max?: 50 })
+ *   chat: chat id (string or number) or @username.
+ * Returns oldest→newest within the fetched window.
+ * → [{ id, date, sender, text, replyTo }]
+ */
 function senderName(sender: any): string {
     if (!sender) return "Unknown";
     if ("firstName" in sender) return sender.firstName + (sender.lastName ? ` ${sender.lastName}` : "");
@@ -42,7 +44,20 @@ function senderName(sender: any): string {
     return "Unknown";
 }
 
-export default async function (ctx: Context, session: Session | null, opts: { chat: string | number; max?: number }) {
+/**
+ * Lists recent messages in a Telegram chat.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+        /** Chat identifier or username. */
+        chat: string | number;
+        /** Maximum number of results to return. */
+        max?: number;
+    }) {
     if (opts?.chat === undefined || opts?.chat === null) throw new Error("messages: opts.chat required (chat id or @username)");
     const client = await connected(ctx);
     const msgs = await client.getMessages(String(opts.chat), { limit: opts.max ?? 50 });
@@ -53,7 +68,9 @@ export default async function (ctx: Context, session: Session | null, opts: { ch
             date: new Date(msg.date * 1000).toISOString(),
             sender: senderName(msg.sender),
             text: msg.message || "[media/no text]",
-            hasPhoto: !!(msg as any).photo,   // a downloadable photo (see telegram.photo)
+            hasPhoto: !!(msg as any).photo,   /**
+ * a downloadable photo (see telegram.photo)
+ */
             replyTo: (msg.replyTo as any)?.replyToMsgId,
         });
     }

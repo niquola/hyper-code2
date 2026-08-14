@@ -15,6 +15,15 @@ const norm = (u: any) => ({
     aliases: u.aliases ?? [],
 });
 
+/**
+ * List Google Workspace users.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.domain - Workspace domain used to constrain results.
+ * @param opts.query - Search query.
+ * @param opts.max - Maximum number of results to return.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (ctx: Context, _session: Session | null, opts?: { domain?: string; query?: string; max?: number; account?: string }) {
     const p = new URLSearchParams();
     if (opts?.domain) p.set("domain", opts.domain); else p.set("customer", "my_customer");

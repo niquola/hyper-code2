@@ -6,6 +6,9 @@
 //
 // Framework-alone (no WORKDIR) is unchanged: workdir is the repo, so this is
 // the repo's own .runtime/.
+/**
+ * Perform runtime dir for the project subsystem.
+ */
 export default function (ctx: Context, _session: Session | null, _opts?: {}): string {
     return `${ctx.fns.procs.project.workdir({})}/.runtime`;
 }

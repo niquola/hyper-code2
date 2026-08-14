@@ -1,10 +1,17 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
+/**
+ * Starts a task by attaching and running an agent.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; model?: string },
+    opts: {
+  /** Task identifier. */
+  id: string;
+  /** Optional model override for the task agent. */
+  model?: string },
 ): Promise<types.tasks.Task> {
     const task = await ctx.fns.tasks.get({ id: opts.id });
     if (!task) throw new Error(`tasks.start: task ${opts.id} not found`);

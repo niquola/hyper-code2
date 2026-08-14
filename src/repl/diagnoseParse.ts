@@ -4,6 +4,10 @@
 // Used by both the eval wrapper and pre-execution checks.
 const DIAG = new Bun.Transpiler({ loader: "ts" });
 
+/**
+ * Diagnoses malformed eval source and identifies likely trailing prose.
+ * @param opts.code TypeScript or JavaScript source to inspect.
+ */
 export default function (
     _ctx: Context,
     _session: Session | null,

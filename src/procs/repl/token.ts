@@ -7,6 +7,9 @@
 // on this machine can read it and nothing off the machine can.
 import { chmod } from "node:fs/promises";
 
+/**
+ * Perform token for the repl subsystem.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string> {
     const state = (ctx.state.procs.repl ??= {});
     if (state.token) return state.token;

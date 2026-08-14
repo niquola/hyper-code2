@@ -1,5 +1,6 @@
 // Cross-process single-flight refresh. Bun.SQL's reserved connection keeps the
 // row lock and token request in one transaction.
+/** Performs the llm.getAnthropicOAuthToken runtime operation. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string> {
     const pool: any = await ctx.fns.procs.db.conn();
     const provider = "anthropic-oauth";

@@ -4,6 +4,9 @@
 import { readdir, realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 
+/**
+ * Return catalog for the modules subsystem.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     // Containers, by the name they are mounted (and excluded) under.
     const mounted = new Set((ctx.state.procs?.modules ?? []).map(m => m.name));

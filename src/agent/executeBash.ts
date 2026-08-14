@@ -14,10 +14,23 @@
 // keeps stdout open), so waiting for the streams to end would wait out the
 // full command anyway. With the text already in hand we return the moment the
 // deadline passes. A stray grandchild is left to the OS.
+/** Execute bash for the runtime.  * @param opts.code Shell source code to execute.
+ * @param opts.cwd Shell working directory.
+ * @param opts.env Environment variables added to the shell.
+ * @param opts.timeout Maximum execution time in milliseconds.
+*/
 export default async function (
     _ctx: Context,
     session: Session | null,
-    opts: { code: string; cwd?: string; env?: Record<string, string>; timeout?: number },
+    opts: {
+        /** Code used by the operation. */
+    code: string;
+        /** Cwd used by the operation. */
+    cwd?: string;
+        /** Env used by the operation. */
+    env?: Record<string, string>;
+        /** Timeout used by the operation. */
+    timeout?: number },
 ): Promise<{ output: string; isError: boolean }> {
     const { code } = opts;
 

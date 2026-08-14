@@ -28,6 +28,18 @@ function mapEvent(e: any) {
     };
 }
 
+/**
+ * List Google Calendar events.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.from - Sender address or filter criterion.
+ * @param opts.to - Recipient address or addresses.
+ * @param opts.days - Number of days in the query window.
+ * @param opts.q - Alias for `query`.
+ * @param opts.calendarId - Calendar identifier; defaults to the primary calendar where supported.
+ * @param opts.max - Maximum number of results to return.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ */
 export default async function (
     ctx: Context,
     session: Session | null,

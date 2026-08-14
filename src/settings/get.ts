@@ -5,9 +5,13 @@
 //        b. descriptor.default
 //   3. undefined (caller may use its own fallback).
 type GetOpts = {
+    /** Setting namespace. */
     module: string;
+    /** Scope category, such as `global` or `agent`. */
     scopeType: string;
+    /** Scope identifier; omitted values address the empty/global scope. */
     scopeId?: string | null;
+    /** Setting key within the module. */
     key: string;
 };
 
@@ -17,6 +21,7 @@ function parseEnv(raw: string, type?: string): any {
     return raw;
 }
 
+/** Resolves a setting from the database or its declared global default. */
 export default async function (ctx: Context, _session: Session | null, opts: GetOpts): Promise<any> {
     const row = (await ctx.fns.procs.db.select({
         sql: `SELECT value

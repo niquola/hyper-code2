@@ -32,10 +32,11 @@ function overlaps(a: { start: number; end: number }, b: { start: number; end: nu
     return a.start <= b.end && b.start <= a.end;
 }
 
+/** Applies structured literal or hashline-anchored edits to a workspace file. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { path: string; ops: types.files.EditHashlineOp[] },
+    opts: { /** Workspace-relative path. */ path: string; /** Ordered edit operations to apply. */ ops: types.files.EditHashlineOp[] },
 ): Promise<{ path: string; bytes: number; diff: string; content: string }> {
     const { path, ops } = opts;
     const before = await ctx.fns.files.read({ path: path });

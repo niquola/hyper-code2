@@ -1,7 +1,12 @@
 // Parse a YouTube URL into { type, id }.
 // type: "video" | "playlist" | "channel" | "handle" | "unknown"
 // ctx.fns.youtube.parse({ url: "https://youtu.be/dQw4w9WgXcQ" })
-export default async function (ctx: Context, session: Session | null, opts: { url: string }) {
+/**
+ * Parses a YouTube URL into its resource type and identifier.
+ */
+export default async function (ctx: Context, session: Session | null, opts: {
+  /** YouTube URL to parse. */
+  url: string }) {
     try {
         const u = new URL(opts.url);
         if (u.hostname === "youtu.be") {

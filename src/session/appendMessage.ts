@@ -1,7 +1,14 @@
+/** Append message for the runtime. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; message: any; ts?: number },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Message to persist or process. */
+    message: any;
+        /** Ts used by the operation. */
+    ts?: number },
 ): Promise<{ idx: number }> {
     const { id, message } = opts;
     // Postgres text refuses NUL bytes — scrub at the boundary so one stray \0

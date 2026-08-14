@@ -1,4 +1,6 @@
-// Download a photo attached to one Telegram message to a local file.
+/**
+ * Download a photo attached to one Telegram message to a local file.
+ */
 import { TelegramClient } from "telegram";
 import { StringSession } from "telegram/sessions";
 
@@ -23,7 +25,22 @@ async function connected(ctx: Context) {
     await client.connect(); cache.client = client; return client;
 }
 
-export default async function (ctx: Context, _session: Session | null, opts: { chat: string | number; id: number; path?: string }) {
+/**
+ * Downloads a photo attached to a Telegram message.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Chat identifier or username. */
+        chat: string | number;
+        /** Numeric identifier. */
+        id: number;
+        /** Local file path or API path, depending on the operation. */
+        path?: string;
+    }) {
     if (opts?.chat == null || opts?.id == null) throw new Error("telegram.photo requires chat and id");
     const client = await connected(ctx);
     const [message] = await client.getMessages(String(opts.chat), { ids: [opts.id] });

@@ -1,5 +1,7 @@
 // POST /ui/right-panel — persist the workspace pane collapsed state server-side.
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
+/** Handles the HTTP route right-panel POST endpoint. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Incoming HTTP request. */ req: Request }) {
     let collapsed: boolean | null = null;
     const contentType = opts.req.headers.get("content-type") ?? "";
     if (contentType.includes("application/json")) {

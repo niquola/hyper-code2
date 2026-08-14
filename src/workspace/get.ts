@@ -1,3 +1,4 @@
+/** Returns the current session workspace directory. */
 export default function (
     _ctx: Context,
     session: Session | null,

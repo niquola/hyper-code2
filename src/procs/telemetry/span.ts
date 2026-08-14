@@ -1,6 +1,12 @@
 // Run an operation under a nested async span. AsyncLocalStorage preserves the
 // parent across concurrent requests and agent runs without changing sync fns
 // into promises (many procedural helpers intentionally return synchronously).
+/**
+ * Perform span for the telemetry subsystem.
+ * @param opts.name The target name.
+ * @param opts.attrs Attributes attached to the operation.
+ * @param opts.fn The fn value used by the operation.
+ */
 export default function <T>(ctx: Context, _session: Session | null, opts: {
     name: string; attrs?: Record<string, any>; fn: () => T;
 }): T {

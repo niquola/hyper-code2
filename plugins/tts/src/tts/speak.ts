@@ -2,6 +2,12 @@
 // (~4500 bytes) and concatenated with ffmpeg. Markdown is stripped by default.
 // ctx.fns.tts.speak({ text: "Привет", out: "/tmp/hi.ogg" })
 // → { saved, seconds?, chunks }
+/**
+ * Resolves and caches a Google OAuth access token for text-to-speech calls.
+ *
+ * @param ctx - Runtime context used to resolve stored OAuth credentials.
+ * @returns A valid bearer access token.
+ */
 async function accessToken(ctx: Context) {
     const cache = ((ctx.state as any).tts ??= {} as { token?: { access_token: string; expires_at: number } });
     if (cache.token && Date.now() < cache.token.expires_at - 60_000) return cache.token.access_token;
@@ -21,15 +27,31 @@ async function accessToken(ctx: Context) {
     return cache.token.access_token;
 }
 
+/**
+ * Synthesizes text to an audio file with Google Cloud text-to-speech.
+ */
 export default async function (ctx: Context, session: Session | null, opts: {
-    text: string;
-    out?: string;                 // default /tmp/tts-<ts>.ogg
-    voice?: string;               // default Chirp3-HD-Puck of the lang
-    lang?: string;                // default ru-RU
-    speed?: number;               // 0.25–4.0
-    pitch?: number;               // -20…20 semitones
-    format?: "OGG_OPUS" | "MP3" | "LINEAR16";
-    strip?: boolean;              // strip markdown (default true)
+        /** Text to synthesize. */
+        text: string;
+        /** Destination audio file path. */
+        out?: string;                 // default /tmp/tts-<ts>.ogg
+
+        /** Google Cloud voice name. */
+        voice?: string;               // default Chirp3-HD-Puck of the lang
+
+        /** BCP 47 language code. */
+        lang?: string;                // default ru-RU
+
+        /** Speaking-rate multiplier from 0.25 to 4.0. */
+        speed?: number;               // 0.25–4.0
+
+        /** Voice pitch in semitones from -20 to 20. */
+        pitch?: number;               // -20…20 semitones
+
+        /** Audio encoding format. */
+        format?: "OGG_OPUS" | "MP3" | "LINEAR16";
+        /** Whether to strip Markdown before synthesis. */
+        strip?: boolean;              // strip markdown (default true)
 }) {
     if (!opts?.text?.trim()) throw new Error("tts.speak: text is required");
     const access_token = await accessToken(ctx);

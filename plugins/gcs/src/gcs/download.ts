@@ -1,8 +1,10 @@
-// gcs.download — read an object's content.
-//   ctx.fns.gcs.download({ bucket, object })                 -> text
-//   ctx.fns.gcs.download({ bucket, object, as: "bytes" })    -> Uint8Array
-//   ctx.fns.gcs.download({ bucket, object, as: "json" })     -> parsed JSON
-//   ctx.fns.gcs.download({ bucket, object, path: "/out.pdf" })-> writes file, returns { path, bytes }
+/**
+ * gcs.download — read an object's content.
+ *   ctx.fns.gcs.download({ bucket, object })                 -> text
+ *   ctx.fns.gcs.download({ bucket, object, as: "bytes" })    -> Uint8Array
+ *   ctx.fns.gcs.download({ bucket, object, as: "json" })     -> parsed JSON
+ *   ctx.fns.gcs.download({ bucket, object, path: "/out.pdf" })-> writes file, returns { path, bytes }
+ */
 const BASE = "https://storage.googleapis.com/storage/v1";
 
 async function accessToken(ctx: Context) {
@@ -16,12 +18,24 @@ async function accessToken(ctx: Context) {
     cache.token = token; cache.expiry = Date.now() + 3_500_000; return token;
 }
 
+/**
+ * Downloads a Google Cloud Storage object.
+ *
+ * @param ctx Runtime context.
+ * @param session Active session, when available.
+ * @param opts Operation options.
+ * @returns The operation result.
+ */
 export default async function (ctx: Context, session: Session | null, opts: {
-    bucket: string;
-    object: string;
-    as?: "text" | "bytes" | "json";
-    path?: string;
-}) {
+        /** Bucket name. */
+        bucket: string;
+        /** Object name. */
+        object: string;
+        /** Desired response representation. */
+        as?: "text" | "bytes" | "json";
+        /** Local file path or API path, depending on the operation. */
+        path?: string;
+    }) {
     if (!opts?.bucket || !opts?.object) throw new Error("bucket and object are required");
     const token = await accessToken(ctx);
     const url = `${BASE}/b/${encodeURIComponent(opts.bucket)}/o/${encodeURIComponent(opts.object)}?alt=media`;

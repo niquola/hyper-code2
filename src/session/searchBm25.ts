@@ -2,10 +2,17 @@
 // Returns hits ordered by relevance with a highlighted snippet (<b>…</b>).
 // Query syntax: bare terms (OR by default), "quoted phrases", AND/OR, field:term.
 //   ctx.fns.session.searchBm25({ q: "postgres migration", agentId?: "cf", limit?: 20 })
+/** Search bm25 for the runtime. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { q: string; agentId?: string; limit?: number },
+    opts: {
+        /** Q used by the operation. */
+    q: string;
+        /** Agent id used by the operation. */
+    agentId?: string;
+        /** Maximum number of results to return. */
+    limit?: number },
 ): Promise<types.session.Bm25Hit[]> {
     const limit = Math.min(Math.max(1, opts.limit ?? 20), 100);
     const where = opts.agentId ? "content @@@ ? AND agent_id = ?" : "content @@@ ?";

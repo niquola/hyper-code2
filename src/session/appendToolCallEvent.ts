@@ -2,12 +2,19 @@
 // the icon opens a sticky popup with the already-highlighted arguments/result
 // (agent chat.js). Tool activity is intentionally pull-based — automatic toasts
 // for every call obscured the conversation and duplicated the same content.
+/** Append tool call event for the runtime. */
 export default async function (
     ctx: Context,
     _session: Session | null,
     opts: {
+
+        /** Agent identifier. */
         id: string;
+
+        /** Payload used by the operation. */
         payload: { name: string; args: any; result: string; isError: boolean; messageIdx?: number };
+
+        /** Ts used by the operation. */
         ts?: number;
     },
 ) {

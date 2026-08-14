@@ -2,6 +2,15 @@
 // with an absolutely-positioned panel: no client JS, and it closes on its own
 // because every item navigates or posts (the pane re-renders, the menu is gone).
 // Each item is an action (data-action), a link, or an htmx post.
+/**
+ * Perform menu for the ui subsystem.
+ * @param opts.id The target identifier.
+ * @param opts.label The display label.
+ * @param opts.icon The icon value used by the operation.
+ * @param opts.items The items value used by the operation.
+ * @param opts.align The align value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {id?: string; label?: string; icon?: string; items: Array<{ label: string; icon?: string; href?: string; action?: string; post?: string; get?: string; vals?: Record<string, any>; danger?: boolean }>; align?: "left" | "right"; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     // daisyUI's `dropdown` on a <details>, with `menu` inside it — the panel,

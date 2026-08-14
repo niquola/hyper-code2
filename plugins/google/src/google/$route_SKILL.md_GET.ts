@@ -3,6 +3,9 @@
 import { marked } from "marked";
 import { resolve } from "node:path";
 
+/**
+ * Serve the Google plugin skill documentation.
+ */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}) {
     const abs = resolve(import.meta.dir, "../../SKILL.md");
     const raw = await Bun.file(abs).text();

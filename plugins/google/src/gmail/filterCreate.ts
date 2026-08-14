@@ -3,6 +3,22 @@
 //   action shortcuts: archive (skip Inbox) | markRead | del (trash) | star | labelId
 //   ctx.fns.gmail.filterCreate({ account, from: "@whova.io", archive: true })
 //   ctx.fns.gmail.filterCreate({ account, query: "from:(a OR b)", archive: true, markRead: true })
+/**
+ * Create a Gmail filter.
+ *
+ * @param opts - Options for the operation.
+ * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
+ * @param opts.from - Sender address or filter criterion.
+ * @param opts.to - Recipient address or addresses.
+ * @param opts.subject - Message subject.
+ * @param opts.query - Search query.
+ * @param opts.hasAttachment - Match messages that have attachments.
+ * @param opts.archive - Archive matching messages.
+ * @param opts.markRead - Mark matching messages as read.
+ * @param opts.del - Delete matching messages.
+ * @param opts.star - Star matching messages.
+ * @param opts.labelId - Label ID to apply or identify.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: {
     account?: string; from?: string; to?: string; subject?: string; query?: string; hasAttachment?: boolean;
     archive?: boolean; markRead?: boolean; del?: boolean; star?: boolean; labelId?: string;

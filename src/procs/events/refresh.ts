@@ -5,6 +5,11 @@
 // render from a message it half-received; re-fetching is an ordinary GET, so it
 // is idempotent; and a refresh never publishes anything, so it cannot feed
 // itself. Missing a signal costs one watchdog interval, never correctness.
+/**
+ * Refresh the events subsystem operation.
+ * @param opts.topic The event topic.
+ * @param opts.reason The reason for the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { topic: string; reason?: string }): void {
     ctx.fns.procs.events.emit({ topic: opts.topic, event: { type: "refresh", reason: opts.reason ?? null } });
 }

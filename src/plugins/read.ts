@@ -1,8 +1,9 @@
 // Read one mounted plugin: compact metadata plus its agent-facing SKILL.md.
+/** Reads metadata and agent instructions for a mounted plugin. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { name: string; maxChars?: number },
+    opts: { /** Runtime, plugin, or tool name. */ name: string; /** Value for maxChars. */ maxChars?: number },
 ) {
     const name = String(opts.name ?? "").trim();
     const plugin = (ctx.fns.procs.modules.list({}) as any[]).find((module: any) =>

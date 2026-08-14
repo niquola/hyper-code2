@@ -1,7 +1,16 @@
+/**
+ * Navigates a browser session to a URL.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { url: string; session?: string; settleMs?: number },
+    opts: {
+  /** Absolute URL to open. */
+  url: string;
+  /** Logical browser session name. */
+  session?: string;
+  /** Additional delay after navigation in milliseconds. */
+  settleMs?: number },
 ): Promise<string> {
     const url = String(opts.url || "").trim();
     if (!/^https?:\/\//i.test(url) && !url.startsWith("about:")) throw new Error("navigate: url must be http(s) or about:");

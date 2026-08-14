@@ -5,6 +5,10 @@
 // Two keys may answer: the workspace's own (it signed the link it printed) and,
 // when configured, a manager's public key. That second one is the whole seam:
 // nothing else changes when this workspace stops trusting only itself.
+/**
+ * Perform verify for the auth subsystem.
+ * @param opts.token The token value used by the operation.
+ */
 export default async function (ctx: Context, _session: Session | null, opts: { token: string }): Promise<{ sub: string; name: string; email?: string; role?: string; kind?: string; jti?: string; exp: number } | null> {
     const parts = opts.token.trim().split(".");
     if (parts.length !== 3) return null;

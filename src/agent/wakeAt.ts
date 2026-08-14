@@ -1,7 +1,17 @@
+/** Wake at for the runtime.  * @param opts.id Target agent identifier.
+ * @param opts.at Absolute Unix timestamp in milliseconds.
+ * @param opts.reason Human-readable wake-up reason.
+*/
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { id: string; at: number; reason: string },
+    opts: {
+        /** Agent identifier. */
+    id: string;
+        /** Timestamp at which to wake the agent. */
+    at: number;
+        /** Human-readable reason for the operation. */
+    reason: string },
 ): Promise<{ wakeAt: number; reason: string }> {
     const wakeAt = Math.floor(Number(opts.at));
     const reason = String(opts.reason ?? "").trim().slice(0, 1000);

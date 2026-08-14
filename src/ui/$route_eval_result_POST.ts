@@ -1,6 +1,9 @@
 type EvalResultBody = { id: string; ok?: boolean; value?: unknown; error?: unknown };
 
-export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
+/** Handles the HTTP route eval result POST endpoint. */
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Incoming HTTP request. */ req: Request;
+        /** Route parameters captured from the request path. */ params: Record<string, string> }) {
     const raw: unknown = await opts.req.json().catch(() => null);
     const body = raw as EvalResultBody | null;
     if (!body || typeof body.id !== 'string') return Response.json({ error: 'invalid payload' }, { status: 400 });

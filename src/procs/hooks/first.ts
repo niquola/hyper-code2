@@ -1,6 +1,11 @@
 // Run hooks under `name` until one returns a non-null result; return it (or
 // undefined). Use for "first responder" points — authenticate, resolve-handler,
 // where the first hook that handles it wins.
+/**
+ * Run hooks under `name` until the first responder returns a non-null result.
+ * @param opts.name The hook point name.
+ * @param opts.opts Options passed to each registered hook.
+ */
 export default async function (ctx: Context, session: Session | null, opts: { name: string; opts?: any }) {
     warnIfUndeclared(ctx, opts.name);
     const map = ctx.state.procs?.hooks?.handlers?.[opts.name];

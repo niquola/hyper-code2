@@ -5,10 +5,17 @@
 // → assistant(final). agent.run recognizes this payload, sanitizes the HTML,
 // publishes the final assistant row/event, and ends the turn without another
 // LLM call.
+/** Respond html for the runtime.  * @param opts.html HTML fragment to sanitize and display.
+ * @param opts.text Plain-text transcript fallback.
+*/
 export default function (
     _ctx: Context,
     _session: Session | null,
-    opts: { html: string; text: string },
+    opts: {
+        /** HTML content for display. */
+    html: string;
+        /** Text used by the operation. */
+    text: string },
 ): {
     output: string;
     terminal: { type: 'html'; html: string; text: string };

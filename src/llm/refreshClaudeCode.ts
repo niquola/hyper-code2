@@ -23,6 +23,7 @@ type Creds = {
     };
 };
 
+/** Performs the llm.refreshClaudeCode runtime operation. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string | null> {
     if (ctx.env.CLAUDE_CODE_ACCESS_TOKEN) return ctx.env.CLAUDE_CODE_ACCESS_TOKEN;
 

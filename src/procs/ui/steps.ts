@@ -1,6 +1,12 @@
 // Where you are in a sequence — a stepwise questionnaire, a wizard. Each step is
 // done, current, or ahead, and reads its state from `data-status`. A `href`
 // makes a done step a way back.
+/**
+ * Perform steps for the ui subsystem.
+ * @param opts.steps The steps value used by the operation.
+ * @param opts.current The current value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {steps: Array<{ label: string; href?: string }>; current: number; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     // daisyUI's `steps`: the connector line and the numbered bubble are the

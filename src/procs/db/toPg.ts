@@ -1,6 +1,10 @@
 // Translate portable `?` placeholders into Postgres `$1..$n`. Skips `?` inside
 // single-quoted strings, double-quoted identifiers, and -- / /* */ comments, so
 // a literal question mark in SQL text never becomes a parameter. Pure.
+/**
+ * Perform to pg for the db subsystem.
+ * @param opts.sql The SQL statement to execute.
+ */
 export default function (_ctx: Context, _session: Session | null, opts: { sql: string }): string {
     const s = opts.sql;
     let out = "";

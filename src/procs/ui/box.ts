@@ -10,6 +10,15 @@
 // `body` is html, already rendered: rows through ui.row, a table, a form.
 // `head` replaces the title with html when the strip itself is a control — a row
 // of tabs over two readings of the same file, say — and then `title` is unused.
+/**
+ * Perform box for the ui subsystem.
+ * @param opts.title The display title.
+ * @param opts.head The head value used by the operation.
+ * @param opts.right The right value used by the operation.
+ * @param opts.body The HTTP body.
+ * @param opts.empty The empty value used by the operation.
+ * @param opts.class CSS classes to apply.
+ */
 export default function (ctx: Context, _session: Session | null, opts: {title: string; head?: string; right?: string; body: string; empty?: string; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     return `<div class="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-xs ${opts.class ?? ""}">

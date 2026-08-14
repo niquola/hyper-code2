@@ -13,10 +13,20 @@ const BY_EXT: Record<string, string> = {
     dockerfile: "dockerfile", diff: "diff", patch: "diff",
 };
 
+/** Tool lang for the runtime.  * @param opts.name Tool or operation name.
+ * @param opts.args Tool arguments.
+ * @param opts.part Tool content part to classify.
+*/
 export default function (
     _ctx: Context,
     _session: Session | null,
-    opts: { name: string; args?: any; part: "args" | "result" },
+    opts: {
+        /** Name of the target resource or runtime function. */
+    name: string;
+        /** Arguments supplied to the target runtime function. */
+    args?: any;
+        /** Part used by the operation. */
+    part: "args" | "result" },
 ): string {
     const name = String(opts.name ?? "");
     const args = opts.args ?? {};

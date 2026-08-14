@@ -1,10 +1,25 @@
 // Ask Google AI Mode through the user's real Chrome session. Starts a fresh
 // query, waits for the generated answer, and returns the answer text plus the
 // visible source links. This is browser automation, not an undocumented API.
+/**
+ * Asks Google AI a question and optionally continues with follow-ups.
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { question: string; followUps?: string[]; session?: string; language?: string; timeoutMs?: number; keepOpen?: boolean },
+    opts: {
+  /** Initial question to ask. */
+  question: string;
+  /** Follow-up questions to ask in order. */
+  followUps?: string[];
+  /** Logical browser session name. */
+  session?: string;
+  /** Google interface language code. */
+  language?: string;
+  /** Maximum wait per answer in milliseconds. */
+  timeoutMs?: number;
+  /** Whether to leave the conversation tab open. */
+  keepOpen?: boolean },
 ) {
     const question = String(opts.question ?? "").trim();
     if (!question) throw new Error("browser.googleAI: question is required");
@@ -37,6 +52,12 @@ export default async function (
     }
 }
 
+/**
+ * Builds the in-page expression used to extract a Google AI response.
+ *
+ * @param question - Original question used to locate the conversation body.
+ * @returns JavaScript expression for browser-page evaluation.
+ */
 function extractExpression(question: string): string {
     return `(() => {
       const body = (document.body?.innerText || "").replace(/\\u00a0/g, " ");

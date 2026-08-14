@@ -7,6 +7,12 @@
 // Either way the row is a `[role=option]` the kit's `$script_combobox` drives with
 // arrow-keys/Enter. An app endpoint filters its own data and hands the hits here,
 // so the markup stays one shape across every combobox.
+/**
+ * Perform combobox results for the ui subsystem.
+ * @param opts.name The target name.
+ * @param opts.url The target URL.
+ * @param opts.items The items value used by the operation.
+ */
 export default function (ctx: Context, _session: Session | null, opts: { name: string; url: string; items: Array<{ value: string; label: string; hint?: string; href?: string }> }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     if (!opts.items.length) return `<div class="px-3 py-2 text-xs text-base-content/60">no matches</div>`;

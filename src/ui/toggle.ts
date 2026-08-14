@@ -1,7 +1,23 @@
+/** Performs the ui.toggle runtime operation. */
+/**
+ * Render a labeled boolean toggle control.
+ * @param opts.name Registered action or input name.
+ * @param opts.enabled Current toggle value.
+ * @param opts.label Visible control label.
+ * @param opts.hint Supplementary help text.
+ * @param opts.compact Whether to use compact presentation.
+ * @param opts.title Displayed title.
+ */
 export default function (
     ctx: Context,
     _session: Session | null,
-    opts: { name: string; enabled: boolean; label?: string; hint?: string; compact?: boolean; title?: string },
+    opts: {
+        /** Name of the requested action or resource. */ name: string;
+        /** Value used for the enabled option. */ enabled: boolean;
+        /** Value used for the label option. */ label?: string;
+        /** Value used for the hint option. */ hint?: string;
+        /** Whether to render the compact variant. */ compact?: boolean;
+        /** Page title. */ title?: string },
 ): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const text = opts.label ? `<span class="min-w-0 flex-1"><span class="block ${opts.compact ? 'text-[11px] font-medium' : 'text-sm'} ${opts.enabled ? 'text-gray-700' : 'text-gray-500'}">${esc(opts.label)}</span>${opts.hint ? `<span class="block text-[10px] leading-4 text-gray-400">${esc(opts.hint)}</span>` : ''}</span>` : '';

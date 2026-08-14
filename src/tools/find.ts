@@ -1,9 +1,10 @@
 // Find files by glob. Declared by $tool_find.md; callable by hand as
 // ctx.fns.tools.find({ pattern: "**/*.test.ts" }).
+/** Implements workspace glob search. */
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { pattern: string; path?: string; limit?: number; noIgnore?: boolean; hidden?: boolean; timeout?: number },
+    opts: { /** Glob or search pattern. */ pattern: string; /** Workspace-relative path. */ path?: string; /** Maximum number of results. */ limit?: number; /** Whether to include ignored files. */ noIgnore?: boolean; /** Whether to include hidden paths. */ hidden?: boolean; /** Timeout in seconds. */ timeout?: number },
 ): Promise<string> {
     const limit = Math.max(1, opts.limit ?? 200);
     const rows = await ctx.fns.files.find({ ...opts, limit });

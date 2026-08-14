@@ -14,6 +14,10 @@
 // field is the normal case in FHIR data and printing the word helps nobody.
 const REPLACEMENTS: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" };
 
+/**
+ * Perform escape for the ui subsystem.
+ * @param opts.text The text to process.
+ */
 export default function (_ctx: Context, _session: Session | null, opts: { text: unknown }): string {
     return String(opts.text ?? "").replace(/[&<>"']/g, ch => REPLACEMENTS[ch]!);
 }

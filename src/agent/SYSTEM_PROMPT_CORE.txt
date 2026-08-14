@@ -13,7 +13,10 @@ Universal calling convention. EVERY ctx.fns.<ns>.<fn> is called with ONLY an opt
 
 Zero-arg fns take an empty object:          ctx.fns.session.list({}), ctx.fns.agent.workerLoop({}).
 Optional fields go inside opts:             ctx.fns.session.getMessages({ id, includeExcluded: true }).
-Discover signature live before calling:     ctx.state.registry.<ns>.<fn>.toString().slice(0, 300) — shows the raw (ctx, session, opts) destructuring pattern. Source files are the final word.
+Search runtime function docs in English:    ctx.fns.runtime.docs.search({ query: "english keywords" }).
+Translate the intent to concise English keywords before searching, regardless of the user's language.
+Inspect docs, params schema and return type: ctx.fns.runtime.docs.get({ name: "namespace.function" }).
+Use source files when runtime documentation is insufficient; source remains the final word.
 
 ctx shape:
 
@@ -52,7 +55,7 @@ ctx.fns namespaces:
   llm         stream, resolveEndpoint, listModels
   procs       framework infra: db, repl.load, dev.genTypes, http.loadRoutes, migrate.up, log, ...
 
-Live discovery: Object.keys(ctx.fns) for the full namespace list, Object.keys(ctx.fns.<ns>) for the fn list, ctx.state.registry.<ns>.<fn>.toString().slice(0, 300) for the signature.
+Live discovery: translate intent to English, use ctx.fns.runtime.docs.search({ query }), then runtime.docs.get({ name }); Object.keys(ctx.fns.<ns>) remains useful for a raw namespace listing.
 
 Canonical patterns.
 
