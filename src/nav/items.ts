@@ -1,6 +1,6 @@
-// Everything the ⌘K palette can jump to, filtered by opts.q: agents (from the
-// store), built-in pages, and every mounted module's top-level GET pages
-// (procs modules metadata — uniskill-style: mount a module, get navigation).
+// Resources available in the global menu: core pages, agent chats, and the
+// installed plugins themselves. Plugin routes are discovered through search
+// providers rather than dumped into the default overview.
 export default async function (
     ctx: Context,
     _session: Session | null,
@@ -24,20 +24,21 @@ export default async function (
         { label: "new agent", href: "/agent/new", hint: "page" },
     ];
 
-    const moduleItems: types.nav.Item[] = (((ctx.state as any).procs?.modules ?? []) as any[])
-        .filter((m) => !m.self)
-        .flatMap((m) => (m.routes ?? [])
-            .filter((r: string) => r.startsWith("GET /") && !r.includes(":") && !/\.(js|css|json)$/.test(r))
-            .map((r: string): types.nav.Item => ({
-                label: `${m.label ?? m.name} — ${r.slice(4)}`,
-                href: r.slice(4),
-                hint: "module page",
-            })));
+    const seenPluginPaths = new Set<string>();
+    const plugins: types.nav.Item[] = ctx.fns.plugins.list({})
+        .filter((plugin: any) => {
+            const identity = plugin.path || plugin.name;
+            if (seenPluginPaths.has(identity)) return false;
+            seenPluginPaths.add(identity);
+            return true;
+        })
+        .map((plugin: any): types.nav.Item => ({
+            label: plugin.label || plugin.name,
+            href: `/plugins/${encodeURIComponent(plugin.name)}`,
+            hint: `plugin · ${plugin.description || plugin.namespaces?.join(", ") || plugin.name}`,
+        }));
 
-    // Pages first, agents after: the rail already lists every agent, so with no
-    // query typed the palette should show what nothing else on screen does —
-    // and it is the only way to reach a page now that the tab strip is gone.
-    const all = [...pages, ...moduleItems, ...agents];
+    const all = [...pages, ...plugins, ...agents];
     const hit = (i: types.nav.Item) => !q || i.label.toLowerCase().includes(q) || i.href.toLowerCase().includes(q) || (i.hint ?? "").toLowerCase().includes(q);
     return all.filter(hit).slice(0, limit);
 }

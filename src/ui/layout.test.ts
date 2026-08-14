@@ -25,9 +25,11 @@ describe("ui.layout", () => {
         const html = await ctx.fns.ui.layout({ main: "", title: "t" });
 
         expect(html).toContain('id="nav-overlay"');
-        expect(html).toContain('id="agents-rail"');
-        // No tabs: reaching a page goes through nav.items, so mounting a module
-        // is all it takes to make its pages reachable.
+        expect(html).not.toContain('id="agents-rail"');
+        // No agent rail or tabs: reaching a page goes through the global menu;
+        // quick access is only a thin strip of pinned page icons.
+        expect(html).toContain('id="quick-bar"');
+        expect(html).toContain('id="quick-items"');
         expect(html).not.toContain('data-action="open-tab"');
     });
 });

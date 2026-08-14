@@ -61,7 +61,8 @@ describe('ui control helpers', () => {
     const script = await ctx.fns.ui.controlScript({});
     expect(script).toContain('secure-input-refresh');
     expect(script).not.toContain("createElement('input')");
-    expect(ctx.state.procs.http.routes['/secureInput/prompt/:id']?.POST).toBeFunction();
+    expect(ctx.fns.secureInput.submit).toBeFunction();
+    expect(ctx.fns.secureInput.current).toBeFunction();
   });
 
 
@@ -70,7 +71,8 @@ describe('ui control helpers', () => {
     const html = ctx.fns.secureInput.render({ prompt: { id: 'p1', name: 'test-1', title: 'Test', message: 'Enter', kind: 'text', maxlength: 20 } });
     expect(html).toContain('border border-gray-300');
     expect(html).toContain('bg-blue-600');
-    expect(html).toContain('hx-post="/secureInput/prompt/p1"');
+    expect(html).toContain('hx-popup="secureInput.submit"');
+    expect(html.match(/hx-popup=/g)?.length).toBe(2);
   });
 
 });

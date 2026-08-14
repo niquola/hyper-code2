@@ -35,10 +35,35 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         "openai:gpt-5.1-mini",
         "openai:gpt-4o-mini",
     ];
-    out.groq = [
-        "groq:llama-3.3-70b-versatile",
-        "groq:moonshotai/kimi-k2-instruct",
-    ];
+    // Groq: query the account catalogue live when a key is configured. Fall back
+    // to a small production list so model selection still works before login.
+    try {
+        const endpoint = await ctx.fns.llm.resolveEndpoint({ model: "groq:openai/gpt-oss-120b" });
+        if (endpoint.apiKey) {
+            const res = await fetch("https://api.groq.com/openai/v1/models", {
+                headers: { authorization: `Bearer ${endpoint.apiKey}` },
+                signal: AbortSignal.timeout(3000),
+            });
+            if (res.ok) {
+                const body: any = await res.json();
+                const ids = (body.data ?? [])
+                    .filter((m: any) => m.active !== false)
+                    .map((m: any) => m.id)
+                    .filter(Boolean)
+                    .map((id: string) => `groq:${id}`)
+                    .sort();
+                if (ids.length) out.groq = ids;
+            }
+        }
+    } catch { /* missing/invalid key or unreachable — use fallback */ }
+    if (!out.groq) {
+        out.groq = [
+            "groq:openai/gpt-oss-120b",
+            "groq:openai/gpt-oss-20b",
+            "groq:llama-3.3-70b-versatile",
+            "groq:llama-3.1-8b-instant",
+        ];
+    }
     out.openrouter = [
         "openrouter:anthropic/claude-sonnet-4.6",
         "openrouter:google/gemini-2.5-pro",

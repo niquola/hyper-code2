@@ -22,8 +22,10 @@ export default async function (
         messages,
         stream: true,
         stream_options: { include_usage: true },
-        prompt_cache_key: agent.id,
     };
+    // OpenAI-compatible providers do not consistently accept OpenAI's cache
+    // extension. Groq currently rejects prompt_cache_key with HTTP 400.
+    if (ep.provider === "openai") body.prompt_cache_key = agent.id;
 
     // Native function calls, in JSON protocol mode only (see agent.wireTools).
     const tools = ctx.fns.agent.wireTools({ agent, api: "openai" });

@@ -18,9 +18,21 @@
     };
 
     window.addEventListener('keydown', (event) => {
+        // ⌘/ opens the global menu without colliding with ⌘K, which remains
+        // agent navigation outside the menu.
+        if (event.key === '/' && !event.altKey && !event.shiftKey && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            window.__navOpen?.();
+            return;
+        }
+
+
         if (event.isComposing || event.altKey || event.shiftKey) return;
         if (!(event.metaKey || event.ctrlKey)) return;
 
+
+        // While the global menu is open it owns ⌘J/⌘K for result navigation.
+        if (window.__navIsOpen?.()) return;
         const key = event.key.toLowerCase();
         if (key !== 'j' && key !== 'k') return;
 

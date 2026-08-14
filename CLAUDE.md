@@ -187,7 +187,7 @@ Rules:
 - Server templates are the single source of markup. Never duplicate a row/card template in browser JavaScript.
 - Prefer ordinary named form controls and `FormData.getAll()` over hidden JSON assembled on submit.
 - A `+` that adds server-defined markup should be `hx-get` + `hx-swap="beforeend"`.
-- Prefer native `<dialog>` with an HTMX target over hand-built modal DOM/fetch/focus code.
+- The shell owns one permanent popup `<dialog>`. Procedural popup partials use only `hx-popup="module.function"` and optional `hx-popup-params='{"key":"value"}'`; the extension owns `/rpc`, target and swap. Do not add `hx-post`, `hx-rpc`, `hx-target`, `hx-swap`, local dialogs or manual fetch to popup triggers/forms.
 - Live state uses `ui.live`: Postgres is authoritative, SSE topics invalidate, HTMX fetches current HTML. Keep topics narrow (`agent:<id>`, `agent-meta:<id>`, `agents`).
 - Browser scripts must use event delegation when their targets can be replaced by HTMX. Do not bind/re-mount handlers on every fragment swap.
 - Do not use JavaScript `fetch()` where an HTMX attribute describes the same request and swap.

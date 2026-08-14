@@ -132,7 +132,6 @@
 
         destroy() {
             this.abort.abort();
-            document.getElementById('tool-dialog')?.remove();
         }
     }
 

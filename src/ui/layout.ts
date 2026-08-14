@@ -1,15 +1,9 @@
-// The app shell: a persistent agents rail on the left and one ordinary page on
-// the right. Agent chat is a page like /llms, /files or /settings; the layout
-// does not own an active agent or keep a hidden chat alive behind other pages.
-//
-// There is no menu bar. Navigation is the ⌘K palette (ui.navMenu over
-// nav.items), reachable from the button in the rail's header — so a mounted
-// module needs nothing but its routes to become reachable.
+// The app shell owns one ordinary URL-addressed page. Global navigation lives
+// in ui.navMenu; there is no persistent sidebar or hidden page state.
 export default async function (ctx: Context, session: Session | null, opts: { currentId?: string; title?: string; main: string; headExtra?: string }): Promise<string> {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
 
-    // currentId is presentation-only: it highlights the matching rail row on
-    // an agent page. It does not make that agent part of unrelated pages.
+    // currentId only identifies the active agent to browser-side chat behavior.
     const currentId = opts.currentId ?? session?.req?.headers?.get("x-hyper-agent") ?? undefined;
     const pageTitle = opts.title ? `${opts.title} · hyper-code2` : "hyper-code2";
     // A tiny terminal prompt: dark enough to survive light browser chrome,
@@ -35,12 +29,12 @@ export default async function (ctx: Context, session: Session | null, opts: { cu
 .tool.tool-tucked:hover { background-color: rgb(249 250 251); border-color: rgb(107 114 128); box-shadow: 0 3px 8px rgb(17 24 39 / .18); transform: translateY(-2px) scale(1.15); color: rgb(55 65 81); }
 .tool.tool-tucked:active { transform: translateY(0) scale(1.05); }
 /* Highlighted code inside tool detail dialogs. */
-.tool-dialog-body pre { margin: 0; padding: .75rem 1rem; border-radius: .65rem; background: rgba(0,0,0,.04) !important; white-space: pre-wrap; word-break: break-word; }
-.tool-dialog-body pre + pre { margin-top: .75rem; }
-.tool-dialog-body code { font-size: 12px; line-height: 1.5; }
-.tool-dialog-body .edit-preview pre { border-radius: 0; background: transparent !important; }
-.tool-dialog-body .edit-remove pre { background: transparent !important; }
-.tool-dialog-body .edit-add pre { background: transparent !important; }
+.app-popup-body pre { margin: 0; padding: .75rem 1rem; border-radius: .65rem; background: rgba(0,0,0,.04) !important; white-space: pre-wrap; word-break: break-word; }
+.app-popup-body pre + pre { margin-top: .75rem; }
+.app-popup-body code { font-size: 12px; line-height: 1.5; }
+.app-popup-body .edit-preview pre { border-radius: 0; background: transparent !important; }
+.app-popup-body .edit-remove pre { background: transparent !important; }
+.app-popup-body .edit-add pre { background: transparent !important; }
 </style>
 
 <style>
@@ -58,43 +52,35 @@ ${opts.headExtra ?? ""}
 <script src="/ui/control.js" defer></script>
 <script src="/procs/events/client.js" defer></script>
 <script src="/ui/hotkeys.js" defer></script>
-<script src="/ui/rail.js" defer></script>
+<script src="/ui/rpc.js" defer></script>
 <script src="/agent/chat.js" defer></script>
+<script src="/ui/popup.js" defer></script>
 <script src="/ui/meta.js" defer></script>
 <script src="/screen/client.js" defer></script>
 <script src="/ui/wake-timer.js" defer></script>
 </head>
-<body class="bg-gray-100 text-gray-900 text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
+<body hx-ext="popup-rpc" class="bg-gray-100 text-gray-900 text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div id="frame" class="relative flex h-screen">
-  ${ctx.fns.ui.live({
-      id: "agents-rail",
-      url: `/ui/rail${currentId ? `?current=${encodeURIComponent(currentId)}` : ""}`,
-      topic: "agents",
-      tag: "nav",
-      swap: "innerHTML",
-      trigger: "load, rail-refresh",
-      every: 60,
-      attrs: `class="shrink-0 w-64 border-r border-gray-200 bg-gray-50 flex flex-col" ${ctx.fns.procs.ui.attr({ section: "agents" })}`,
-  })}
-  <!-- No htmx attributes on this container. htmx inherits hx-target, hx-swap
-       and hx-push-url into EVERY descendant, and #main holds live content (the
-       chat's tail poll, the status bar, the meta panel). With navigation
-       declared here, each of those answered its own poll by replacing the page
-       and pushing its fragment URL into the address bar. Navigation belongs to
-       the things that navigate — the tab strip and the rail's links. -->
+  <nav id="quick-bar" aria-label="Quick access" class="flex w-10 shrink-0 flex-col items-center border-r border-gray-200 bg-gray-50 py-1.5">
+    <button type="button" title="Global menu — ⌘/" aria-label="Open global menu" onclick="window.__navOpen?.()" class="flex size-7 items-center justify-center rounded-md text-gray-500 hover:bg-gray-200 hover:text-gray-900">
+      <i class="ph ph-squares-four text-base" aria-hidden="true"></i>
+    </button>
+    <div id="quick-items" class="mt-2 flex min-h-0 flex-1 flex-col items-center gap-1" aria-label="Pinned pages"></div>
+  </nav>
+  <!-- This container owns no navigation attributes: live descendants must
+       always target themselves, while navigation is handled by the global menu. -->
   <section id="page-view" class="flex min-w-0 flex-1 flex-col bg-white">
     <main id="main" hx-history-elt class="min-h-0 min-w-0 flex flex-1 flex-col overflow-y-auto">${opts.main}</main>
   </section>
 </div>
-<div id="modal"></div>
-${ctx.fns.ui.navMenu({})}
-<div id="secure-input-host" hx-get="/secureInput/current" hx-trigger="load, secure-input-refresh from:body" hx-swap="innerHTML"></div>
-<dialog id="tool-dialog" class="m-auto max-h-[82vh] w-[min(48rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-gray-200 bg-white p-0 shadow-2xl backdrop:bg-gray-950/40 backdrop:backdrop-blur-[1px]">
-  <div class="flex max-h-[82vh] flex-col">
-    <div class="flex shrink-0 items-center gap-3 border-b border-gray-200 px-5 py-3.5"><h2 id="tool-dialog-title" class="min-w-0 flex-1 truncate font-mono text-sm font-semibold text-gray-800">tool</h2><form method="dialog"><button title="Close" aria-label="Close" class="flex size-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"><i class="ph ph-x text-lg"></i></button></form></div>
-    <div id="tool-dialog-body" class="tool-dialog-body min-h-0 flex-1 overflow-auto bg-gray-50/60 p-5 text-xs text-gray-700"></div>
+<dialog id="app-popup" class="m-auto max-h-[85vh] w-[min(48rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-gray-200 bg-white p-0 shadow-2xl backdrop:bg-gray-950/40 backdrop:backdrop-blur-[1px]">
+  <div class="flex max-h-[85vh] flex-col">
+    <div class="flex shrink-0 items-center gap-3 border-b border-gray-200 px-5 py-3.5"><h2 id="app-popup-title" class="min-w-0 flex-1 truncate text-sm font-semibold text-gray-800">Details</h2><form method="dialog"><button title="Close" aria-label="Close" class="flex size-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"><i class="ph ph-x text-lg"></i></button></form></div>
+    <div id="app-popup-body" class="app-popup-body min-h-0 flex-1 overflow-auto bg-gray-50/60 p-5 text-xs text-gray-700"></div>
   </div>
 </dialog>
+${ctx.fns.ui.navMenu({})}
+<button id="secure-input-host" type="button" class="hidden" hx-popup="secureInput.current" data-pending="${(ctx.state as any).secureInput?.prompts?.size ? '1' : '0'}" aria-label="Secure input"></button>
 
 </body>
 </html>`;

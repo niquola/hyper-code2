@@ -9,11 +9,17 @@ declare global {
         agent: {
             buildDelegatedTaskPrompt: Injected<typeof import("./agent/buildDelegatedTaskPrompt").default>;
             buildLlmRequest: Injected<typeof import("./agent/buildLlmRequest").default>;
+            cancelWake: Injected<typeof import("./agent/cancelWake").default>;
+            cancelWatch: Injected<typeof import("./agent/cancelWatch").default>;
             checkGoal: Injected<typeof import("./agent/checkGoal").default>;
             clear: Injected<typeof import("./agent/clear").default>;
             clearReflectionNudge: Injected<typeof import("./agent/clearReflectionNudge").default>;
             compact: Injected<typeof import("./agent/compact").default>;
+            createFromPopup: Injected<typeof import("./agent/createFromPopup").default>;
+            createFromValues: Injected<typeof import("./agent/createFromValues").default>;
             delegateTask: Injected<typeof import("./agent/delegateTask").default>;
+            deliverWakes: Injected<typeof import("./agent/deliverWakes").default>;
+            deliverWatch: Injected<typeof import("./agent/deliverWatch").default>;
             executeBash: Injected<typeof import("./agent/executeBash").default>;
             finishTask: Injected<typeof import("./agent/finishTask").default>;
             fullSystemPrompt: Injected<typeof import("./agent/fullSystemPrompt").default>;
@@ -22,9 +28,12 @@ declare global {
             highlightResult: Injected<typeof import("./agent/highlightResult").default>;
             imageContent: Injected<typeof import("./agent/imageContent").default>;
             listPromptPresets: Injected<typeof import("./agent/listPromptPresets").default>;
+            listWatches: Injected<typeof import("./agent/listWatches").default>;
             llmCall: Injected<typeof import("./agent/llmCall").default>;
+            newForm: Injected<typeof import("./agent/newForm").default>;
             nextId: Injected<typeof import("./agent/nextId").default>;
             normalizeSleepContext: Injected<typeof import("./agent/normalizeSleepContext").default>;
+            pollWatches: Injected<typeof import("./agent/pollWatches").default>;
             readAndSummarize: Injected<typeof import("./agent/readAndSummarize").default>;
             recordGoalCheck: Injected<typeof import("./agent/recordGoalCheck").default>;
             reflect: Injected<typeof import("./agent/reflect").default>;
@@ -46,11 +55,16 @@ declare global {
             stashResult: Injected<typeof import("./agent/stashResult").default>;
             statusLineForTurn: Injected<typeof import("./agent/statusLineForTurn").default>;
             stop: Injected<typeof import("./agent/stop").default>;
+            toolDetails: Injected<typeof import("./agent/toolDetails").default>;
             toolLang: Injected<typeof import("./agent/toolLang").default>;
             toolMeta: Injected<typeof import("./agent/toolMeta").default>;
             waitForEvent: Injected<typeof import("./agent/waitForEvent").default>;
+            wakeAt: Injected<typeof import("./agent/wakeAt").default>;
+            wakeIn: Injected<typeof import("./agent/wakeIn").default>;
+            wakeUpWhen: Injected<typeof import("./agent/wakeUpWhen").default>;
             wakeWaiters: Injected<typeof import("./agent/wakeWaiters").default>;
             wakeWorker: Injected<typeof import("./agent/wakeWorker").default>;
+            watchPredicate: Injected<typeof import("./agent/watchPredicate").default>;
             wireTools: Injected<typeof import("./agent/wireTools").default>;
             workerLoop: Injected<typeof import("./agent/workerLoop").default>;
         };
@@ -447,7 +461,6 @@ declare global {
                 comboboxResults: Injected<typeof import("./procs/ui/comboboxResults").default>;
                 control: Injected<typeof import("./procs/ui/control").default>;
                 descriptionList: Injected<typeof import("./procs/ui/descriptionList").default>;
-                dialog: Injected<typeof import("./procs/ui/dialog").default>;
                 diff: Injected<typeof import("./procs/ui/diff").default>;
                 empty: Injected<typeof import("./procs/ui/empty").default>;
                 escape: Injected<typeof import("./procs/ui/escape").default>;
@@ -512,8 +525,10 @@ declare global {
             resolveSetting: Injected<typeof import("./secrets/resolveSetting").default>;
         };
         secureInput: {
+            current: Injected<typeof import("./secureInput/current").default>;
             prompt: Injected<typeof import("./secureInput/prompt").default>;
             render: Injected<typeof import("./secureInput/render").default>;
+            submit: Injected<typeof import("./secureInput/submit").default>;
         };
         session: {
             appendAssistantEvent: Injected<typeof import("./session/appendAssistantEvent").default>;
@@ -605,6 +620,10 @@ declare global {
             send: Injected<typeof import("../plugins/telegram/src/telegram/send").default>;
             sendFile: Injected<typeof import("../plugins/telegram/src/telegram/sendFile").default>;
         };
+        tmp: {
+            waitForEmail: Injected<typeof import("../.hyper/tmp/waitForEmail").default>;
+            wakeProbe: Injected<typeof import("../.hyper/tmp/wakeProbe").default>;
+        };
         tools: {
             bash: Injected<typeof import("./tools/bash").default>;
             call: Injected<typeof import("./tools/call").default>;
@@ -633,7 +652,6 @@ declare global {
         ui: {
             action: Injected<typeof import("./ui/action").default>;
             agentMetaPanel: Injected<typeof import("./ui/agentMetaPanel").default>;
-            agentsRail: Injected<typeof import("./ui/agentsRail").default>;
             chatColumn: Injected<typeof import("./ui/chatColumn").default>;
             controlScript: Injected<typeof import("./ui/controlScript").default>;
             createAgent: Injected<typeof import("./ui/createAgent").default>;
@@ -642,16 +660,20 @@ declare global {
             live: Injected<typeof import("./ui/live").default>;
             modelLogo: Injected<typeof import("./ui/modelLogo").default>;
             navMenu: Injected<typeof import("./ui/navMenu").default>;
+            newAgentPopup: Injected<typeof import("./ui/newAgentPopup").default>;
             notify: Injected<typeof import("./ui/notify").default>;
             openAgent: Injected<typeof import("./ui/openAgent").default>;
             openFile: Injected<typeof import("./ui/openFile").default>;
             pending: Injected<typeof import("./ui/pending").default>;
             planTaskRow: Injected<typeof import("./ui/planTaskRow").default>;
+            popup: Injected<typeof import("./ui/popup").default>;
+            popupContent: Injected<typeof import("./ui/popupContent").default>;
             reflectionDropdown: Injected<typeof import("./ui/reflectionDropdown").default>;
             script: Injected<typeof import("./ui/script").default>;
             sendToAgent: Injected<typeof import("./ui/sendToAgent").default>;
             state: Injected<typeof import("./ui/state").default>;
             toggle: Injected<typeof import("./ui/toggle").default>;
+            wakeTimer: Injected<typeof import("./ui/wakeTimer").default>;
         };
         workspace: {
             get: Injected<typeof import("./workspace/get").default>;

@@ -1,0 +1,11 @@
+export default async function (ctx: Context, _session: Session | null, _opts: {}): Promise<string> {
+    const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
+    const last = ((await ctx.fns.procs.db.select({ sql: "SELECT value FROM kv WHERE key = 'last-model'" }).catch(() => [])) as any[])[0]?.value;
+    const model = last ?? (await ctx.fns.settings.modelDefault({})) ?? ctx.env.MODEL ?? '';
+    const groups = await ctx.fns.llm.listModels({});
+    const base = await ctx.fns.agent.getBasePromptParts({});
+    const presets = await ctx.fns.agent.listPromptPresets({});
+    const options = Object.entries(groups).map(([provider, ids]) => `<optgroup label="${esc(provider)}">${(ids as string[]).map(id => `<option value="${esc(id)}" ${id === model ? 'selected' : ''}>${esc(id)}</option>`).join('')}</optgroup>`).join('');
+    const presetHtml = Object.entries(presets).map(([id, p]: any) => `<details class="rounded-md border border-gray-200 bg-white"><summary class="cursor-pointer px-3 py-2"><label class="flex gap-2 text-sm"><input type="checkbox" name="promptPreset" value="${esc(id)}"><span>${esc(p.label)} <span class="text-gray-400">${Math.ceil((p.text?.length || 0) / 4)}t</span></span></label></summary><pre class="border-t bg-gray-50 p-3 text-[11px] whitespace-pre-wrap">${esc(p.text)}</pre></details>`).join('');
+    return `<input name="title" maxlength="120" placeholder="title (optional)" class="w-full rounded border px-3 py-2"><select name="model" class="w-full rounded border bg-white px-3 py-2 font-mono">${options}</select><div><input name="workspaceDir" list="workspace-dirs" value="${esc(process.cwd())}" required hx-get="/agent/dirs/status" hx-trigger="load, keyup changed delay:250ms" hx-target="#workspace-dir-status" hx-vals="js:{q:event.target.value}" class="w-full rounded border px-3 py-2 font-mono"><datalist id="workspace-dirs"></datalist><div id="workspace-dir-status" class="mt-1 min-h-5 text-[11px]"></div></div><details class="rounded border"><summary class="p-2">Base system prompt · ${Math.ceil((base.core?.length || 0) / 4)}t</summary><pre class="border-t bg-gray-50 p-3 text-[11px] whitespace-pre-wrap">${esc(base.core)}</pre></details>${presetHtml}<textarea name="systemPrompt" rows="4" placeholder="custom instructions (optional)" class="w-full rounded border px-3 py-2 font-mono"></textarea>`;
+}

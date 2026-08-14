@@ -129,5 +129,6 @@ ${agent.sleepContext?.active === true
   </details>
 </div>
   ${reflectionNudge ? `<div class="flex items-start gap-2 border-t border-violet-100 bg-violet-50/60 px-3 py-2 text-[11px] leading-4 text-violet-700" title="Active reflection instruction"><i class="ph ph-brain mt-0.5 shrink-0" aria-hidden="true"></i><span class="min-w-0 flex-1">${esc(reflectionNudge)}</span><button hx-post="/agent/${encodeURIComponent(id)}/reflection-nudge/delete" hx-target="closest div" hx-swap="outerHTML" title="Dismiss reflection nudge" aria-label="Dismiss reflection nudge" class="-mr-1 -mt-1 inline-flex size-6 shrink-0 items-center justify-center rounded text-violet-400 hover:bg-violet-100 hover:text-violet-700"><i class="ph ph-x"></i></button></div>` : ''}
+
 `;
 }

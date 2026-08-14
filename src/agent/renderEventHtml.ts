@@ -133,22 +133,15 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         const cardStyle = ev.isError
             ? 'border-red-200 bg-red-50/40 text-red-500'
             : destructive ? 'border-gray-500 bg-white text-gray-500' : 'border-gray-200 bg-white text-gray-400';
-        const bodyUrl = agentId && ev.idx != null
-            ? `/agent/${encodeURIComponent(agentId)}/tool/${Number(ev.idx)}`
-            : '';
+        const bodyMethod = agentId && ev.idx != null ? 'agent.toolDetails' : '';
         const title = String(meta.label + ' ' + meta.subject).trim();
 
-        // The transcript carries only a compact trigger. HTMX fetches the
-        // expensive highlighted body directly into the shared native dialog.
-        return '<button type="button" class="tool tool-tucked shrink-0 rounded-full border ' + cardStyle + '"'
-            + ' data-tool="' + esc(ev.name || 'tool') + '"'
-            + ' data-title="' + esc(title) + '"'
-            + (bodyUrl ? ' hx-get="' + esc(bodyUrl) + '" hx-target="#tool-dialog-body" hx-swap="innerHTML"' : '')
-            + ' hx-on::before-request="document.getElementById(\'tool-dialog-title\').textContent=this.dataset.title; document.getElementById(\'tool-dialog-body\').innerHTML=\'<div class=&quot;text-sm text-gray-400&quot;>loading…</div>\'; document.getElementById(\'tool-dialog\').showModal()"'
-            + (ev.isError ? ' data-error="1"' : '')
-            + ' title="' + esc(title) + '" aria-label="' + esc(title) + '">'
-            + '<i class="ph ' + esc(meta.icon) + '" aria-hidden="true"></i>'
-            + '</button>';
+        return (_ctx as any).fns.ui.popup({
+            method: bodyMethod,
+            params: { agentId, idx: Number(ev.idx) },
+            html: '<i class="ph ' + esc(meta.icon) + '" aria-hidden="true"></i>',
+            attrs: 'class="tool tool-tucked shrink-0 rounded-full border ' + cardStyle + '" data-tool="' + esc(ev.name || 'tool') + '" data-title="' + esc(title) + '"' + (ev.isError ? ' data-error="1"' : '') + ' title="' + esc(title) + '" aria-label="' + esc(title) + '"',
+        });
     }
 
     if (ev.type === "plan_activation") {

@@ -26,9 +26,10 @@ Conventions:
 - render each fragment/row on the server only once—browser JS must not duplicate templates;
 - submit repeated form controls with `FormData.getAll()` instead of constructing hidden JSON;
 - keep JavaScript for scroll anchoring, keyboard shortcuts, resize, and local reorder/remove only;
+- popup RPC uses the compact `hx-popup="module.function"` plus optional `hx-popup-params='{"key":"value"}'` contract; do not repeat transport/target/swap attributes or create local dialogs;
 - do not mix Datastar or another reactive framework into the HTMX lifecycle.
 
-Examples in the current UI: Plan `+` loads a server-rendered task row with HTMX; tool details load into a native `<dialog>` with HTMX; chat and Meta refresh on separate live topics.
+Examples in the current UI: Plan `+` loads a server-rendered task row with HTMX; tool details and secure input call procedural partials through `hx-popup` into one permanent native `<dialog>`; chat and Meta refresh on separate live topics.
 
 ## What it is
 

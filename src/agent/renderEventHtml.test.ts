@@ -17,6 +17,7 @@ const ctx = { fns: {
   },
   markdown: { highlight: async ({ code }: any) => `<pre>${String(code)}</pre>` },
   procs: { ui: { escape: ({ text }: any) => String(text) } },
+  ui: { popup: (opts: any) => `<button type="button" hx-popup="${opts.method}" hx-popup-params='${JSON.stringify(opts.params)}' ${opts.attrs}>${opts.html}</button>` },
 } } as unknown as Context;
 const renderEventHtml = (c: any, event: any, opts: { agentId?: string } = {}) =>
     renderEventHtmlFn(c, null, { event, agentId: opts.agentId });
@@ -30,9 +31,10 @@ describe("agent.renderEventHtml", () => {
     expect(evalHtml).toContain('data-title="eval 1 + 1"');
     expect(evalHtml).toContain("1 + 1");
     expect(evalHtml).toContain("ph-brackets-curly");
-    expect(evalHtml).toContain('hx-get="/agent/a/tool/7"');
-    expect(evalHtml).toContain('hx-target="#tool-dialog-body"');
-    expect(evalHtml).toContain("showModal()");
+    expect(evalHtml).toContain('hx-popup="agent.toolDetails"');
+    expect(evalHtml).toContain('hx-popup-params=');
+    expect(evalHtml).not.toContain('hx-post');
+    expect(evalHtml).not.toContain('hx-target');
     expect(evalHtml).not.toContain('tool-label');
     expect(evalHtml).not.toContain('tool-subject');
     expect(evalHtml).not.toContain('tool-size');
@@ -45,7 +47,7 @@ describe("agent.renderEventHtml", () => {
     const writeHtml = await renderEventHtml(ctx, { type: "tool_call", name: "write", argsHtml: "<pre>x</pre>", resultHtml: "<pre>ok</pre>", result: "ok", args: { path: "src/foo.ts", content: "x" }, isError: false, ts: Date.now(), idx: 8 }, { agentId: "a" });
     expect(writeHtml).toContain("src/foo.ts");
     expect(writeHtml).not.toContain("<details");
-    expect(writeHtml).toContain('hx-get="/agent/a/tool/8"');
+    expect(writeHtml).toContain('hx-popup="agent.toolDetails"');
     expect(writeHtml).toContain("tool-tucked");
 
     expect(writeHtml).toContain("border-gray-500");

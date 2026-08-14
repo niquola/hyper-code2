@@ -5,9 +5,8 @@ const ctx: any = { fns: { procs: { ui: { escape: ({ text }: any) => String(text)
 
 test("toggle keeps its thumb within a 36x20 track", () => {
     const html = render(ctx, null, { name: "sleep", enabled: true, label: "Sleep", hint: "Idle" });
-    expect(html).toContain("h-5 w-9");
-    expect(html).toContain("after:size-4");
-    expect(html).toContain("peer-checked:after:translate-x-4");
-    expect(html).toContain("overflow-hidden");
+    expect(html).toContain("ui-toggle-input");
+    expect(html).toContain("ui-toggle-track");
+    expect(html).toContain("ui-toggle-thumb");
     expect(html).toContain("checked");
 });

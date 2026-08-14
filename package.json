@@ -61,9 +61,6 @@
     "modules": {
       "browser": {},
       "duckdb": {},
-      "google-local": {
-        "path": "plugins/google"
-      },
       "youtube": {},
       "gplaces": {},
       "gcs": {},
