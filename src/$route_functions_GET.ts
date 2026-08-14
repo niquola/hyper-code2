@@ -1,5 +1,5 @@
 /** GET /functions — searchable documentation for every function in the live runtime. */
-export default function (
+export default async function (
     ctx: Context,
     _session: Session | null,
     opts: {
@@ -22,10 +22,18 @@ export default function (
     const namespaces = [...new Set(ctx.fns.runtime.docs.list({}).map((item: any) => item.name.split(".").slice(0, -1).join(".")))]
         .filter(Boolean).sort();
 
-    const cards = docs.map((meta: any) => {
+    // Warm Shiki once before rendering cards concurrently; markdown.highlight
+    // caches the highlighter, but simultaneous cold calls would each create one.
+    if (docs.length) await ctx.fns.markdown.highlight({ code: "", lang: "typescript" });
+
+
+    const cards = (await Promise.all(docs.map(async (meta: any) => {
         const properties = Object.entries(meta.paramsSchema?.properties ?? {}) as Array<[string, any]>;
         const required = new Set<string>(meta.paramsSchema?.required ?? []);
         const params = properties.map(([name, schema]) => `<div class="rounded-lg border border-gray-200 bg-white px-3 py-2"><div class="flex items-center gap-1"><code class="text-xs font-semibold text-indigo-700">${esc(name)}</code><span class="text-[10px] text-gray-400">${esc(schemaType(schema))}${required.has(name) ? " · required" : " · optional"}</span></div>${schema.description ? `<p class="mt-1 text-xs leading-5 text-gray-600">${esc(schema.description)}</p>` : ""}</div>`).join("");
+        const optsType = String(meta.optsType || "{}").trim();
+        const signature = `await ctx.fns.${meta.name}(\n${optsType.split("\n").map((line: string) => `  ${line}`).join("\n")}\n); // returns ${String(meta.returnType || "unknown").replace(/\s+/g, " ").trim()}`;
+        const highlightedSignature = await ctx.fns.markdown.highlight({ code: signature, lang: "typescript" });
         return `<details ${ctx.fns.procs.ui.attr({ entity: "function", id: meta.name })} class="group rounded-xl border border-gray-200 bg-white shadow-sm open:ring-1 open:ring-indigo-100">
   <summary class="flex cursor-pointer list-none items-start gap-3 px-4 py-3 hover:bg-gray-50">
     <span class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600"><i class="ph ph-function"></i></span>
@@ -34,11 +42,12 @@ export default function (
   </summary>
   <div class="space-y-4 border-t border-gray-200 px-4 py-4">
     ${meta.doc && meta.doc !== meta.summary ? `<p class="whitespace-pre-line text-sm leading-6 text-gray-700">${esc(meta.doc)}</p>` : ""}
+    <div><div class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Signature</div><div class="overflow-x-auto rounded-lg border border-gray-200 bg-gray-50 text-xs [&_.shiki]:m-0 [&_.shiki]:bg-transparent! [&_.shiki]:p-3 [&_.shiki]:leading-5">${highlightedSignature}</div></div>
     <div><div class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Parameters</div><div class="grid gap-2 sm:grid-cols-2">${params || `<span class="text-xs text-gray-400">No options</span>`}</div></div>
     <div class="grid gap-3 sm:grid-cols-2"><div><div class="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Returns</div><code class="mt-1 block break-words rounded-md bg-gray-100 px-2.5 py-2 text-xs text-gray-700">${esc(meta.returnType)}</code></div><div><div class="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Source</div><a href="/files?path=${encodeURIComponent(meta.abs || meta.rel)}" class="mt-1 block break-words rounded-md bg-gray-100 px-2.5 py-2 font-mono text-xs text-indigo-700 hover:underline">${esc(meta.rel)}${meta.line ? `:${esc(meta.line)}` : ""}</a></div></div>
   </div>
 </details>`;
-    }).join("");
+    }))).join("");
 
     const namespaceOptions = namespaces.map(name => `<option value="${esc(name)}"${name === namespace ? " selected" : ""}>${esc(name)}</option>`).join("");
     return {

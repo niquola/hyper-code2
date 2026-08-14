@@ -4,8 +4,8 @@ import route from "./$route_functions_GET";
 
 const ctx = await testCtx();
 
-test("GET /functions renders searchable live runtime documentation", () => {
-    const page: any = route(ctx, null, {
+test("GET /functions renders searchable live runtime documentation", async () => {
+    const page: any = await route(ctx, null, {
         req: new Request("http://localhost/functions?q=read+only+duckdb+sql"),
         params: {},
     });
@@ -14,6 +14,12 @@ test("GET /functions renders searchable live runtime documentation", () => {
     expect(page.main).toContain("duckdb.query");
     expect(page.main).toContain("Read-only DuckDB SQL statement.");
     expect(page.main).toContain("Promise&lt;{ rows: any[]; rowCount: number; truncated: boolean }&gt;");
+    expect(page.main).toContain("Signature");
+    expect(page.main).toContain("class=\"shiki");
+    expect(page.main).toContain("ctx.fns.duckdb.");
+    expect(page.main).toContain(">query<");
+    expect(page.main).toContain("sql: string;");
+    expect(page.main).toContain("returns");
     expect(page.main).toContain("Search in English");
     expect(page.main).toContain("bg-white");
     expect(page.main).not.toContain("bg-base-");
