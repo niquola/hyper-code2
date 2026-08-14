@@ -61,6 +61,15 @@ describe("agent new routes", () => {
     expect(html).toContain("Create");
     expect(html).toContain(missing);
   });
+  test("GET workspace status accepts the named workspaceDir control without undefined suffix", async () => {
+    const { ctx } = await mkCtx();
+    const cwd = process.cwd();
+    const res = await ctx.fns.procs.http.dispatch({ url: `/agent/dirs/status?workspaceDir=${encodeURIComponent(cwd)}` });
+    const html = await res.text();
+    expect(html).toContain("directory exists");
+    expect(html).not.toContain("undefined");
+  });
+
   test("POST creates agent with selected preset text prepended to custom instructions", async () => {
     const { ctx, started } = await mkCtx();
     const body = new URLSearchParams();

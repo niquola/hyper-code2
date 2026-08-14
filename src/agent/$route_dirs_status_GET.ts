@@ -3,7 +3,8 @@ import { readdir, stat } from "node:fs/promises";
 
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
-    let raw = String(new URL(opts.req.url).searchParams.get("q") ?? "").trim();
+    const url = new URL(opts.req.url);
+    let raw = String(url.searchParams.get("q") ?? url.searchParams.get("workspaceDir") ?? "").trim();
     if (raw.startsWith("~")) raw = (ctx.env.HOME ?? "") + raw.slice(1);
     const dir = resolve(raw || process.cwd());
     const info = await stat(dir).catch(() => null);
