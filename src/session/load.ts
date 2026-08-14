@@ -19,6 +19,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { i
         events: [],
         sleepContext: row.sleep_context == null ? null : (typeof row.sleep_context === 'string' ? JSON.parse(row.sleep_context) : row.sleep_context),
         cursors: {},
+        reflectionEnabled: row.reflection_enabled !== false && row.reflection_enabled !== 0 && row.reflection_enabled !== 'f',
+        sleepEnabled: row.sleep_enabled !== false && row.sleep_enabled !== 0 && row.sleep_enabled !== 'f',
         goal: row.goal == null ? null : (typeof row.goal === 'string' ? JSON.parse(row.goal) : row.goal),
         subscribers: new Set(),
         waiters: [],

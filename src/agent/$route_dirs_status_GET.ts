@@ -1,0 +1,24 @@
+import { basename, dirname, resolve } from "node:path";
+import { readdir, stat } from "node:fs/promises";
+
+export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
+    const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
+    let raw = String(new URL(opts.req.url).searchParams.get("q") ?? "").trim();
+    if (raw.startsWith("~")) raw = (ctx.env.HOME ?? "") + raw.slice(1);
+    const dir = resolve(raw || process.cwd());
+    const info = await stat(dir).catch(() => null);
+    const listDir = raw.endsWith("/") ? raw.slice(0, -1) || "/" : dirname(raw || dir);
+    const prefix = raw.endsWith("/") ? "" : basename(raw);
+    const entries = await readdir(listDir, { withFileTypes: true }).catch(() => []);
+    const options = entries.filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .filter(name => (prefix.startsWith(".") || !name.startsWith(".")) && name.toLowerCase().startsWith(prefix.toLowerCase()))
+        .sort().slice(0, 20)
+        .map(name => `<option value="${esc(`${listDir === "/" ? "" : listDir}/${name}`)}"></option>`).join("");
+    const html = info?.isDirectory()
+        ? `<span class="inline-flex items-center gap-1 text-emerald-600"><i class="ph ph-check-circle"></i> directory exists</span>`
+        : info
+            ? `<span class="inline-flex items-center gap-1 text-red-600"><i class="ph ph-warning-circle"></i> path exists but is not a directory</span>`
+            : `<label class="inline-flex cursor-pointer items-center gap-2 text-amber-700"><input type="checkbox" name="createWorkspaceDir" value="1" required class="rounded border-amber-300 text-amber-600 focus:ring-amber-300"><span>Create <code class="rounded bg-amber-50 px-1">${esc(dir)}</code></span></label>`;
+    return new Response(html + `<datalist id="workspace-dirs" hx-swap-oob="innerHTML">${options}</datalist>`, { headers: { "content-type": "text/html; charset=utf-8" } });
+}

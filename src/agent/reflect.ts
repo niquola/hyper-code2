@@ -10,6 +10,7 @@ export default async function (
 ): Promise<{ started: boolean; reason?: string }> {
     const parent = opts.agent;
     const every = Math.max(1, opts.every ?? 3);
+    if (parent.reflectionEnabled === false) return { started: false, reason: "disabled" };
     if (parent.scratchpad?.delegateTask?.taskKind === "reflection") return { started: false, reason: "reflection child" };
 
     const row = ((await ctx.fns.procs.db.select({

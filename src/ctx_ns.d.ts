@@ -36,6 +36,7 @@ declare global {
             respondHtml: Injected<typeof import("./agent/respondHtml").default>;
             run: Injected<typeof import("./agent/run").default>;
             sanitizeHtmlBody: Injected<typeof import("./agent/sanitizeHtmlBody").default>;
+            setAutomation: Injected<typeof import("./agent/setAutomation").default>;
             setGoal: Injected<typeof import("./agent/setGoal").default>;
             setSleepActive: Injected<typeof import("./agent/setSleepActive").default>;
             setStatusLine: Injected<typeof import("./agent/setStatusLine").default>;
@@ -649,6 +650,7 @@ declare global {
             script: Injected<typeof import("./ui/script").default>;
             sendToAgent: Injected<typeof import("./ui/sendToAgent").default>;
             state: Injected<typeof import("./ui/state").default>;
+            toggle: Injected<typeof import("./ui/toggle").default>;
         };
         workspace: {
             get: Injected<typeof import("./workspace/get").default>;

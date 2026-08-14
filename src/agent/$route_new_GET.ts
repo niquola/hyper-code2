@@ -48,11 +48,12 @@ export default async function (ctx: Context, _session: Session | null, _opts: { 
         <span class="mt-1 block text-[11px] text-gray-400">last picked is preselected · remote ids need their API key env var</span>
       </div>
       <div>
-        <input name="workspaceDir" list="workspace-dirs" value="${esc(process.cwd())}" placeholder="working directory"
-               hx-get="/agent/dirs" hx-trigger="keyup changed delay:250ms" hx-target="#workspace-dirs" hx-swap="innerHTML"
+        <input name="workspaceDir" list="workspace-dirs" value="${esc(process.cwd())}" placeholder="working directory" required
+               hx-get="/agent/dirs/status" hx-trigger="load, keyup changed delay:250ms" hx-target="#workspace-dir-status" hx-swap="innerHTML"
                hx-vals="js:{q: event.target.value}"
                class="w-full rounded border border-gray-300 px-3 py-2 font-mono text-sm" data-field="workspaceDir">
         <datalist id="workspace-dirs"></datalist>
+        <div id="workspace-dir-status" class="mt-1 min-h-5 text-[11px] text-gray-500"></div>
       </div>
       <details class="rounded-md border border-gray-200 bg-white">
         <summary class="cursor-pointer select-none px-3 py-2 text-sm font-medium text-gray-700">Base system prompt <span class="text-gray-400 font-normal ml-1">${coreTokens}t · always included</span></summary>

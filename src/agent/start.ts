@@ -28,6 +28,8 @@ export default async function (
         forkOffset: opts.forkOffset ?? null,
         sleepContext: null,
         currentJobId: null,
+        reflectionEnabled: true,
+        sleepEnabled: true,
         goal: null,
         drainPromise: null,
     };

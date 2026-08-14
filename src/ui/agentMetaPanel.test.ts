@@ -4,11 +4,12 @@ import render from "./agentMetaPanel";
 const escapeHtml = ({ text }: any) => String(text)
     .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+const toggle = (o: any) => `<label><input name="${o.name}" ${o.enabled ? 'checked' : ''}>${o.label ?? ''}</label>`;
 
 test("agent meta panel is a topic-addressed live region", () => {
     const ctx: any = { fns: {
         procs: { ui: { escape: escapeHtml } },
-        ui: { live: (o: any) => `<${o.tag} id="${o.id}" hx-get="${o.url}" data-live-topic="${o.topic}" ${o.attrs}>${o.html}</${o.tag}>` },
+        ui: { toggle, live: (o: any) => `<${o.tag} id="${o.id}" hx-get="${o.url}" data-live-topic="${o.topic}" ${o.attrs}>${o.html}</${o.tag}>` },
     } };
     const html = render(ctx, null, { agent: { id: "eh", goal: null } as any });
     expect(html).toContain('id="agent-meta-eh"');
@@ -18,7 +19,7 @@ test("agent meta panel is a topic-addressed live region", () => {
 test("collapses an inactive goal and opens an enabled goal", () => {
     const ctx: any = { fns: {
         procs: { ui: { escape: escapeHtml } },
-        ui: { live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
+        ui: { toggle, live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
     } };
     const inactive = render(ctx, null, { agent: { id: "eh", goal: { statement: "done", enabled: false, status: "achieved", checks: [] } } as any });
     expect(inactive).toContain('<details  class="group');
@@ -32,7 +33,7 @@ test("collapses an inactive goal and opens an enabled goal", () => {
 test("renders the plan below goal with instructions and time", () => {
     const ctx: any = { fns: {
         procs: { ui: { escape: escapeHtml } },
-        ui: { live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
+        ui: { toggle, live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
     } };
     const html = render(ctx, null, { agent: { id: "eh", goal: null, scratchpad: { plan: {
         title: "Ship it", tasks: [{ id: "api", title: "Build API", instructions: "Detailed requirements", status: "active", elapsedMs: 5000, activeSince: null }],
@@ -47,7 +48,7 @@ test("renders the plan below goal with instructions and time", () => {
 test("escapes plan content and renders archive/delete controls inside the scroll panel", () => {
     const ctx: any = { fns: {
         procs: { ui: { escape: escapeHtml } },
-        ui: { live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
+        ui: { toggle, live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
     } };
     const html = render(ctx, null, { agent: { id: "a/b", goal: null, scratchpad: { plan: {
         title: "<Plan>", tasks: [{ id: "x", title: "<Task>", instructions: "<script>bad()</script>", status: "active", elapsedMs: 0 }],
@@ -68,7 +69,7 @@ test("escapes plan content and renders archive/delete controls inside the scroll
 test("renders a safe editor with immutable active and removable pending tasks", () => {
     const ctx: any = { fns: {
         procs: { ui: { escape: escapeHtml } },
-        ui: { live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
+        ui: { toggle, live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
     } };
     const html = render(ctx, null, { agent: { id: "eh", goal: null, scratchpad: { plan: {
         title: "Edit me", tasks: [

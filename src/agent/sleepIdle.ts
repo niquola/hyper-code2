@@ -11,6 +11,7 @@ export default async function (
                WHERE a.archived_at IS NULL AND a.run_state = 'idle' AND a.next_run_at IS NULL
                  AND a.parent_id IS NULL AND a.updated_at < ?
                  AND (SELECT COUNT(*) FROM messages m WHERE m.agent_id = a.id) >= ?
+                 AND a.sleep_enabled = TRUE
                  AND COALESCE(
                        (SELECT MAX((g->>'sourceOffset')::int) FROM jsonb_array_elements(COALESCE(a.sleep_context->'generations', '[]'::jsonb)) g),
                        (a.sleep_context->>'sourceOffset')::int,

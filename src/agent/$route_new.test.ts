@@ -51,6 +51,16 @@ describe("agent new routes", () => {
     expect(html).toContain("verify");
   });
 
+
+  test("GET asks to create a missing workspace directory", async () => {
+    const { ctx } = await mkCtx();
+    const missing = `/tmp/hyper-missing-${Date.now()}`;
+    const res = await ctx.fns.procs.http.dispatch({ url: `/agent/dirs/status?q=${encodeURIComponent(missing)}` });
+    const html = await res.text();
+    expect(html).toContain('name="createWorkspaceDir"');
+    expect(html).toContain("Create");
+    expect(html).toContain(missing);
+  });
   test("POST creates agent with selected preset text prepended to custom instructions", async () => {
     const { ctx, started } = await mkCtx();
     const body = new URLSearchParams();
@@ -70,6 +80,28 @@ describe("agent new routes", () => {
     expect(created.systemPrompt).toContain("Reply in Russian.");
   });
 
+
+  test("POST creates a missing workspace only after explicit confirmation", async () => {
+    const { ctx, started } = await mkCtx();
+    const { mkdtemp, rm, stat } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+    const parent = await mkdtemp(join(tmpdir(), "hyper-new-agent-"));
+    const workspaceDir = join(parent, "new", "nested");
+    try {
+      const rejected = new URLSearchParams({ model: "openai:gpt-4o", workspaceDir });
+      const rejectedResponse = await ctx.fns.procs.http.dispatch({ method: "POST", url: "/agent/new", body: rejected, headers: { accept: "text/html" } });
+      expect(rejectedResponse.status).toBe(200);
+      const confirmation = await rejectedResponse.text();
+      expect(confirmation).toContain("Create workspace directory?");
+      expect(confirmation).toContain('name="createWorkspaceDir" value="1"');
+      const confirmed = new URLSearchParams({ model: "openai:gpt-4o", workspaceDir, createWorkspaceDir: "1" });
+      const response = await ctx.fns.procs.http.dispatch({ method: "POST", url: "/agent/new", body: confirmed });
+      expect(response.status).toBe(303);
+      expect(started.at(-1).workspaceDir).toBe(workspaceDir);
+      expect((await stat(workspaceDir)).isDirectory()).toBe(true);
+    } finally { await rm(parent, { recursive: true, force: true }); }
+  });
   test("POST ignores unknown presets", async () => {
     const { ctx, started } = await mkCtx();
     const body = new URLSearchParams();

@@ -37,7 +37,17 @@
                 }
             }, { signal });
             this.form.addEventListener('submit', event => {
-                if (!this.input.value.trim()) event.preventDefault();
+                if (!this.input.value.trim()) return event.preventDefault();
+                // Sending is an explicit return to the live edge. Set this
+                // before the user event arrives so the next #msg-tail swap also
+                // remains pinned to the bottom.
+                this.shouldStick = true;
+            }, { signal });
+            this.form.addEventListener('htmx:afterRequest', event => {
+                if (!event.detail?.successful) return;
+                this.shouldStick = true;
+                this.scrollBottom();
+                requestAnimationFrame(() => { if (this.alive()) this.scrollBottom(); });
             }, { signal });
             this.arrangeTools(this.messages);
             this.addInheritedNote();
