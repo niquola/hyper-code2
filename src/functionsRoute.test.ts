@@ -15,6 +15,10 @@ test("GET /functions renders searchable live runtime documentation", () => {
     expect(page.main).toContain("Read-only DuckDB SQL statement.");
     expect(page.main).toContain("Promise&lt;{ rows: any[]; rowCount: number; truncated: boolean }&gt;");
     expect(page.main).toContain("Search in English");
+    expect(page.main).toContain("bg-white");
+    expect(page.main).not.toContain("bg-base-");
+    expect(page.main).not.toContain("text-base-content");
+    expect(page.main).not.toContain("btn btn-primary");
 });
 
 test("functions page is present in the global navigation", async () => {
