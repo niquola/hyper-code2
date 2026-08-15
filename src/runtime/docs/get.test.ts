@@ -17,5 +17,5 @@ test("runtime.docs search is compact and list filters namespaces", async () => {
     expect(hits[0]?.name).toBe("agent.reflect");
     expect((hits[0] as any).paramsSchema).toBeUndefined();
     const listed = ctx.fns.runtime.docs.list({ namespace: "runtime.docs" });
-    expect(listed.map((x: any) => x.name)).toEqual(["runtime.docs.get", "runtime.docs.index", "runtime.docs.list", "runtime.docs.search"]);
+    expect(listed.map((x: any) => x.name)).toEqual(["runtime.docs.get", "runtime.docs.index", "runtime.docs.list", "runtime.docs.ragBenchmark", "runtime.docs.search", "runtime.docs.validate"]);
 });

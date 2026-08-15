@@ -7,7 +7,7 @@ describe("agent automation flags", () => {
         const agent = await ctx.fns.agent.start({ model: "mock:test" });
         agent.sleepContext = { mode: "compact", activeRevision: 1, draftRevision: null, generations: [{ revision: 1 }] };
         await ctx.fns.procs.db.run({ sql: "UPDATE agents SET sleep_context = ?::jsonb WHERE id = ?", params: [JSON.stringify(agent.sleepContext), agent.id] });
-        expect(await ctx.fns.agent.setAutomation({ id: agent.id, reflectionEnabled: false, sleepEnabled: false })).toEqual({ reflectionEnabled: false, sleepEnabled: false });
+        expect(await ctx.fns.agent.setAutomation({ id: agent.id, reflectionEnabled: false, sleepEnabled: false })).toEqual({ reflectionEnabled: false, sleepEnabled: false, functionRagEnabled: false });
         expect(agent.sleepContext.mode).toBe("full");
         expect(await ctx.fns.agent.reflect({ agent, every: 1 })).toEqual({ started: false, reason: "disabled" });
         expect(await ctx.fns.agent.sleep({ agent, force: true })).toEqual({ started: false, reason: "disabled" });

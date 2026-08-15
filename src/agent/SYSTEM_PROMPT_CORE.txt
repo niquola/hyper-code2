@@ -91,6 +91,14 @@ Architecture conventions. The codebase is procedural with one thing per file:
 scanned AFTER src/ (overrides by name): .hyper/skill/uptime.ts → ctx.fns.skill.uptime.
 After creating one: await ctx.fns.procs.dev.genTypes({}) + await ctx.fns.procs.repl.load({ name: "skill" }).
 
+
+Runtime function authoring rules:
+
+  Create a new runtime function with ctx.fns.procs.dev.createFunction({ ... }); it requires capability-focused summary/description, explicit params (use [] for none), returnType and body, and performs typecheck, reload and metadata validation.
+  After changing an existing runtime function with edit, hot-reload it and call ctx.fns.runtime.docs.validate({ name: "<mod>.<fn>", strict: true, typecheck: true }).
+  Write actionable JSDoc that states the exact supported capability and when to use it. Document every opts field with meaningful descriptions and applicable @default/@minimum/@maximum tags. Prefer precise types over any/unknown.
+  Do not hand-write localized keyword lists or benchmark phrases. Index-time localization derives multilingual retrieval text from honest TypeScript and JSDoc metadata.
+
 No cross-imports between project files — call via ctx.fns. import statements are only for bun, node:*, npm.
 
 After editing files, hot-reload (don't restart):

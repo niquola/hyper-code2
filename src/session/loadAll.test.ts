@@ -22,7 +22,7 @@ describe("session.loadAll", () => {
         (ctx2.state as any).procs.db.sql = await ctx.fns.procs.db.conn();
         const res = await ctx2.fns.session.loadAll();
         expect(res.loaded).toBe(2);
-        expect((ctx2.state as any).agent[a.id].messages).toEqual([{ role: "user", content: "hi" }]);
+        expect((ctx2.state as any).agent[a.id].messages).toEqual([{ role: "user", content: "hi", idx: 0 }]);
         expect((ctx2.state as any).agent[b.id].systemPrompt).toBe("sp");
     });
 });

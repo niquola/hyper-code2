@@ -32,9 +32,9 @@ describe("session.load", () => {
         expect(loaded!.model).toBe("m");
         expect(loaded!.systemPrompt).toBe("sp");
         expect(loaded!.messages).toEqual([
-            { role: 'user', content: 'a' },
-            { role: 'assistant', content: '§eval\nconsole.log(1);' },
-            { role: 'user', content: '§result:eval\n1' },
+            { role: 'user', content: 'a', idx: 0 },
+            { role: 'assistant', content: '§eval\nconsole.log(1);', idx: 1 },
+            { role: 'user', content: '§result:eval\n1', idx: 2 },
         ]);
         expect(loaded!.events).toMatchObject([   // co's feature adds ts to every event
             { type: 'user', text: 'a' },
