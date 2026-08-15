@@ -30,6 +30,10 @@
   --color-border-input: var(--color-base-300);
   --color-border-focus: var(--color-primary);
   --color-border-subtle: var(--color-base-300);
+  --color-ui-border: var(--ui-border);
+  --color-ui-border-strong: var(--ui-border-strong);
+  --color-ui-surface: var(--ui-surface);
+  --color-ui-surface-muted: var(--ui-surface-muted);
   --color-text-primary: var(--color-base-content);
   --color-text-heading: var(--color-base-content);
   --color-text-muted: color-mix(in oklab, var(--color-base-content) 70%, transparent);
@@ -105,14 +109,32 @@
   --color-base-200: oklch(96.8% 0.001 240);
   --color-base-300: oklch(92.5% 0.003 240);
   --color-canvas: oklch(98.8% 0.001 240);
+  --ui-border: oklch(90.5% 0.004 240);
+  --ui-border-strong: oklch(82% 0.008 240);
+  --ui-surface: var(--color-base-100);
+  --ui-surface-muted: var(--color-base-200);
 }
 
 [data-theme="dark"] {
+  /* Dense chat surfaces use their own restrained border ramp: nested cards,
+   * popups and controls should separate without becoming a white wireframe. */
+  --color-base-300: oklch(31% 0.014 252);
   --color-canvas: color-mix(in oklab, var(--color-base-100) 72%, black);
+  --ui-border: oklch(34% 0.014 252);
+  --ui-border-strong: oklch(41% 0.016 252);
+  --ui-surface: var(--color-base-100);
+  --ui-surface-muted: var(--color-base-200);
 }
 
 body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
 
+
+/* Stable component tokens. Explicit classes keep legacy utility ordering from
+ * overriding the semantic theme while renderers are migrated incrementally. */
+.border-ui-border { border-color: var(--ui-border) !important; }
+.border-ui-border-strong { border-color: var(--ui-border-strong) !important; }
+.bg-ui-surface { background-color: var(--ui-surface) !important; }
+.bg-ui-surface-muted { background-color: var(--ui-surface-muted) !important; }
 /* the chat's compose box: one focus ring around textarea + control row */
 .ui-compose-box {
   background: var(--color-base-100);

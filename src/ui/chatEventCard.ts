@@ -35,7 +35,7 @@ export default function (
 ): string {
     const esc = (value: string) => ctx.fns.procs.ui.escape({ text: value });
     const tone = opts.tone ?? 'neutral';
-    const tones = { neutral: 'border-base-300 bg-base-200/45 text-base-content', info: 'border-info/25 bg-info/10 text-base-content', success: 'border-success/25 bg-success/10 text-base-content', warning: 'border-warning/30 bg-warning/10 text-base-content', error: 'border-error/30 bg-error/10 text-base-content' } as const;
+    const tones = { neutral: 'border-ui-border bg-base-200/45 text-base-content', info: 'border-info/25 bg-info/10 text-base-content', success: 'border-success/25 bg-success/10 text-base-content', warning: 'border-warning/30 bg-warning/10 text-base-content', error: 'border-error/30 bg-error/10 text-base-content' } as const;
     const iconTones = { neutral: 'text-base-content/50', info: 'text-info', success: 'text-success', warning: 'text-warning', error: 'text-error' } as const;
     const icon = opts.icon ? `<span class="flex size-6 shrink-0 items-center justify-center rounded-md bg-base-100/70"><i class="ph ph-${esc(opts.icon)} ${iconTones[tone]}" aria-hidden="true"></i></span>` : '';
     const badge = opts.badge ? `<span class="ml-auto shrink-0">${opts.badge}</span>` : '';

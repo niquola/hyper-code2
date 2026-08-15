@@ -34,7 +34,7 @@ function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = 
         + ' hx-confirm="' + confirm + '"'
         + ' hx-on::after-request="if (event.detail.successful) location.reload();"'
         + ' title="' + title + '" aria-label="' + title + '"'
-        + ' class="flex size-7 items-center justify-center rounded-full border border-base-300 bg-base-100/95 text-base-content/45 shadow-sm backdrop-blur transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200">'
+        + ' class="flex size-7 items-center justify-center rounded-full border border-ui-border bg-base-100/95 text-base-content/45 shadow-sm backdrop-blur transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200">'
         + '<i class="ph ' + icon + ' text-sm" aria-hidden="true"></i><span class="sr-only">' + title + '</span></button>';
     return '<div class="' + (placement === 'side' ? 'flex gap-1' : 'absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100') + '">'
         + (allowOne ? btn('one', 'Delete message', 'delete this message?', 'ph-trash') : '')
@@ -84,7 +84,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
     if (!ev || typeof ev !== "object") return "";
     const eventCard = (card: any) => (_ctx as any).fns.ui.chatEventCard
         ? (_ctx as any).fns.ui.chatEventCard(card)
-        : `<div class="mx-auto max-w-[90%] rounded-lg border border-base-300 bg-base-200/45 px-3 py-2"><div class="flex items-center gap-2 text-xs font-semibold">${card.icon ? `<i class="ph ph-${esc(card.icon)}"></i>` : ''}<span>${esc(card.title)}</span>${card.badge ?? ''}</div>${card.body ? `<div class="mt-1 text-[11px]">${card.body}</div>` : ''}${card.details ? `<details><summary>Details</summary>${card.details}</details>` : ''}</div>`;
+        : `<div class="mx-auto max-w-[90%] rounded-lg border border-ui-border bg-base-200/45 px-3 py-2"><div class="flex items-center gap-2 text-xs font-semibold">${card.icon ? `<i class="ph ph-${esc(card.icon)}"></i>` : ''}<span>${esc(card.title)}</span>${card.badge ?? ''}</div>${card.body ? `<div class="mt-1 text-[11px]">${card.body}</div>` : ''}${card.details ? `<details><summary>Details</summary>${card.details}</details>` : ''}</div>`;
     const badge = (label: string, tone: 'neutral' | 'info' | 'success' | 'warning' | 'error' = 'neutral') => (_ctx as any).fns.ui.statusBadge
         ? (_ctx as any).fns.ui.statusBadge({ label, tone })
         : `<span class="badge badge-sm">${esc(label)}</span>`;
@@ -94,7 +94,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         // audit stays visible, dimmed, with an out-of-context chip. Recurse
         // through the registry for the normal rendering of the same event.
         const inner: string = await (_ctx as any).fns.agent.renderEventHtml({ event: { ...ev, excludedFromLlm: false }, agentId });
-        return '<div class="relative opacity-50"><span class="absolute -top-2 right-2 z-10 text-[10px] px-1.5 py-0.5 rounded-full border border-base-300 bg-base-200 text-base-content/55">вне контекста</span>' + inner + '</div>';
+        return '<div class="relative opacity-50"><span class="absolute -top-2 right-2 z-10 text-[10px] px-1.5 py-0.5 rounded-full border border-ui-border bg-base-200 text-base-content/55">вне контекста</span>' + inner + '</div>';
     }
 
     if (ev.type === "user") {
@@ -103,7 +103,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         const ragNames = ragFunctions.map((item: any) => String(typeof item === "string" ? item : item?.name ?? "")).filter(Boolean);
         const injected = String(ev.functionRag?.injected ?? ragNames.join("\n"));
         const ragIcon = ragNames.length
-            ? '<span class="group/rag relative ml-1.5 inline-flex align-middle text-indigo-200" aria-label="Function RAG retrieved ' + ragNames.length + ' functions" tabindex="0"><i class="ph ph-function text-xs" aria-hidden="true"></i><span role="tooltip" class="pointer-events-none invisible absolute bottom-full right-0 z-30 mb-2 w-max max-w-[32rem] whitespace-pre-wrap rounded-lg border border-base-300 bg-base-100 px-3 py-2 font-mono text-[10px] leading-4 text-base-content/70 opacity-0 shadow-xl transition group-hover/rag:visible group-hover/rag:opacity-100 group-focus/rag:visible group-focus/rag:opacity-100">' + esc(injected) + '</span></span>'
+            ? '<span class="group/rag relative ml-1.5 inline-flex align-middle text-indigo-200" aria-label="Function RAG retrieved ' + ragNames.length + ' functions" tabindex="0"><i class="ph ph-function text-xs" aria-hidden="true"></i><span role="tooltip" class="pointer-events-none invisible absolute bottom-full right-0 z-30 mb-2 w-max max-w-[32rem] whitespace-pre-wrap rounded-lg border border-ui-border bg-base-100 px-3 py-2 font-mono text-[10px] leading-4 text-base-content/70 opacity-0 shadow-xl transition group-hover/rag:visible group-hover/rag:opacity-100 group-focus/rag:visible group-focus/rag:opacity-100">' + esc(injected) + '</span></span>'
             : '';
         return '<div class="group relative flex justify-end">'
             + '<div class="relative ml-auto max-w-[80%]">'
@@ -135,7 +135,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
             : '<pre class="text-xs whitespace-pre-wrap break-words">' + esc(ev.text || '') + '</pre>';
         return '<div class="group relative flex justify-start">'
             + deleteControls(idx, agentId, true, true)
-            + '<div class="assistant max-w-[90%] rounded-2xl bg-base-100 px-4 py-3 shadow-sm border border-base-300">'
+            + '<div class="assistant max-w-[90%] rounded-2xl bg-base-100 px-4 py-3 shadow-sm border border-ui-border">'
             + '<div class="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
             + appendTime(safeHtml, ev.ts, 'light', instructionMarks)
             + '</div>'
@@ -144,7 +144,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
     }
 
     if (ev.type === "thinking") {
-        return '<details class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded px-3 py-1.5"><summary class="cursor-pointer select-none">💭 thinking (' + (ev.text?.length ?? 0) + ' chars)</summary><pre class="mt-2 whitespace-pre-wrap font-mono text-[11px] leading-snug text-gray-600">' + esc(ev.text || '') + '</pre></details>';
+        return eventCard({ title: `Thinking · ${ev.text?.length ?? 0} chars`, icon: 'brain', tone: 'neutral', details: `<pre class="whitespace-pre-wrap font-mono text-[11px] leading-snug text-base-content/65">${esc(ev.text || '')}</pre>` });
     }
 
     if (ev.type === "tool_call") {
@@ -152,8 +152,8 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         // File-changing tools get a stronger outline; errors take precedence.
         const destructive = new Set(['write', 'edit', 'remove', 'rename']).has(String(ev.name ?? ''));
         const cardStyle = ev.isError
-            ? 'border-red-200 bg-red-50/40 text-red-500'
-            : destructive ? 'border-gray-500 bg-white text-gray-500' : 'border-gray-200 bg-white text-gray-400';
+            ? 'border-error/35 bg-error/10 text-error'
+            : destructive ? 'border-base-content/35 bg-base-100 text-base-content/55' : 'border-ui-border bg-base-100 text-base-content/45';
         const bodyMethod = agentId && ev.idx != null ? 'agent.toolDetails' : '';
         const title = String(meta.label + ' ' + meta.subject).trim();
 
@@ -176,7 +176,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         const title = watched ? (ready ? "Condition met" : "Condition timed out") : "Scheduled wake-up";
         const icon = watched ? (ready ? "ph-check-circle" : "ph-timer") : "ph-alarm";
         const result = ev.result == null ? "" : JSON.stringify(ev.result, null, 2);
-        return eventCard({ title, icon: icon.replace(/^ph-/, ''), tone: ready || !watched ? 'info' : 'warning', badge: watched ? badge('watch', ready ? 'success' : 'warning') : undefined, body: esc(ev.reason ?? ev.summary ?? ""), details: result ? `<pre class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-base-300 bg-base-100 p-2 font-mono text-[10px] leading-4 text-base-content/65">${esc(result)}</pre>` : undefined });
+        return eventCard({ title, icon: icon.replace(/^ph-/, ''), tone: ready || !watched ? 'info' : 'warning', badge: watched ? badge('watch', ready ? 'success' : 'warning') : undefined, body: esc(ev.reason ?? ev.summary ?? ""), details: result ? `<pre class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-ui-border bg-base-100 p-2 font-mono text-[10px] leading-4 text-base-content/65">${esc(result)}</pre>` : undefined });
     }
 
 
@@ -199,9 +199,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
     if (ev.type === "attempt") {
         // A protocol-invalid candidate that was repaired before commit — never
         // part of the LLM transcript; kept for the audit trail.
-        return '<div class="relative opacity-50"><details class="border border-amber-200 bg-amber-50 rounded-xl overflow-hidden text-xs">'
-            + '<summary class="cursor-pointer select-none px-4 py-2 text-amber-800">invalid attempt · repaired before commit <span class="text-amber-600">(' + esc(String(ev.error ?? '').slice(0, 80)) + ')</span></summary>'
-            + '<pre class="px-4 py-3 whitespace-pre-wrap break-words text-gray-600 bg-white">' + esc(ev.text) + '</pre></details></div>';
+        return '<div class="relative opacity-60">' + eventCard({ title: 'Invalid attempt · repaired before commit', icon: 'wrench', tone: 'warning', badge: badge('audit', 'warning'), body: esc(String(ev.error ?? '').slice(0, 160)), details: `<pre class="whitespace-pre-wrap break-words font-mono text-[10px] text-base-content/65">${esc(ev.text)}</pre>` }) + '</div>';
     }
 
     if (ev.type === "team_update") {

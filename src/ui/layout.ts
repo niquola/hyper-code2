@@ -39,7 +39,7 @@ export default async function (ctx: Context, session: Session | null, opts: {
 .tool.tool-tucked { width: 1.333rem; height: 1.333rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 9999px; }
 .tool.tool-tucked > i { font-size: .7rem; }
 .tool { transition: background-color .2s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
-.tool.tool-tucked:hover { background-color: rgb(249 250 251); border-color: rgb(107 114 128); box-shadow: 0 3px 8px rgb(17 24 39 / .18); transform: translateY(-2px) scale(1.15); color: rgb(55 65 81); }
+.tool.tool-tucked:hover { background: color-mix(in oklab, var(--color-base-200) 75%, transparent); border-color: var(--color-base-300); box-shadow: 0 3px 8px color-mix(in oklab, var(--color-base-content) 18%, transparent); transform: translateY(-2px) scale(1.15); color: var(--color-base-content); }
 .tool.tool-tucked:active { transform: translateY(0) scale(1.05); }
 /* Highlighted code inside tool detail dialogs. */
 .app-popup-body pre { margin: 0; padding: .75rem 1rem; border-radius: .65rem; background: rgba(0,0,0,.04) !important; white-space: pre-wrap; word-break: break-word; }

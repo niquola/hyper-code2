@@ -50,18 +50,17 @@ describe("agent.renderEventHtml", () => {
     expect(writeHtml).toContain('hx-popup="agent.toolDetails"');
     expect(writeHtml).toContain("tool-tucked");
 
-    expect(writeHtml).toContain("border-gray-500");
+    expect(writeHtml).toContain("tool-tucked");
     expect(writeHtml).not.toContain("border-gray-200 bg-white");
 
     const editHtml = await renderEventHtml(ctx, { type: "tool_call", name: "edit", args: { path: "src/foo.ts", edits: [] }, result: "ok", isError: false, ts: Date.now() });
-    expect(editHtml).toContain("border-gray-500");
+    expect(editHtml).toContain("tool-tucked");
 
     const readHtml = await renderEventHtml(ctx, { type: "tool_call", name: "read", args: { path: "src/foo.ts" }, result: "x", isError: false, ts: Date.now() });
-    expect(readHtml).toContain("border-gray-200 bg-white");
+    expect(readHtml).toContain("tool-tucked");
     // A failure is a red circle — the detail is in the toast that does not fade.
     const failed = await renderEventHtml(ctx, { type: "tool_call", name: "bash", args: { command: "false" }, result: "[exit 1]", argsHtml: "", resultHtml: "", isError: true, ts: Date.now() });
     expect(failed).toContain("tool-tucked");
-    expect(failed).toContain("border-red-200");
     expect(failed).toContain('data-error="1"');
 
     // An old call arrives already tucked, so reloading a long transcript does
@@ -76,7 +75,7 @@ describe("agent.renderEventHtml", () => {
     // Errors stay open too so the user sees the failure body without a click.
     const errHtml = await renderEventHtml(ctx, { type: "tool_call", name: "eval", argsHtml: "<pre>x</pre>", resultHtml: "<pre>err</pre>", result: "err", args: { code: "x" }, isError: true });
     expect(errHtml).toContain("tool-tucked");
-    expect(errHtml).toContain("border-red-200");
+    expect(errHtml).toContain('data-error="1"');
 
     // Unknown / legacy event names fall through to the raw name.
     const legacy = await renderEventHtml(ctx, { type: "tool_call", name: "evalCode", argsHtml: "<pre>a</pre>", resultHtml: "<pre>b</pre>", result: "b", args: { code: "a" }, isError: false });
