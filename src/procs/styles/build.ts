@@ -42,9 +42,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { a
     // markdown, the file browser's — had no rules behind it.
     // daisyUI is the design system: it ships the component classes (`btn`,
     // `card`, `alert`) and the `base-*`/`primary`/`info`… theme variables every
-    // `$style` file then names. A framework-level plugin like typography, so a
-    // stylesheet gets it wherever it lives.
-    const wrapper = `@import "tailwindcss";\n@plugin "@tailwindcss/typography";\n@plugin "daisyui" {\n  themes: light --default, dark --prefersdark;\n}\n${sources}\n@import ${JSON.stringify(opts.abs)};\n`;
+    // `$style` file then names. Light is the initial default; the document's
+    // persisted data-theme selection can switch explicitly to dark.
+    const wrapper = `@import "tailwindcss";\n@plugin "@tailwindcss/typography";\n@plugin "daisyui" {\n  themes: light --default, dark;\n}\n${sources}\n@import ${JSON.stringify(opts.abs)};\n`;
     if (!opts.force && record?.built === output && await Bun.file(output).exists()) return output;
     await Bun.write(input, wrapper);
 

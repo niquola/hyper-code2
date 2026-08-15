@@ -7,10 +7,10 @@ export default async function (ctx: Context, _session: Session | null, _opts: { 
     }
     return {
         head: '<script src="/ui/control.js"></script>',
-        main: `<div class="flex-1 flex items-center justify-center text-gray-500">
+        main: `<div class="flex-1 flex items-center justify-center text-base-content/55">
   <div class="text-center">
     <p class="mb-4">No agents yet.</p>
-    <a href="/agent/new" class="inline-block px-4 py-2 bg-gray-900 text-white rounded hover:bg-gray-700">+ new agent</a>
+    <a href="/agent/new" class="inline-block px-4 py-2 bg-primary text-primary-content rounded hover:bg-primary/80">+ new agent</a>
   </div>
 </div>`,
     };

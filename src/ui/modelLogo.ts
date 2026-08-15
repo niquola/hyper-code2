@@ -37,9 +37,9 @@ export default function (ctx: Context, _session: Session | null, opts: {
         : `<i class="ph ph-cpu ${markSize} ${opts.compact ? 'text-xs' : 'text-sm'}${motion}" aria-hidden="true"></i>`;
 
     const frameSize = opts.compact ? 'size-4' : 'size-6';
-    const tone = opts.compact ? 'text-gray-400' : 'text-gray-600';
+    const tone = opts.compact ? 'text-base-content/40' : 'text-base-content/60';
     const frame = opts.bare
         ? `inline-flex ${frameSize} shrink-0 items-center justify-center ${tone}`
-        : `inline-flex ${frameSize} shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white ${tone}`;
+        : `inline-flex ${frameSize} shrink-0 items-center justify-center rounded-md border border-base-300 bg-base-100 ${tone}`;
     return `<span class="${frame}" title="${esc(model)}" aria-label="Model: ${esc(model)}">${mark}</span>`;
 }

@@ -2,17 +2,17 @@
 // overview and filtered results both come from GET /nav/items.
 /** Performs the ui.navMenu runtime operation. */
 export default function (_ctx: Context, _session: Session | null, _opts?: {}): string {
-    return `<div id="nav-overlay" class="hidden fixed inset-0 z-50 bg-gray-950/35 p-3 backdrop-blur-[1px]" onclick="if(event.target===this)window.__navClose()">
-  <div role="dialog" aria-modal="true" aria-label="Global menu" class="flex h-full w-full flex-col overflow-hidden rounded-xl border border-gray-300 bg-white shadow-2xl">
-    <div class="flex items-center gap-3 border-b border-gray-200 px-4">
-      <i class="ph ph-magnifying-glass text-base text-gray-400" aria-hidden="true"></i>
+    return `<div id="nav-overlay" class="hidden fixed inset-0 z-50 bg-base-content/35 p-3 backdrop-blur-[1px]" onclick="if(event.target===this)window.__navClose()">
+  <div role="dialog" aria-modal="true" aria-label="Global menu" class="flex h-full w-full flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 text-base-content shadow-2xl">
+    <div class="flex items-center gap-3 border-b border-base-300 px-4">
+      <i class="ph ph-magnifying-glass text-base text-base-content/40" aria-hidden="true"></i>
       <input id="nav-q" name="q" placeholder="Search chats, projects, plugins, people…" autocomplete="off"
              hx-get="/nav/items" hx-trigger="load, palette-open, input changed delay:100ms" hx-target="#nav-results"
-             class="h-11 min-w-0 flex-1 border-0 bg-transparent text-sm outline-none">
-      <kbd class="rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] text-gray-400">esc</kbd>
+             class="h-11 min-w-0 flex-1 border-0 bg-transparent text-sm text-base-content outline-none placeholder:text-base-content/40">
+      <kbd class="kbd kbd-xs border-base-300 bg-base-200 text-base-content/50">esc</kbd>
     </div>
     <div id="nav-results" class="min-h-0 flex-1 overflow-y-auto"></div>
-    <div class="flex gap-4 border-t border-gray-200 bg-gray-50 px-4 py-1.5 text-[10px] text-gray-500">
+    <div class="flex gap-4 border-t border-base-300 bg-base-200 px-4 py-1.5 text-[10px] text-base-content/60">
       <span>⌘J/⌘K move</span><span>↵ open</span><span>⌘↵ beside</span><span class="ml-auto">⌘/ open</span>
     </div>
   </div>
@@ -25,10 +25,11 @@ export default function (_ctx: Context, _session: Session | null, _opts?: {}): s
   const rows = () => Array.from(document.querySelectorAll('#nav-results .nav-row'));
   const mark = () => rows().forEach((row, index) => {
     const active = index === sel;
-    row.classList.toggle('bg-violet-50', active);
+    row.classList.toggle('bg-primary/10', active);
+    row.classList.toggle('text-primary', active);
     row.classList.toggle('ring-1', active);
     row.classList.toggle('ring-inset', active);
-    row.classList.toggle('ring-violet-200', active);
+    row.classList.toggle('ring-primary/30', active);
     row.setAttribute('aria-selected', String(active));
     if (active) row.scrollIntoView({ block: 'nearest' });
   });

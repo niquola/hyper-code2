@@ -22,9 +22,9 @@ test("GET /functions renders searchable live runtime documentation", async () =>
     expect(page.main).toContain("returns");
     expect(page.main).toContain("Search in English");
     expect(page.main).toContain("BM25");
-    expect(page.main).toContain("bg-white");
-    expect(page.main).not.toContain("bg-base-");
-    expect(page.main).not.toContain("text-base-content");
+    expect(page.main).toContain("bg-base-100");
+    expect(page.main).toContain("text-base-content");
+    expect(page.main).not.toContain("bg-white");
     expect(page.main).not.toContain("btn btn-primary");
 });
 

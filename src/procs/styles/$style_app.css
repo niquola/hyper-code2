@@ -7,8 +7,8 @@
  * it compiles the same whether it lives in the workspace or in the project.
  *
  * The design system is daisyUI (styles.build adds the plugin): its component
- * classes — `btn`, `card`, `alert`, `table` — and its theme, which is what
- * `light`/`dark` switch. Build screens out of those.
+ * classes — `btn`, `card`, `alert`, `table` — and semantic light/dark themes.
+ * Build screens from semantic colors so the explicit app theme can switch.
  *
  * The colours below are NOT a second palette. They are the names the markup used
  * before daisyUI, each defined as whatever daisyUI calls the same thing, so the
@@ -101,14 +101,14 @@
  *              a shadow to lift it off
  *
  * After the plugin's own block on purpose — same specificity, later wins. */
-:root,
 [data-theme="light"] {
   --color-base-200: oklch(96.8% 0.001 240);
   --color-base-300: oklch(92.5% 0.003 240);
+  --color-canvas: oklch(98.8% 0.001 240);
 }
 
-@theme {
-  --color-canvas: oklch(98.8% 0.001 240);
+[data-theme="dark"] {
+  --color-canvas: color-mix(in oklab, var(--color-base-100) 72%, black);
 }
 
 body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }

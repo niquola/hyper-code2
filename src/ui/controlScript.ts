@@ -48,7 +48,7 @@ export default async function (_ctx: Context, _session: Session | null, _opts?: 
         "    // bad news you have to clear by hand.",
         "    error: { cls: 'border-red-200 bg-red-50 text-red-800', icon: 'ph-warning-circle', ms: 20000 },",
         "    warn:  { cls: 'border-amber-200 bg-amber-50 text-amber-900', icon: 'ph-warning', ms: 8000 },",
-        "    info:  { cls: 'border-gray-200 bg-white text-gray-800', icon: 'ph-info', ms: 4000 },",
+        "    info:  { cls: 'border-base-300 bg-base-100 text-base-content', icon: 'ph-info', ms: 4000 },",
         "  };",
         "",
         "  const notify = (ev) => {",
