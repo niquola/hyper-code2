@@ -82,6 +82,12 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
     const ev = opts.event;
     const agentId = String(opts.agentId ?? ev?.agentId ?? '');
     if (!ev || typeof ev !== "object") return "";
+    const eventCard = (card: any) => (_ctx as any).fns.ui.chatEventCard
+        ? (_ctx as any).fns.ui.chatEventCard(card)
+        : `<div class="mx-auto max-w-[90%] rounded-lg border border-base-300 bg-base-200/45 px-3 py-2"><div class="flex items-center gap-2 text-xs font-semibold">${card.icon ? `<i class="ph ph-${esc(card.icon)}"></i>` : ''}<span>${esc(card.title)}</span>${card.badge ?? ''}</div>${card.body ? `<div class="mt-1 text-[11px]">${card.body}</div>` : ''}${card.details ? `<details><summary>Details</summary>${card.details}</details>` : ''}</div>`;
+    const badge = (label: string, tone: 'neutral' | 'info' | 'success' | 'warning' | 'error' = 'neutral') => (_ctx as any).fns.ui.statusBadge
+        ? (_ctx as any).fns.ui.statusBadge({ label, tone })
+        : `<span class="badge badge-sm">${esc(label)}</span>`;
 
     if (ev.excludedFromLlm) {
         // Collapsed out of the LLM's view after a successful correction — the
@@ -160,7 +166,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
     }
 
     if (ev.type === "plan_activation") {
-        return `<div class="mx-auto max-w-[90%] rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800"><div class="flex items-center gap-1.5 font-medium"><i class="ph ph-list-checks"></i> Plan task injected</div><div class="mt-1 font-medium leading-5">${esc(ev.title ?? ev.taskId ?? "Task")}</div>${ev.instructions ? `<div class="mt-1 whitespace-pre-wrap leading-5 opacity-80">${esc(ev.instructions)}</div>` : ""}</div>`;
+        return eventCard({ title: 'Plan task injected', icon: 'list-checks', tone: 'info', body: `<div class="font-medium text-base-content/80">${esc(ev.title ?? ev.taskId ?? "Task")}</div>${ev.instructions ? `<div class="mt-1 whitespace-pre-wrap">${esc(ev.instructions)}</div>` : ""}` });
     }
 
 
@@ -170,12 +176,12 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         const title = watched ? (ready ? "Condition met" : "Condition timed out") : "Scheduled wake-up";
         const icon = watched ? (ready ? "ph-check-circle" : "ph-timer") : "ph-alarm";
         const result = ev.result == null ? "" : JSON.stringify(ev.result, null, 2);
-        return `<div class="mx-auto max-w-[90%] overflow-hidden rounded-xl border border-sky-200 bg-sky-50 text-xs text-sky-900"><div class="flex items-center gap-2 border-b border-sky-100 px-3 py-2 font-medium"><i class="ph ${icon} text-sky-600"></i><span>${title}</span>${watched ? `<span class="ml-auto rounded-full bg-sky-100 px-1.5 py-0.5 font-mono text-[9px] text-sky-600">watch</span>` : ""}</div><div class="px-3 py-2.5"><div class="leading-5 text-sky-800">${esc(ev.reason ?? ev.summary ?? "")}</div>${result ? `<details class="mt-2"><summary class="cursor-pointer text-[10px] font-medium text-sky-600">Result</summary><pre class="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-sky-100 bg-white/70 p-2 font-mono text-[10px] leading-4 text-gray-600">${esc(result)}</pre></details>` : ""}</div></div>`;
+        return eventCard({ title, icon: icon.replace(/^ph-/, ''), tone: ready || !watched ? 'info' : 'warning', badge: watched ? badge('watch', ready ? 'success' : 'warning') : undefined, body: esc(ev.reason ?? ev.summary ?? ""), details: result ? `<pre class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-base-300 bg-base-100 p-2 font-mono text-[10px] leading-4 text-base-content/65">${esc(result)}</pre>` : undefined });
     }
 
 
     if (ev.type === "goal_activation") {
-        return `<div class="mx-auto max-w-[90%] rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-800"><div class="flex items-center gap-1.5 font-medium"><i class="ph ph-target"></i> Goal enabled · ${Number(ev.iterations ?? 3)} iterations</div><div class="mt-1 leading-5 opacity-80">${esc(ev.text ?? "")}</div></div>`;
+        return eventCard({ title: `Goal enabled · ${Number(ev.iterations ?? 3)} iterations`, icon: 'target', tone: 'info', body: esc(ev.text ?? '') });
     }
 
 
@@ -183,10 +189,10 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         const status = String(ev.status ?? "unclear");
         const achieved = status === "achieved";
         const limited = status === "limit_reached";
-        const color = achieved ? "border-emerald-200 bg-emerald-50 text-emerald-800" : limited ? "border-orange-200 bg-orange-50 text-orange-800" : status === "continue" ? "border-indigo-200 bg-indigo-50 text-indigo-800" : "border-amber-200 bg-amber-50 text-amber-800";
+        const tone = achieved ? 'success' : limited ? 'error' : status === 'continue' ? 'info' : 'warning';
         const icon = achieved ? "ph-check-circle" : limited ? "ph-stop-circle" : status === "continue" ? "ph-target" : "ph-warning-circle";
         const count = ev.maxIterations ? ` · ${Number(ev.iteration ?? 0)}/${Number(ev.maxIterations)}` : "";
-        return `<div class="mx-auto max-w-[90%] rounded-lg border px-3 py-2 text-xs ${color}"><div class="flex items-center gap-1.5 font-medium"><i class="ph ${icon}"></i> Goal check: ${esc(status)}${count}</div><div class="mt-1 leading-5 opacity-80">${esc(ev.reason ?? "")}</div>${ev.nextStep ? `<div class="mt-1 leading-5"><span class="font-medium">Next:</span> ${esc(ev.nextStep)}</div>` : ""}</div>`;
+        return eventCard({ title: `Goal check: ${status}${count}`, icon: icon.replace(/^ph-/, ''), tone, badge: badge(status, tone), body: `${esc(ev.reason ?? '')}${ev.nextStep ? `<div class="mt-1"><span class="font-medium text-base-content/80">Next:</span> ${esc(ev.nextStep)}</div>` : ''}` });
     }
 
 
@@ -200,7 +206,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
 
     if (ev.type === "team_update") {
         const title = ev.taskTitle ? `Agent ${ev.memberId} · ${ev.taskTitle}` : `Agent ${ev.memberId} · ${ev.event}`;
-        return '<div class="flex justify-start"><a href="/agent/' + encodeURIComponent(String(ev.memberId ?? '')) + '" class="inline-flex max-w-[90%] items-start gap-2 rounded-lg border border-indigo-200 bg-indigo-50/60 px-3 py-2 text-xs text-indigo-800 hover:bg-indigo-50" data-team-update="' + esc(ev.event) + '"><i class="ph ph-users-three mt-0.5"></i><span><span class="font-medium">' + esc(title) + '</span><span class="mt-0.5 block text-[11px] leading-4 text-indigo-700/80">' + esc(ev.summary ?? '') + '</span></span></a></div>';
+        return eventCard({ title, icon: 'users-three', tone: ev.event === 'failed' || ev.event === 'blocked' ? 'error' : ev.event === 'completed' ? 'success' : 'info', badge: badge(String(ev.event ?? 'update'), ev.event === 'failed' || ev.event === 'blocked' ? 'error' : ev.event === 'completed' ? 'success' : 'info'), href: '/agent/' + encodeURIComponent(String(ev.memberId ?? '')), body: esc(ev.summary ?? ''), attrs: 'data-team-update="' + esc(ev.event) + '"' });
     }
 
 

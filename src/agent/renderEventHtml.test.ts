@@ -187,7 +187,7 @@ describe("agent.renderEventHtml", () => {
     const html = await renderEventHtml(ctx, { type: "goal_check", status: "limit_reached", reason: "limit reached", iteration: 2, maxIterations: 2 });
     expect(html).toContain("Goal check: limit_reached · 2/2");
     expect(html).toContain("ph-stop-circle");
-    expect(html).toContain("border-orange-200");
+    expect(html).toContain("badge");
   });
 
   test("renders conditional wake as a compact card with collapsible result", async () => {
@@ -195,7 +195,7 @@ describe("agent.renderEventHtml", () => {
     expect(html).toContain("Condition met");
     expect(html).toContain(">watch</span>");
     expect(html).toContain("<summary");
-    expect(html).toContain("Result");
+    expect(html).toContain("Details");
     expect(html).toContain('&quot;subject&quot;: &quot;Hello&quot;');
     expect(html).not.toContain("Wake condition met:");
   });

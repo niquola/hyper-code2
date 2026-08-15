@@ -699,6 +699,7 @@ declare global {
             action: Injected<typeof import("./ui/action").default>;
             agentMetaPanel: Injected<typeof import("./ui/agentMetaPanel").default>;
             chatColumn: Injected<typeof import("./ui/chatColumn").default>;
+            chatEventCard: Injected<typeof import("./ui/chatEventCard").default>;
             controlScript: Injected<typeof import("./ui/controlScript").default>;
             createAgent: Injected<typeof import("./ui/createAgent").default>;
             eval: Injected<typeof import("./ui/eval").default>;
