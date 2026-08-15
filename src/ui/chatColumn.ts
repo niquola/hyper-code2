@@ -90,6 +90,8 @@ export default async function (ctx: Context, _session: Session | null, opts: {
   ${reflectionHtml}
     ${sleepControl}
 
+    ${ctx.fns.ui.popup({ method: 'agent.initialPromptPopup', params: { agentId: id }, html: '<i class="ph ph-scroll" aria-hidden="true"></i>', attrs: 'title="Initial prompt" aria-label="Initial prompt" class="px-1 text-gray-400 hover:text-indigo-600"' })}
+
     <form method="POST" action="/agent/${encodeURIComponent(id)}/fork" hx-boost="false" class="inline">
       <button type="submit" title="fork and open" aria-label="Fork and open agent" ${ctx.fns.procs.ui.attr({ action: "fork", entity: "agent", id })} class="px-1 text-gray-400 transition hover:text-indigo-600"><i class="ph ph-git-fork" aria-hidden="true"></i></button>
     </form>

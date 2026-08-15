@@ -28,6 +28,7 @@ declare global {
             getSleepGeneration: Injected<typeof import("./agent/getSleepGeneration").default>;
             highlightResult: Injected<typeof import("./agent/highlightResult").default>;
             imageContent: Injected<typeof import("./agent/imageContent").default>;
+            initialPromptPopup: Injected<typeof import("./agent/initialPromptPopup").default>;
             listPromptPresets: Injected<typeof import("./agent/listPromptPresets").default>;
             listWatches: Injected<typeof import("./agent/listWatches").default>;
             llmCall: Injected<typeof import("./agent/llmCall").default>;
@@ -345,6 +346,7 @@ declare global {
             };
             dev: {
                 build: Injected<typeof import("./procs/dev/build").default>;
+                createFunction: Injected<typeof import("./procs/dev/createFunction").default>;
                 def: Injected<typeof import("./procs/dev/def").default>;
                 doc: Injected<typeof import("./procs/dev/doc").default>;
                 genTypes: Injected<typeof import("./procs/dev/genTypes").default>;
@@ -519,6 +521,7 @@ declare global {
                 list: Injected<typeof import("./runtime/docs/list").default>;
                 ragBenchmark: Injected<typeof import("./runtime/docs/ragBenchmark").default>;
                 search: Injected<typeof import("./runtime/docs/search").default>;
+                validate: Injected<typeof import("./runtime/docs/validate").default>;
             };
         };
         screen: {
