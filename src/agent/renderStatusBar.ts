@@ -58,7 +58,7 @@ initialUsage?: any }): Promise<string> {
     // every second: the button appears with the run and leaves with it.
     const busy = row?.run_state === 'running' || !!row?.next_run_at;
     const stopBtn = busy
-        ? `<form method="POST" action="/agent/${encodeURIComponent(agentId)}/stop" class="inline"><button title="stop this run" ${ctx.fns.procs.ui.attr({ action: "stop", entity: "agent", id: agentId })} class="text-xs px-1 py-0.5 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50"><i class="ph ph-stop-circle align-middle"></i></button></form>`
+        ? `<form method="POST" action="/agent/${encodeURIComponent(agentId)}/stop" class="inline"><button title="stop this run" ${ctx.fns.procs.ui.attr({ action: "stop", entity: "agent", id: agentId })} class="rounded border border-error/30 bg-error/10 px-1 py-0.5 text-xs text-error hover:bg-error/20"><i class="ph ph-stop-circle align-middle"></i></button></form>`
         : '';
     // The SSE stream is the real trigger (it dispatches hyper-tick on every
     // agent event); the timer is only a safety net. A busy agent still refreshes
