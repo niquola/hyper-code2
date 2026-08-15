@@ -702,6 +702,7 @@ declare global {
             controlScript: Injected<typeof import("./ui/controlScript").default>;
             createAgent: Injected<typeof import("./ui/createAgent").default>;
             eval: Injected<typeof import("./ui/eval").default>;
+            inspectorSection: Injected<typeof import("./ui/inspectorSection").default>;
             layout: Injected<typeof import("./ui/layout").default>;
             live: Injected<typeof import("./ui/live").default>;
             modelLogo: Injected<typeof import("./ui/modelLogo").default>;
@@ -714,10 +715,12 @@ declare global {
             planTaskRow: Injected<typeof import("./ui/planTaskRow").default>;
             popup: Injected<typeof import("./ui/popup").default>;
             popupContent: Injected<typeof import("./ui/popupContent").default>;
+            progressBar: Injected<typeof import("./ui/progressBar").default>;
             reflectionDropdown: Injected<typeof import("./ui/reflectionDropdown").default>;
             script: Injected<typeof import("./ui/script").default>;
             sendToAgent: Injected<typeof import("./ui/sendToAgent").default>;
             state: Injected<typeof import("./ui/state").default>;
+            statusBadge: Injected<typeof import("./ui/statusBadge").default>;
             toggle: Injected<typeof import("./ui/toggle").default>;
             wakeTimer: Injected<typeof import("./ui/wakeTimer").default>;
         };
