@@ -1,0 +1,26 @@
+export type Paper = {
+    title?: string;
+    authors?: string[] | string;
+    primary_author?: string;
+    year?: number;
+    publish_date?: string;
+    journal?: string;
+    publisher?: string;
+    doi?: string;
+    doi_url?: string;
+    open_access_pdf?: string;
+    has_full_text: boolean;
+    arxiv_id?: string;
+    is_retracted: boolean;
+    citations?: number;
+    study_type?: string;
+    study_count?: number;
+    highly_cited: boolean;
+    rigorous_journal: boolean;
+    large_human_trial: boolean;
+    animal_trial: boolean;
+    takeaway?: string;
+    paper_id?: string;
+    doc_id?: string;
+    consensus_url?: string;
+};

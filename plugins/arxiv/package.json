@@ -1,0 +1,12 @@
+{
+  "name": "arxiv",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "arXiv",
+    "icon": "ph-article",
+    "optional": true,
+    "description": "Public arXiv search, paper metadata, abstracts, citations, Markdown notes and PDF/source downloads."
+  }
+}

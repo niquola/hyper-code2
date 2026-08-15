@@ -71,6 +71,14 @@ declare global {
             wireTools: Injected<typeof import("./agent/wireTools").default>;
             workerLoop: Injected<typeof import("./agent/workerLoop").default>;
         };
+        arxiv: {
+            api: Injected<typeof import("../plugins/arxiv/src/arxiv/api").default>;
+            bibtex: Injected<typeof import("../plugins/arxiv/src/arxiv/bibtex").default>;
+            download: Injected<typeof import("../plugins/arxiv/src/arxiv/download").default>;
+            get: Injected<typeof import("../plugins/arxiv/src/arxiv/get").default>;
+            markdown: Injected<typeof import("../plugins/arxiv/src/arxiv/markdown").default>;
+            search: Injected<typeof import("../plugins/arxiv/src/arxiv/search").default>;
+        };
         browser: {
             click: Injected<typeof import("../plugins/browser/src/browser/click").default>;
             closeSessions: Injected<typeof import("../plugins/browser/src/browser/closeSessions").default>;
@@ -514,6 +522,13 @@ declare global {
             diagnoseParse: Injected<typeof import("./repl/diagnoseParse").default>;
             eval: Injected<typeof import("./repl/eval").default>;
         };
+        research: {
+            ask: Injected<typeof import("../plugins/research/src/research/ask").default>;
+            call: Injected<typeof import("../plugins/research/src/research/call").default>;
+            papers: Injected<typeof import("../plugins/research/src/research/papers").default>;
+            search: Injected<typeof import("../plugins/research/src/research/search").default>;
+            start: Injected<typeof import("../plugins/research/src/research/start").default>;
+        };
         runtime: {
             docs: {
                 get: Injected<typeof import("./runtime/docs/get").default>;
@@ -730,6 +745,10 @@ declare global {
         namespace agent {
             type Agent = import("./agent/Agent").Agent;
         }
+        namespace arxiv {
+            type Paper = import("../plugins/arxiv/src/arxiv/Paper").Paper;
+            type SearchResult = import("../plugins/arxiv/src/arxiv/SearchResult").SearchResult;
+        }
         namespace dev {
             type TestRun = import("./dev/TestRun").TestRun;
         }
@@ -802,6 +821,15 @@ declare global {
             namespace telemetry {
                 type State = import("./procs/telemetry/State").State;
             }
+        }
+        namespace research {
+            type AskResult = import("../plugins/research/src/research/AskResult").AskResult;
+            type Citation = import("../plugins/research/src/research/Citation").Citation;
+            type Filters = import("../plugins/research/src/research/Filters").Filters;
+            type Paper = import("../plugins/research/src/research/Paper").Paper;
+            type QueryOpts = import("../plugins/research/src/research/QueryOpts").QueryOpts;
+            type SearchResult = import("../plugins/research/src/research/SearchResult").SearchResult;
+            type StartResult = import("../plugins/research/src/research/StartResult").StartResult;
         }
         namespace screen {
             type Catalogue = import("./screen/Catalogue").Catalogue;

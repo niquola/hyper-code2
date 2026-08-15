@@ -1,0 +1,12 @@
+{
+  "name": "research",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "Research",
+    "icon": "ph-microscope",
+    "optional": true,
+    "description": "Evidence research over Consensus: synthesized answers, ranked peer-reviewed papers, citations, follow-ups and study filters."
+  }
+}
