@@ -4,5 +4,9 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     const id = opts.params.id!;
     const agent = await ctx.fns.session.load({ id });
     if (!agent) return new Response('not found', { status: 404 });
-    return new Response(ctx.fns.ui.agentMetaPanel({ agent }), { headers: { 'content-type': 'text/html; charset=utf-8' } });
+    const [team, archivedTeam] = await Promise.all([
+        ctx.fns.agent.team({ agent }),
+        ctx.fns.agent.team({ agent, includeArchived: true }),
+    ]);
+    return new Response(ctx.fns.ui.agentMetaPanel({ agent, team, archivedTeam }), { headers: { 'content-type': 'text/html; charset=utf-8' } });
 }

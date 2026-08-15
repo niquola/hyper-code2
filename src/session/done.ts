@@ -49,5 +49,20 @@ export default async function (
     } });
     agent.scratchpad = updated.scratchpad;
     ctx.fns.events.refreshAgentMeta({ agentId: agent.id, reason: "plan-done" });
+    if (!updated.result.alreadyDone && agent.parentId && agent.scratchpad?.delegation) {
+        await ctx.fns.agent.steer({
+            from: agent,
+            // The final task is announced by finishTask with its mandatory
+            // semantic result. Emitting a generic plan.completed here would
+            // duplicate the parent update and wake.
+            event: "task.completed",
+            taskId: updated.result.completed.id,
+            taskTitle: updated.result.completed.title,
+            summary: updated.result.complete
+                ? `Completed final plan task ${updated.result.progress.done}/${updated.result.progress.total}; preparing required result.`
+                : `Completed plan task ${updated.result.progress.done}/${updated.result.progress.total}.`,
+        });
+    }
+    if (agent.parentId) ctx.fns.events.refreshAgentMeta({ agentId: String(agent.parentId), reason: "team-plan-done" });
     return { ok: true, ...updated.result };
 }

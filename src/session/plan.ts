@@ -68,5 +68,6 @@ export default async function (
     } });
     agent.scratchpad = updated.scratchpad;
     ctx.fns.events.refreshAgentMeta({ agentId: agent.id, reason: "plan" });
+    if (agent.parentId) ctx.fns.events.refreshAgentMeta({ agentId: String(agent.parentId), reason: "team-plan" });
     return { ok: true, ...updated.result };
 }

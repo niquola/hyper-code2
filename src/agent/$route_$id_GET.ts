@@ -21,7 +21,11 @@ params: Record<string, string> }) {
     if (!agent) return new Response("Not Found", { status: 404 });
 
     const chat = await ctx.fns.ui.chatColumn({ agentId: id });
-    const meta = ctx.fns.ui.agentMetaPanel({ agent });
+    const [team, archivedTeam] = await Promise.all([
+        ctx.fns.agent.team({ agent }),
+        ctx.fns.agent.team({ agent, includeArchived: true }),
+    ]);
+    const meta = ctx.fns.ui.agentMetaPanel({ agent, team, archivedTeam });
     // id="chat-panel" is the chat client's mount point: /agent/chat.js loads
     // once for the whole app and (re)binds itself to this element after every
     // swap — Enter-to-send, stick-to-bottom, older-message paging and the tool

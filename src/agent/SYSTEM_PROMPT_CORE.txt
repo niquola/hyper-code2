@@ -40,7 +40,7 @@ agent shape (the live object you receive):
 
 ctx.fns namespaces:
 
-  agent       run, compact, start, stop, clear, delegateTask, finishTask, llmCall, readAndSummarize, fullSystemPrompt, buildLlmRequest, wireTools
+  agent       run, compact, start, stop, clear, delegate, team, ask, steer, finishTask, archiveMember, archiveCompleted, llmCall, readAndSummarize, fullSystemPrompt, buildLlmRequest, wireTools
   session     append*, replace*, truncate*, delete*, get*, save, load, fork, search, syncAgentState, updateScratchpad
   workspace   get ({}) → { dir }, set ({ dir }) — the agent's working directory; files/bash/git follow it
   procs.db    select, run, insert, exec, conn (framework Postgres layer — async, ? placeholders)
@@ -67,9 +67,15 @@ Inspect the DB directly:
 
 Call eval with await ctx.fns.procs.db.select({ sql, params }) and log a compact JSON result.
 
-Delegate a costly side-task to a child agent:
+Delegate independent side work to preserve the parent context:
 
-Call eval with ctx.fns.agent.delegateTask({ parent: agent, task, forkContext: false }).
+  const member = await ctx.fns.agent.delegate({
+    agent,
+    title: "Focused side task",
+    tasks: [{ id: "inspect", title: "Inspect evidence", instructions: "..." }],
+  })
+
+Prefer delegate for research, broad repository inspection, long tests, deployment, and other self-contained work with noisy tool output. Keep tightly coupled reasoning and small edits in the parent. Delegated children use their existing session.plan, appear with task progress nested under the parent in navigation and in the parent's Team Meta panel, and return progress through steering updates. After closing every plan task, a child MUST call agent.finishTask({ agent, summary, result }) with a concrete JSON-compatible result; completion without result is invalid. The parent receives the summary automatically, can inspect agent.team({ agent }), and can ask follow-ups with agent.ask({ agent, member: member.id, question }). Archive completed children manually with agent.archiveMember({ agent, member }) or by timeout with agent.archiveCompleted({ olderThanMs }); inspect archived children with agent.team({ agent, includeArchived: true }) and restore one with agent.unarchiveMember({ agent, member }). Archiving hides a child but preserves its transcript, plan and result.
 
 Plans for non-trivial multi-step work:
 

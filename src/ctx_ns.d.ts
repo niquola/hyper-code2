@@ -7,6 +7,9 @@ declare global {
 
     interface FnsRegistry {
         agent: {
+            archiveCompleted: Injected<typeof import("./agent/archiveCompleted").default>;
+            archiveMember: Injected<typeof import("./agent/archiveMember").default>;
+            ask: Injected<typeof import("./agent/ask").default>;
             buildDelegatedTaskPrompt: Injected<typeof import("./agent/buildDelegatedTaskPrompt").default>;
             buildLlmRequest: Injected<typeof import("./agent/buildLlmRequest").default>;
             cancelWake: Injected<typeof import("./agent/cancelWake").default>;
@@ -17,6 +20,7 @@ declare global {
             compact: Injected<typeof import("./agent/compact").default>;
             createFromPopup: Injected<typeof import("./agent/createFromPopup").default>;
             createFromValues: Injected<typeof import("./agent/createFromValues").default>;
+            delegate: Injected<typeof import("./agent/delegate").default>;
             delegateTask: Injected<typeof import("./agent/delegateTask").default>;
             deliverWakes: Injected<typeof import("./agent/deliverWakes").default>;
             deliverWatch: Injected<typeof import("./agent/deliverWatch").default>;
@@ -46,6 +50,7 @@ declare global {
             renderSleepContextHtml: Injected<typeof import("./agent/renderSleepContextHtml").default>;
             renderStatusBar: Injected<typeof import("./agent/renderStatusBar").default>;
             respondHtml: Injected<typeof import("./agent/respondHtml").default>;
+            retryMember: Injected<typeof import("./agent/retryMember").default>;
             run: Injected<typeof import("./agent/run").default>;
             sanitizeHtmlBody: Injected<typeof import("./agent/sanitizeHtmlBody").default>;
             setAutomation: Injected<typeof import("./agent/setAutomation").default>;
@@ -57,10 +62,14 @@ declare global {
             start: Injected<typeof import("./agent/start").default>;
             stashResult: Injected<typeof import("./agent/stashResult").default>;
             statusLineForTurn: Injected<typeof import("./agent/statusLineForTurn").default>;
+            steer: Injected<typeof import("./agent/steer").default>;
             stop: Injected<typeof import("./agent/stop").default>;
+            stopMember: Injected<typeof import("./agent/stopMember").default>;
+            team: Injected<typeof import("./agent/team").default>;
             toolDetails: Injected<typeof import("./agent/toolDetails").default>;
             toolLang: Injected<typeof import("./agent/toolLang").default>;
             toolMeta: Injected<typeof import("./agent/toolMeta").default>;
+            unarchiveMember: Injected<typeof import("./agent/unarchiveMember").default>;
             waitForEvent: Injected<typeof import("./agent/waitForEvent").default>;
             wakeAt: Injected<typeof import("./agent/wakeAt").default>;
             wakeIn: Injected<typeof import("./agent/wakeIn").default>;

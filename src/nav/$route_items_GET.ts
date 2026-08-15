@@ -10,6 +10,14 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const items = await ctx.fns.nav.items({ q, limit: q ? 40 : 500 });
     const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     const agents = await ctx.fns.session.list({}).catch(() => [] as any[]);
+    const visibleAgents = agents.filter((agent: any) => !agent.parentId);
+    const childrenByParent = new Map<string, any[]>();
+    for (const candidate of agents as any[]) {
+        if (!candidate.parentId || !candidate.delegated) continue;
+        const children = childrenByParent.get(String(candidate.parentId)) ?? [];
+        children.push(candidate);
+        childrenByParent.set(String(candidate.parentId), children);
+    }
     const agentByHref = new Map(agents.map((agent: any) => [`/agent/${encodeURIComponent(agent.id)}`, agent]));
     const group = (item: any) => {
         const hint = String(item.hint ?? "").toLowerCase();
@@ -40,19 +48,19 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     let html: string;
     const workspaceLabel = (dir: string) => dir.split("/").filter(Boolean).pop() || dir;
     const agentGroups = new Map<string, any[]>();
-    for (const agent of agents as any[]) {
+    for (const agent of visibleAgents as any[]) {
         const dir = String(agent.workspaceDir || "");
         const key = dir || "(no workdir)";
         const list = agentGroups.get(key) ?? [];
         list.push(agent);
         agentGroups.set(key, list);
     }
-    const agentRow = (agent: any) => row({ href: `/agent/${encodeURIComponent(agent.id)}`, label: agent.title || agent.id, hint: "agent" });
+    const agentRow = (agent: any, nested = false) => row({ href: `/agent/${encodeURIComponent(agent.id)}`, label: agent.title || agent.id, hint: nested ? "subagent" : "agent" });
     const chats = () => [...agentGroups.entries()].map(([dir, list]) => `<section class="mb-2">
   ${dir === "(no workdir)"
       ? `<h4 class="mb-0.5 px-1.5 text-[10px] font-semibold text-gray-400">${dir}</h4>`
       : `<a href="/files?path=${encodeURIComponent(dir)}" class="nav-row mb-0.5 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 hover:bg-gray-100"><i class="ph ph-folder-open"></i><span class="truncate">${esc(workspaceLabel(dir))}</span></a>`}
-  ${list.map(agentRow).join("")}
+  ${list.map((parent: any) => `${agentRow(parent)}${(childrenByParent.get(String(parent.id)) ?? []).map((child: any) => `<div class="ml-5 border-l border-gray-200 pl-1">${agentRow(child, true)}</div>`).join("")}`).join("")}
 </section>`).join("");
     const projects = () => {
         const folders = [...agentGroups.entries()].filter(([dir]) => dir !== "(no workdir)");

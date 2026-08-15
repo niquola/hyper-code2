@@ -219,6 +219,14 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
             (ctx.state as any).lastSleepScan = Date.now();
             await ctx.fns.agent.sleepIdle({}).catch((error: any) => console.error('sleep scan failed:', error));
         }
+        const lastTeamArchiveScan = Number((ctx.state as any).lastTeamArchiveScan ?? 0);
+        if (Date.now() - lastTeamArchiveScan >= 10_000) {
+            (ctx.state as any).lastTeamArchiveScan = Date.now();
+            const archiveAfterMs = await ctx.fns.settings.getNumber({ module: 'agent', scopeType: 'global', key: 'teamArchiveAfterMs', fallback: 60_000 });
+            if (Number(archiveAfterMs) > 0) {
+                await ctx.fns.agent.archiveCompleted({ olderThanMs: Number(archiveAfterMs) }).catch((error: any) => console.error('team archive scan failed:', error));
+            }
+        }
         while (true) {
             const id = await claimOne(ctx, Date.now());
             if (!id) break;

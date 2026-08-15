@@ -198,6 +198,12 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
             + '<pre class="px-4 py-3 whitespace-pre-wrap break-words text-gray-600 bg-white">' + esc(ev.text) + '</pre></details></div>';
     }
 
+    if (ev.type === "team_update") {
+        const title = ev.taskTitle ? `Agent ${ev.memberId} · ${ev.taskTitle}` : `Agent ${ev.memberId} · ${ev.event}`;
+        return '<div class="flex justify-start"><a href="/agent/' + encodeURIComponent(String(ev.memberId ?? '')) + '" class="inline-flex max-w-[90%] items-start gap-2 rounded-lg border border-indigo-200 bg-indigo-50/60 px-3 py-2 text-xs text-indigo-800 hover:bg-indigo-50" data-team-update="' + esc(ev.event) + '"><i class="ph ph-users-three mt-0.5"></i><span><span class="font-medium">' + esc(title) + '</span><span class="mt-0.5 block text-[11px] leading-4 text-indigo-700/80">' + esc(ev.summary ?? '') + '</span></span></a></div>';
+    }
+
+
     if (ev.type === "error") {
         // Errors surface as a toast (session.appendErrorEvent notifies) and in
         // the status bar; the row stays in the events table for the audit.

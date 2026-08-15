@@ -12,6 +12,7 @@ async function setup() {
     ctx.fns.agent.run = async (c: any, _s: any, opts: { agent: any; userText: string }) => {
         const child = opts.agent;
         child.scratchpad.__lastPrompt = opts.userText;
+        await c.fns.session.updateScratchpad({ id: child.id, scratchpad: child.scratchpad });
         return c.fns.agent.finishTask({ agent: child, summary: "done", result: { ok: true, inherited: !!child.parentId } });
     };
     return ctx;
