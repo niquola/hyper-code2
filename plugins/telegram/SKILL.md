@@ -1,6 +1,6 @@
 ---
 name: telegram-live
-description: "Read-only personal Telegram client over MTProto — list recent dialogs, read message history without marking it read, globally search messages, search within a chat, find contacts, list folders and group participants. Use when the user asks to inspect or search their Telegram."
+description: "Personal Telegram client over MTProto — find chats by title or username, list recent dialogs, read message history without marking it read, search messages globally or within a chat, find contacts, list folders and group participants, and perform guarded writes."
 ---
 
 # Telegram
@@ -11,6 +11,7 @@ Read-only access to the user's personal Telegram account through GramJS/MTProto.
 
 - `telegram.me({})` — account metadata.
 - `telegram.dialogs({ max? })` — recent chats, groups and channels.
+- `telegram.findChat({ query, limit? })` — server-side search for direct chats, groups and channels by title, person name or username; own dialogs rank before global public results.
 - `telegram.messages({ chat, max? })` — message history, oldest to newest; does **not** mark messages read.
 - `telegram.search({ query, max? })` — global server-side message search.
 - `telegram.searchChat({ chat, query, max? })` — search within one chat.
@@ -39,5 +40,6 @@ Without `confirm: true`, every write function refuses to act.
 ```ts
 await ctx.fns.telegram.dialogs({ max: 20 });
 await ctx.fns.telegram.search({ query: "Circleback", max: 10 });
-await ctx.fns.telegram.messages({ chat: "@channel", max: 30 });
+await ctx.fns.telegram.findChat({ query: "ИИшница", limit: 10 });
+await ctx.fns.telegram.messages({ chat: "-1001951583351", max: 30 });
 ```

@@ -625,6 +625,7 @@ declare global {
             contacts: Injected<typeof import("../plugins/telegram/src/telegram/contacts").default>;
             createFolder: Injected<typeof import("../plugins/telegram/src/telegram/createFolder").default>;
             dialogs: Injected<typeof import("../plugins/telegram/src/telegram/dialogs").default>;
+            findChat: Injected<typeof import("../plugins/telegram/src/telegram/findChat").default>;
             folder: Injected<typeof import("../plugins/telegram/src/telegram/folder").default>;
             folders: Injected<typeof import("../plugins/telegram/src/telegram/folders").default>;
             leave: Injected<typeof import("../plugins/telegram/src/telegram/leave").default>;
