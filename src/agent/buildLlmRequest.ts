@@ -47,6 +47,23 @@ export default async function (
     // the way OUT, for whichever dialect — means such an agent answers again
     // instead of 400-ing forever on history it cannot edit.
     const { messages: base, repaired } = ctx.fns.session.repairToolPairs({ messages: raw });
+    const functionRag = await ctx.fns.agent.functionRag({ agent, messages: base }).catch((error: any) => {
+        ctx.fns.procs.log.warn({ event: "agent.function-rag.failed", msg: String(error?.message ?? error), agentId: agent.id });
+        return null;
+    });
+    if (functionRag) {
+        const at = [...base].map((message: any, index: number) => ({ message, index })).reverse()
+            .find(({ message }) => message?.role === "user" && typeof message.content === "string")?.index;
+        if (at != null) {
+            const message = base[at];
+            const block = functionRag.functions.map((fn: any) => `- #${fn.rank} ${fn.name} [RRF ${formatRagScore(fn.score)}${fn.bm25 == null ? "" : ` · BM25 ${formatRagScore(fn.bm25)}`}${fn.similarity == null ? "" : ` · cos ${formatRagScore(fn.similarity)}`}]: ${fn.summary}\n  ${fn.signature}`).join("\n");
+            const injected = `<relevant_runtime_functions>\n${block}\n</relevant_runtime_functions>\nUse these only if relevant; inspect one with runtime.docs.get before calling when details are needed.`;
+            base[at] = { ...message, content: `${message.content}\n\n${injected}` };
+            agent.scratchpad ??= {};
+            agent.scratchpad.functionRag = { messageIdx: functionRag.messageIdx, functions: functionRag.functions.map((fn: any) => fn.name), updatedAt: Date.now() };
+            queueMicrotask(() => ctx.fns.agent.markFunctionRag({ agent, messageIdx: functionRag.messageIdx, functions: functionRag.functions, injected }).catch(() => undefined));
+        }
+    }
     if (repaired.length) {
         ctx.fns.procs.log.warn({
             event: "transcript.repair",
@@ -78,4 +95,11 @@ export default async function (
         system,
         messages: [...bootstrap, ...base],
     };
+}
+
+
+function formatRagScore(value: any): string {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return "—";
+    return Math.abs(n) < 0.1 ? n.toFixed(5) : n.toFixed(3);
 }

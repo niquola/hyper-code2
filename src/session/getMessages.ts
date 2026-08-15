@@ -16,7 +16,7 @@ export default async function (
     })) as any[];
 
     return rows.map((r: any) => {
-        const m: any = { role: r.role };
+        const m: any = { role: r.role, idx: Number(r.idx) };
         if (r.content !== null) {
             // Structured multimodal content is stored as JSON text in the same
             // column as prose. Only parse the exact array shape we own; normal

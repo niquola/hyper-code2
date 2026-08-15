@@ -6,7 +6,7 @@ const ctx = await testCtx();
 
 test("GET /functions renders searchable live runtime documentation", async () => {
     const page: any = await route(ctx, null, {
-        req: new Request("http://localhost/functions?q=read+only+duckdb+sql"),
+        req: new Request("http://localhost/functions?q=read+only+duckdb+sql&namespace=duckdb"),
         params: {},
     });
     expect(page.title).toBe("functions: read only duckdb sql");
@@ -21,6 +21,7 @@ test("GET /functions renders searchable live runtime documentation", async () =>
     expect(page.main).toContain("sql: string;");
     expect(page.main).toContain("returns");
     expect(page.main).toContain("Search in English");
+    expect(page.main).toContain("BM25");
     expect(page.main).toContain("bg-white");
     expect(page.main).not.toContain("bg-base-");
     expect(page.main).not.toContain("text-base-content");

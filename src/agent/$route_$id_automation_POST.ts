@@ -12,6 +12,7 @@ params: Record<string, string> }) {
             id: opts.params.id!,
             reflectionEnabled: form.get('reflectionEnabled') === '1',
             sleepEnabled: form.get('sleepEnabled') === '1',
+            functionRagEnabled: form.get('functionRagEnabled') === '1',
         });
     } catch (error: any) {
         return new Response(error?.message ?? 'Invalid automation settings', { status: 400 });

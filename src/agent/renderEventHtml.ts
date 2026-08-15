@@ -21,7 +21,7 @@ function isHtmlBalanced(html: string): boolean {
     return true;
 }
 
-function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = true): string {
+function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = true, placement: 'overlay' | 'side' = 'overlay'): string {
     if (!agentId) return '';
     const url = '/agent/' + encodeURIComponent(agentId) + '/messages/delete';
     const btn = (mode: 'one' | 'from', title: string, confirm: string, icon: string) =>
@@ -36,7 +36,7 @@ function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = 
         + ' title="' + title + '" aria-label="' + title + '"'
         + ' class="flex size-7 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-400 shadow-sm backdrop-blur transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200">'
         + '<i class="ph ' + icon + ' text-sm" aria-hidden="true"></i><span class="sr-only">' + title + '</span></button>';
-    return '<div class="absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">'
+    return '<div class="' + (placement === 'side' ? 'flex gap-1' : 'absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100') + '">'
         + (allowOne ? btn('one', 'Delete message', 'delete this message?', 'ph-trash') : '')
         + (allowFrom ? btn('from', 'Delete from here', 'delete this and everything after?', 'ph-arrow-line-down') : '')
         + '</div>';
@@ -93,10 +93,18 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
 
     if (ev.type === "user") {
         const idx = ev.messageIdx ?? ev.idx ?? 0;
+        const ragFunctions = Array.isArray(ev.functionRag?.functions) ? ev.functionRag.functions : [];
+        const ragNames = ragFunctions.map((item: any) => String(typeof item === "string" ? item : item?.name ?? "")).filter(Boolean);
+        const injected = String(ev.functionRag?.injected ?? ragNames.join("\n"));
+        const ragIcon = ragNames.length
+            ? '<span class="group/rag relative ml-1.5 inline-flex align-middle text-indigo-200" aria-label="Function RAG retrieved ' + ragNames.length + ' functions" tabindex="0"><i class="ph ph-function text-xs" aria-hidden="true"></i><span role="tooltip" class="pointer-events-none invisible absolute bottom-full right-0 z-30 mb-2 w-max max-w-[32rem] whitespace-pre-wrap rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-[10px] leading-4 text-gray-700 opacity-0 shadow-xl transition group-hover/rag:visible group-hover/rag:opacity-100 group-focus/rag:visible group-focus/rag:opacity-100">' + esc(injected) + '</span></span>'
+            : '';
         return '<div class="group relative flex justify-end">'
-            + deleteControls(idx, agentId, true, true)
-            + '<div class="ml-auto max-w-[80%] rounded-xl bg-gray-600 px-4 py-3 text-white whitespace-pre-wrap break-words shadow-sm">'
-            + appendTime(esc(ev.text), ev.ts, 'dark')
+            + '<div class="relative ml-auto max-w-[80%]">'
+            + '<div class="rounded-xl bg-gray-600 px-4 py-3 text-white whitespace-pre-wrap break-words shadow-sm">'
+            + appendTime(esc(ev.text) + ragIcon, ev.ts, 'dark')
+            + '</div>'
+            + '<div class="mt-1 flex justify-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">' + deleteControls(idx, agentId, true, true, 'side') + '</div>'
             + '</div></div>';
     }
 

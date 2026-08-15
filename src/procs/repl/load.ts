@@ -18,6 +18,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { n
         const fnName = segs.pop()!;
         const modPath = segs.join('/');
         await loadFile(ctx, modPath, fnName);
+        scheduleDocsIndex(ctx);
         return { reloaded: target };
     }
 
@@ -28,8 +29,16 @@ export default async function (ctx: Context, _session: Session | null, opts: { n
         await loadFile(ctx, target, entry.runtimeName!);
         if (!loaded.includes(entry.runtimeName!)) loaded.push(entry.runtimeName!);
     }
+    scheduleDocsIndex(ctx);
     return { reloaded: target, count: loaded.length, fns: loaded };
 }
+
+function scheduleDocsIndex(ctx: Context): void {
+    if (!(ctx.fns as any).runtime?.docs?.index) return;
+    queueMicrotask(() => (ctx.fns as any).runtime.docs.index({}).catch((error: any) =>
+        ctx.fns.procs.log.warn({ event: "runtime.docs.index.failed", msg: String(error?.message ?? error) })));
+}
+
 
 async function loadFile(ctx: Context, modPath: string, fnName: string) {
     // Look the fn up by its dotted registry path in the scan (which knows the

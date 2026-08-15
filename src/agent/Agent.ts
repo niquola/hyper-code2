@@ -25,6 +25,8 @@ export type Agent = {
     currentJobId?: string | null;
     reflectionEnabled?: boolean;
     sleepEnabled?: boolean;
+    /** Inject compact hybrid-search function candidates for new user prompts. */
+    functionRagEnabled?: boolean;
     goal?: Record<string, any> | null;
     drainPromise?: Promise<any> | null;
     wakeAt?: number | null;

@@ -6,11 +6,15 @@ describe("session.save", () => {
         const ctx: any = await mkTestCtx();
         const agent = await ctx.fns.agent.start({ model: "m1", systemPrompt: "sp" });
         agent.scratchpad.x = 42;
+        agent.functionRagEnabled = true;
         await ctx.fns.session.save({ agent });
         const [row] = (await ctx.fns.procs.db.select({ sql: "SELECT * FROM agents WHERE id = ?", params: [agent.id] })) as any[];
         expect(row.model).toBe("m1");
         expect(row.system_prompt).toBe("sp");
         expect(JSON.parse(row.scratchpad)).toEqual({ x: 42 });
+        expect(row.function_rag_enabled).toBe(true);
+        const loaded = await ctx.fns.session.load({ id: agent.id });
+        expect(loaded?.functionRagEnabled).toBe(true);
     });
 
     test("save persists current in-memory messages/events", async () => {

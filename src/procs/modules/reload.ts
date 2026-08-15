@@ -25,5 +25,7 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
     // strip out of band, so its own click updates instantly and the broadcast just
     // agrees with it.
     root.fns.procs.events.reload({});
+    if (root.fns.runtime?.docs?.index) queueMicrotask(() => root.fns.runtime.docs.index({}).catch((error: any) =>
+        root.fns.procs.log.warn({ event: "runtime.docs.index.failed", msg: String(error?.message ?? error) })));
     return root.fns.procs.modules.list({});
 }

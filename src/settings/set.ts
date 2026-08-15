@@ -34,5 +34,9 @@ export default async function (ctx: Context, _session: Session | null, opts: Set
             now,
         ],
     });
+    if (opts.module === "embeddings" || (opts.module === "llm" && opts.key === "openaiApiKey")) {
+        queueMicrotask(() => (ctx.fns as any).runtime?.docs?.index?.({ force: opts.module === "embeddings" }).catch((error: any) =>
+            ctx.fns.procs.log.warn({ event: "runtime.docs.index.failed", msg: String(error?.message ?? error) })));
+    }
     return { ok: true };
 }

@@ -23,6 +23,7 @@ declare global {
             executeBash: Injected<typeof import("./agent/executeBash").default>;
             finishTask: Injected<typeof import("./agent/finishTask").default>;
             fullSystemPrompt: Injected<typeof import("./agent/fullSystemPrompt").default>;
+            functionRag: Injected<typeof import("./agent/functionRag").default>;
             getBasePromptParts: Injected<typeof import("./agent/getBasePromptParts").default>;
             getSleepGeneration: Injected<typeof import("./agent/getSleepGeneration").default>;
             highlightResult: Injected<typeof import("./agent/highlightResult").default>;
@@ -30,6 +31,7 @@ declare global {
             listPromptPresets: Injected<typeof import("./agent/listPromptPresets").default>;
             listWatches: Injected<typeof import("./agent/listWatches").default>;
             llmCall: Injected<typeof import("./agent/llmCall").default>;
+            markFunctionRag: Injected<typeof import("./agent/markFunctionRag").default>;
             newForm: Injected<typeof import("./agent/newForm").default>;
             nextId: Injected<typeof import("./agent/nextId").default>;
             normalizeSleepContext: Injected<typeof import("./agent/normalizeSleepContext").default>;
@@ -101,6 +103,12 @@ declare global {
             query: Injected<typeof import("../plugins/duckdb/src/duckdb/query").default>;
             run: Injected<typeof import("../plugins/duckdb/src/duckdb/run").default>;
             source: Injected<typeof import("../plugins/duckdb/src/duckdb/source").default>;
+        };
+        embeddings: {
+            embed: Injected<typeof import("./embeddings/embed").default>;
+            localize: Injected<typeof import("./embeddings/localize").default>;
+            openai: Injected<typeof import("./embeddings/openai").default>;
+            provider: Injected<typeof import("./embeddings/provider").default>;
         };
         events: {
             emitAgentsChanged: Injected<typeof import("./events/emitAgentsChanged").default>;
@@ -507,7 +515,9 @@ declare global {
         runtime: {
             docs: {
                 get: Injected<typeof import("./runtime/docs/get").default>;
+                index: Injected<typeof import("./runtime/docs/index").default>;
                 list: Injected<typeof import("./runtime/docs/list").default>;
+                ragBenchmark: Injected<typeof import("./runtime/docs/ragBenchmark").default>;
                 search: Injected<typeof import("./runtime/docs/search").default>;
             };
         };
@@ -565,6 +575,7 @@ declare global {
             plan: Injected<typeof import("./session/plan").default>;
             removePlan: Injected<typeof import("./session/removePlan").default>;
             repairToolPairs: Injected<typeof import("./session/repairToolPairs").default>;
+            replaceEventAt: Injected<typeof import("./session/replaceEventAt").default>;
             replaceEvents: Injected<typeof import("./session/replaceEvents").default>;
             replaceMessages: Injected<typeof import("./session/replaceMessages").default>;
             save: Injected<typeof import("./session/save").default>;

@@ -14,8 +14,9 @@ export default async function (
     const namespace = (url.searchParams.get("namespace") ?? "").trim();
     const esc = (value: any) => ctx.fns.procs.ui.escape({ text: String(value ?? "") });
     const compact = q
-        ? ctx.fns.runtime.docs.search({ query: q, limit: 50 })
+        ? await ctx.fns.runtime.docs.search({ query: q, limit: 50 })
         : ctx.fns.runtime.docs.list({ namespace: namespace || undefined });
+    const ranking = new Map((compact as any[]).map((item: any) => [item.name, item]));
     const docs = compact
         .filter((item: any) => !namespace || item.name === namespace || item.name.startsWith(namespace + "."))
         .map((item: any) => ctx.fns.runtime.docs.get({ name: item.name }));
@@ -34,10 +35,13 @@ export default async function (
         const optsType = String(meta.optsType || "{}").trim();
         const signature = `await ctx.fns.${meta.name}(\n${optsType.split("\n").map((line: string) => `  ${line}`).join("\n")}\n); // returns ${String(meta.returnType || "unknown").replace(/\s+/g, " ").trim()}`;
         const highlightedSignature = await ctx.fns.markdown.highlight({ code: signature, lang: "typescript" });
+        const rank: any = ranking.get(meta.name);
+        const score = rank && q ? `<span class="ml-auto flex shrink-0 items-center gap-1.5 text-[10px] text-gray-400">${rank.similarity != null ? `<span title="Reciprocal Rank Fusion score">RRF <b class="font-mono font-semibold text-gray-600">${formatScore(rank.score)}</b></span>` : ""}${rank.bm25 != null ? `<span title="ParadeDB BM25 score">BM25 ${formatScore(rank.bm25)}</span>` : ""}${rank.similarity != null ? `<span title="Embedding cosine similarity">cos ${formatScore(rank.similarity)}</span>` : ""}</span>` : "";
         return `<details ${ctx.fns.procs.ui.attr({ entity: "function", id: meta.name })} class="group rounded-xl border border-gray-200 bg-white shadow-sm open:ring-1 open:ring-indigo-100">
   <summary class="flex cursor-pointer list-none items-start gap-3 px-4 py-3 hover:bg-gray-50">
     <span class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600"><i class="ph ph-function"></i></span>
     <span class="min-w-0 flex-1"><code class="text-sm font-semibold text-gray-900">${esc(meta.name)}</code><span class="mt-1 block text-xs leading-5 text-gray-600">${esc(meta.summary || meta.doc || "No description")}</span></span>
+    ${score}
     <i class="ph ph-caret-down mt-1 text-gray-400 transition-transform group-open:rotate-180"></i>
   </summary>
   <div class="space-y-4 border-t border-gray-200 px-4 py-4">
@@ -64,6 +68,13 @@ export default async function (
 </section></div>`,
     };
 }
+
+function formatScore(value: any): string {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return "—";
+    return Math.abs(n) < 0.1 ? n.toFixed(5) : n.toFixed(3);
+}
+
 
 function schemaType(schema: any): string {
     if (schema?.["x-typescript-type"]) return schema["x-typescript-type"];

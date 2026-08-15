@@ -24,6 +24,7 @@ id: string }): Promise<types.agent.Agent | null> {
         cursors: {},
         reflectionEnabled: row.reflection_enabled !== false && row.reflection_enabled !== 0 && row.reflection_enabled !== 'f',
         sleepEnabled: row.sleep_enabled !== false && row.sleep_enabled !== 0 && row.sleep_enabled !== 'f',
+        functionRagEnabled: row.function_rag_enabled === true || row.function_rag_enabled === 1 || row.function_rag_enabled === 't',
         goal: row.goal == null ? null : (typeof row.goal === 'string' ? JSON.parse(row.goal) : row.goal),
         subscribers: new Set(),
         wakeAt: row.wake_at == null ? null : Number(row.wake_at),
