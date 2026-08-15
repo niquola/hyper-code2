@@ -30,7 +30,7 @@ params: Record<string, string> }) {
     // once for the whole app and (re)binds itself to this element after every
     // swap — Enter-to-send, stick-to-bottom, older-message paging and the tool
     // cards all hang off it. Without the id the page renders and does nothing.
-    const main = `<div ${ctx.fns.procs.ui.attr({ page: "agent", id })} class="flex min-h-0 min-w-0 flex-1 bg-gray-50">
+    const main = `<div ${ctx.fns.procs.ui.attr({ page: "agent", id })} class="flex min-h-0 min-w-0 flex-1 bg-base-200">
   <section id="chat-panel" data-agent-id="${ctx.fns.procs.ui.escape({ text: id })}" class="flex min-w-0 flex-1 flex-col">${chat}</section>
   ${meta}
 </div>`;

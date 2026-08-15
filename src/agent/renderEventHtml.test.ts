@@ -95,7 +95,7 @@ describe("agent.renderEventHtml", () => {
   test("renders assistant as left bubble with htmx delete buttons when agentId given", async () => {
     const html = await renderEventHtml(ctx, { type: "assistant", html: "<p>ok</p>", usage: { prompt_tokens: 1234, total_tokens: 1300 }, messageIdx: 7 }, { agentId: 'a1' });
     expect(html).toContain("justify-start");
-    expect(html).toContain("rounded-2xl bg-white");
+    expect(html).toContain("rounded-2xl bg-base-100");
     expect(html).toContain("prose prose-sm max-w-none");
     expect(html).toContain(`hx-post="/agent/a1/messages/delete"`);
     expect(html).toContain(`"idx":"7"`);
@@ -145,7 +145,7 @@ describe("agent.renderEventHtml", () => {
   test("renders user with compact icon delete controls", async () => {
     const html = await renderEventHtml(ctx, { type: "user", text: "hi", messageIdx: 3 }, { agentId: 'a1' });
     expect(html).toContain("justify-end");
-    expect(html).toContain("rounded-xl bg-gray-600");
+    expect(html).toContain("rounded-xl bg-primary");
     expect(html).not.toContain("bg-gray-900");
     expect(html).toContain(`"mode":"one"`);
     expect(html).toContain(`"mode":"from"`);
