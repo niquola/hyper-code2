@@ -42,11 +42,11 @@ describe("agent.finishTask", () => {
         expect(resolved).toEqual({ childId: agent.id, summary: "done", result: { value: 3 } });
     });
 
-    test("missing delegateTask metadata throws", async () => {
+    test("missing delegation metadata throws", async () => {
         const ctx = await setup();
         const agent = await ctx.fns.agent.start({ model: "m", systemPrompt: "" });
         await ctx.fns.session.save({ agent });
-        await expect(finishTask(ctx, null, { agent, summary: "done" })).rejects.toThrow("finishTask: missing delegateTask metadata");
+        await expect(finishTask(ctx, null, { agent, summary: "done" })).rejects.toThrow("finishTask: missing delegation metadata");
     });
 
     test("async mode does not resolve waiter", async () => {
