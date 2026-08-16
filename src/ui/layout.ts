@@ -72,9 +72,9 @@ export default async function (ctx: Context, session: Session | null, opts: {
   box-shadow: inset 1px 0 0 rgb(255 255 255 / .18), -1px 0 8px rgb(0 0 0 / .04);
 }
 .glass-bar {
-  background-color: rgb(from var(--color-base-200) r g b / .72) !important;
+  background-color: rgb(from var(--color-base-100) r g b / .84) !important;
   background-image: linear-gradient(110deg, rgb(255 255 255 / .12), transparent 45%, rgb(255 255 255 / .04));
-  box-shadow: inset 0 -1px 0 rgb(255 255 255 / .16), 0 1px 7px rgb(0 0 0 / .04);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 1px 2px rgb(0 0 0 / .04), 0 8px 24px rgb(0 0 0 / .08);
   backdrop-filter: blur(12px) saturate(115%);
   -webkit-backdrop-filter: blur(12px) saturate(115%);
 }
@@ -97,7 +97,9 @@ export default async function (ctx: Context, session: Session | null, opts: {
   -webkit-backdrop-filter: blur(16px) saturate(115%);
 }
 .glass-input:hover { box-shadow: 0 0 0 1px rgb(0 0 0 / .05), 0 2px 9px rgb(0 0 0 / .05), 0 4px 80px 8px rgb(0 0 0 / .028); }
-.glass-input:focus { box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 55%, transparent), 0 2px 10px rgb(0 0 0 / .055), 0 4px 80px 8px rgb(0 0 0 / .03); }
+.glass-input:focus {
+  box-shadow: 0 0 0 3px rgb(59 130 246 / .72), 0 2px 10px rgb(0 0 0 / .055), 0 4px 80px 8px rgb(0 0 0 / .03);
+}
 .chat-composer kbd { font: inherit; color: color-mix(in oklab, var(--color-base-content) 55%, transparent); }
 .mermaid-diagram { display: block; width: 100%; max-width: 100%; min-width: 0; overflow: hidden; }
 .mermaid-light { display: block; width: 100%; max-width: 100%; min-width: 0; }
