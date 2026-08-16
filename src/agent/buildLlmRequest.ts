@@ -91,9 +91,29 @@ export default async function (
         ]
         : [];
 
+    const messages = [...bootstrap, ...base];
+
+    // A transcript that ENDS with an assistant message is a "prefill" request:
+    // the model is asked to continue its own half-written turn. It happens
+    // normally here — a run answers a mid-run user message with a terminal
+    // respondHtml, the worker reschedules for that same message, and the next
+    // request replays a history whose last row is that final answer.
+    //
+    // Most models continue happily; some (claude-opus-5) reject the request
+    // outright with 400 "does not support assistant message prefill", which
+    // kills the run, leaves the cursor unadvanced and repeats forever. So the
+    // request always ends on a user turn — a one-line nudge, never persisted.
+    const last = messages[messages.length - 1];
+    if (last?.role === 'assistant' && !(last.tool_calls?.length)) {
+        messages.push({
+            role: 'user',
+            content: 'Continue from where you stopped: if the previous answer already settled the user\'s request, say so briefly; otherwise take the next step.',
+        });
+    }
+
     return {
         system,
-        messages: [...bootstrap, ...base],
+        messages,
     };
 }
 

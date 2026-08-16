@@ -20,7 +20,11 @@ describe("agent.compactContext", () => {
     const request = await ctx.fns.agent.buildLlmRequest({ agent });
     const summaryAt = request.messages.findIndex((m: any) => m.content === "handoff summary");
     expect(summaryAt).toBeGreaterThanOrEqual(0);
-    expect(request.messages.slice(summaryAt + 1).map((m: any) => m.content)).toEqual(before.slice(agent.sleepContext.generations.at(-1).tailStart).map((m: any) => m.content));
+    // The seeded transcript ends on an assistant message, so buildLlmRequest
+    // closes the request with its synthetic "keep going" user turn (never
+    // persisted). The verbatim tail is everything between summary and it.
+    expect(request.messages.at(-1)!.role).toBe("user");
+    expect(request.messages.slice(summaryAt + 1, -1).map((m: any) => m.content)).toEqual(before.slice(agent.sleepContext.generations.at(-1).tailStart).map((m: any) => m.content));
     const child = (await ctx.fns.procs.db.select({ sql: "SELECT parent_id, fork_offset, scratchpad FROM agents WHERE id = ?", params: [agent.sleepContext.generations.at(-1).contextAgentId] }) as any[])[0];
     expect(Number(child.fork_offset)).toBe(0);
     const childScratchpad = typeof child.scratchpad === "string" ? JSON.parse(child.scratchpad) : child.scratchpad;

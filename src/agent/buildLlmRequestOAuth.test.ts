@@ -31,3 +31,27 @@ describe("buildLlmRequest OAuth identity", () => {
         expect(result.messages[0].content).toBe("runtime instructions");
     });
 });
+
+describe("buildLlmRequest trailing turn", () => {
+    const assistantTail = [
+        { role: "user", content: "hi" },
+        { role: "assistant", content: "final answer" },
+    ];
+
+    test("never ends on a bare assistant message (no prefill)", async () => {
+        const result = await build(ctx("claude-code"), null, { agent: { model: "claude-code:claude-opus-5", messages: assistantTail, scratchpad: {} } as any });
+        expect(result.messages[result.messages.length - 1].role).toBe("user");
+        expect(result.messages[result.messages.length - 2].content).toBe("final answer");
+    });
+
+    test("an assistant message carrying tool calls is left alone", async () => {
+        const messages = [{ role: "user", content: "hi" }, { role: "assistant", content: "", tool_calls: [{ id: "t1", name: "bash" }] }];
+        const result = await build(ctx("claude-code"), null, { agent: { model: "claude-code:claude-opus-5", messages, scratchpad: {} } as any });
+        expect(result.messages[result.messages.length - 1].role).toBe("assistant");
+    });
+
+    test("a transcript already ending on user is untouched", async () => {
+        const result = await build(ctx("anthropic"), null, { agent: { model: "anthropic:claude-x", messages: [{ role: "user", content: "hi" }], scratchpad: {} } as any });
+        expect(result.messages.length).toBe(3);
+    });
+});

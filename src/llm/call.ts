@@ -108,8 +108,19 @@ async function anthropic(ctx: Context, endpoint: any, opts: any) {
     const body: any = { model: endpoint.modelId, max_tokens: opts.max_tokens ?? 2048, messages: [{ role: "user", content: opts.user }] };
     if (opts.system) body.system = opts.system;
     if (opts.temperature != null) body.temperature = opts.temperature;
-    const response = await fetch(endpoint.url, { method: "POST", headers, body: JSON.stringify(body) });
-    if (!response.ok) throw new Error(`${endpoint.provider} ${response.status}: ${await response.text()}`);
+    let response = await fetch(endpoint.url, { method: "POST", headers, body: JSON.stringify(body) });
+    if (!response.ok) {
+        // Newer Anthropic models reject `temperature` outright (400 "deprecated
+        // for this model"). Every internal caller — reflection, sleep, compact
+        // — passes a low temperature for determinism, so the whole background
+        // machinery died on those models. Drop the knob and ask once more.
+        const detail = await response.text();
+        if (response.status === 400 && body.temperature != null && /temperature/i.test(detail) && /deprecat|not support|unsupported/i.test(detail)) {
+            delete body.temperature;
+            response = await fetch(endpoint.url, { method: "POST", headers, body: JSON.stringify(body) });
+            if (!response.ok) throw new Error(`${endpoint.provider} ${response.status}: ${await response.text()}`);
+        } else throw new Error(`${endpoint.provider} ${response.status}: ${detail}`);
+    }
     const raw: any = await response.json();
     return { text: (raw.content ?? []).filter((x: any) => x.type === "text").map((x: any) => x.text).join(""), finishReason: raw.stop_reason ?? null, usage: raw.usage, raw };
 }
