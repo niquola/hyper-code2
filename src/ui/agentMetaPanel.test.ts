@@ -7,10 +7,11 @@ const escapeHtml = ({ text }: any) => String(text)
     .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 const toggle = (o: any) => `<label><input name="${o.name}" ${o.enabled ? 'checked' : ''}>${o.label ?? ''}</label>`;
 const planTaskRow = ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({ text: task.id })}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({ text: task.id })}"><input name="task_title" value="${escapeHtml({ text: task.title })}"><textarea name="task_instructions">${escapeHtml({ text: task.instructions ?? '' })}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0) / 1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>`;
+const button = (o: any) => `<button type="${o.type ?? (o.name ? 'submit' : 'button')}" class="ui-button ui-button--${o.size ?? 'sm'} ui-button--${o.tone ?? 'default'}"${o.action ? ` data-action="${o.action}"` : ''}${o.get ? ` hx-get="${o.get}"` : ''}${o.post ? ` hx-post="${o.post}"` : ''}${o.target ? ` hx-target="${o.target}"` : ''}${o.swap ? ` hx-swap="${o.swap}"` : ''}>${o.html ?? escapeHtml({ text: o.label ?? '' })}</button>`;
 const mkCtx = (extra: any = {}): any => {
     const ctx: any = {
         fns: {
-            procs: { ui: { escape: escapeHtml } },
+            procs: { ui: { escape: escapeHtml, button } },
             ui: {
                 toggle,
                 planTaskRow,
