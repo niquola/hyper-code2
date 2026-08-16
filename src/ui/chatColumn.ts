@@ -114,13 +114,14 @@ ${agent.sleepContext?.active === true
 </div>
 <form id="form"
       ${ctx.fns.procs.ui.attr({ form: "chat" })}
-      class="flex gap-2 p-3 border-t border-ui-border"
+      class="chat-composer mx-auto w-[calc(100%-2rem)] max-w-3xl pb-2 pt-3"
       hx-post="/agent/${encodeURIComponent(id)}?debounceSeconds=0.1"
       hx-trigger="submit"
       hx-swap="none"
       hx-on::after-request="this.elements.input.value=''; this.elements.input.focus();">
-  <textarea id="input" name="text" rows="5" placeholder="type — Enter to send"
-    class="glass-input flex-1 rounded border border-ui-input px-3 py-2 font-mono text-sm text-base-content placeholder:text-base-content/35 resize-y focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
+  <textarea id="input" name="text" rows="1" placeholder="Message agent…"
+    class="glass-input block h-[52px] w-full resize-none overflow-y-auto rounded-[28px] border-0 px-5 py-[15px] font-sans text-sm leading-[22px] text-base-content placeholder:text-base-content/35 focus:outline-none"></textarea>
+  <div class="mt-1.5 text-center text-[10px] leading-none text-base-content/35"><kbd>⌘J</kbd> scroll down · <kbd>⌘K</kbd> scroll up · Enter to send</div>
 </form>
 <div class="border-t border-ui-border bg-base-200 px-3 py-1.5 text-[11px] text-base-content/45">
   <details class="group">

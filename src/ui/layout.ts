@@ -78,12 +78,27 @@ export default async function (ctx: Context, session: Session | null, opts: {
   backdrop-filter: blur(12px) saturate(115%);
   -webkit-backdrop-filter: blur(12px) saturate(115%);
 }
-.glass-input {
-  background-color: rgb(from var(--color-base-100) r g b / .72) !important;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .26), 0 2px 8px rgb(0 0 0 / .05);
-  backdrop-filter: blur(10px) saturate(110%);
-  -webkit-backdrop-filter: blur(10px) saturate(110%);
+.chat-dot-grid { padding-bottom: 6.5rem !important; }
+.chat-composer {
+  position: relative;
+  z-index: 20;
+  flex: none;
+  margin: -4.5rem auto .5rem;
+  background: transparent;
+  pointer-events: none;
 }
+.chat-composer > * { pointer-events: auto; }
+.glass-input {
+  min-height: 52px;
+  max-height: 208px;
+  background-color: rgb(from var(--color-base-100) r g b / .96) !important;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / .04), 0 2px 8px rgb(0 0 0 / .04), 0 4px 80px 8px rgb(0 0 0 / .024);
+  backdrop-filter: blur(16px) saturate(115%);
+  -webkit-backdrop-filter: blur(16px) saturate(115%);
+}
+.glass-input:hover { box-shadow: 0 0 0 1px rgb(0 0 0 / .05), 0 2px 9px rgb(0 0 0 / .05), 0 4px 80px 8px rgb(0 0 0 / .028); }
+.glass-input:focus { box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 55%, transparent), 0 2px 10px rgb(0 0 0 / .055), 0 4px 80px 8px rgb(0 0 0 / .03); }
+.chat-composer kbd { font: inherit; color: color-mix(in oklab, var(--color-base-content) 55%, transparent); }
 .mermaid-diagram { display: block; width: 100%; max-width: 100%; min-width: 0; overflow: hidden; }
 .mermaid-light { display: block; width: 100%; max-width: 100%; min-width: 0; }
 .mermaid-diagram svg { display: block; width: auto; max-width: 100% !important; height: auto !important; }
