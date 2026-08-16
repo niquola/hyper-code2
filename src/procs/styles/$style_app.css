@@ -111,8 +111,20 @@
   --color-canvas: oklch(98.8% 0.001 240);
   --ui-border: oklch(88.5% 0.004 240);
   --ui-border-strong: oklch(88.5% 0.004 240);
+  --ui-input-border: oklch(72% 0.008 240);
   --ui-surface: var(--color-base-100);
   --ui-surface-muted: var(--color-base-200);
+  /* GitHub-inspired restrained palette: neutral ink plus green/red states. */
+  --color-primary: #1f2328;
+  --color-primary-content: #ffffff;
+  --color-info: #57606a;
+  --color-info-content: #ffffff;
+  --color-success: #1a7f37;
+  --color-success-content: #ffffff;
+  --color-warning: #cf222e;
+  --color-warning-content: #ffffff;
+  --color-error: #cf222e;
+  --color-error-content: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -122,8 +134,19 @@
   --color-canvas: color-mix(in oklab, var(--color-base-100) 72%, black);
   --ui-border: oklch(38% 0.015 252);
   --ui-border-strong: oklch(46% 0.018 252);
+  --ui-input-border: oklch(50% 0.018 252);
   --ui-surface: var(--color-base-100);
   --ui-surface-muted: var(--color-base-200);
+  --color-primary: #f0f6fc;
+  --color-primary-content: #0d1117;
+  --color-info: #8c959f;
+  --color-info-content: #0d1117;
+  --color-success: #3fb950;
+  --color-success-content: #0d1117;
+  --color-warning: #f85149;
+  --color-warning-content: #0d1117;
+  --color-error: #f85149;
+  --color-error-content: #0d1117;
 }
 
 body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
@@ -133,8 +156,18 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
  * overriding the semantic theme while renderers are migrated incrementally. */
 .border-ui-border { border-color: var(--ui-border) !important; }
 .border-ui-border-strong { border-color: var(--ui-border-strong) !important; }
+.border-ui-input { border-color: var(--ui-input-border) !important; }
 .bg-ui-surface { background-color: var(--ui-surface) !important; }
 .bg-ui-surface-muted { background-color: var(--ui-surface-muted) !important; }
+
+/* Inputs are intentionally stronger than structural dividers so white controls
+ * remain distinct from white cards in the light theme. */
+.input, .textarea, .select, input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), textarea, select {
+  border-color: var(--ui-input-border);
+}
+.input:focus, .textarea:focus, .select:focus, input:focus, textarea:focus, select:focus {
+  border-color: var(--color-primary);
+}
 /* the chat's compose box: one focus ring around textarea + control row */
 .ui-compose-box {
   background: var(--color-base-100);

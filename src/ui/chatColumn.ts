@@ -120,7 +120,7 @@ ${agent.sleepContext?.active === true
       hx-swap="none"
       hx-on::after-request="this.elements.input.value=''; this.elements.input.focus();">
   <textarea id="input" name="text" rows="5" placeholder="type — Enter to send"
-    class="flex-1 rounded border border-ui-border bg-base-100 px-3 py-2 font-mono text-sm text-base-content placeholder:text-base-content/35 resize-y focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
+    class="flex-1 rounded border border-ui-input bg-base-100 px-3 py-2 font-mono text-sm text-base-content placeholder:text-base-content/35 resize-y focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
 </form>
 <div class="border-t border-ui-border bg-base-200 px-3 py-1.5 text-[11px] text-base-content/45">
   <details class="group">

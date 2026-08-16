@@ -67,7 +67,7 @@ function timeHtml(ts: any, tone: 'dark' | 'light', suffix = ''): string {
     // It stays beside a one-liner and naturally lands at the lower-right when
     // text wraps.
     return '<span class="inline-block ml-2 whitespace-nowrap text-[10px] leading-none '
-        + (tone === 'dark' ? 'text-gray-400' : 'text-gray-400')
+        + (tone === 'dark' ? 'text-base-content/70' : 'text-base-content/70')
         + '">' + esc(time) + suffix + '</span>';
 }
 
@@ -135,7 +135,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
             : '<pre class="text-xs whitespace-pre-wrap break-words">' + esc(ev.text || '') + '</pre>';
         return '<div class="group relative flex justify-start">'
             + deleteControls(idx, agentId, true, true)
-            + '<div class="assistant max-w-[90%] rounded-2xl bg-base-100 px-4 py-3 shadow-sm border border-ui-border">'
+            + '<div class="assistant max-w-[90%] rounded-2xl bg-base-100 px-4 py-3 text-base-content shadow-sm border border-ui-border">'
             + '<div class="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
             + appendTime(safeHtml, ev.ts, 'light', instructionMarks)
             + '</div>'
