@@ -60,9 +60,9 @@ export default function (ctx: Context, _session: Session | null, opts: {
       topic: `agent-meta:${agent.id}`,
       every: 0,
       tag: 'aside',
-      attrs: 'class="flex h-full w-80 shrink-0 flex-col border-l border-ui-border bg-base-200 text-base-content"',
+      attrs: 'class="glass-panel flex h-full w-80 shrink-0 flex-col border-l border-ui-border text-base-content"',
       html: `
-      <header class="flex h-8 shrink-0 items-center gap-2 border-b border-ui-border bg-base-200 px-3">
+      <header class="glass-bar flex h-8 shrink-0 items-center gap-2 border-b border-ui-border px-3">
         <i class="ph ph-sidebar-simple text-sm text-base-content/45" aria-hidden="true"></i><span class="min-w-0 flex-1 truncate text-xs font-semibold text-base-content">Agent inspector</span><span class="font-mono text-[10px] text-base-content/40">${esc(agent.id)}</span>
       </header>
       <div class="flex-1 overflow-y-auto bg-base-200">

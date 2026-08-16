@@ -60,6 +60,30 @@ export default async function (ctx: Context, session: Session | null, opts: {
   color: var(--color-base-content);
 }
 .tool.tool-tucked:active { transform: translateY(0) scale(1.05); }
+#quick-bar,
+.glass-panel {
+  background-color: rgb(from var(--color-base-200) r g b / .72);
+  background-image: linear-gradient(110deg, rgb(255 255 255 / .12), transparent 45%, rgb(255 255 255 / .04));
+  box-shadow: inset -1px 0 0 rgb(255 255 255 / .18), 1px 0 8px rgb(0 0 0 / .04);
+  backdrop-filter: blur(12px) saturate(115%);
+  -webkit-backdrop-filter: blur(12px) saturate(115%);
+}
+.glass-panel {
+  box-shadow: inset 1px 0 0 rgb(255 255 255 / .18), -1px 0 8px rgb(0 0 0 / .04);
+}
+.glass-bar {
+  background-color: rgb(from var(--color-base-200) r g b / .72) !important;
+  background-image: linear-gradient(110deg, rgb(255 255 255 / .12), transparent 45%, rgb(255 255 255 / .04));
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / .16), 0 1px 7px rgb(0 0 0 / .04);
+  backdrop-filter: blur(12px) saturate(115%);
+  -webkit-backdrop-filter: blur(12px) saturate(115%);
+}
+.glass-input {
+  background-color: rgb(from var(--color-base-100) r g b / .72) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .26), 0 2px 8px rgb(0 0 0 / .05);
+  backdrop-filter: blur(10px) saturate(110%);
+  -webkit-backdrop-filter: blur(10px) saturate(110%);
+}
 .mermaid-diagram { display: block; width: 100%; max-width: 100%; min-width: 0; overflow: hidden; }
 .mermaid-light { display: block; width: 100%; max-width: 100%; min-width: 0; }
 .mermaid-diagram svg { display: block; width: auto; max-width: 100% !important; height: auto !important; }
@@ -67,14 +91,16 @@ export default async function (ctx: Context, session: Session | null, opts: {
 .chat-dot-grid {
   background-color: var(--color-base-200);
   background-image: radial-gradient(circle, color-mix(in oklab, var(--color-base-content) 9%, transparent) 0 1px, transparent 1.35px);
-  background-position: .5em .5em;
-  background-size: 1em 1em;
+  background-position: 8px 8px;
+  background-size: 16px 16px;
+  background-attachment: local;
 }
 
 .chat-glass,
 .chat-glass-primary {
-  background-size: 1em 1em;
-  background-position: calc(.5em + 1px) calc(.5em + 1px);
+  background-size: 16px 16px;
+  background-position: 9px 9px;
+  background-attachment: local;
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
 }
@@ -120,7 +146,7 @@ ${opts.headExtra ?? ""}
 </head>
 <body hx-ext="popup-rpc" class="bg-base-200 text-base-content text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div id="frame" class="relative flex h-screen">
-  <nav id="quick-bar" aria-label="Quick access" class="flex w-10 shrink-0 flex-col items-center border-r border-ui-border bg-base-200 py-1.5">
+  <nav id="quick-bar" aria-label="Quick access" class="flex w-10 shrink-0 flex-col items-center border-r border-ui-border py-1.5">
     <button type="button" title="Global menu — ⌘/" aria-label="Open global menu" onclick="window.__navOpen?.()" class="flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content">
       <i class="ph ph-squares-four text-base" aria-hidden="true"></i>
     </button>

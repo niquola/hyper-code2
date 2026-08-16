@@ -81,7 +81,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
         ?.slice('Reflection nudge: '.length) ?? '';
     // header names THIS agent and holds its controls, nothing more.
     return `
-<header class="flex h-8 shrink-0 items-center gap-2 border-b border-ui-border bg-base-200 px-3 text-xs text-base-content/70">
+<header class="glass-bar flex h-8 shrink-0 items-center gap-2 border-b border-ui-border px-3 text-xs text-base-content/70">
   ${ctx.fns.ui.modelLogo({ model: agent.model })}
   <span class="font-mono font-medium text-base-content/80">${esc(String(agent.title ?? id).slice(0, 40) || id)} <span class="text-base-content/45">(${esc(id)})</span></span>
   ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}
@@ -120,7 +120,7 @@ ${agent.sleepContext?.active === true
       hx-swap="none"
       hx-on::after-request="this.elements.input.value=''; this.elements.input.focus();">
   <textarea id="input" name="text" rows="5" placeholder="type — Enter to send"
-    class="flex-1 rounded border border-ui-input bg-base-100 px-3 py-2 font-mono text-sm text-base-content placeholder:text-base-content/35 resize-y focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
+    class="glass-input flex-1 rounded border border-ui-input px-3 py-2 font-mono text-sm text-base-content placeholder:text-base-content/35 resize-y focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
 </form>
 <div class="border-t border-ui-border bg-base-200 px-3 py-1.5 text-[11px] text-base-content/45">
   <details class="group">
