@@ -23,9 +23,15 @@ type Creds = {
     };
 };
 
-/** Performs the llm.refreshClaudeCode runtime operation. */
-export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string | null> {
-    if (ctx.env.CLAUDE_CODE_ACCESS_TOKEN) return ctx.env.CLAUDE_CODE_ACCESS_TOKEN;
+/** Refreshes Claude Code credentials for one isolated CLI account. */
+/**
+ * Return a valid Claude Code subscription token for one account slot.
+ * @param opts.account Credential slot; named slots use isolated keychain services.
+ */
+export default async function (ctx: Context, _session: Session | null, opts?: {
+    /** Credential slot within Claude Code. @default "default" */ account?: string }): Promise<string | null> {
+    const account = String(opts?.account ?? "").trim() || "default";
+    if (account === "default" && ctx.env.CLAUDE_CODE_ACCESS_TOKEN) return ctx.env.CLAUDE_CODE_ACCESS_TOKEN;
 
     const user = ctx.env.USER ?? process.env.USER ?? "";
     if (!user) {
@@ -34,8 +40,9 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
     }
 
     let creds: Creds;
+    const service = ctx.fns.llm.accountCredentialPath({ provider: "claude-code", account }).keychainService!;
     try {
-        const raw = readKeychain(user);
+        const raw = readKeychain(user, service);
         if (!raw) return null;
         creds = JSON.parse(raw);
     } catch (e: any) {
@@ -89,7 +96,7 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
                 expiresAt,
             },
         };
-        writeKeychain(user, JSON.stringify(updated));
+        writeKeychain(user, service, JSON.stringify(updated));
     } catch (e: any) {
         console.warn(`[claude-code] could not write refreshed creds: ${e?.message}`);
     }
@@ -97,9 +104,9 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
     return newAccess;
 }
 
-function readKeychain(user: string): string | null {
+function readKeychain(user: string, service: string): string | null {
     const proc = Bun.spawnSync({
-        cmd: ["security", "find-generic-password", "-s", KEYCHAIN_ITEM, "-a", user, "-w"],
+        cmd: ["security", "find-generic-password", "-s", service, "-a", user, "-w"],
         stdout: "pipe",
         stderr: "pipe",
     });
@@ -107,10 +114,10 @@ function readKeychain(user: string): string | null {
     return new TextDecoder().decode(proc.stdout).trimEnd();
 }
 
-function writeKeychain(user: string, value: string): void {
+function writeKeychain(user: string, service: string, value: string): void {
     // -U updates if the item exists; -s service, -a account, -w password.
     const proc = Bun.spawnSync({
-        cmd: ["security", "add-generic-password", "-U", "-s", KEYCHAIN_ITEM, "-a", user, "-w", value],
+        cmd: ["security", "add-generic-password", "-U", "-s", service, "-a", user, "-w", value],
         stdout: "pipe",
         stderr: "pipe",
     });

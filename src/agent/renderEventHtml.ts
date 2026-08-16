@@ -21,31 +21,25 @@ function isHtmlBalanced(html: string): boolean {
     return true;
 }
 
-function deleteControls(idx: any, agentId: string, allowOne = true, allowFrom = true, placement: 'overlay' | 'side' = 'overlay'): string {
+function deleteControls(ctx: Context, idx: any, agentId: string, allowOne = true, allowFrom = true, placement: 'overlay' | 'side' = 'overlay'): string {
     if (!agentId) return '';
     const url = '/agent/' + encodeURIComponent(agentId) + '/messages/delete';
-    const btn = (mode: 'one' | 'from', title: string, confirm: string, icon: string) =>
-        '<button type="button"'
-        + ' hx-post="' + url + '"'
-        // The page is reloaded on success, so the response is not UI: say so,
-        // or an inherited hx-target/hx-swap paints it over whatever contains us.
-        + ' hx-swap="none"'
-        + ' hx-vals=\'{"idx":"' + String(idx) + '","mode":"' + mode + '"}\''
-        + ' hx-confirm="' + confirm + '"'
-        + ' hx-on::after-request="if (event.detail.successful) location.reload();"'
-        + ' title="' + title + '" aria-label="' + title + '"'
-        + ' class="flex size-7 items-center justify-center rounded-full border border-ui-border bg-base-100/95 text-base-content/45 shadow-sm backdrop-blur transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200">'
-        + '<i class="ph ' + icon + ' text-sm" aria-hidden="true"></i><span class="sr-only">' + title + '</span></button>';
+    const actionControl = (mode: 'one' | 'from', title: string, confirm: string, icon: string) => ctx.fns.procs.ui.button({
+        action: `delete-${mode}`, appearance: 'plain', html: `<i class="ph ${icon} text-sm" aria-hidden="true"></i><span class="sr-only">${title}</span>`,
+        post: url, swap: 'none', vals: { idx: String(idx), mode }, title, ariaLabel: title,
+        class: 'flex size-7 items-center justify-center rounded-full border border-ui-border bg-base-100/95 text-base-content/45 shadow-sm backdrop-blur transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200',
+        attrs: { 'hx-confirm': confirm, 'hx-on::after-request': 'if (event.detail.successful) location.reload();' },
+    });
     return '<div class="' + (placement === 'side' ? 'flex gap-1' : 'absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100') + '">'
-        + (allowOne ? btn('one', 'Delete message', 'delete this message?', 'ph-trash') : '')
-        + (allowFrom ? btn('from', 'Delete from here', 'delete this and everything after?', 'ph-arrow-line-down') : '')
+        + (allowOne ? actionControl('one', 'Delete message', 'delete this message?', 'ph-trash') : '')
+        + (allowFrom ? actionControl('from', 'Delete from here', 'delete this and everything after?', 'ph-arrow-line-down') : '')
         + '</div>';
 }
 
 /** Render event html for the runtime.  * @param opts.event Agent event to render.
  * @param opts.agentId Target agent identifier.
 */
-export default async function (_ctx: Context, _session: Session | null, opts: {
+export default async function (ctx: Context, _session: Session | null, opts: {
         /** Event to persist or render. */
 event: any;
         /** Agent id used by the operation. */
@@ -82,18 +76,18 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
     const ev = opts.event;
     const agentId = String(opts.agentId ?? ev?.agentId ?? '');
     if (!ev || typeof ev !== "object") return "";
-    const eventCard = (card: any) => (_ctx as any).fns.ui.chatEventCard
-        ? (_ctx as any).fns.ui.chatEventCard(card)
-        : `<div class="mx-auto max-w-[90%] rounded-lg border border-ui-border bg-base-200/45 px-3 py-2"><div class="flex items-center gap-2 text-xs font-semibold">${card.icon ? `<i class="ph ph-${esc(card.icon)}"></i>` : ''}<span>${esc(card.title)}</span>${card.badge ?? ''}</div>${card.body ? `<div class="mt-1 text-[11px]">${card.body}</div>` : ''}${card.details ? `<details><summary>Details</summary>${card.details}</details>` : ''}</div>`;
-    const badge = (label: string, tone: 'neutral' | 'info' | 'success' | 'warning' | 'error' = 'neutral') => (_ctx as any).fns.ui.statusBadge
-        ? (_ctx as any).fns.ui.statusBadge({ label, tone })
+    const eventCard = (card: any) => (ctx as any).fns.ui.chatEventCard
+        ? (ctx as any).fns.ui.chatEventCard(card)
+        : `<div class="w-full rounded-lg border border-ui-border bg-base-200/45 px-3 py-2"><div class="flex items-center gap-2 text-xs font-semibold">${card.icon ? `<i class="ph ph-${esc(card.icon)}"></i>` : ''}<span>${esc(card.title)}</span>${card.badge ?? ''}</div>${card.body ? `<div class="mt-1 text-[11px]">${card.body}</div>` : ''}${card.details ? `<details><summary>Details</summary>${card.details}</details>` : ''}</div>`;
+    const badge = (label: string, tone: 'neutral' | 'info' | 'success' | 'warning' | 'error' = 'neutral') => (ctx as any).fns.ui.statusBadge
+        ? (ctx as any).fns.ui.statusBadge({ label, tone })
         : `<span class="badge badge-sm">${esc(label)}</span>`;
 
     if (ev.excludedFromLlm) {
         // Collapsed out of the LLM's view after a successful correction — the
         // audit stays visible, dimmed, with an out-of-context chip. Recurse
         // through the registry for the normal rendering of the same event.
-        const inner: string = await (_ctx as any).fns.agent.renderEventHtml({ event: { ...ev, excludedFromLlm: false }, agentId });
+        const inner: string = await (ctx as any).fns.agent.renderEventHtml({ event: { ...ev, excludedFromLlm: false }, agentId });
         return '<div class="relative opacity-50"><span class="absolute -top-2 right-2 z-10 text-[10px] px-1.5 py-0.5 rounded-full border border-ui-border bg-base-200 text-base-content/55">вне контекста</span>' + inner + '</div>';
     }
 
@@ -110,7 +104,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
             + '<div class="chat-glass-primary rounded-xl px-4 py-3 text-white whitespace-pre-wrap break-words shadow-sm border border-black/20">'
             + appendTime(esc(ev.text) + ragIcon, ev.ts, 'dark')
             + '</div>'
-            + '<div class="mt-1 flex justify-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">' + deleteControls(idx, agentId, true, true, 'side') + '</div>'
+            + '<div class="mt-1 flex justify-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">' + deleteControls(ctx, idx, agentId, true, true, 'side') + '</div>'
             + '</div></div>';
     }
 
@@ -134,7 +128,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
             ? rawHtml
             : '<pre class="text-xs whitespace-pre-wrap break-words">' + esc(ev.text || '') + '</pre>';
         return '<div class="group relative flex justify-start">'
-            + deleteControls(idx, agentId, true, true)
+            + deleteControls(ctx, idx, agentId, true, true)
             + '<div class="assistant chat-glass w-full rounded-2xl px-4 py-3 text-base-content shadow-sm border border-ui-border">'
             + '<div class="prose prose-sm max-w-none text-base-content prose-headings:text-base-content prose-p:text-base-content prose-li:text-base-content prose-strong:text-base-content prose-code:text-base-content prose-a:text-base-content/80 prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
             + appendTime(safeHtml, ev.ts, 'light', instructionMarks)
@@ -148,7 +142,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
     }
 
     if (ev.type === "tool_call") {
-        const meta = (_ctx as any).fns.agent.toolMeta({ name: ev.name, args: ev.args });
+        const meta = (ctx as any).fns.agent.toolMeta({ name: ev.name, args: ev.args });
         // File-changing tools get a stronger outline; errors take precedence.
         const destructive = new Set(['write', 'edit', 'remove', 'rename']).has(String(ev.name ?? ''));
         const cardStyle = ev.isError
@@ -157,7 +151,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         const bodyMethod = agentId && ev.idx != null ? 'agent.toolDetails' : '';
         const title = String(meta.label + ' ' + meta.subject).trim();
 
-        return (_ctx as any).fns.ui.popup({
+        return (ctx as any).fns.ui.popup({
             method: bodyMethod,
             params: { agentId, idx: Number(ev.idx) },
             html: '<i class="ph ' + esc(meta.icon) + '" aria-hidden="true"></i>',
@@ -179,6 +173,40 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         return eventCard({ title, icon: icon.replace(/^ph-/, ''), tone: ready || !watched ? 'info' : 'warning', badge: watched ? badge('watch', ready ? 'success' : 'warning') : undefined, body: esc(ev.reason ?? ev.summary ?? ""), details: result ? `<pre class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-ui-border bg-base-100 p-2 font-mono text-[10px] leading-4 text-base-content/65">${esc(result)}</pre>` : undefined });
     }
 
+
+    if (ev.type === "parked") {
+        // The quota is spent, not the agent broken. Say when it resumes and by
+        // whose doing — otherwise a silent agent reads as a hang.
+        const account = ev.account && ev.account !== "default" ? `/${ev.account}` : "";
+        const resetsAt = Number(ev.resetsAt ?? ev.wakeAt ?? 0);
+        const when = resetsAt ? new Date(resetsAt).toLocaleString() : "время неизвестно";
+        return eventCard({
+            title: "Припаркован — лимит подписки",
+            icon: "pause-circle",
+            tone: "warning",
+            badge: badge(`${ev.provider ?? "provider"}${account}`, "warning"),
+            body: `${esc(ev.message ?? "Квота исчерпана.")}<div class="mt-1 text-base-content/55">Проснусь сам ${esc(when)} и продолжу. Можно не ждать: переключите модель или аккаунт.</div>`,
+        });
+    }
+
+    if (ev.type === "unparked") {
+        const why = ev.reason === "wake" ? "квота вернулась" : ev.reason === "model-switch" ? "смена модели" : "снято вручную";
+        return eventCard({
+            title: "Парковка снята",
+            icon: "play-circle",
+            tone: "info",
+            body: `${esc(why)}${ev.resumed ? " — продолжаю незаконченную работу" : ""}`,
+        });
+    }
+
+    if (ev.type === "model_changed") {
+        return eventCard({
+            title: "Модель изменена",
+            icon: "swap",
+            tone: "info",
+            body: `<span class="font-mono text-[11px]">${esc(ev.from ?? "?")}</span> → <span class="font-mono text-[11px]">${esc(ev.to ?? "?")}</span>`,
+        });
+    }
 
     if (ev.type === "goal_activation") {
         return eventCard({ title: `Goal enabled · ${Number(ev.iterations ?? 3)} iterations`, icon: 'target', tone: 'info', body: esc(ev.text ?? '') });

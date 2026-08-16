@@ -2,17 +2,18 @@
 // page you are on is in the URL and shareable; prev/next disable at the ends.
 /**
  * Perform pagination for the ui subsystem.
- * @param opts.page The page value used by the operation.
- * @param opts.pages The pages value used by the operation.
- * @param opts.href The href value used by the operation.
+ * @param opts.page Current one-based page number.
+ * @param opts.pages Total number of available pages.
+ * @param opts.href Builds the navigation URL for a page number.
  */
 export default function (ctx: Context, _session: Session | null, opts: {page: number; pages: number; href: (page: number) => string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     if (opts.pages <= 1) return "";
-    // the shared component layer pages a list with `join` — the buttons sit flush as one control.
-    const link = (p: number, label: string, on = false, disabled = false) => disabled
-        ? `<button class="join-item btn btn-sm" disabled>${esc(label)}</button>`
-        : `<a class="join-item btn btn-sm ${on ? "btn-active btn-primary" : ""}" href="${esc(opts.href(p))}" hx-get="${esc(opts.href(p))}" hx-target="#main" hx-swap="innerHTML" hx-push-url="true">${esc(label)}</a>`;
+    const link = (p: number, label: string, on = false, disabled = false) => ctx.fns.procs.ui.button({
+        label, href: disabled ? undefined : opts.href(p), disabled,
+        tone: on ? "primary" : "default", active: on, size: "sm", class: "join-item",
+        attrs: disabled ? undefined : { "hx-push-url": "true" },
+    });
     const nums: string[] = [];
     for (let p = 1; p <= opts.pages; p++) nums.push(link(p, String(p), p === opts.page));
     return `<nav class="join" ${ctx.fns.procs.ui.attr({ role: "pagination" })}>

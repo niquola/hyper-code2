@@ -25,7 +25,7 @@ test("GET /functions renders searchable live runtime documentation", async () =>
     expect(page.main).toContain("bg-base-100");
     expect(page.main).toContain("text-base-content");
     expect(page.main).not.toContain("bg-white");
-    expect(page.main).not.toContain("btn btn-primary");
+    expect(page.main).not.toContain("ui-button ui-button--primary");
 });
 
 test("functions page is present in the global navigation", async () => {

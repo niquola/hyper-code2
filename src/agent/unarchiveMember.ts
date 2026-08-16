@@ -21,6 +21,6 @@ export default async function (
     if (!rows[0] || String(rows[0].parent_id ?? "") !== opts.agent.id) throw new Error("unarchiveMember: member is not a direct child of this agent");
     if (rows[0].archived_at == null) return { unarchived: false, member };
     await ctx.fns.session.unarchive({ id: member });
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, reason: "team-unarchive" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, section: "team", reason: "team-unarchive" });
     return { unarchived: true, member };
 }

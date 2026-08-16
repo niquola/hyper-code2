@@ -49,8 +49,8 @@ export default async function (
     await ctx.fns.procs.db.run({ sql: "UPDATE agents SET next_run_at = COALESCE(next_run_at, ?), updated_at = ? WHERE id = ? AND archived_at IS NULL", params: [ts, ts, parentId] });
     const parent = (ctx.state as any).agent?.[parentId];
     if (parent) await ctx.fns.session.syncAgentState({ agent: parent });
-    ctx.fns.events.refreshAgentMeta({ agentId: parentId, reason: "team-update" });
-    ctx.fns.events.refreshAgentMeta({ agentId: child.id, reason: "team-update" });
+    ctx.fns.events.refreshAgentMeta({ agentId: parentId, section: "team", reason: "team-update" });
+    ctx.fns.events.refreshAgentMeta({ agentId: child.id, section: "plan", reason: "team-update" });
     ctx.fns.agent.wakeWorker({});
     return { delivered: true, parentId, messageIdx: message.idx };
 }

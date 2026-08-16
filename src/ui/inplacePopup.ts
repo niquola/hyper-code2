@@ -36,6 +36,18 @@ export default async function (
     const anchor = "--inplace-" + id;
     const triggerAttrs = String(opts.triggerAttrs ?? "").trim();
     const panelAttrs = String(opts.panelAttrs ?? "").trim();
-    return '<button type="button" popovertarget="' + esc(id) + '" aria-haspopup="dialog" style="anchor-name:' + anchor + '"' + (triggerAttrs ? ' ' + triggerAttrs : '') + '>' + opts.triggerHtml + '</button>'
+    const attrs: Record<string, string | boolean> = { popovertarget: id, 'aria-haspopup': 'dialog', style: 'anchor-name:' + anchor };
+    for (const match of triggerAttrs.matchAll(/([\w:-]+)(?:="([^"]*)")?/g)) {
+        const name = match[1];
+        if (name) attrs[name] = match[2] ?? true;
+    }
+    // `class`, `title` and `aria-label` are first-class button options, not raw attrs.
+    const className = typeof attrs.class === 'string' ? attrs.class : undefined;
+    const title = typeof attrs.title === 'string' ? attrs.title : undefined;
+    const ariaLabel = typeof attrs['aria-label'] === 'string' ? attrs['aria-label'] : undefined;
+    delete attrs.class;
+    delete attrs.title;
+    delete attrs['aria-label'];
+    return ctx.fns.procs.ui.button({ action: 'open-inplace-popup', html: opts.triggerHtml, appearance: 'plain', class: className, title, ariaLabel, attrs })
       + '<div id="' + esc(id) + '" popover style="position-anchor:' + anchor + '" class="inplace-popup-panel"' + (panelAttrs ? ' ' + panelAttrs : '') + '>' + opts.contentHtml + '</div>';
 }

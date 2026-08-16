@@ -8,14 +8,19 @@ import { readFileSync, writeFileSync } from "node:fs";
 const DEFAULT_OAUTH_HOST = "https://auth.kimi.com";
 const CLIENT_ID = "17e5f671-d194-4dfb-9706-5516cb48c098";
 
-/** Performs the llm.refreshKimiCode runtime operation. */
+/** Refreshes Kimi Code credentials for one named account. */
 /**
- * Refresh credentials managed by Kimi Code.
+ * Return a valid Kimi Code access token and persist refreshes into its selected credential file.
+ * @param opts.account Credential slot; "personal" maps to kimi-code.personal.json.
  */
-export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string | null> {
-    if (ctx.env.KIMI_CODING_API_KEY) return ctx.env.KIMI_CODING_API_KEY;
+export default async function (ctx: Context, _session: Session | null, opts?: {
+    /** Credential slot within Kimi Coding. @default "default" */ account?: string }): Promise<string | null> {
+    const account = String(opts?.account ?? "").trim() || "default";
+    if (account === "default" && ctx.env.KIMI_CODING_API_KEY) return ctx.env.KIMI_CODING_API_KEY;
     const home = ctx.env.HOME ?? process.env.HOME ?? "";
-    const path = `${home}/.kimi/credentials/kimi-code.json`;
+    const { file } = ctx.fns.llm.accountCredentialPath({ provider: "kimi-coding", account });
+    if (!file) return null;
+    const path = file;
 
     let creds: any;
     try { creds = JSON.parse(readFileSync(path, "utf8")); }

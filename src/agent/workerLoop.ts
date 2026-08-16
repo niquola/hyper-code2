@@ -110,6 +110,7 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
 
     agent.isStreaming = true;
     let errorText: string | null = null;
+    let failure: types.llm.FailureInfo | null = null;
     let aborted = false;
 
     // Steering: run() reports the user-message frontier its LAST model call
@@ -123,8 +124,14 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
         if (isAbortError(e)) {
             aborted = true;
         } else {
-            errorText = e?.message ?? String(e);
-            try { await ctx.fns.session.appendErrorEvent({ id: agentId, error: errorText ?? 'unknown error', ts: Date.now() }); } catch {}
+            // Stream implementations classify their own HTTP failures and carry
+            // the verdict on the error. A spent subscription is a wait, not a
+            // breakage: it gets parked below instead of an error badge.
+            failure = (e?.failure as types.llm.FailureInfo | undefined) ?? null;
+            errorText = failure?.message ?? e?.message ?? String(e);
+            if (failure?.kind !== 'usage_limit') {
+                try { await ctx.fns.session.appendErrorEvent({ id: agentId, error: errorText ?? 'unknown error', ts: Date.now() }); } catch {}
+            }
         }
     } finally {
         const ts = Date.now();
@@ -167,18 +174,35 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
             params: [advanceCursor ? 1 : 0, consumedIdx, advanceCursor ? 1 : 0, consumedIdx, ts + 100, errorText, ts, agentId],
         });
 
-        // One automatic retry for TRANSIENT failures (stalled stream, 429/5xx,
+        // One automatic retry for TRANSIENT failures (stalled stream, 5xx,
         // dropped connection): reschedule once with a short backoff. Anything
         // else — and a second failure in a row — stays manual (statusbar badge).
-        const transient = errorText && /stalled|429|(?:^|\D)5\d\d(?:\D|$)|Connection closed|ConnectionRefused|network|ETIMEDOUT|ECONNRESET|timed? ?out/i.test(errorText);
+        //
+        // A spent subscription window is never transient: retrying it costs a
+        // round-trip per agent and cannot succeed before the quota resets. Such
+        // a failure parks the whole credential group instead, with a durable
+        // wake-up at the reset moment (see agent.parkOnUsageLimit).
         const retries: Record<string, number> = ((ctx.state as any).agentRunRetries ??= {});
-        if (!errorText) delete retries[agentId];
-        else if (transient && (retries[agentId] ?? 0) < 1) {
-            retries[agentId] = (retries[agentId] ?? 0) + 1;
-            await ctx.fns.procs.db.run({
-                sql: 'UPDATE agents SET next_run_at = COALESCE(next_run_at, ?) WHERE id = ?',
-                params: [ts + 10_000, agentId],
-            });
+        if (failure?.kind === 'usage_limit') {
+            delete retries[agentId];
+            try {
+                await ctx.fns.agent.parkOnUsageLimit({ info: failure, originAgentId: agentId });
+            } catch (error: any) {
+                console.error(`parking after usage limit failed for ${agentId}:`, error?.message ?? error);
+                try { await ctx.fns.session.appendErrorEvent({ id: agentId, error: errorText ?? 'usage limit', ts: Date.now() }); } catch {}
+            }
+        } else {
+            const transient = failure
+                ? failure.retryable
+                : !!errorText && /stalled|429|(?:^|\D)5\d\d(?:\D|$)|Connection closed|ConnectionRefused|network|ETIMEDOUT|ECONNRESET|timed? ?out/i.test(errorText);
+            if (!errorText) delete retries[agentId];
+            else if (transient && (retries[agentId] ?? 0) < 1) {
+                retries[agentId] = (retries[agentId] ?? 0) + 1;
+                await ctx.fns.procs.db.run({
+                    sql: 'UPDATE agents SET next_run_at = COALESCE(next_run_at, ?) WHERE id = ?',
+                    params: [ts + Math.max(1_000, Number(failure?.retryAfterMs ?? 10_000)), agentId],
+                });
+            }
         }
 
         agent.abortController = null;

@@ -75,6 +75,6 @@ export default async function (
         return plan;
     } });
     agent.scratchpad = updated.scratchpad;
-    ctx.fns.events.refreshAgentMeta({ agentId: agent.id, reason: "plan-updated" });
+    ctx.fns.events.refreshAgentMeta({ agentId: agent.id, section: "plan", reason: "plan-updated" });
     return { ok: true, plan: updated.result };
 }

@@ -26,7 +26,7 @@ export default async function (
 }> {
     const { agent } = opts;
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
-    const apiKey = await ctx.fns.llm.refreshCodex({}) ?? ep.apiKey;
+    const apiKey = await ctx.fns.llm.refreshCodex({ account: ep.account }) ?? ep.apiKey;
     if (!apiKey) throw new Error("codex: no access_token (run /settings → login)");
     const accountId = extractAccountId(apiKey);
 
@@ -72,11 +72,20 @@ export default async function (
             res = await ctx.fns.llm.connectFetch({ url: ep.url, init: { method: "POST", headers, body: bodyJson, signal: opts.signal } });
             if (res.ok) break;
             const errText = await res.text();
-            lastErr = new Error(`${ep.provider} ${res.status}: ${errText.slice(0, 500)}`);
-            if (attempt >= MAX_RETRIES || !isRetryable(res.status, errText)) throw lastErr;
+            // A spent subscription window is NOT retryable: no number of
+            // attempts brings the quota back before resets_at, and every one of
+            // them costs a round-trip per agent. classifyError carries the
+            // reset moment so the caller can park instead of hammering.
+            const info = ctx.fns.llm.classifyError({
+                provider: ep.provider, account: ep.account, kind: ep.kind,
+                status: res.status, body: errText, headers: res.headers,
+            });
+            lastErr = failure(info);
+            if (attempt >= MAX_RETRIES || !info.retryable) throw lastErr;
         } catch (e: any) {
             lastErr = e;
             if (e?.message === "aborted") throw e;
+            if (e?.failure && !e.failure.retryable) throw e;
             if (attempt >= MAX_RETRIES) throw e;
             if (res && !isRetryable(res.status, e?.message ?? "")) throw e;
         }
@@ -95,6 +104,10 @@ export default async function (
     // response.output_item.done — the arguments are complete there, so the
     // *.delta events only matter for showing progress.
     const toolCalls: { id: string; name: string; args: any }[] = [];
+    // The backend reports how much of the plan window is spent on every OK
+    // response. Capturing it here is what lets the UI warn before the wall
+    // instead of after it.
+    let rateLimits: any = null;
 
     for await (const { data } of ctx.fns.llm.parseSSE({ body: res.body })) {
         if (!data || data === "[DONE]") continue;
@@ -112,6 +125,7 @@ export default async function (
         } else if (t === "response.output_item.done" && ev.item?.type === "function_call") {
             toolCalls.push({ id: ev.item.call_id ?? ev.item.id, name: ev.item.name, args: parseArgs(ev.item.arguments) });
         } else if (t === "response.completed" || t === "response.incomplete") {
+            rateLimits = ev.response?.rate_limits ?? ev.rate_limits ?? rateLimits;
             const u = ev.response?.usage;
             if (u) {
                 usage.prompt_tokens = u.input_tokens ?? 0;
@@ -131,6 +145,10 @@ export default async function (
         }
     }
 
+    // Recording is a side effect of work already done: never its own request,
+    // and never a reason to fail a completed turn.
+    ctx.fns.llm.recordUsage?.({ provider: ep.provider, account: ep.account, headers: res.headers, rateLimits })
+        ?.catch(() => undefined);
     return { text, thinking, finishReason, usage, toolCalls };
 }
 
@@ -147,6 +165,15 @@ function isRetryable(status: number, body: string): boolean {
     if (status === 429 || status === 408) return true;
     if (status >= 500 && status <= 599) return true;
     return /upstream\s+connect|connection\s+(?:reset|termination|refused)|service\s+unavailable|overloaded|rate.?limit/i.test(body);
+}
+
+// Carry the classification on the Error itself: agent.workerLoop reads
+// `error.failure` to decide between parking, retrying and giving up, without
+// re-parsing a message string.
+function failure(info: types.llm.FailureInfo): Error {
+    const error = new Error(info.message);
+    (error as any).failure = info;
+    return error;
 }
 
 function mapStop(status: string | undefined): string | null {

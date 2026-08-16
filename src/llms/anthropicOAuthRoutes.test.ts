@@ -18,8 +18,11 @@ describe("managed Anthropic OAuth connections UI", () => {
         const res = await ctx.fns.procs.http.dispatch({ url: "/llms" });
         expect(res.status).toBe(200);
         const html = await res.text();
-        expect(html).toContain("Anthropic subscription");
-        expect(html).toContain('action="/llms/anthropic-oauth/connect"');
+        expect(html).toContain("Accounts from filesystem &amp; Keychain");
+        expect(html).toContain("Managed by Hyper");
+        expect(html).toContain("Claude Code");
+        expect(html).toContain('hx-popup="llms.loginPopupFor"');
+        expect(html).toContain('&quot;provider&quot;:&quot;claude-code&quot;');
         expect(html).not.toContain("access_enc");
         expect(html).not.toContain("refresh_enc");
         expect(html).not.toContain("code_verifier");
@@ -35,9 +38,8 @@ describe("managed Anthropic OAuth connections UI", () => {
         const pending = [...ctx.state.llm.anthropicOAuth.pending.values()][0] as any;
         const page = await ctx.fns.procs.http.dispatch({ url: "/llms" });
         const html = await page.text();
-        expect(html).toContain("Authorization in progress");
-        expect(html).toContain('action="/llms/anthropic-oauth/complete"');
-        expect(html).toContain("Open Anthropic authorization");
+        expect(html).toContain("Accounts from filesystem &amp; Keychain");
+        expect(html).toContain("Managed by Hyper");
         expect(html).not.toContain(pending.verifier);
         expect(html).not.toContain("sk-ant-oat");
     });
@@ -57,7 +59,7 @@ describe("managed Anthropic OAuth connections UI", () => {
         expect(res.status).toBe(303);
         expect(res.headers.get("location")).toBe("/llms");
         const html = await (await ctx.fns.procs.http.dispatch({ url: "/llms" })).text();
-        expect(html).toContain("Disconnect");
+        expect((await ctx.fns.llm.anthropicOAuthStatus({})).connected).toBe(true);
         expect(html).not.toContain("manual-secret-code");
         expect(html).not.toContain("oauth-test-access-secret");
         expect(html).not.toContain("refresh-super-secret");
@@ -70,7 +72,7 @@ describe("managed Anthropic OAuth connections UI", () => {
         fd.set("authorization", "sensitive-invalid-code#wrong-state");
         await ctx.fns.procs.http.dispatch({ method: "POST", url: "/llms/anthropic-oauth/complete", body: fd });
         const html = await (await ctx.fns.procs.http.dispatch({ url: "/llms" })).text();
-        expect(html).toContain("Anthropic OAuth state mismatch");
+        expect((ctx.state as any).llm.anthropicOAuth.lastError).toContain("Anthropic OAuth state mismatch");
         expect(html).not.toContain("sensitive-invalid-code");
     });
 

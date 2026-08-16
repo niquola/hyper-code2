@@ -32,6 +32,6 @@ export default async function (
     await ctx.fns.session.appendUserMessage({ id: member, text: "Parent requested a retry. Resume the active plan task, address the previous stop or failure, and complete the remaining plan." });
     await ctx.fns.procs.db.run({ sql: "UPDATE agents SET next_run_at = ?, last_error = NULL, updated_at = ? WHERE id = ? AND run_state = 'idle' AND archived_at IS NULL", params: [now, now, member] });
     ctx.fns.agent.wakeWorker({});
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, reason: "team-retry" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, section: "team", reason: "team-retry" });
     return { retried: true, member };
 }

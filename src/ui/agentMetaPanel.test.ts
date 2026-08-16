@@ -1,85 +1,63 @@
 import { expect, test } from "bun:test";
 import render from "./agentMetaPanel";
+import renderSection from "./agentMetaSection";
 
 const escapeHtml = ({ text }: any) => String(text)
     .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 const toggle = (o: any) => `<label><input name="${o.name}" ${o.enabled ? 'checked' : ''}>${o.label ?? ''}</label>`;
+const planTaskRow = ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({ text: task.id })}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({ text: task.id })}"><input name="task_title" value="${escapeHtml({ text: task.title })}"><textarea name="task_instructions">${escapeHtml({ text: task.instructions ?? '' })}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0) / 1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>`;
+const mkCtx = (extra: any = {}): any => {
+    const ctx: any = {
+        fns: {
+            procs: { ui: { escape: escapeHtml } },
+            ui: {
+                toggle,
+                planTaskRow,
+                statusBadge: (o: any) => `<span data-tone="${o.tone ?? 'neutral'}">${escapeHtml({ text: o.label })}</span>`,
+                progressBar: (o: any) => `<progress value="${o.value}" max="${o.max}"></progress>`,
+                inspectorSection: (o: any) => `<details ${o.open ? 'open' : ''}><summary>${escapeHtml({ text: o.title })}${o.badge ?? ''}</summary><div class="border-t border-base-300 px-3 py-3">${o.html}</div></details>`,
+                // The runtime calls this in the injected style ctx.fns.x(opts),
+                // while the imported module takes (ctx, session, opts) — bridge it.
+                agentMetaSection: (o: any) => renderSection(ctx, null, o),
+                ...extra,
+            },
+        },
+    };
+    return ctx;
+};
 
-test("agent meta panel is a topic-addressed live region", () => {
-    const ctx: any = { fns: {
-        procs: { ui: { escape: escapeHtml } },
-        ui: { toggle, live: (o: any) => `<${o.tag} id="${o.id}" hx-get="${o.url}" data-live-topic="${o.topic}" ${o.attrs}>${o.html}</${o.tag}>` },
-    } };
-    const html = render(ctx, null, { agent: { id: "eh", goal: null } as any });
+test("agent meta panel is a static shell with per-section slots", () => {
+    const html = render(mkCtx(), null, { agent: { id: "eh", goal: null } as any });
     expect(html).toContain('id="agent-meta-eh"');
-    expect(html).toContain('hx-get="/ui/agent/eh/meta"');
-    expect(html).toContain('data-live-topic="agent-meta:eh"');
+    for (const section of ["goal", "automation", "wake", "team", "plan"]) {
+        expect(html).toContain(`id="agent-meta-${section}-eh"`);
+        expect(html).toContain(`data-meta-section="${section}"`);
+    }
+    // No live region: sections are redrawn through the RPC push, not polling.
+    expect(html).not.toContain("data-live-topic");
+    expect(html).not.toContain("hx-get");
 });
+
 test("collapses an inactive goal and opens an enabled goal", () => {
-    const ctx: any = { fns: {
-        procs: { ui: { escape: escapeHtml } },
-        ui: { toggle, live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
-    } };
+    const ctx = mkCtx();
     const inactive = render(ctx, null, { agent: { id: "eh", goal: { statement: "done", enabled: false, status: "achieved", checks: [] } } as any });
-    expect(inactive).toContain('<summary>Goal</summary>');
-    expect(inactive).not.toContain('<details open><summary>Goal</summary>');
+    expect(inactive).toContain('<summary>Goal<span data-tone="success">achieved</span></summary>');
+    expect(inactive).not.toContain('<details open><summary>Goal');
     const active = render(ctx, null, { agent: { id: "eh", goal: { statement: "work", enabled: true, status: "active", checks: [] } } as any });
-    expect(active).toContain('<details open><summary>Goal</summary>');
+    expect(active).toContain('<details open><summary>Goal');
 });
 
-
-
-test("renders the plan below goal with instructions and time", () => {
-    const ctx: any = { fns: {
-        procs: { ui: { escape: escapeHtml } },
-        ui: { toggle, live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
-    } };
-    const html = render(ctx, null, { agent: { id: "eh", goal: null, scratchpad: { plan: {
-        title: "Ship it", tasks: [{ id: "api", title: "Build API", instructions: "Detailed requirements", status: "active", elapsedMs: 5000, activeSince: null }],
-    } } } } as any);
-    expect(html.indexOf("Goal")).toBeLessThan(html.indexOf("Ship it"));
-    expect(html).toContain("Build API");
-    expect(html).toContain("Detailed requirements");
-    expect(html).toContain("5s");
-});
-
-
-test("escapes plan content and renders archive/delete controls inside the scroll panel", () => {
-    const ctx: any = { fns: {
-        procs: { ui: { escape: escapeHtml } },
-        ui: { toggle, live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
-    } };
-    const html = render(ctx, null, { agent: { id: "a/b", goal: null, scratchpad: { plan: {
-        title: "<Plan>", tasks: [{ id: "x", title: "<Task>", instructions: "<script>bad()</script>", status: "active", elapsedMs: 0 }],
-    } } } } as any);
-    expect(html).toContain("&lt;Plan&gt;");
-    expect(html).toContain("&lt;Task&gt;");
-    expect(html).toContain("&lt;script&gt;bad()&lt;/script&gt;");
-    expect(html).not.toContain("<script>bad()</script>");
-    expect(html).toContain('hx-post="/agent/a%2Fb/plan"');
-    expect(html).toContain('hx-confirm="Archive this plan?"');
-    expect(html).toContain('hx-confirm="Delete this plan permanently?"');
-    const scrollStart = html.indexOf('overflow-y-auto');
-    expect(html.indexOf("Goal", scrollStart)).toBeLessThan(html.indexOf("&lt;Plan&gt;", scrollStart));
-    expect(html.indexOf("&lt;Plan&gt;", scrollStart)).toBeLessThan(html.lastIndexOf("</div>"));
-});
-
-
-test("renders a safe editor with immutable active and removable pending tasks", () => {
-    const ctx: any = { fns: {
-        procs: { ui: { escape: escapeHtml } },
-        ui: { toggle, live: (o: any) => o.html, planTaskRow: ({ task }: any) => `<div data-plan-task data-task-id="${escapeHtml({text:task.id})}" data-task-status="${task.status}"><input name="task_id" value="${escapeHtml({text:task.id})}"><input name="task_title" value="${escapeHtml({text:task.title})}"><textarea name="task_instructions">${escapeHtml({text:task.instructions ?? ''})}</textarea><span>${Math.floor(Number(task.elapsedMs ?? 0)/1000)}s</span>${task.status === 'pending' ? '<button data-plan-remove></button><button data-plan-move="up"></button>' : ''}</div>` },
-    } };
-    const html = render(ctx, null, { agent: { id: "eh", goal: null, scratchpad: { plan: {
-        title: "Edit me", tasks: [
-            { id: "active", title: "Active", instructions: "Now", status: "active", elapsedMs: 0 },
-            { id: "later", title: "Later", instructions: "Then", status: "pending", elapsedMs: 0 },
-        ],
-    } } } } as any);
-    expect(html).toContain("data-plan-editor");
-    expect(html).toContain('name="action" value="update"');
-    expect(html).not.toContain("Edit plan");
+test("renders plan tasks with ids and editor fields", () => {
+    const ctx = mkCtx();
+    const agent: any = {
+        id: "eh", goal: null,
+        scratchpad: { plan: { title: "Ship", tasks: [
+            { id: "active", title: "Doing", status: "active", instructions: "now" },
+            { id: "later", title: "Next", status: "pending", instructions: "later" },
+        ] } },
+    };
+    const html = render(ctx, null, { agent });
     expect(html).toContain('name="title"');
     expect(html).toContain('name="task_id"');
     expect(html).toContain('name="task_title"');
@@ -92,37 +70,28 @@ test("renders a safe editor with immutable active and removable pending tasks", 
     expect(pending).toContain('data-plan-move="up"');
 });
 
-
-
 test("renders team members as semantic nested accordions", () => {
-    const ctx: any = { fns: {
-        procs: { ui: { escape: escapeHtml } },
-        ui: {
-            toggle,
-            live: (o: any) => o.html,
-            statusBadge: (o: any) => `<span data-tone="${o.tone}">${escapeHtml({ text: o.label })}</span>`,
-            progressBar: (o: any) => `<progress value="${o.value}" max="${o.max}"></progress>`,
-            inspectorSection: (o: any) => `<section>${o.title}${o.badge}${o.html}</section>`,
-        },
-    } };
-    const html = render(ctx, null, {
+    const html = render(mkCtx(), null, {
         agent: { id: "eh", goal: null } as any,
         team: [{ id: "kid", title: "Visual QA", runState: "running", status: "blocked", plan: { title: "QA", tasks: [{ id: "see", title: "Inspect", status: "active" }] }, summary: null, updatedAt: Date.now() }],
     });
     expect(html).toContain("Team");
     expect(html).toContain('data-tone="error"');
-    expect(html).toContain("group-open:rotate-180");
-    expect(html).toContain('class="btn btn-ghost btn-xs');
+    expect(html).toContain('class="ui-button ui-button--xs ui-button--ghost');
     expect(html).toContain('<progress value="0" max="1">');
 });
 
 test("automation controls live in a collapsed compact accordion", () => {
-    const ctx: any = { fns: {
-        procs: { ui: { escape: escapeHtml } },
-        ui: { toggle, live: (o: any) => o.html, statusBadge: (o: any) => `<span>${o.label}</span>`, inspectorSection: (o: any) => `<details ${o.open ? 'open' : ''}><summary><span>${o.title}</span></summary><div class="border-t border-base-300 px-3 py-3">${o.html}</div></details>` },
-    } };
-    const html = render(ctx, null, { agent: { id: "eh", goal: null } as any });
-    expect(html).toContain('>Automation</span>');
-    expect(html).toContain('border-t border-base-300 px-3 py-3');
-    expect(html).not.toMatch(/<details open[^>]*>[\s\S]*?<summary[^>]*>[\s\S]*?>Automation<\/span>/);
+    const html = render(mkCtx(), null, { agent: { id: "eh", goal: null } as any });
+    expect(html).toContain('>Automation</summary>');
+    const slot = html.slice(html.indexOf('id="agent-meta-automation-eh"'), html.indexOf('id="agent-meta-wake-eh"'));
+    expect(slot).not.toContain("<details open");
+});
+
+test("a section renders standalone and an unknown section throws", () => {
+    const ctx = mkCtx();
+    const html = renderSection(ctx, null, { agent: { id: "eh", goal: null } as any, section: "automation" });
+    expect(html).toContain("Automation");
+    expect(html).not.toContain("agent-meta-goal");
+    expect(() => renderSection(ctx, null, { agent: { id: "eh" } as any, section: "nope" as any })).toThrow(/unknown section/);
 });

@@ -162,7 +162,7 @@ ${opts.headExtra ?? ""}
 <script src="/ui/control.js" defer></script>
 <script src="/procs/events/client.js" defer></script>
 <script src="/ui/hotkeys.js" defer></script>
-<script src="/ui/rpc.js" defer></script>
+<script src="/ui/rpc.js?v=5" defer></script>
 <script src="/agent/chat.js" defer></script>
 <script src="/ui/popup.js" defer></script>
 <script src="/ui/meta.js" defer></script>
@@ -172,11 +172,12 @@ ${opts.headExtra ?? ""}
 <body hx-ext="popup-rpc" class="bg-base-200 text-base-content text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div id="frame" class="relative flex h-screen">
   <nav id="quick-bar" aria-label="Quick access" class="flex w-10 shrink-0 flex-col items-center border-r border-ui-border py-1.5">
-    <button type="button" title="Global menu — ⌘/" aria-label="Open global menu" onclick="window.__navOpen?.()" class="flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content">
-      <i class="ph ph-squares-four text-base" aria-hidden="true"></i>
-    </button>
-    <button id="theme-toggle" type="button" title="Switch color theme" aria-label="Switch color theme" aria-pressed="false" class="mt-1 flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content"><i class="ph ph-moon" aria-hidden="true"></i></button>
+    ${ctx.fns.procs.ui.button({ action: "open-global-menu", html: '<i class="ph ph-squares-four text-base" aria-hidden="true"></i>', appearance: "plain", title: "Global menu — ⌘/", ariaLabel: "Open global menu", class: "flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content", attrs: { onclick: "window.__navOpen?.()" } })}
+    ${ctx.fns.procs.ui.button({ action: "toggle-theme", html: '<i class="ph ph-moon" aria-hidden="true"></i>', appearance: "plain", title: "Switch color theme", ariaLabel: "Switch color theme", class: "mt-1 flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content", attrs: { id: "theme-toggle", "aria-pressed": "false" } })}
     <div id="quick-items" class="mt-2 flex min-h-0 flex-1 flex-col items-center gap-1" aria-label="Pinned pages"></div>
+    <!-- Subscription quota, loaded by itself so the shell never waits on it.
+         Collapsed to rings in the narrow bar; the title carries the detail. -->
+    <div id="quota-rings" class="mt-auto w-full" hx-get="/llms/usage" hx-trigger="load" hx-swap="innerHTML" hx-target="this"></div>
     <script>(function(){var button=document.getElementById('theme-toggle');function paint(){var dark=document.documentElement.dataset.theme==='dark';button.setAttribute('aria-pressed',String(dark));button.title=dark?'Use light theme':'Use dark theme';button.querySelector('i').className='ph '+(dark?'ph-sun':'ph-moon')}paint();button.addEventListener('click',function(){var next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;document.documentElement.style.colorScheme=next;try{localStorage.setItem('hyper-theme',next)}catch(_){}paint()})})()</script>
   </nav>
   <!-- This container owns no navigation attributes: live descendants must
@@ -187,12 +188,12 @@ ${opts.headExtra ?? ""}
 </div>
 <dialog id="app-popup" class="m-auto max-h-[85vh] w-[min(48rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-ui-border bg-base-100 p-0 text-base-content shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-[1px]">
   <div class="flex max-h-[85vh] flex-col">
-    <div class="flex shrink-0 items-center gap-3 border-b border-ui-border px-5 py-3.5"><h2 id="app-popup-title" class="min-w-0 flex-1 truncate text-sm font-semibold text-base-content/80">Details</h2><button id="app-popup-close" type="button" title="Close" aria-label="Close" class="flex size-8 items-center justify-center rounded-full text-base-content/45 hover:bg-base-200 hover:text-base-content"><i class="ph ph-x text-lg"></i></button></div>
+    <div class="flex shrink-0 items-center gap-3 border-b border-ui-border px-5 py-3.5"><h2 id="app-popup-title" class="min-w-0 flex-1 truncate text-sm font-semibold text-base-content/80">Details</h2>${ctx.fns.procs.ui.button({ action: "close-popup", html: '<i class="ph ph-x text-lg"></i>', appearance: "plain", title: "Close", ariaLabel: "Close", class: "flex size-8 items-center justify-center rounded-full text-base-content/45 hover:bg-base-200 hover:text-base-content", attrs: { id: "app-popup-close" } })}</div>
     <div id="app-popup-body" class="app-popup-body min-h-0 flex-1 overflow-auto bg-base-200/60 p-5 text-xs text-base-content/70"></div>
   </div>
 </dialog>
 ${ctx.fns.ui.navMenu({})}
-<button id="secure-input-host" type="button" class="hidden" hx-popup="secureInput.current" data-pending="${(ctx.state as any).secureInput?.prompts?.size ? '1' : '0'}" aria-label="Secure input"></button>
+${ctx.fns.procs.ui.button({ action: "secure-input", appearance: "plain", ariaLabel: "Secure input", class: "hidden", attrs: { id: "secure-input-host", "hx-popup": "secureInput.current", "data-pending": (ctx.state as any).secureInput?.prompts?.size ? '1' : '0' } })}
 
 </body>
 </html>`;

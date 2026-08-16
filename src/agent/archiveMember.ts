@@ -26,6 +26,6 @@ export default async function (
         throw new Error("archiveMember: cannot archive a working member");
     }
     await ctx.fns.session.archive({ id: member });
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, reason: "team-archive" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, section: "team", reason: "team-archive" });
     return { archived: true, member };
 }

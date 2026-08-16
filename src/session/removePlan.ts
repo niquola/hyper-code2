@@ -27,6 +27,6 @@ export default async function (
         return { archived: archive };
     } });
     agent.scratchpad = updated.scratchpad;
-    ctx.fns.events.refreshAgentMeta({ agentId: agent.id, reason: updated.result.archived ? "plan-archived" : "plan-deleted" });
+    ctx.fns.events.refreshAgentMeta({ agentId: agent.id, section: "plan", reason: updated.result.archived ? "plan-archived" : "plan-deleted" });
     return { ok: true, archived: updated.result.archived };
 }

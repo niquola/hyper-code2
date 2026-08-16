@@ -32,7 +32,9 @@ export default async function (
             verifier: pending.verifier, redirectUri: pending.redirectUri,
         });
         if (!token.refresh) throw new Error("Anthropic OAuth token exchange returned an invalid response");
-        await ctx.fns.llm.saveAnthropicOAuth({ ...token, refresh: token.refresh });
+        // The slot was chosen when the flow started; saving into it is what
+        // makes a second Claude login an addition rather than a replacement.
+        await ctx.fns.llm.saveAnthropicOAuth({ ...token, refresh: token.refresh, account: pending.account ?? "default", label: pending.label ?? null });
         pending.status = "complete";
         pending.verifier = null;
         store.lastError = null;

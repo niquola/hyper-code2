@@ -13,9 +13,11 @@ initialUsage?: any;
     let usage = initialUsage;
     const now = Date.now();
     const row = ((await ctx.fns.procs.db.select({
-        sql: 'SELECT run_state, run_started_at, next_run_at, last_processed_msg_idx, last_error FROM agents WHERE id = ?',
+        sql: 'SELECT run_state, run_started_at, next_run_at, last_processed_msg_idx, last_error, wake_at, scratchpad FROM agents WHERE id = ?',
         params: [agentId],
     })) as any[])[0];
+    let parked: any = null;
+    try { parked = JSON.parse(String(row?.scratchpad ?? '{}'))?.parked ?? null; } catch { parked = null; }
 
     if (!usage) {
         const lastEvent = ((await ctx.fns.procs.db.select({
@@ -45,6 +47,16 @@ initialUsage?: any;
         label = `<i class="ph ph-clock-countdown" aria-hidden="true"></i><span>${waits}s</span>`;
         title = `queued · ${waits}s`;
         cls = 'text-warning';
+    } else if (parked) {
+        // Parked is a WAIT, not a breakage: the quota is spent and the agent
+        // already holds a wake-up for the reset moment. Red would say "fix me"
+        // when there is nothing to fix, so this state is yellow and states when
+        // the work resumes.
+        const until = Number(parked.resetsAt ?? parked.wakeAt ?? 0);
+        const left = until ? humanDelay(until - now) : null;
+        label = `<i class="ph ph-pause-circle" aria-hidden="true"></i><span>parked${left ? ` · ${left}` : ''}</span>`;
+        title = `${parked.message ?? 'usage limit'} Агент проснётся сам.`;
+        cls = 'text-warning bg-warning/10 border-ui-border';
     } else if (row?.last_error) {
         // A failed run does NOT auto-retry (by design) — without this badge it
         // looks like a hang. The next user message retries; say so.
@@ -60,7 +72,7 @@ initialUsage?: any;
 
     const url = `/agent/${encodeURIComponent(agentId)}/statusbar`;
     const esc = (t: any) => ctx.fns.procs.ui.escape({ text: t });
-    const statusBadge = row?.last_error && row?.run_state !== 'running'
+    const statusBadge = row?.last_error && row?.run_state !== 'running' && !parked
         ? `<span class="text-xs px-2 py-0.5 rounded border font-mono ${cls} max-w-[16rem] truncate inline-block align-bottom" title="${esc(String(row.last_error))} — send a message to retry">error: ${esc(String(row.last_error).slice(0, 48))}</span>`
         : `<span class="text-xs px-2 py-0.5 rounded ${borderCls} font-mono inline-flex items-center gap-1 ${cls}" title="${esc(title)}">${label}</span>`;
     const tokensBadge = usage ? `<span title="context tokens" class="rounded px-1 py-0.5 font-mono text-xs text-base-content/65">${(((usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0)) / 1000).toFixed(1)}k</span>` : '';
@@ -68,7 +80,7 @@ initialUsage?: any;
     // the run, but CSS anchors it inside the composer instead of the top bar.
     const busy = row?.run_state === 'running' || !!row?.next_run_at;
     const stopBtn = busy
-        ? `<button type="button" hx-post="/agent/${encodeURIComponent(agentId)}/stop" hx-swap="none" title="stop this run" aria-label="Stop generation" ${ctx.fns.procs.ui.attr({ action: "stop", entity: "agent", id: agentId })} class="inline-flex size-8 items-center justify-center rounded-full bg-gray-900 text-white shadow-md transition hover:bg-gray-700"><span class="block size-2.5 rounded-[2px] bg-white" aria-hidden="true"></span></button>`
+        ? ctx.fns.procs.ui.button({ action: 'stop', entity: 'agent', id: agentId, post: `/agent/${encodeURIComponent(agentId)}/stop`, swap: 'none', title: 'stop this run', ariaLabel: 'Stop generation', tone: 'neutral', class: 'size-8 rounded-full shadow-md', html: '<span class="block size-2.5 rounded-[2px] bg-white" aria-hidden="true"></span>' })
         : '';
     if (part === 'stop') return stopBtn;
     // The SSE stream is the real trigger (it dispatches hyper-tick on every
@@ -89,4 +101,14 @@ initialUsage?: any;
         attrs: 'class="flex items-center gap-2"',
         html: `${statusBadge}${tokensBadge}`,
     });
+}
+// "3d 16h", "2h 14m", "8m" — enough to decide whether to wait or switch model.
+function humanDelay(ms: number): string {
+    const left = Math.max(0, ms);
+    const minutes = Math.floor(left / 60_000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days >= 1) return `${days}d ${hours % 24}h`;
+    if (hours >= 1) return `${hours}h ${minutes % 60}m`;
+    return `${minutes}m`;
 }

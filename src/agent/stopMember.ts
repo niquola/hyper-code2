@@ -28,6 +28,6 @@ export default async function (
     } });
     child.scratchpad = updated.scratchpad;
     await ctx.fns.agent.steer({ from: child, event: "blocked", summary: "Stopped by parent" });
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, reason: "team-stop" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, section: "team", reason: "team-stop" });
     return { stopped: true, member };
 }

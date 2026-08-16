@@ -64,7 +64,7 @@ export default async function (
     const waiters = (((ctx.state as any).delegateTaskWaiters) ??= new Map());
     if (agent.parentId) {
         await ctx.fns.agent.steer({ from: agent, event: "plan.completed", summary });
-        ctx.fns.events.refreshAgentMeta({ agentId: String(agent.parentId), reason: "team-finished" });
+        ctx.fns.events.refreshAgentMeta({ agentId: String(agent.parentId), section: "team", reason: "team-finished" });
     }
     const waiter = meta.mode === "await" ? waiters.get(agent.id) : null;
     if (waiter?.resolve) {

@@ -24,7 +24,7 @@ export default async function (
     if (result.changes === 0) throw new Error(`agent not found: ${opts.id}`);
     const agent = (ctx.state as any).agent?.[opts.id];
     if (agent) { agent.wakeAt = wakeAt; agent.wakeReason = reason; }
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, reason: "wake-set" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, section: "wake", reason: "wake-set" });
     ctx.fns.agent.wakeWorker({});
     return { wakeAt, reason };
 }

@@ -26,6 +26,11 @@ limit?: number }): Promise<{ delivered: string[] }> {
     for (const row of rows) {
         const id = String(row.id);
         const reason = String(row.wake_reason ?? "Scheduled wake-up");
+        // A parked agent wakes because its quota came back — the mark must go
+        // before it runs, or the UI would keep claiming it is waiting. resume
+        // is off: the wake itself already scheduled the run.
+        try { await ctx.fns.agent.unpark({ id, reason: "wake", resume: false }); }
+        catch (error: any) { console.error(`unpark on wake failed for ${id}:`, error?.message ?? error); }
         const message = await ctx.fns.session.appendMessage({ id, message: {
             role: "user",
             content: `Wake-up: ${reason}`,
@@ -39,7 +44,7 @@ limit?: number }): Promise<{ delivered: string[] }> {
             agent.wakeReason = null;
             await ctx.fns.session.syncAgentState({ agent });
         }
-        ctx.fns.events.refreshAgentMeta({ agentId: id, reason: "wake-delivered" });
+        ctx.fns.events.refreshAgentMeta({ agentId: id, section: "wake", reason: "wake-delivered" });
         delivered.push(id);
     }
     if (delivered.length) ctx.fns.agent.wakeWorker({});

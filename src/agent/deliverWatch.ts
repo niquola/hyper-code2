@@ -65,7 +65,7 @@ export default async function (
     await ctx.fns.procs.db.run({ sql: "UPDATE agents SET next_run_at = COALESCE(next_run_at, ?), updated_at = ? WHERE id = ?", params: [now, now, row.agent_id] });
     const agent = (ctx.state as any).agent?.[row.agent_id];
     if (agent) await ctx.fns.session.syncAgentState({ agent });
-    ctx.fns.events.refreshAgentMeta({ agentId: row.agent_id, reason: "watch-delivered" });
+    ctx.fns.events.refreshAgentMeta({ agentId: row.agent_id, section: "wake", reason: "watch-delivered" });
     ctx.fns.agent.wakeWorker({});
     return { status, ...(status === "ready" ? { result } : {}) };
 }

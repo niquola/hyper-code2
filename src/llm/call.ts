@@ -38,7 +38,7 @@ export default async function (
 }
 
 async function responses(ctx: Context, endpoint: any, opts: any) {
-    const token = await ctx.fns.llm.refreshCodex({}) ?? endpoint.apiKey;
+    const token = await ctx.fns.llm.refreshCodex({ account: endpoint.account }) ?? endpoint.apiKey;
     if (!token) throw new Error("codex: no access_token");
     const body: any = {
         model: endpoint.modelId,
@@ -86,11 +86,11 @@ async function anthropic(ctx: Context, endpoint: any, opts: any) {
     let apiKey = endpoint.apiKey;
     const headers: Record<string, string> = { "content-type": "application/json", "anthropic-version": "2023-06-01" };
     if (endpoint.provider === "kimi-coding") {
-        apiKey = await ctx.fns.llm.refreshKimiCode({}) ?? apiKey;
+        apiKey = await ctx.fns.llm.refreshKimiCode({ account: endpoint.account }) ?? apiKey;
     } else if (endpoint.provider === "claude-code") {
-        apiKey = await ctx.fns.llm.refreshClaudeCode({}) ?? apiKey;
+        apiKey = await ctx.fns.llm.refreshClaudeCode({ account: endpoint.account }) ?? apiKey;
     } else if (endpoint.provider === "anthropic-oauth") {
-        apiKey = await ctx.fns.llm.getAnthropicOAuthToken({});
+        apiKey = await ctx.fns.llm.getAnthropicOAuthToken({ account: endpoint.account });
     }
     const subscription = endpoint.provider === "claude-code" || endpoint.provider === "anthropic-oauth";
     if (apiKey) {

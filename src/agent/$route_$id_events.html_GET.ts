@@ -30,7 +30,7 @@ params: Record<string, string> }) {
         const eventsHtml = await ctx.fns.agent.renderEventsHtml({ events, agentId: id });
         const firstIdx = events.length ? Number(events[0]?.idx ?? 0) : 0;
         const head = firstIdx > 0
-            ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${firstIdx}&limit=${limit}" hx-trigger="load-older" hx-target="this" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-ui-border bg-base-100 px-3 py-1 text-[10px] text-base-content/45 hover:text-base-content">older messages</button></div>`
+            ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${firstIdx}&limit=${limit}" hx-trigger="load-older" hx-target="this" hx-swap="outerHTML" class="flex justify-center py-1">${ctx.fns.procs.ui.button({ action: 'load-older-messages', label: 'older messages', size: 'xs', class: 'rounded-full text-[10px]', attrs: { onclick: "htmx.trigger(this.parentElement, 'load-older')" } })}</div>`
             : '';
         return new Response(head + eventsHtml, { headers: { 'content-type': 'text/html; charset=utf-8' } });
     }

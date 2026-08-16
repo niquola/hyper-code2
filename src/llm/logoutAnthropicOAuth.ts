@@ -1,9 +1,22 @@
-/** Performs the llm.logoutAnthropicOAuth runtime operation. */
+/** Deletes the stored Anthropic OAuth credentials of one account. */
 /**
- * Delete the stored Anthropic OAuth credentials.
+ * Delete stored Anthropic OAuth credentials.
+ *
+ * Removes one credential slot, leaving other Claude logins intact. Pass no
+ * account to disconnect the default one.
+ *
+ * @param opts.account Credential slot to disconnect.
+ * @param opts.all Remove every Anthropic OAuth account at once.
  */
-export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<{ ok: true }> {
-    await ctx.fns.procs.db.run({ sql: "DELETE FROM oauth_credentials WHERE provider = ?", params: ["anthropic-oauth"] });
+export default async function (ctx: Context, _session: Session | null, opts?: {
+    /** Credential slot to disconnect. @default "default" */ account?: string;
+    /** Disconnect every account of this provider. @default false */ all?: boolean }): Promise<{ ok: true }> {
+    const account = String(opts?.account ?? "").trim() || "default";
+    if (opts?.all) {
+        await ctx.fns.procs.db.run({ sql: "DELETE FROM oauth_credentials WHERE provider = ?", params: ["anthropic-oauth"] });
+    } else {
+        await ctx.fns.procs.db.run({ sql: "DELETE FROM oauth_credentials WHERE provider = ? AND account = ?", params: ["anthropic-oauth", account] });
+    }
     const store: any = (ctx.state as any).llm?.anthropicOAuth;
     if (store) {
         for (const p of store.pending?.values?.() ?? []) try { p.server?.close(); } catch {}

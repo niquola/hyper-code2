@@ -31,7 +31,7 @@ export default async function (
 ): Promise<{ started: boolean; reason?: string }> {
     const parent = opts.agent;
     if (parent.scratchpad?.delegateTask?.taskKind) return { started: false, reason: "delegated child" };
-    if (parent.sleepEnabled === false) return { started: false, reason: "disabled" };
+    if (parent.sleepEnabled !== true) return { started: false, reason: "disabled" };
     const running: Set<string> = ((ctx.state as any).sleepRuns ??= new Set());
     if (((ctx.state as any).reflectionRuns as Set<string> | undefined)?.has(parent.id)) return { started: false, reason: "reflection running" };
     if (running.has(parent.id)) return { started: false, reason: "already sleeping" };
@@ -104,7 +104,7 @@ export default async function (
             });
             if (updated.changes > 0) {
                 parent.sleepContext = next;
-                ctx.fns.events.refreshAgentMeta({ agentId: parent.id, reason: "sleep-draft" });
+                ctx.fns.events.refreshAgentMeta({ agentId: parent.id, section: "automation", reason: "sleep-draft" });
             }
         } catch (error) {
             console.error(`sleep for ${parent.id} failed:`, error);

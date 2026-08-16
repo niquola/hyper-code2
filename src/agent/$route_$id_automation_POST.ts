@@ -10,9 +10,9 @@ params: Record<string, string> }) {
     try {
         await ctx.fns.agent.setAutomation({
             id: opts.params.id!,
-            reflectionEnabled: form.get('reflectionEnabled') === '1',
-            sleepEnabled: form.get('sleepEnabled') === '1',
-            functionRagEnabled: form.get('functionRagEnabled') === '1',
+            reflectionEnabled: form.get('reflectionEnabled') === '1' ? true : undefined,
+            sleepEnabled: form.get('sleepEnabled') === '1' ? true : undefined,
+            functionRagEnabled: form.get('functionRagEnabled') === '1' ? true : undefined,
         });
     } catch (error: any) {
         return new Response(error?.message ?? 'Invalid automation settings', { status: 400 });

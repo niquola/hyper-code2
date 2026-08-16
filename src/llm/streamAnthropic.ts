@@ -49,13 +49,13 @@ export default async function (
     //   anthropic-oauth  → encrypted Postgres credential
     let apiKey = ep.apiKey;
     if (ep.provider === "kimi-coding") {
-        const fresh = await ctx.fns.llm.refreshKimiCode({});
+        const fresh = await ctx.fns.llm.refreshKimiCode({ account: ep.account });
         if (fresh) apiKey = fresh;
     } else if (ep.provider === "claude-code") {
-        const fresh = await ctx.fns.llm.refreshClaudeCode({});
+        const fresh = await ctx.fns.llm.refreshClaudeCode({ account: ep.account });
         if (fresh) apiKey = fresh;
     } else if (ep.provider === "anthropic-oauth") {
-        apiKey = await ctx.fns.llm.getAnthropicOAuthToken({});
+        apiKey = await ctx.fns.llm.getAnthropicOAuthToken({ account: ep.account });
     }
 
     const claudeSubscription = ep.provider === "claude-code" || ep.provider === "anthropic-oauth";
@@ -87,7 +87,18 @@ export default async function (
         body: JSON.stringify(body),
         signal: opts.signal,
     } });
-    if (!res.ok) throw new Error(`${ep.provider} ${res.status}: ${await res.text()}`);
+    if (!res.ok) {
+        // Same classification path as streamCodex: a spent Claude subscription
+        // window must arrive at the worker as a parkable failure carrying its
+        // reset moment, not as an opaque "provider 429: {…}" string.
+        const info = ctx.fns.llm.classifyError({
+            provider: ep.provider, account: ep.account, kind: ep.kind,
+            status: res.status, body: await res.text(), headers: res.headers,
+        });
+        const error = new Error(info.message);
+        (error as any).failure = info;
+        throw error;
+    }
     if (!res.body) throw new Error("empty response body");
 
     let text = "";
@@ -132,6 +143,12 @@ export default async function (
     const toolCalls = [...slots.entries()]
         .sort((a, b) => a[0] - b[0])
         .map(([, s]) => ({ id: s.id, name: s.name, args: parseArgs(s.buf) }));
+    // Subscription quota travels in the unified rate-limit headers of every OK
+    // response; recording it here is what makes the left panel honest without
+    // a single extra request.
+    if (ep.kind === "subscription") {
+        ctx.fns.llm.recordUsage?.({ provider: ep.provider, account: ep.account, headers: res.headers })?.catch(() => undefined);
+    }
     return { text, thinking, finishReason: mapStop(finishReason), usage, toolCalls };
 }
 

@@ -243,6 +243,19 @@
     // number unnecessary to state.
     const GUIDED_MS = 7000;
 
+    // Client-side counterpart of procs.ui.button for controls created after page load.
+    // Dynamic widgets must use this factory instead of embedding raw button markup.
+    function actionButton({ action, label = "", className = "", ariaLabel = "" }) {
+        const control = document.createElement("button");
+        control.type = "button";
+        control.className = className;
+        control.dataset.action = action;
+        control.textContent = label;
+        if (ariaLabel) control.setAttribute("aria-label", ariaLabel);
+        return control;
+    }
+
+
     function tourChrome() {
         if (panel) return;
         // The dim is a full-viewport layer with the lit rectangle inside it, so
@@ -259,20 +272,25 @@
         panel.id = "page-tour";
         panel.innerHTML = `<div class="page-tour__head">
     <span data-role="count"></span>
-    <button type="button" data-action="exit" aria-label="End the tour">✕</button>
+    <span data-control="exit-head"></span>
   </div>
   <p class="page-tour__text" data-role="text"></p>
   <p class="page-tour__where" data-role="where"></p>
   <div class="page-tour__foot">
-    <button type="button" class="page-tour__ghost" data-action="back">Back</button>
-    <button type="button" class="page-tour__go" data-action="next"></button>
+    <span data-control="back"></span>
+    <span data-control="next"></span>
   </div>
   <div class="page-tour__end">
     <span class="page-tour__dots" data-role="dots"></span>
-    <button type="button" class="page-tour__ghost" data-action="guide"></button>
-    <button type="button" class="page-tour__ghost" data-action="exit">End tour</button>
+    <span data-control="guide"></span>
+    <span data-control="exit-end"></span>
   </div>
   <div class="page-tour__timer"><i data-role="timer"></i></div>`;
+        panel.querySelector('[data-control="exit-head"]').replaceWith(actionButton({ action: "exit", label: "✕", ariaLabel: "End the tour" }));
+        panel.querySelector('[data-control="back"]').replaceWith(actionButton({ action: "back", label: "Back", className: "page-tour__ghost" }));
+        panel.querySelector('[data-control="next"]').replaceWith(actionButton({ action: "next", className: "page-tour__go" }));
+        panel.querySelector('[data-control="guide"]').replaceWith(actionButton({ action: "guide", className: "page-tour__ghost" }));
+        panel.querySelector('[data-control="exit-end"]').replaceWith(actionButton({ action: "exit", label: "End tour", className: "page-tour__ghost" }));
         document.body.append(dim, panel);
         panel.addEventListener("click", event => {
             const action = event.target.closest("[data-action]")?.dataset.action;

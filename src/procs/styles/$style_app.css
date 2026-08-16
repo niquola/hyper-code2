@@ -7,7 +7,7 @@
  * it compiles the same whether it lives in the workspace or in the project.
  *
  * The design system is project-owned: semantic theme tokens plus small reusable
- * component classes (`btn`, `badge`, `input`, `menu`, and friends). Tailwind
+ * component classes (`ui-button`, `badge`, `input`, `menu`, and friends). Tailwind
  * supplies utilities; no external component framework or theme layer is used.
  * Build screens from semantic colors so the explicit app theme can switch.
  *
@@ -481,20 +481,26 @@ summary::-webkit-details-marker { display: none; }
 .ui-combobox__results:not(:empty) { display: block; }
 
 
-/* Project-owned component primitives. Kept intentionally small and bichrome;
- * semantic success/error colors are reserved for actual state. */
-.btn { display:inline-flex; min-height:2.25rem; align-items:center; justify-content:center; gap:.4rem; border:1px solid var(--ui-input-border); border-radius:.5rem; background:var(--color-base-100); padding:.45rem .8rem; color:var(--color-base-content); font-size:.8125rem; font-weight:600; line-height:1; cursor:pointer; transition:background-color .15s,border-color .15s,opacity .15s; }
-.btn:hover { background:var(--color-base-200); }
-.btn:disabled { cursor:not-allowed; opacity:.45; }
-[data-theme="light"] .btn-primary { border-color:#1f2328 !important; background:#1f2328 !important; color:#fff !important; }
-[data-theme="dark"] .btn-primary { border-color:#8c959f !important; background:#1f2328 !important; color:#f0f6fc !important; }
-.btn-primary:hover { opacity:.88; }
-.btn-ghost { border-color:transparent !important; background:transparent !important; color:var(--theme-base-content) !important; }
-.btn-xs { min-height:1.65rem; padding:.25rem .45rem; font-size:.6875rem; }
-.btn-sm { min-height:2rem; padding:.35rem .65rem; font-size:.75rem; }
-.btn-circle,.btn-square { width:2.25rem; padding:0; }
-.btn-circle { border-radius:9999px; }
-.btn-xs.btn-circle,.btn-xs.btn-square { width:1.65rem; }
+/* Project-owned action component. Feature code renders it through procs.ui.button. */
+.ui-button { display:inline-flex; min-height:2.25rem; align-items:center; justify-content:center; gap:.4rem; border:1px solid var(--ui-input-border); border-radius:.5rem; background:var(--theme-base-100); padding:.45rem .8rem; color:var(--theme-base-content); font-size:.8125rem; font-weight:600; line-height:1; cursor:pointer; transition:background-color .15s,border-color .15s,opacity .15s; }
+.ui-button:hover { background:var(--theme-base-200); }
+[data-theme="light"] .ui-button--default { border-color:var(--ui-input-border) !important; background:#fff !important; color:#1f2328 !important; }
+[data-theme="dark"] .ui-button--default { border-color:var(--ui-input-border) !important; background:#20242b !important; color:#f0f6fc !important; }
+.ui-button--default:hover { background:var(--theme-base-200) !important; }
+.ui-button:disabled,.ui-button[aria-disabled="true"] { cursor:not-allowed; opacity:.45; }
+[data-theme="light"] .ui-button--primary { border-color:#1f2328 !important; background:#1f2328 !important; color:#fff !important; }
+[data-theme="dark"] .ui-button--primary { border-color:#8c959f !important; background:#1f2328 !important; color:#f0f6fc !important; }
+.ui-button--primary:hover { opacity:.88; }
+.ui-button--ghost { border-color:transparent !important; background:transparent !important; color:var(--theme-base-content) !important; }
+.ui-button--danger { border-color:var(--color-error) !important; color:var(--color-error) !important; }
+.ui-button--success { border-color:var(--color-success) !important; background:var(--color-success) !important; color:var(--color-success-content,#fff) !important; }
+.ui-button--warning { border-color:var(--color-warning) !important; background:var(--color-warning) !important; color:var(--color-warning-content,#111) !important; }
+.ui-button--neutral { border-color:var(--color-neutral) !important; background:var(--color-neutral) !important; color:var(--color-neutral-content,#fff) !important; }
+.ui-button--xs { min-height:1.65rem; padding:.25rem .45rem; font-size:.6875rem; }
+.ui-button--sm { min-height:2rem; padding:.35rem .65rem; font-size:.75rem; }
+.ui-button--md { min-height:2.25rem; }
+.ui-button--lg { min-height:2.75rem; padding:.6rem 1rem; font-size:.875rem; }
+.ui-button--active { box-shadow:inset 0 0 0 1px currentColor; }
 .badge { display:inline-flex; min-height:1.25rem; align-items:center; justify-content:center; gap:.25rem; border:1px solid var(--ui-border); border-radius:9999px; background:var(--color-base-200); padding:.1rem .45rem; color:color-mix(in oklab,var(--color-base-content) 70%,transparent); font-size:.6875rem; line-height:1; }
 .badge-sm { min-height:1.125rem; padding:.08rem .38rem; font-size:.625rem; }
 .badge-soft { background:var(--color-base-200); }

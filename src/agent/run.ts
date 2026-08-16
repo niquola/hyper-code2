@@ -45,11 +45,11 @@ export default async function (
             if (active && !active.activeSince) active.activeSince = now;
         } });
         agent.scratchpad = updated.scratchpad;
-        ctx.fns.events.refreshAgentMeta({ agentId: agent.id, reason: 'plan-resumed' });
+        ctx.fns.events.refreshAgentMeta({ agentId: agent.id, section: 'plan', reason: 'plan-resumed' });
     }
     agent.scratchpad.activeStatusLine = await ctx.fns.agent.statusLineForTurn({ agent });
     let consumedUserIdx = -1;
-    const MAX_TURNS = 60;
+    const MAX_TURNS = 300;
     let turns = 0;
 
     let goalIterations = 0;

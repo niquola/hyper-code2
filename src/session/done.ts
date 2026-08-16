@@ -48,7 +48,7 @@ export default async function (
         };
     } });
     agent.scratchpad = updated.scratchpad;
-    ctx.fns.events.refreshAgentMeta({ agentId: agent.id, reason: "plan-done" });
+    ctx.fns.events.refreshAgentMeta({ agentId: agent.id, section: "plan", reason: "plan-done" });
     if (!updated.result.alreadyDone && agent.parentId && agent.scratchpad?.delegation) {
         await ctx.fns.agent.steer({
             from: agent,
@@ -63,6 +63,6 @@ export default async function (
                 : `Completed plan task ${updated.result.progress.done}/${updated.result.progress.total}.`,
         });
     }
-    if (agent.parentId) ctx.fns.events.refreshAgentMeta({ agentId: String(agent.parentId), reason: "team-plan-done" });
+    if (agent.parentId) ctx.fns.events.refreshAgentMeta({ agentId: String(agent.parentId), section: "team", reason: "team-plan-done" });
     return { ok: true, ...updated.result };
 }

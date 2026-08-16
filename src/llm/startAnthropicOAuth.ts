@@ -4,12 +4,16 @@ import { createServer } from "node:http";
 /**
  * Start the Anthropic OAuth authorization flow.
  * @param opts.listen Whether to listen locally for the OAuth callback.
+ * @param opts.account Credential slot the resulting tokens are saved into.
+ * @param opts.label Human-readable name for the account, e.g. the e-mail.
  */
 export default async function (
     ctx: Context,
     _session: Session | null,
     opts?: {
-        /** Value used for the listen option. */ listen?: boolean },
+        /** Value used for the listen option. */ listen?: boolean;
+        /** Credential slot to log into, allowing a second Claude account. @default "default" */ account?: string;
+        /** Human-readable account name shown in the UI. */ label?: string | null },
 ): Promise<{ authorizationUrl: string; expiresAt: number; callbackListening: boolean }> {
     const state = randomBase64Url(32);
     const verifier = randomBase64Url(32);
@@ -21,7 +25,11 @@ export default async function (
     for (const p of store.pending.values()) try { p.server?.close(); } catch {}
     store.pending.clear();
     store.lastError = null;
-    const pending: any = { state, verifier, redirectUri: c.redirectUri, createdAt: Date.now(), expiresAt: Date.now() + 10 * 60_000, status: "pending", server: null };
+    // Which credential slot this login fills travels with the pending flow, so
+    // the callback saves a second Claude account instead of overwriting the
+    // first one.
+    const account = String(opts?.account ?? "").trim().slice(0, 40) || "default";
+    const pending: any = { state, verifier, redirectUri: c.redirectUri, account, label: opts?.label ?? null, createdAt: Date.now(), expiresAt: Date.now() + 10 * 60_000, status: "pending", server: null };
     store.pending.set(state, pending);
 
     let callbackListening = false;

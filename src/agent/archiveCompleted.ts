@@ -21,7 +21,7 @@ export default async function (
       if (scratchpad.delegation?.status !== "ready") continue;
       await ctx.fns.session.archive({ id: String(row.id) });
       archived.push(String(row.id));
-      ctx.fns.events.refreshAgentMeta({ agentId: String(row.parent_id), reason: "team-timeout-archive" });
+      ctx.fns.events.refreshAgentMeta({ agentId: String(row.parent_id), section: "team", reason: "team-timeout-archive" });
     }
     return { archived };
 }

@@ -1,8 +1,13 @@
 // Parse agent.model "provider:modelId" → {url, apiKey, modelId, provider, api}.
 // "modelId" without prefix defaults to provider "lmstudio".
+//
+// An optional account segment selects WHICH credential of that provider to use:
+// "codex/personal:gpt-5.6-sol". Omitted means account "default" — the historical
+// single-credential behaviour, unchanged. Quota belongs to a subscription
+// account, not to a provider, so parking and usage tracking key on both.
 /** Performs the llm.resolveEndpoint runtime operation. */
 /**
- * Parse agent.model "provider:modelId" → {url, apiKey, modelId, provider, api}.
+ * Parse agent.model "provider[/account]:modelId" into a callable endpoint.
  * @param opts.model Model identifier.
  */
 export default async function (ctx: Context, _session: Session | null, opts: {
@@ -11,29 +16,36 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     apiKey: string | null;
     modelId: string;
     provider: string;
+    account: string;
+    kind: "subscription" | "api" | "local";
     api: "openai" | "anthropic" | "responses" | "mock";
 }> {
     const model = opts.model;
-    const m = /^([a-z][\w\-]*):(.+)$/.exec(model);
+    const m = /^([a-z][\w\-]*)(?:\/([\w\-.]+))?:(.+)$/.exec(model);
     const provider = m ? m[1]! : "lmstudio";
-    const modelId = m ? m[2]! : model;
+    const account = (m?.[2] ?? "default");
+    const modelId = m ? m[3]! : model;
     const p = PROVIDERS[provider];
     if (!p) throw new Error(`unknown provider: ${provider}`);
 
     // baseUrl + apiKey come from the provider's resolveBaseUrl/resolveApiKey,
     // which themselves consult declared settings (src/llm/$setting_*.ts).
     const baseUrl = await p.resolveBaseUrl(ctx);
-    const apiKey = p.resolveApiKey ? await p.resolveApiKey(ctx) : null;
+    const apiKey = p.resolveApiKey ? await p.resolveApiKey(ctx, account) : null;
     const url = p.api === "anthropic" ? `${baseUrl}/v1/messages`
         : p.api === "responses" ? `${baseUrl}/responses`
             : `${baseUrl}/chat/completions`;
-    return { url, apiKey, modelId, provider, api: p.api };
+    return { url, apiKey, modelId, provider, account, kind: p.kind, api: p.api };
 }
 
 type ProviderConfig = {
     api: "openai" | "anthropic" | "responses" | "mock";
+    // subscription = fixed quota per rolling window; a 429 means "wait until it
+    // resets", money cannot fix it, so agents get parked. api = pay-per-token;
+    // a 429 is short throttling and stays a normal retry. local = no limits.
+    kind: "subscription" | "api" | "local";
     resolveBaseUrl: (ctx: Context) => string | Promise<string>;
-    resolveApiKey?: (ctx: Context) => string | null | Promise<string | null>;
+    resolveApiKey?: (ctx: Context, account: string) => string | null | Promise<string | null>;
 };
 
 // Secret declarations contain either a provider reference (env://, op://) or a
@@ -59,12 +71,14 @@ function decodeJwtExp(token: string): number | null {
 const PROVIDERS: Record<string, ProviderConfig> = {
     lmstudio: {
         api: "openai",
+        kind: "local",
         // src/llm/$setting_lmstudioBaseUrl.ts handles env LMSTUDIO_URL → default.
         resolveBaseUrl: async (ctx) => ((await declaredString('lmstudioBaseUrl')(ctx)) ?? 'http://localhost:1234') + '/v1',
     },
     kimi: {
         // Moonshot-AI OpenAI-compat (NOT the kimi.com/coding subscription — use kimi-coding: for that)
         api: "openai",
+        kind: "api",
         resolveBaseUrl: () => "https://api.moonshot.ai/v1",
         resolveApiKey: declaredSecret('kimiApiKey'),
     },
@@ -74,13 +88,14 @@ const PROVIDERS: Record<string, ProviderConfig> = {
         // call (no caching). JWT exp is checked; expired tokens return null so
         // the caller fails loud instead of silently using a stale token.
         api: "anthropic",
+        kind: "subscription",
         resolveBaseUrl: () => "https://api.kimi.com/coding",
-        resolveApiKey: (ctx) => {
-            if (ctx.env.KIMI_CODING_API_KEY) return ctx.env.KIMI_CODING_API_KEY;
+        resolveApiKey: (ctx, account) => {
+            if (account === "default" && ctx.env.KIMI_CODING_API_KEY) return ctx.env.KIMI_CODING_API_KEY;
             try {
                 const { readFileSync } = require("node:fs");
-                const home = ctx.env.HOME ?? process.env.HOME ?? "";
-                const raw = readFileSync(`${home}/.kimi/credentials/kimi-code.json`, "utf8");
+                const { file } = ctx.fns.llm.accountCredentialPath({ provider: "kimi-coding", account });
+                const raw = readFileSync(file!, "utf8");
                 const j = JSON.parse(raw);
                 const tok = j.access_token;
                 if (!tok) return null;
@@ -99,6 +114,7 @@ const PROVIDERS: Record<string, ProviderConfig> = {
     },
     anthropic: {
         api: "anthropic",
+        kind: "api",
         resolveBaseUrl: () => "https://api.anthropic.com",
         resolveApiKey: declaredSecret('anthropicApiKey'),
     },
@@ -106,6 +122,7 @@ const PROVIDERS: Record<string, ProviderConfig> = {
         // Anthropic subscription via the Claude Code CLI's keychain entry.
         // Token is fetched/refreshed in streamAnthropic at request time.
         api: "anthropic",
+        kind: "subscription",
         resolveBaseUrl: () => "https://api.anthropic.com",
         resolveApiKey: () => null,
     },
@@ -113,26 +130,31 @@ const PROVIDERS: Record<string, ProviderConfig> = {
         // Managed Claude Pro/Max OAuth. Decryption + refresh happen lazily in
         // streamAnthropic, immediately before the request.
         api: "anthropic",
+        kind: "subscription",
         resolveBaseUrl: () => "https://api.anthropic.com",
         resolveApiKey: () => null,
     },
     openai: {
         api: "openai",
+        kind: "api",
         resolveBaseUrl: () => "https://api.openai.com/v1",
         resolveApiKey: declaredSecret('openaiApiKey'),
     },
     groq: {
         api: "openai",
+        kind: "api",
         resolveBaseUrl: () => "https://api.groq.com/openai/v1",
         resolveApiKey: declaredSecret('groqApiKey'),
     },
     openrouter: {
         api: "openai",
+        kind: "api",
         resolveBaseUrl: () => "https://openrouter.ai/api/v1",
         resolveApiKey: declaredSecret('openrouterApiKey'),
     },
     mock: {
         api: "mock",
+        kind: "local",
         resolveBaseUrl: () => "mock://local",
     },
     codex: {
@@ -141,12 +163,13 @@ const PROVIDERS: Record<string, ProviderConfig> = {
         // streamCodex() always re-asks refreshCodex() right before sending,
         // so an expired access_token here is fine — it gets refreshed there.
         api: "responses",
+        kind: "subscription",
         resolveBaseUrl: () => "https://chatgpt.com/backend-api/codex",
-        resolveApiKey: (ctx) => {
+        resolveApiKey: (ctx, account) => {
             try {
                 const { readFileSync } = require("node:fs");
-                const home = ctx.env.HOME ?? process.env.HOME ?? "";
-                const raw = readFileSync(`${home}/.codex/auth.json`, "utf8");
+                const { file } = ctx.fns.llm.accountCredentialPath({ provider: "codex", account });
+                const raw = readFileSync(file!, "utf8");
                 return JSON.parse(raw)?.tokens?.access_token ?? null;
             } catch { return null; }
         },

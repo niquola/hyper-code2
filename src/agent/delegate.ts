@@ -39,6 +39,6 @@ export default async function (
         params: [now, now, child.id],
     });
     ctx.fns.agent.wakeWorker({});
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, reason: "delegate" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, section: "team", reason: "delegate" });
     return { id: child.id, status: "working" as const };
 }

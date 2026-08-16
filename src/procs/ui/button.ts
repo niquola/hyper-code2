@@ -1,45 +1,76 @@
-// A control that does something, and therefore one that carries `data-action` —
-// the verb, not the label, so `page.click({ action: "materialize" })` keeps
-// working when the wording changes. Give it the `entity`/`id` it acts on and the
-// same descriptor addresses it from anywhere on the page.
-//
-// `post`/`get` wire it to htmx; without either it is a plain button for a form
-// to submit or for client.js to handle.
-// the shared component layer's `btn`. `default` is the quiet outline one a toolbar is full of;
-// `primary` is the one action a screen is actually about.
+// The single shared renderer for clickable controls and action-styled links.
+// Feature renderers describe semantics; all visual variants are owned here.
 const TONE = {
-    default: "btn-outline", primary: "btn-primary", danger: "btn-error btn-outline",
-    ghost: "btn-ghost", success: "btn-success", warning: "btn-warning", neutral: "btn-neutral",
+    default: "ui-button--default", primary: "ui-button--primary", danger: "ui-button--danger",
+    ghost: "ui-button--ghost", success: "ui-button--success", warning: "ui-button--warning", neutral: "ui-button--neutral",
 } as const;
 
+const SIZE = { xs: "ui-button--xs", sm: "ui-button--sm", md: "ui-button--md", lg: "ui-button--lg" } as const;
+
 /**
- * Perform button for the ui subsystem.
- * @param opts.action The action URL.
- * @param opts.label The display label.
- * @param opts.entity The entity value used by the operation.
- * @param opts.id The target identifier.
- * @param opts.post The post value used by the operation.
- * @param opts.get The get value used by the operation.
- * @param opts.vals The vals value used by the operation.
- * @param opts.target The operation target.
- * @param opts.tone The tone value used by the operation.
- * @param opts.title The display title.
- * @param opts.disabled The disabled value used by the operation.
- * @param opts.name The target name.
- * @param opts.value The value to apply.
+ * Render the shared application button component.
+ *
+ * Use this for submit buttons, client actions, htmx actions, and links that look
+ * like buttons. Feature code must not own visual button classes.
+ *
+ * @param opts.action Stable semantic action name used by UI automation.
+ * @param opts.label Visible text; required unless html supplies accessible content.
+ * @param opts.html Trusted component-owned inner HTML, typically an icon plus escaped text.
+ * @param opts.href Render an anchor button pointing to this URL.
+ * @param opts.element Render a disclosure summary instead of a native button. @default "button"
+ * @param opts.appearance Render either the standard visual button or a semantic plain control. @default "button"
+ * @param opts.type Native button type. @default "button", or "submit" when name is set.
+ * @param opts.entity Entity kind used by UI automation.
+ * @param opts.id Entity identifier used by UI automation.
+ * @param opts.uiRole Semantic UI role used by automation, distinct from the ARIA role attribute.
+ * @param opts.status Semantic UI status used by automation.
+ * @param opts.active Apply the selected/active visual state.
+ * @param opts.post htmx POST URL.
+ * @param opts.get htmx GET URL.
+ * @param opts.vals htmx values serialized as JSON.
+ * @param opts.target htmx target selector. @default "#main"
+ * @param opts.swap htmx swap strategy. @default "innerHTML"
+ * @param opts.tone Visual semantic tone. @default "default"
+ * @param opts.size Component size. @default "sm"
+ * @param opts.title Accessible tooltip text.
+ * @param opts.ariaLabel Accessible label for icon-only controls.
+ * @param opts.disabled Disable the control.
+ * @param opts.name Submitted field name.
+ * @param opts.value Submitted field value. @default "1"
+ * @param opts.class Layout-only utility classes; visual styling belongs to the component.
+ * @param opts.attrs Additional safe HTML attributes needed by platform integrations.
  */
 export default function (ctx: Context, _session: Session | null, opts: {
-    action: string; label: string; entity?: string; id?: string;
-    post?: string; get?: string; vals?: Record<string, any>; target?: string;
-    tone?: keyof typeof TONE; title?: string; disabled?: boolean; name?: string; value?: string;
+    action?: string; label?: string; html?: string; href?: string; element?: "button" | "summary"; appearance?: "button" | "plain";
+    type?: "submit" | "button" | "reset"; entity?: string; id?: string; uiRole?: string; status?: string; active?: boolean;
+    post?: string; get?: string; vals?: Record<string, any>; target?: string; swap?: string;
+    tone?: keyof typeof TONE; size?: keyof typeof SIZE; title?: string; ariaLabel?: string;
+    disabled?: boolean; name?: string; value?: string; class?: string;
+    attrs?: Record<string, string | number | boolean | undefined>;
 }): string {
-    const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
-    const hx = opts.post ? `hx-post="${esc(opts.post)}"` : opts.get ? `hx-get="${esc(opts.get)}"` : "";
-    const vals = opts.vals ? ` hx-vals="${esc(JSON.stringify(opts.vals))}"` : "";
-    const target = hx ? ` hx-target="${esc(opts.target ?? "#main")}" hx-swap="innerHTML"` : "";
-    // `name` makes it a submit that says which button was pressed — how a Back or
-    // a Save-draft beside a form is told apart from its Submit.
-    const kind = opts.name ? ` type="submit" name="${esc(opts.name)}" value="${esc(opts.value ?? "1")}"` : "";
+    const esc = (s: any) => ctx.fns.procs.ui.escape({ text: String(s ?? "") });
+    const attr = (name: string, value: string | number | boolean | undefined) => {
+        if (value === undefined || value === false) return "";
+        if (value === true) return ` ${name}`;
+        return ` ${name}="${esc(value)}"`;
+    };
+    const extra = Object.entries(opts.attrs ?? {}).map(([name, value]) => {
+        if (!/^(?:data-[a-z0-9_:-]+|aria-[a-z0-9_:-]+|hx-[a-z0-9_:-]+|onclick|style|id|form|formaction|formmethod|popovertarget|popovertargetaction|role|target|rel)$/.test(name)) {
+            throw new Error(`Unsupported button attribute: ${name}`);
+        }
+        return attr(name, value);
+    }).join("");
+    const hx = opts.post ? attr("hx-post", opts.post) : opts.get ? attr("hx-get", opts.get) : "";
+    const vals = opts.vals ? attr("hx-vals", JSON.stringify(opts.vals)) : "";
+    const htmx = hx ? `${hx}${attr("hx-target", opts.target ?? "#main")}${attr("hx-swap", opts.swap ?? "innerHTML")}` : "";
+    const content = opts.html ?? esc(opts.label ?? "");
+    const classes = opts.appearance === "plain"
+        ? opts.class ?? ""
+        : `ui-button ${SIZE[opts.size ?? "sm"]} ${TONE[opts.tone ?? "default"]}${opts.active ? " ui-button--active" : ""}${opts.class ? ` ${opts.class}` : ""}`;
+    const common = `${attr("class", classes)} ${ctx.fns.procs.ui.attr({ action: opts.action, entity: opts.entity, id: opts.id, role: opts.uiRole, status: opts.status })}${attr("title", opts.title)}${attr("aria-label", opts.ariaLabel)}${opts.disabled ? " disabled aria-disabled=\"true\"" : ""}${htmx}${vals}${extra}`;
 
-    return `<button${kind} class="btn btn-sm ${TONE[opts.tone ?? "default"]}" ${ctx.fns.procs.ui.attr({ action: opts.action, entity: opts.entity, id: opts.id })}${opts.title ? ` title="${esc(opts.title)}"` : ""}${opts.disabled ? " disabled" : ""} ${hx}${vals}${target}>${esc(opts.label)}</button>`;
+    if (opts.element === "summary") return `<summary${common}>${content}</summary>`;
+    if (opts.href) return `<a href="${esc(opts.href)}"${common}>${content}</a>`;
+    const type = opts.type ?? (opts.name ? "submit" : "button");
+    return `<button type="${type}"${attr("name", opts.name)}${attr("value", opts.name ? opts.value ?? "1" : opts.value)}${common}>${content}</button>`;
 }

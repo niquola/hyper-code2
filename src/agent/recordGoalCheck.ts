@@ -18,6 +18,6 @@ export default async function (
     if (entry.status === "achieved") goal.enabled = false;
     await ctx.fns.procs.db.run({ sql: "UPDATE agents SET goal = ?::jsonb, updated_at = ? WHERE id = ?", params: [JSON.stringify(goal), entry.at, opts.agent.id] });
     opts.agent.goal = goal;
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, reason: "goal-check" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.agent.id, section: "goal", reason: "goal-check" });
     return goal;
 }

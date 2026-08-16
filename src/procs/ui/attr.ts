@@ -5,7 +5,7 @@
 //   `<section ${ctx.fns.procs.ui.attr({ page: "questionnaire" })}>`
 //   `<tr ${ctx.fns.procs.ui.attr({ entity: "Patient", id: "pt-1", status: "active" })}>`
 //   `<td ${ctx.fns.procs.ui.attr({ role: "name" })}>`
-//   `<button ${ctx.fns.procs.ui.attr({ action: "delete", id: "pt-1" })}>`
+//   `ctx.fns.procs.ui.button({ action: "delete", id: "pt-1", label: "Delete" })`
 //   `<form ${ctx.fns.procs.ui.attr({ form: "search" })}>`
 //
 // The eight keys, and what each promises:

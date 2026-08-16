@@ -22,11 +22,14 @@ export default function (ctx: Context, _session: Session | null, opts: {
     const anthropic = 'M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z';
     const kimi = 'M21.765.351C22.998.351 24 1.353 24 2.586S22.998 4.82 21.765 4.82h-1.974c-.15 0-.26-.12-.26-.26V2.586A2.237 2.237 0 0 1 21.765.35M9.41 13.388l8.447-8.377c.16-.16.07-.471-.14-.471h-4.55s-.1.02-.14.06l-9.099 9.029c-.14.14-.35.02-.35-.21V4.81c0-.15-.1-.27-.221-.27H.22c-.12 0-.22.12-.22.27v18.57c0 .15.1.27.22.27h3.137c.12 0 .22-.12.22-.27v-3.79c0-.08.03-.16.08-.21l2.826-2.796c.07-.07.16-.08.241-.03l7.546 5.551a8.9 8.9 0 0 0 4.018 1.493c.12.01.23-.11.23-.27V19.76c0-.14-.08-.25-.19-.26a5.8 5.8 0 0 1-2.355-.942l-6.533-4.73c-.14-.09-.15-.32-.03-.441';
 
-    const path = key.startsWith('codex:') || key.startsWith('openai:') || key.startsWith('openai/') || key.includes('gpt-')
+    // Provider prefix decides the mark; the loose `includes` fallbacks only
+    // catch bare model ids. kimi-coding: is the Kimi subscription and must not
+    // fall through to the generic chip.
+    const path = key.startsWith('codex:') || key.startsWith('codex/') || key.startsWith('openai:') || key.startsWith('openai/') || key.includes('gpt-')
         ? openai
-        : key.startsWith('claude-code:') || key.startsWith('anthropic:') || key.startsWith('anthropic-oauth:') || key.includes('claude')
+        : key.startsWith('claude-code:') || key.startsWith('claude-code/') || key.startsWith('anthropic:') || key.startsWith('anthropic/') || key.startsWith('anthropic-oauth:') || key.startsWith('anthropic-oauth/') || key.includes('claude')
             ? anthropic
-            : key.startsWith('kimi:') || key.startsWith('moonshot:') || key.includes('kimi')
+            : key.startsWith('kimi:') || key.startsWith('kimi/') || key.startsWith('kimi-coding:') || key.startsWith('kimi-coding/') || key.startsWith('moonshot:') || key.includes('kimi')
                 ? kimi
                 : null;
 

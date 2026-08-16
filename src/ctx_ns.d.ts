@@ -37,9 +37,11 @@ declare global {
             listPromptPresets: Injected<typeof import("./agent/listPromptPresets").default>;
             listWatches: Injected<typeof import("./agent/listWatches").default>;
             markFunctionRag: Injected<typeof import("./agent/markFunctionRag").default>;
+            modelPicker: Injected<typeof import("./agent/modelPicker").default>;
             newForm: Injected<typeof import("./agent/newForm").default>;
             nextId: Injected<typeof import("./agent/nextId").default>;
             normalizeSleepContext: Injected<typeof import("./agent/normalizeSleepContext").default>;
+            parkOnUsageLimit: Injected<typeof import("./agent/parkOnUsageLimit").default>;
             pollWatches: Injected<typeof import("./agent/pollWatches").default>;
             readAndSummarize: Injected<typeof import("./agent/readAndSummarize").default>;
             recordGoalCheck: Injected<typeof import("./agent/recordGoalCheck").default>;
@@ -55,6 +57,7 @@ declare global {
             sanitizeHtmlBody: Injected<typeof import("./agent/sanitizeHtmlBody").default>;
             setAutomation: Injected<typeof import("./agent/setAutomation").default>;
             setGoal: Injected<typeof import("./agent/setGoal").default>;
+            setModel: Injected<typeof import("./agent/setModel").default>;
             setSleepActive: Injected<typeof import("./agent/setSleepActive").default>;
             setStatusLine: Injected<typeof import("./agent/setStatusLine").default>;
             sleep: Injected<typeof import("./agent/sleep").default>;
@@ -70,6 +73,7 @@ declare global {
             toolLang: Injected<typeof import("./agent/toolLang").default>;
             toolMeta: Injected<typeof import("./agent/toolMeta").default>;
             unarchiveMember: Injected<typeof import("./agent/unarchiveMember").default>;
+            unpark: Injected<typeof import("./agent/unpark").default>;
             waitForEvent: Injected<typeof import("./agent/waitForEvent").default>;
             wakeAt: Injected<typeof import("./agent/wakeAt").default>;
             wakeIn: Injected<typeof import("./agent/wakeIn").default>;
@@ -288,26 +292,35 @@ declare global {
             users: Injected<typeof import("../plugins/google/src/gworkspace/users").default>;
         };
         llm: {
+            accountCredentialExists: Injected<typeof import("./llm/accountCredentialExists").default>;
+            accountCredentialPath: Injected<typeof import("./llm/accountCredentialPath").default>;
+            accountLoginStatus: Injected<typeof import("./llm/accountLoginStatus").default>;
+            accountRegistry: Injected<typeof import("./llm/accountRegistry").default>;
             anthropicOAuthConstants: Injected<typeof import("./llm/anthropicOAuthConstants").default>;
             anthropicOAuthStatus: Injected<typeof import("./llm/anthropicOAuthStatus").default>;
             call: Injected<typeof import("./llm/call").default>;
+            classifyError: Injected<typeof import("./llm/classifyError").default>;
             completeAnthropicOAuth: Injected<typeof import("./llm/completeAnthropicOAuth").default>;
             connectFetch: Injected<typeof import("./llm/connectFetch").default>;
             decryptOAuthSecret: Injected<typeof import("./llm/decryptOAuthSecret").default>;
             encryptOAuthSecret: Injected<typeof import("./llm/encryptOAuthSecret").default>;
             exchangeAnthropicOAuth: Injected<typeof import("./llm/exchangeAnthropicOAuth").default>;
             getAnthropicOAuthToken: Injected<typeof import("./llm/getAnthropicOAuthToken").default>;
+            listAccounts: Injected<typeof import("./llm/listAccounts").default>;
             listModels: Injected<typeof import("./llm/listModels").default>;
             localize: Injected<typeof import("./llm/localize").default>;
             logoutAnthropicOAuth: Injected<typeof import("./llm/logoutAnthropicOAuth").default>;
             oauthEncryptionKey: Injected<typeof import("./llm/oauthEncryptionKey").default>;
             parseAnthropicAuthorizationInput: Injected<typeof import("./llm/parseAnthropicAuthorizationInput").default>;
             parseSSE: Injected<typeof import("./llm/parseSSE").default>;
+            recordUsage: Injected<typeof import("./llm/recordUsage").default>;
             refreshClaudeCode: Injected<typeof import("./llm/refreshClaudeCode").default>;
             refreshCodex: Injected<typeof import("./llm/refreshCodex").default>;
             refreshKimiCode: Injected<typeof import("./llm/refreshKimiCode").default>;
+            removeAccount: Injected<typeof import("./llm/removeAccount").default>;
             resolveEndpoint: Injected<typeof import("./llm/resolveEndpoint").default>;
             saveAnthropicOAuth: Injected<typeof import("./llm/saveAnthropicOAuth").default>;
+            startAccountLogin: Injected<typeof import("./llm/startAccountLogin").default>;
             startAnthropicOAuth: Injected<typeof import("./llm/startAnthropicOAuth").default>;
             stream: Injected<typeof import("./llm/stream").default>;
             streamAnthropic: Injected<typeof import("./llm/streamAnthropic").default>;
@@ -317,6 +330,20 @@ declare global {
             toAnthropicMessages: Injected<typeof import("./llm/toAnthropicMessages").default>;
             toCodexInput: Injected<typeof import("./llm/toCodexInput").default>;
             toOpenAIMessages: Injected<typeof import("./llm/toOpenAIMessages").default>;
+            usageOverview: Injected<typeof import("./llm/usageOverview").default>;
+        };
+        llms: {
+            accountsCard: Injected<typeof import("./llms/accountsCard").default>;
+            completeClaudeManagedOAuth: Injected<typeof import("./llms/completeClaudeManagedOAuth").default>;
+            confirmRemoveAccount: Injected<typeof import("./llms/confirmRemoveAccount").default>;
+            loginPopup: Injected<typeof import("./llms/loginPopup").default>;
+            loginPopupFor: Injected<typeof import("./llms/loginPopupFor").default>;
+            loginProgressFor: Injected<typeof import("./llms/loginProgressFor").default>;
+            popupButton: Injected<typeof import("./llms/popupButton").default>;
+            removeAccount: Injected<typeof import("./llms/removeAccount").default>;
+            startClaudeManagedOAuth: Injected<typeof import("./llms/startClaudeManagedOAuth").default>;
+            startLoginFromPopup: Injected<typeof import("./llms/startLoginFromPopup").default>;
+            submitLoginCode: Injected<typeof import("./llms/submitLoginCode").default>;
         };
         markdown: {
             highlight: Injected<typeof import("./markdown/highlight").default>;
@@ -710,6 +737,8 @@ declare global {
         ui: {
             action: Injected<typeof import("./ui/action").default>;
             agentMetaPanel: Injected<typeof import("./ui/agentMetaPanel").default>;
+            agentMetaSection: Injected<typeof import("./ui/agentMetaSection").default>;
+            agentMetaSectionHtml: Injected<typeof import("./ui/agentMetaSectionHtml").default>;
             chatColumn: Injected<typeof import("./ui/chatColumn").default>;
             chatEventCard: Injected<typeof import("./ui/chatEventCard").default>;
             controlScript: Injected<typeof import("./ui/controlScript").default>;
@@ -725,10 +754,12 @@ declare global {
             notify: Injected<typeof import("./ui/notify").default>;
             openAgent: Injected<typeof import("./ui/openAgent").default>;
             openFile: Injected<typeof import("./ui/openFile").default>;
+            parkedCard: Injected<typeof import("./ui/parkedCard").default>;
             pending: Injected<typeof import("./ui/pending").default>;
             planTaskRow: Injected<typeof import("./ui/planTaskRow").default>;
             popup: Injected<typeof import("./ui/popup").default>;
             popupContent: Injected<typeof import("./ui/popupContent").default>;
+            previewFile: Injected<typeof import("../.hyper/ui/previewFile").default>;
             progressBar: Injected<typeof import("./ui/progressBar").default>;
             reflectionDropdown: Injected<typeof import("./ui/reflectionDropdown").default>;
             script: Injected<typeof import("./ui/script").default>;
@@ -736,6 +767,7 @@ declare global {
             state: Injected<typeof import("./ui/state").default>;
             statusBadge: Injected<typeof import("./ui/statusBadge").default>;
             toggle: Injected<typeof import("./ui/toggle").default>;
+            usageDial: Injected<typeof import("./ui/usageDial").default>;
             wakeTimer: Injected<typeof import("./ui/wakeTimer").default>;
         };
         workspace: {
@@ -789,6 +821,11 @@ declare global {
         }
         namespace git {
             type Result = import("./git/Result").Result;
+        }
+        namespace llm {
+            type FailureInfo = import("./llm/FailureInfo").FailureInfo;
+            type UsageSnapshot = import("./llm/UsageSnapshot").UsageSnapshot;
+            type UsageWindow = import("./llm/UsageWindow").UsageWindow;
         }
         namespace nav {
             type Item = import("./nav/Item").Item;

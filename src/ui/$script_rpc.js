@@ -10,7 +10,23 @@
             init() {
                 document.addEventListener('click', event => {
                     const elt = event.target.closest?.('[hx-popup]');
-                    if (!elt || (elt.tagName === 'FORM' && event.target.closest('button[type="submit"],input[type="submit"]'))) return;
+                    if (!elt) return;
+                    // A submit button is inside the form carrying hx-popup.
+                    // Browser submit dispatch proved unreliable after HTMX swaps,
+                    // so handle the click here — but SEND BEFORE showing loading,
+                    // otherwise replacing #app-popup-body detaches the form and
+                    // FormData becomes empty.
+                    if (elt.tagName === 'FORM') {
+                        // A <button> inside a form defaults to submit even when
+                        // type is omitted. Honour HTML semantics; restricting
+                        // this to explicit [type=submit] made secondary OAuth
+                        // forms stick on loading after their callback URL.
+                        const button = event.target.closest('button,input[type="submit"]');
+                        if (!button || button.getAttribute('type') === 'button') return;
+                        event.preventDefault();
+                        send(elt);
+                        return;
+                    }
                     event.preventDefault();
                     send(elt);
                 });
@@ -19,6 +35,21 @@
                     if (!form) return;
                     event.preventDefault();
                     send(form);
+                });
+                // HTMX does not swap 4xx/5xx responses. Popup RPC used to stay
+                // on "loading…" even though the server had already returned a
+                // useful error. Render only the error string via textContent —
+                // never raw provider/user HTML.
+                document.body.addEventListener('htmx:responseError', event => {
+                    const target = event.detail?.target;
+                    if (target?.id !== 'app-popup-body') return;
+                    let message = `Request failed (${event.detail?.xhr?.status || 'unknown'})`;
+                    try { message = JSON.parse(event.detail.xhr.responseText)?.error || message; } catch {}
+                    const box = document.createElement('div');
+                    box.className = 'rounded-lg border border-error/30 bg-error/10 p-3 text-xs text-error';
+                    box.textContent = message;
+                    target.replaceChildren(box);
+                    document.getElementById('app-popup-title').textContent = 'Could not complete';
                 });
                 document.body.addEventListener('secure-input-refresh', () => {
                     const host = document.getElementById('secure-input-host');
@@ -41,8 +72,12 @@
             const method = elt.getAttribute('hx-popup');
             const title = elt.getAttribute('title') || elt.getAttribute('aria-label') || method;
             const secureSubmit = method === 'secureInput.submit';
+            // Snapshot everything htmx needs BEFORE loading() removes the source
+            // form from the DOM. htmx source may be the detached element, but
+            // values are already complete and target is explicit.
+            const values = { method, params: JSON.stringify(params) };
             if (!secureSubmit) window.hyperPopup?.loading(title, 'rpc');
-            htmx.ajax('POST', '/rpc', { source: elt, target: '#app-popup-body', swap: 'innerHTML', values: { method, params: JSON.stringify(params) } });
+            htmx.ajax('POST', '/rpc', { target: '#app-popup-body', swap: 'innerHTML', values });
         }
     };
     if (!install()) document.addEventListener('DOMContentLoaded', install, { once: true });

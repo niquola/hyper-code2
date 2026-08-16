@@ -23,6 +23,6 @@ export default async function (
     });
     const agent = (ctx.state as any).agent?.[opts.id];
     if (agent) agent.reflection = reflection;
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, reason: "nudge-cleared" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, section: "automation", reason: "nudge-cleared" });
     return { cleared: true };
 }

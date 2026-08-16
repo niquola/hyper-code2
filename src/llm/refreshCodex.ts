@@ -8,13 +8,17 @@ import { readFileSync, writeFileSync } from "node:fs";
 const OAUTH_HOST = "https://auth.openai.com";
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"; // codex client id (from JWT aud)
 
-/** Performs the llm.refreshCodex runtime operation. */
+/** Refresh credentials managed by Codex for one named account. */
 /**
- * Refresh credentials managed by Codex.
+ * Return a valid Codex access token, refreshing and persisting the selected account.
+ * @param opts.account Credential slot; "personal" maps to ~/.codex/auth.personal.json.
  */
-export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string | null> {
-    const home = ctx.env.HOME ?? process.env.HOME ?? "";
-    const path = `${home}/.codex/auth.json`;
+export default async function (ctx: Context, _session: Session | null, opts?: {
+    /** Credential slot within Codex. @default "default" */ account?: string }): Promise<string | null> {
+    const account = String(opts?.account ?? "").trim() || "default";
+    const { file } = ctx.fns.llm.accountCredentialPath({ provider: "codex", account });
+    if (!file) return null;
+    const path = file;
 
     let creds: any;
     try { creds = JSON.parse(readFileSync(path, "utf8")); }

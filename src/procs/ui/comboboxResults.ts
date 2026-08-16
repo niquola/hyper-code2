@@ -11,7 +11,7 @@
  * Perform combobox results for the ui subsystem.
  * @param opts.name The target name.
  * @param opts.url The target URL.
- * @param opts.items The items value used by the operation.
+ * @param opts.items Matching options rendered as field selections or navigation links.
  */
 export default function (ctx: Context, _session: Session | null, opts: { name: string; url: string; items: Array<{ value: string; label: string; hint?: string; href?: string }> }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
@@ -19,9 +19,12 @@ export default function (ctx: Context, _session: Session | null, opts: { name: s
     const cls = "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-base-content hover:bg-base-200";
     return opts.items.map(o => {
         const inside = `<span class="min-w-0 truncate">${esc(o.label)}</span>${o.hint ? `<span class="ml-2 shrink-0 text-xs text-base-content/60">${esc(o.hint)}</span>` : ""}`;
-        const marks = ctx.fns.procs.ui.attr({ action: "pick", id: o.value });
-        return o.href
-            ? `<a class="ui-focusable ${cls}" href="${esc(o.href)}" hx-get="${esc(o.href)}" hx-target="#main" hx-swap="innerHTML" hx-push-url="true" ${marks} role="option">${inside}</a>`
-            : `<button type="button" class="${cls}" hx-get="${esc(opts.url)}?pick=${encodeURIComponent(o.value)}&name=${encodeURIComponent(opts.name)}" hx-target="closest [data-field]" hx-swap="outerHTML" ${marks} role="option">${inside}</button>`;
+        return ctx.fns.procs.ui.button({
+            action: "pick", id: o.value, html: inside, href: o.href,
+            get: o.href ? undefined : `${opts.url}?pick=${encodeURIComponent(o.value)}&name=${encodeURIComponent(opts.name)}`,
+            target: o.href ? "#main" : "closest [data-field]", swap: o.href ? "innerHTML" : "outerHTML",
+            appearance: "plain", class: `${o.href ? "ui-focusable " : ""}${cls}`,
+            attrs: { role: "option", ...(o.href ? { "hx-push-url": "true" } : {}) },
+        });
     }).join("");
 }

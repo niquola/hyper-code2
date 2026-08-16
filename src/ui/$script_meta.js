@@ -1,5 +1,14 @@
-// Only interactions with unsaved task rows need JavaScript. Adding and saving
-// rows are ordinary HTMX + form operations; delegation survives live swaps.
+// The agent inspector panel, client side.
+//
+// 1) Plan editor rows: adding and saving are ordinary HTMX + form operations;
+//    only removing and reordering unsaved rows needs JavaScript.
+//
+// 2) Section redraws: the server pushes ui.metaSection (events.refreshAgentMeta)
+//    over the shared event stream, and the section re-fetches itself through
+//    the RPC endpoint (ui.agentMetaSectionHtml). The <details> shell comes back
+//    with the fragment, so "open" is restored around the swap — a redraw must
+//    never fold a section the user has open. Redraws are debounced per slot:
+//    an active plan ticks many times a second and must cost one request.
 (() => {
     if (window.__hyperMetaInstalled) return;
     window.__hyperMetaInstalled = true;
@@ -17,5 +26,40 @@
         const index = rows.indexOf(row);
         if (button.matches('[data-plan-move="up"]') && index > 0) tasks.insertBefore(row, rows[index - 1]);
         if (button.matches('[data-plan-move="down"]') && index >= 0 && index < rows.length - 1) tasks.insertBefore(rows[index + 1], row);
+    });
+
+    const SECTIONS = ['goal', 'automation', 'wake', 'team', 'plan'];
+    const pending = new Map(); // element -> timer
+
+    function redraw(slot) {
+        const details = slot.querySelector(':scope > details');
+        const wasOpen = details ? details.open : null;
+        const agentId = slot.id.slice(slot.id.lastIndexOf('-') + 1);
+        htmx.ajax('POST', '/rpc', {
+            target: slot,
+            swap: 'innerHTML',
+            values: { method: 'ui.agentMetaSectionHtml', params: JSON.stringify({ agentId, section: slot.dataset.metaSection }) },
+        }).then?.(() => restore(slot, wasOpen));
+        // htmx.ajax resolves after the swap; htmx:load is the fallback for
+        // versions where the promise settles earlier.
+        slot.addEventListener('htmx:load', () => restore(slot, wasOpen), { once: true });
+    }
+
+    function restore(slot, wasOpen) {
+        if (wasOpen === null) return;
+        const details = slot.querySelector(':scope > details');
+        if (details && details.open !== wasOpen) details.open = wasOpen;
+    }
+
+    document.addEventListener('hyper-events', event => {
+        const data = event.detail;
+        if (data?.type !== 'ui.metaSection' || !data.agentId) return;
+        const sections = data.section && data.section !== 'all' ? [data.section] : SECTIONS;
+        for (const section of sections) {
+            const slot = document.getElementById(`agent-meta-${section}-${data.agentId}`);
+            if (!slot) continue; // this agent's panel is not on the page
+            clearTimeout(pending.get(slot));
+            pending.set(slot, setTimeout(() => { pending.delete(slot); redraw(slot); }, 150));
+        }
     });
 })();

@@ -40,7 +40,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
         : 0;
 
     const historyHead = events.length && Number(events[0]?.idx ?? 0) > 0
-        ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${Number(events[0].idx)}&limit=100" hx-trigger="load-older" hx-target="this" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-ui-border bg-base-100 px-3 py-1 text-[10px] text-base-content/45 hover:text-base-content/65">older messages</button></div>`
+        ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${Number(events[0].idx)}&limit=100" hx-trigger="load-older" hx-target="this" hx-swap="outerHTML" class="flex justify-center py-1">${ctx.fns.procs.ui.button({ action: 'load-older-messages', label: 'older messages', appearance: 'plain', class: 'rounded-full border border-ui-border bg-base-100 px-3 py-1 text-[10px] text-base-content/45 hover:text-base-content/65', attrs: { onclick: "htmx.trigger(this.parentElement, 'load-older')" } })}</div>`
         : '';
     const activeSleepForView = ctx.fns.agent.getSleepGeneration({ sleepContext: agent.sleepContext, kind: "active" });
     const eventsHtml = activeSleepForView
@@ -81,8 +81,8 @@ export default async function (ctx: Context, _session: Session | null, opts: {
         <div class="mt-2 text-base-content/65">${esc(sleepState.situation ?? 'No situation summary')}</div>
         ${sleepState.nextStep ? `<div class="mt-2 text-base-content/55"><span class="font-medium">Next:</span> ${esc(sleepState.nextStep)}</div>` : ''}
         ${(sleepState.openWork ?? []).length ? `<div class="mt-3 border-t border-gray-100 pt-2 font-medium text-base-content/70">Open work</div><ul class="mt-1 list-disc space-y-1 pl-4 text-base-content/55">${sleepState.openWork.slice(0, 5).map((x: any) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
-        <div class="mt-3 flex flex-wrap gap-2">${draftSleep ? `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="activate"><input type="hidden" name="revision" value="${draftSleep.revision}"><button class="rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs text-indigo-700">Use draft v${draftSleep.revision}</button></form>` : ''}${sleep.mode === 'compact' ? `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="deactivate"><button class="rounded border border-ui-border px-2 py-1 text-xs text-base-content/65">Show full history</button></form>` : ''}<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="prepare"><button class="rounded border border-ui-border px-2 py-1 text-xs text-base-content/55">Build next draft</button></form></div>`,
-    }) : `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none" class="inline"><input type="hidden" name="action" value="prepare"><button title="prepare compact sleep context" class="px-1 text-base-content/45 hover:text-indigo-700"><i class="ph ph-bed"></i></button></form>`;
+        <div class="mt-3 flex flex-wrap gap-2">${draftSleep ? `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="activate"><input type="hidden" name="revision" value="${draftSleep.revision}">${ctx.fns.procs.ui.button({ action: 'activate-sleep-draft', label: `Use draft v${draftSleep.revision}`, type: 'submit', appearance: 'plain', class: 'rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs text-indigo-700' })}</form>` : ''}${sleep.mode === 'compact' ? `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="deactivate">${ctx.fns.procs.ui.button({ action: 'deactivate-sleep-context', label: 'Show full history', type: 'submit', appearance: 'plain', class: 'rounded border border-ui-border px-2 py-1 text-xs text-base-content/65' })}</form>` : ''}<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="prepare">${ctx.fns.procs.ui.button({ action: 'prepare-sleep-context', label: 'Build next draft', type: 'submit', appearance: 'plain', class: 'rounded border border-ui-border px-2 py-1 text-xs text-base-content/55' })}</form></div>`,
+    }) : `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none" class="inline"><input type="hidden" name="action" value="prepare">${ctx.fns.procs.ui.button({ action: 'prepare-sleep-context', html: '<i class="ph ph-bed"></i>', type: 'submit', appearance: 'plain', title: 'prepare compact sleep context', class: 'px-1 text-base-content/45 hover:text-indigo-700' })}</form>`;
     // Use the same turn/TTL calculation as the LLM request builder, so the UI
     // shows exactly the reflection instruction that is currently injected.
     const activeInstructions = await ctx.fns.agent.statusLineForTurn({ agent });
@@ -95,13 +95,20 @@ export default async function (ctx: Context, _session: Session | null, opts: {
         triggerHtml: '<i class="ph ph-arrows-in-line-vertical"></i>',
         triggerAttrs: 'class="px-1 text-base-content/45 hover:text-indigo-600" title="Compact context" aria-label="Compact context"',
         panelAttrs: 'aria-label="Compact context"',
-        contentHtml: `<form hx-post="/agent/${encodeURIComponent(id)}/compact" hx-swap="none"><div class="text-sm font-medium">Compact context</div><textarea name="instructions" rows="3" placeholder="Optional focus instructions" class="mt-2 w-full rounded border border-ui-border bg-base-100 p-2 text-xs"></textarea><button type="submit" class="mt-2 rounded bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-700">Compact</button></form>`,
+        contentHtml: `<form hx-post="/agent/${encodeURIComponent(id)}/compact" hx-swap="none"><div class="text-sm font-medium">Compact context</div><textarea name="instructions" rows="3" placeholder="Optional focus instructions" class="mt-2 w-full rounded border border-ui-border bg-base-100 p-2 text-xs"></textarea>${ctx.fns.procs.ui.button({ action: 'compact-context', label: 'Compact', type: 'submit', tone: 'primary', class: 'mt-2' })}</form>`,
+    });
+
+    const modelControl = ctx.fns.ui.popup({
+        method: 'agent.modelPicker',
+        params: { agentId: id },
+        html: ctx.fns.ui.modelLogo({ model: agent.model, bare: true }),
+        attrs: `class="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-base-100/25 text-base-content/65 transition hover:bg-base-100/60 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/25" title="Change provider or model · ${esc(agent.model)}" aria-label="Change provider or model: ${esc(agent.model)}"`,
     });
 
     // header names THIS agent and holds its controls, nothing more.
     return `
 <header class="glass-bar absolute inset-x-0 top-0 z-40 mx-auto mt-2 flex h-11 w-[calc(100%-2rem)] max-w-3xl shrink-0 items-center gap-2.5 overflow-visible rounded-[22px] border border-ui-border pl-2 pr-5 text-xs text-base-content/70">
-  <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-base-100/25 text-base-content/65">${ctx.fns.ui.modelLogo({ model: agent.model, bare: true })}</span>
+  ${modelControl}
   <span class="font-mono font-medium text-base-content/80">${esc(String(agent.title ?? id).slice(0, 40) || id)} <span class="text-base-content/45">(${esc(id)})</span></span>
   ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}
   ${statusBarHtml}
@@ -114,17 +121,15 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     ${ctx.fns.ui.popup({ method: 'agent.initialPromptPopup', params: { agentId: id }, html: '<i class="ph ph-scroll" aria-hidden="true"></i>', attrs: 'title="Initial prompt" aria-label="Initial prompt" class="px-1 text-base-content/45 hover:text-indigo-600"' })}
 
     <form method="POST" action="/agent/${encodeURIComponent(id)}/fork" hx-boost="false" class="inline">
-      <button type="submit" title="fork and open" aria-label="Fork and open agent" ${ctx.fns.procs.ui.attr({ action: "fork", entity: "agent", id })} class="px-1 text-base-content/45 transition hover:text-indigo-600"><i class="ph ph-git-fork" aria-hidden="true"></i></button>
+      ${ctx.fns.procs.ui.button({ action: 'fork', entity: 'agent', id, html: '<i class="ph ph-git-fork" aria-hidden="true"></i>', type: 'submit', appearance: 'plain', title: 'fork and open', ariaLabel: 'Fork and open agent', class: 'px-1 text-base-content/45 transition hover:text-indigo-600' })}
     </form>
 
     <a href="/agent/${encodeURIComponent(id)}" hx-boost="false" title="agent page" class="px-1 text-base-content/45 hover:text-base-content/70">ⓘ</a>
     <form method="POST" action="/agent/${encodeURIComponent(id)}/archive" hx-boost="false" class="inline">
-      <button title="archive — hides from the rail, keeps the transcript" ${ctx.fns.procs.ui.attr({ action: "archive", entity: "agent", id })}
-        class="px-1 text-base-content/45 hover:text-base-content/70"><i class="ph ph-archive"></i></button>
+      ${ctx.fns.procs.ui.button({ action: 'archive', entity: 'agent', id, html: '<i class="ph ph-archive"></i>', type: 'submit', appearance: 'plain', title: 'archive — hides from the rail, keeps the transcript', class: 'px-1 text-base-content/45 hover:text-base-content/70' })}
     </form>
     <form method="POST" action="/agent/${encodeURIComponent(id)}/delete" hx-boost="false" class="inline" onsubmit="return confirm('delete ${esc(id)}? The transcript goes with it.')">
-      <button title="delete" ${ctx.fns.procs.ui.attr({ action: "delete", entity: "agent", id })}
-        class="px-1 text-base-content/45 hover:text-red-600"><i class="ph ph-trash"></i></button>
+      ${ctx.fns.procs.ui.button({ action: 'delete', entity: 'agent', id, html: '<i class="ph ph-trash"></i>', type: 'submit', appearance: 'plain', title: 'delete', class: 'px-1 text-base-content/45 hover:text-red-600' })}
     </form>
   </span>
 </header>
@@ -157,11 +162,11 @@ ${agent.sleepContext?.active === true
       <label class="w-20">Every
         <input name="every" type="number" min="1" max="100" value="${Math.max(1, Number(agent.statusLineEvery ?? 1))}" class="mt-1 w-full rounded border border-ui-border bg-base-100 px-2 py-1 text-xs text-base-content/70">
       </label>
-      <button class="rounded border border-ui-border bg-base-100 px-2 py-1 text-xs text-base-content/65 hover:bg-base-200">save</button>
+      ${ctx.fns.procs.ui.button({ action: 'save-status-line', label: 'save', type: 'submit', appearance: 'plain', class: 'rounded border border-ui-border bg-base-100 px-2 py-1 text-xs text-base-content/65 hover:bg-base-200' })}
     </form>
   </details>
 </div>
-  ${reflectionNudge ? `<div class="flex items-start gap-2 border-t border-violet-100 bg-violet-50/60 px-3 py-2 text-[11px] leading-4 text-violet-700" title="Active reflection instruction"><i class="ph ph-brain mt-0.5 shrink-0" aria-hidden="true"></i><span class="min-w-0 flex-1">${esc(reflectionNudge)}</span><button hx-post="/agent/${encodeURIComponent(id)}/reflection-nudge/delete" hx-target="closest div" hx-swap="outerHTML" title="Dismiss reflection nudge" aria-label="Dismiss reflection nudge" class="-mr-1 -mt-1 inline-flex size-6 shrink-0 items-center justify-center rounded text-violet-400 hover:bg-violet-100 hover:text-violet-700"><i class="ph ph-x"></i></button></div>` : ''}
+  ${reflectionNudge ? `<div class="flex items-start gap-2 border-t border-violet-100 bg-violet-50/60 px-3 py-2 text-[11px] leading-4 text-violet-700" title="Active reflection instruction"><i class="ph ph-brain mt-0.5 shrink-0" aria-hidden="true"></i><span class="min-w-0 flex-1">${esc(reflectionNudge)}</span>${ctx.fns.procs.ui.button({ action: 'dismiss-reflection-nudge', html: '<i class="ph ph-x"></i>', appearance: 'plain', post: `/agent/${encodeURIComponent(id)}/reflection-nudge/delete`, target: 'closest div', swap: 'outerHTML', title: 'Dismiss reflection nudge', ariaLabel: 'Dismiss reflection nudge', class: '-mr-1 -mt-1 inline-flex size-6 shrink-0 items-center justify-center rounded text-violet-400 hover:bg-violet-100 hover:text-violet-700' })}</div>` : ''}
 
 `;
 }

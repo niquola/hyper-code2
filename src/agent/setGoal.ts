@@ -33,7 +33,7 @@ export default async function (
     await ctx.fns.procs.db.run({ sql: "UPDATE agents SET goal = ?::jsonb, updated_at = ? WHERE id = ?", params: [goal == null ? null : JSON.stringify(goal), Date.now(), opts.id] });
     const agent = (ctx.state as any).agent?.[opts.id];
     if (agent) agent.goal = goal;
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, reason: "goal-set" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, section: "goal", reason: "goal-set" });
     const shouldActivate = !!goal?.enabled && (!previous?.enabled || previous?.statement !== goal.statement);
     if (shouldActivate) {
         const text = `Goal enabled: ${goal.statement}\n\nWork toward this goal now. Before stopping, the goal checker will verify whether it was reached.`;

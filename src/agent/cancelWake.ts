@@ -9,6 +9,6 @@ id: string }): Promise<{ cancelled: boolean }> {
     });
     const agent = (ctx.state as any).agent?.[opts.id];
     if (agent) { agent.wakeAt = null; agent.wakeReason = null; }
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, reason: "wake-cancel" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, section: "wake", reason: "wake-cancel" });
     return { cancelled: result.changes > 0 };
 }

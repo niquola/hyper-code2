@@ -71,9 +71,9 @@ describe('ui control helpers', () => {
     const { ctx } = await mkCtx();
     const html = ctx.fns.secureInput.render({ prompt: { id: 'p1', name: 'test-1', title: 'Test', message: 'Enter', kind: 'text', maxlength: 20 } });
     expect(html).toContain('input input-bordered');
-    expect(html).toContain('btn btn-primary');
-    expect(html).toContain('hx-popup="secureInput.submit"');
-    expect(html.match(/hx-popup=/g)?.length).toBe(2);
+    expect(html).toContain('ui-button ui-button--sm ui-button--primary');
+    expect(html).toContain('data-secure-cancel');
+    expect(html.match(/hx-popup=/g)?.length).toBe(1);
   });
 
 });

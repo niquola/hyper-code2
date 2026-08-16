@@ -21,4 +21,16 @@ describe('GET /agent/:id', () => {
         expect(html).toContain(agent.id);
         expect(html).toContain('db-model');
     });
+
+    test('renders the provider icon as a model-picker trigger', async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: 'mock:test', systemPrompt: '' });
+        await ctx.fns.session.save({ agent });
+
+        const res = await ctx.fns.procs.http.dispatch({ url: '/agent/' + agent.id });
+        const html = await res.text();
+        expect(html).toContain('hx-popup="agent.modelPicker"');
+        expect(html).toContain('Change provider or model');
+    });
+
 });

@@ -46,7 +46,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         main: `<main class="mx-auto w-full max-w-5xl px-5 py-7">
           <div class="mb-5 flex items-center justify-between gap-4">
             <div><h1 class="text-2xl font-semibold tracking-tight text-gray-900">Tasks</h1><p class="mt-1 text-sm text-gray-500">One focused agent chat for every task.</p></div>
-            <button type="button" onclick="document.getElementById('new-task').showModal()" class="rounded-md border border-green-700 bg-green-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-green-700"><i class="ph ph-plus mr-1"></i>New task</button>
+            ${ctx.fns.procs.ui.button({ action: 'new-task', html: '<i class="ph ph-plus mr-1"></i>New task', tone: 'success', attrs: { onclick: "document.getElementById('new-task').showModal()" } })}
           </div>
 
           <div class="overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm">
@@ -62,12 +62,12 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
 
           <dialog id="new-task" class="m-auto w-[min(94vw,640px)] rounded-lg border border-gray-300 p-0 shadow-2xl backdrop:bg-gray-900/40">
             <form method="POST" action="/tasks">
-              <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4"><h2 class="font-semibold text-gray-900">Create a new task</h2><button type="button" onclick="document.getElementById('new-task').close()" class="rounded p-1 text-gray-500 hover:bg-gray-100"><i class="ph ph-x text-lg"></i></button></div>
+              <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4"><h2 class="font-semibold text-gray-900">Create a new task</h2>${ctx.fns.procs.ui.button({ action: 'close-new-task', html: '<i class="ph ph-x text-lg"></i>', tone: 'ghost', ariaLabel: 'Close', attrs: { onclick: "document.getElementById('new-task').close()" } })}</div>
               <div class="space-y-4 p-5">
                 <label class="block"><span class="mb-2 block text-sm font-semibold text-gray-800">Description</span><textarea name="description" required autofocus rows="7" placeholder="What should the agent do?" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-inner outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"></textarea></label>
                 <label class="block"><span class="mb-2 block text-sm font-semibold text-gray-800">Workspace</span><select name="workspaceMode" class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"><option value="default">Shared · ~/.hyper/tasks</option><option value="isolated">Isolated · ~/.hyper/tasks/&lt;task-id&gt;</option></select><span class="mt-1.5 block text-xs text-gray-500">The directory is created when the attached agent starts.</span></label>
               </div>
-              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3"><button type="button" onclick="document.getElementById('new-task').close()" class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-gray-50">Cancel</button><button class="rounded-md border border-green-700 bg-green-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-700">Create task</button></div>
+              <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3">${ctx.fns.procs.ui.button({ action: 'cancel-new-task', label: 'Cancel', attrs: { onclick: "document.getElementById('new-task').close()" } })}${ctx.fns.procs.ui.button({ action: 'create-task', label: 'Create task', type: 'submit', tone: 'success' })}</div>
             </form>
           </dialog>
         </main>`,

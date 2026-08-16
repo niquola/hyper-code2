@@ -6,9 +6,9 @@
  * Perform menu for the ui subsystem.
  * @param opts.id The target identifier.
  * @param opts.label The display label.
- * @param opts.icon The icon value used by the operation.
- * @param opts.items The items value used by the operation.
- * @param opts.align The align value used by the operation.
+ * @param opts.icon Optional Phosphor icon class for the disclosure trigger.
+ * @param opts.items Menu actions or links with optional icons and htmx request details.
+ * @param opts.align Horizontal edge used to align the dropdown panel.
  * @param opts.class CSS classes to apply.
  */
 export default function (ctx: Context, _session: Session | null, opts: {id?: string; label?: string; icon?: string; items: Array<{ label: string; icon?: string; href?: string; action?: string; post?: string; get?: string; vals?: Record<string, any>; danger?: boolean }>; align?: "left" | "right"; class?: string }): string {
@@ -16,20 +16,24 @@ export default function (ctx: Context, _session: Session | null, opts: {id?: str
     // the shared component layer's `dropdown` on a <details>, with `menu` inside it — the panel,
     // the hover states and the item padding are the component's.
     const item = (it: (typeof opts.items)[number]) => {
-        const cls = it.danger ? "text-error" : "";
         const icon = it.icon ? `<i class="ph ${esc(it.icon)} w-4 opacity-60" aria-hidden="true"></i>` : "";
-        const hx = it.post ? `hx-post="${esc(it.post)}"` : it.get ? `hx-get="${esc(it.get)}"` : "";
-        const vals = it.vals ? ` hx-vals="${esc(JSON.stringify(it.vals))}"` : "";
-        const inner = it.href
-            ? `<a class="${cls}" href="${esc(it.href)}" hx-get="${esc(it.href)}" hx-target="#main" hx-swap="innerHTML" hx-push-url="true" role="menuitem">${icon}${esc(it.label)}</a>`
-            : `<button type="button" class="${cls}" ${ctx.fns.procs.ui.attr({ action: it.action })} ${hx}${vals} hx-target="#main" hx-swap="innerHTML" role="menuitem">${icon}${esc(it.label)}</button>`;
+        const inner = ctx.fns.procs.ui.button({
+            action: it.action, html: `${icon}${esc(it.label)}`, href: it.href,
+            post: it.post, get: it.get, vals: it.vals, tone: it.danger ? "danger" : "ghost",
+            appearance: "plain", class: it.danger ? "text-error" : "",
+            attrs: { role: "menuitem", ...(it.href ? { "hx-push-url": "true" } : {}) },
+        });
         return `<li>${inner}</li>`;
     };
     const trigger = opts.label || opts.icon
         ? `${opts.icon ? `<i class="ph ${esc(opts.icon)}" aria-hidden="true"></i>` : ""}${opts.label ? `<span>${esc(opts.label)}</span>` : ""}`
         : `<i class="ph ph-dots-three" aria-hidden="true"></i>`;
+    const triggerButton = ctx.fns.procs.ui.button({
+        element: "summary", action: "menu", html: trigger, tone: "ghost", size: "xs",
+        attrs: { "aria-haspopup": "menu" },
+    });
     return `<details class="dropdown ${opts.align === "left" ? "" : "dropdown-end"} ${opts.class ?? ""}" ${ctx.fns.procs.ui.attr({ entity: "menu", id: opts.id })}>
-  <summary class="btn btn-xs btn-ghost" ${ctx.fns.procs.ui.attr({ action: "menu" })} aria-haspopup="menu">${trigger}</summary>
+  ${triggerButton}
   <ul class="menu dropdown-content border border-ui-border bg-base-100 text-base-content rounded-box z-50 mt-1 w-52 p-2 shadow-lg" role="menu">${opts.items.map(item).join("")}</ul>
 </details>`;
 }

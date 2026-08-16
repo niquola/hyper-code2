@@ -37,7 +37,7 @@ export default async function (
               VALUES (?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?)`,
         params: [watchId, opts.id, opts.predicate, JSON.stringify(opts.opts ?? {}), reason, intervalMs, now, now + timeoutMs, now],
     });
-    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, reason: "watch-set" });
+    ctx.fns.events.refreshAgentMeta({ agentId: opts.id, section: "wake", reason: "watch-set" });
     ctx.fns.agent.wakeWorker({});
     return { watchId, nextCheckAt: now, timeoutAt: now + timeoutMs };
 }
