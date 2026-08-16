@@ -1,7 +1,7 @@
 // A coloured dot for a state — running, ready, crashed — read from the word, so
 // a service card or a resource status shows its health at a glance. `data-status`
 // carries the raw state.
-// daisyUI's `status` is exactly this dot, and `status-*` carries the colour.
+// the shared component layer's `status` is exactly this dot, and `status-*` carries the colour.
 const TONE: Record<string, string> = { running: "status-success", ready: "status-success", ok: "status-success", active: "status-success", completed: "status-success", crashed: "status-error", error: "status-error", failed: "status-error", starting: "status-warning", restarting: "status-warning", draft: "status-warning", idle: "status-neutral", stopped: "status-neutral" };
 /**
  * Perform status dot for the ui subsystem.

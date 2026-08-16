@@ -6,20 +6,31 @@
  * it with the Tailwind import, the typography plugin and the content sources, so
  * it compiles the same whether it lives in the workspace or in the project.
  *
- * The design system is daisyUI (styles.build adds the plugin): its component
- * classes — `btn`, `card`, `alert`, `table` — and semantic light/dark themes.
+ * The design system is project-owned: semantic theme tokens plus small reusable
+ * component classes (`btn`, `badge`, `input`, `menu`, and friends). Tailwind
+ * supplies utilities; no external component framework or theme layer is used.
  * Build screens from semantic colors so the explicit app theme can switch.
  *
  * The colours below are NOT a second palette. They are the names the markup used
- * before daisyUI, each defined as whatever daisyUI calls the same thing, so the
- * ~1700 places that still say `bg-bg-content` follow the theme instead of a
- * hardcoded grey. Nothing new should use them — reach for `bg-base-100`,
+ * before semantic themes, each defined in terms of the same project-owned tokens,
+ * so legacy markup follows the selected theme instead of a hardcoded gray. Nothing new should use them — reach for `bg-base-100`,
  * `text-base-content`, `border-base-300`, `text-error` directly.
  *
- * The sizes further down are ours on purpose: daisyUI's defaults are built for
- * marketing pages, and a clinical table needs to be denser than that.
+ * The sizes further down are intentionally compact: this is a dense procedural
+ * workbench rather than a marketing page.
  * The component rules below are the handful of things utilities cannot say. */
 @theme {
+  --color-base-100: var(--theme-base-100);
+  --color-base-200: var(--theme-base-200);
+  --color-base-300: var(--theme-base-300);
+  --color-base-content: var(--theme-base-content);
+  --color-primary: var(--theme-primary);
+  --color-primary-content: var(--theme-primary-content);
+  --color-info: var(--theme-info);
+  --color-success: var(--theme-success);
+  --color-warning: var(--theme-danger);
+  --color-error: var(--theme-danger);
+
   --color-bg-primary: var(--color-base-200);
   --color-bg-tertiary: var(--color-base-200);
   --color-bg-quaternary: var(--color-base-300);
@@ -94,9 +105,8 @@
   --tracking-label: 0.04em;
 }
 
-/* Three surfaces, not two. daisyUI's light theme puts base-200 two percent off
- * white, which on a bright screen is white — so the harness and the product and
- * the cards on it were all one colour with hairlines drawn between them.
+/* Three surfaces, not two. The light theme keeps the harness, product canvas,
+ * and raised content visually distinct without using high-contrast borders.
  *
  *   base-200   the HARNESS — the chat column, the tab strip, the chrome
  *   canvas     the PRODUCT's page, a shade lighter, so it reads as the thing
@@ -106,8 +116,15 @@
  *
  * After the plugin's own block on purpose — same specificity, later wins. */
 [data-theme="light"] {
-  --color-base-200: oklch(96.8% 0.001 240);
-  --color-base-300: oklch(92.5% 0.003 240);
+  --theme-base-100: oklch(100% 0 0);
+  --theme-base-200: oklch(96.8% 0.001 240);
+  --theme-base-300: oklch(92.5% 0.003 240);
+  --theme-base-content: oklch(21% 0.006 285.885);
+  --theme-primary: #1f2328;
+  --theme-primary-content: #ffffff;
+  --theme-info: #57606a;
+  --theme-success: #1a7f37;
+  --theme-danger: #cf222e;
   --color-canvas: oklch(98.8% 0.001 240);
   --ui-border: oklch(88.5% 0.004 240);
   --ui-border-strong: oklch(88.5% 0.004 240);
@@ -115,38 +132,26 @@
   --ui-surface: var(--color-base-100);
   --ui-surface-muted: var(--color-base-200);
   /* GitHub-inspired restrained palette: neutral ink plus green/red states. */
-  --color-primary: #1f2328;
-  --color-primary-content: #ffffff;
-  --color-info: #57606a;
-  --color-info-content: #ffffff;
-  --color-success: #1a7f37;
-  --color-success-content: #ffffff;
-  --color-warning: #cf222e;
-  --color-warning-content: #ffffff;
-  --color-error: #cf222e;
-  --color-error-content: #ffffff;
 }
 
 [data-theme="dark"] {
+  --theme-base-100: oklch(25.33% 0.016 252.42);
+  --theme-base-200: oklch(23.26% 0.014 253.1);
+  --theme-base-300: oklch(31% 0.014 252);
+  --theme-base-content: oklch(97.807% 0.029 256.847);
+  --theme-primary: #f0f6fc;
+  --theme-primary-content: #0d1117;
+  --theme-info: #8c959f;
+  --theme-success: #3fb950;
+  --theme-danger: #f85149;
   /* Dense chat surfaces use their own restrained border ramp: nested cards,
    * popups and controls should separate without becoming a white wireframe. */
-  --color-base-300: oklch(31% 0.014 252);
   --color-canvas: color-mix(in oklab, var(--color-base-100) 72%, black);
   --ui-border: oklch(38% 0.015 252);
   --ui-border-strong: oklch(46% 0.018 252);
   --ui-input-border: oklch(50% 0.018 252);
   --ui-surface: var(--color-base-100);
   --ui-surface-muted: var(--color-base-200);
-  --color-primary: #f0f6fc;
-  --color-primary-content: #0d1117;
-  --color-info: #8c959f;
-  --color-info-content: #0d1117;
-  --color-success: #3fb950;
-  --color-success-content: #0d1117;
-  --color-warning: #f85149;
-  --color-warning-content: #0d1117;
-  --color-error: #f85149;
-  --color-error-content: #0d1117;
 }
 
 body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
@@ -179,7 +184,7 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
   border-color: var(--color-primary);
   box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-primary) 10%, transparent);
 }
-/* The composer's send button is daisyUI's `btn btn-circle btn-primary` — only
+/* The composer's send button uses the shared circular primary button pattern. */
  * the arrow's stroke is ours. Its disabled look is the component's, which is the
  * point: the old hand-rolled one dimmed the accent to 50%, and a half-strength
  * accent still reads as a live button, so an empty composer looked sendable. */
@@ -433,3 +438,64 @@ summary::-webkit-details-marker { display: none; }
 
 /* combobox results reveal when populated (ui.combobox) */
 .ui-combobox__results:not(:empty) { display: block; }
+
+
+/* Project-owned component primitives. Kept intentionally small and bichrome;
+ * semantic success/error colors are reserved for actual state. */
+.btn { display:inline-flex; min-height:2.25rem; align-items:center; justify-content:center; gap:.4rem; border:1px solid var(--ui-input-border); border-radius:.5rem; background:var(--color-base-100); padding:.45rem .8rem; color:var(--color-base-content); font-size:.8125rem; font-weight:600; line-height:1; cursor:pointer; transition:background-color .15s,border-color .15s,opacity .15s; }
+.btn:hover { background:var(--color-base-200); }
+.btn:disabled { cursor:not-allowed; opacity:.45; }
+[data-theme="light"] .btn-primary { border-color:#1f2328 !important; background:#1f2328 !important; color:#fff !important; }
+[data-theme="dark"] .btn-primary { border-color:#8c959f !important; background:#1f2328 !important; color:#f0f6fc !important; }
+.btn-primary:hover { opacity:.88; }
+.btn-ghost { border-color:transparent !important; background:transparent !important; color:var(--theme-base-content) !important; }
+.btn-xs { min-height:1.65rem; padding:.25rem .45rem; font-size:.6875rem; }
+.btn-sm { min-height:2rem; padding:.35rem .65rem; font-size:.75rem; }
+.btn-circle,.btn-square { width:2.25rem; padding:0; }
+.btn-circle { border-radius:9999px; }
+.btn-xs.btn-circle,.btn-xs.btn-square { width:1.65rem; }
+.badge { display:inline-flex; min-height:1.25rem; align-items:center; justify-content:center; gap:.25rem; border:1px solid var(--ui-border); border-radius:9999px; background:var(--color-base-200); padding:.1rem .45rem; color:color-mix(in oklab,var(--color-base-content) 70%,transparent); font-size:.6875rem; line-height:1; }
+.badge-sm { min-height:1.125rem; padding:.08rem .38rem; font-size:.625rem; }
+.badge-soft { background:var(--color-base-200); }
+.input,.textarea,.select { width:100%; border:1px solid var(--ui-input-border); border-radius:.45rem; background:var(--color-base-100); color:var(--color-base-content); padding:.5rem .65rem; outline:none; }
+.input:focus,.textarea:focus,.select:focus { border-color:var(--color-primary); box-shadow:0 0 0 2px color-mix(in oklab,var(--color-primary) 12%,transparent); }
+.input-sm,.textarea-sm,.select-sm { min-height:2rem; padding:.35rem .55rem; font-size:.75rem; }
+.textarea { min-height:5rem; }
+.select { appearance:auto; }
+.progress { display:block; width:100%; height:.375rem; overflow:hidden; border:0; border-radius:9999px; background:var(--color-base-300); color:var(--color-base-content); }
+.progress::-webkit-progress-bar { background:var(--color-base-300); }
+.progress::-webkit-progress-value { background:currentColor; }
+.progress::-moz-progress-bar { background:currentColor; }
+.toggle { appearance:none; width:2.25rem; height:1.25rem; border:1px solid var(--ui-input-border); border-radius:9999px; background:var(--color-base-300); cursor:pointer; transition:.15s; }
+.toggle::after { content:""; display:block; width:.875rem; height:.875rem; margin:.125rem; border-radius:9999px; background:var(--color-base-100); transition:transform .15s; }
+.toggle:checked { background:var(--theme-primary); border-color:var(--theme-primary); }
+.toggle:checked::after { transform:translateX(1rem); }
+.toggle-sm { width:2rem; height:1.125rem; }
+.card { border-radius:.75rem; background:var(--color-base-100); color:var(--color-base-content); }
+.card-border { border:1px solid var(--ui-border); }
+.card-body { display:flex; flex-direction:column; gap:.75rem; padding:1rem; }
+.card-title { font-size:.95rem; font-weight:650; }
+.card-actions { display:flex; align-items:center; gap:.5rem; }
+.alert { display:flex; align-items:flex-start; gap:.6rem; border:1px solid var(--ui-border); border-radius:.6rem; background:var(--color-base-200); padding:.75rem; color:var(--color-base-content); }
+.table { width:100%; border-collapse:collapse; color:var(--color-base-content); }
+.table th,.table td { border-bottom:1px solid var(--ui-border); padding:.55rem .7rem; text-align:left; }
+.table-sm th,.table-sm td { padding:.35rem .5rem; font-size:.75rem; }
+.menu { display:flex; flex-direction:column; padding:.35rem; color:var(--color-base-content); }
+.menu li>a,.menu li>button { display:flex; width:100%; align-items:center; gap:.5rem; border-radius:.4rem; padding:.45rem .6rem; }
+.menu li>a:hover,.menu li>button:hover { background:var(--color-base-200); }
+.dropdown { position:relative; }
+.dropdown-content { position:absolute; z-index:50; }
+.join { display:inline-flex; }
+.join-item { border-radius:0; }
+.join-item:first-child { border-radius:.45rem 0 0 .45rem; }
+.join-item:last-child { border-radius:0 .45rem .45rem 0; }
+.avatar { display:inline-flex; align-items:center; justify-content:center; overflow:hidden; border-radius:9999px; }
+.avatar img { width:100%; height:100%; object-fit:cover; }
+.status { display:inline-block; width:.5rem; height:.5rem; border-radius:9999px; background:currentColor; }
+.tooltip { position:relative; }
+.breadcrumbs { overflow-x:auto; }
+.breadcrumbs ul { display:flex; align-items:center; white-space:nowrap; }
+.breadcrumbs li+li::before { content:"/"; margin:0 .45rem; color:color-mix(in oklab,var(--color-base-content) 35%,transparent); }
+.steps { display:flex; align-items:flex-start; gap:1rem; list-style:none; }
+.steps .step { flex:1; }
+.rounded-box { border-radius:.65rem; }

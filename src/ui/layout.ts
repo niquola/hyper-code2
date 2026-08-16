@@ -41,6 +41,10 @@ export default async function (ctx: Context, session: Session | null, opts: {
 .tool { transition: background-color .2s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
 .tool.tool-tucked:hover { background: color-mix(in oklab, var(--color-base-200) 75%, transparent); border-color: var(--color-base-300); box-shadow: 0 3px 8px color-mix(in oklab, var(--color-base-content) 18%, transparent); transform: translateY(-2px) scale(1.15); color: var(--color-base-content); }
 .tool.tool-tucked:active { transform: translateY(0) scale(1.05); }
+.mermaid-diagram { display: block; width: 100%; max-width: 100%; min-width: 0; overflow: hidden; }
+.mermaid-light { display: block; width: 100%; max-width: 100%; min-width: 0; }
+.mermaid-diagram svg { display: block; width: auto; max-width: 100% !important; height: auto !important; }
+
 /* Highlighted code inside tool detail dialogs. */
 .app-popup-body pre { margin: 0; padding: .75rem 1rem; border-radius: .65rem; background: rgba(0,0,0,.04) !important; white-space: pre-wrap; word-break: break-word; }
 .app-popup-body pre + pre { margin-top: .75rem; }
@@ -90,8 +94,8 @@ ${opts.headExtra ?? ""}
 </div>
 <dialog id="app-popup" class="m-auto max-h-[85vh] w-[min(48rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-ui-border bg-base-100 p-0 text-base-content shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-[1px]">
   <div class="flex max-h-[85vh] flex-col">
-    <div class="flex shrink-0 items-center gap-3 border-b border-gray-200 px-5 py-3.5"><h2 id="app-popup-title" class="min-w-0 flex-1 truncate text-sm font-semibold text-gray-800">Details</h2><button id="app-popup-close" type="button" title="Close" aria-label="Close" class="flex size-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"><i class="ph ph-x text-lg"></i></button></div>
-    <div id="app-popup-body" class="app-popup-body min-h-0 flex-1 overflow-auto bg-gray-50/60 p-5 text-xs text-gray-700"></div>
+    <div class="flex shrink-0 items-center gap-3 border-b border-ui-border px-5 py-3.5"><h2 id="app-popup-title" class="min-w-0 flex-1 truncate text-sm font-semibold text-base-content/80">Details</h2><button id="app-popup-close" type="button" title="Close" aria-label="Close" class="flex size-8 items-center justify-center rounded-full text-base-content/45 hover:bg-base-200 hover:text-base-content"><i class="ph ph-x text-lg"></i></button></div>
+    <div id="app-popup-body" class="app-popup-body min-h-0 flex-1 overflow-auto bg-base-200/60 p-5 text-xs text-base-content/70"></div>
   </div>
 </dialog>
 ${ctx.fns.ui.navMenu({})}

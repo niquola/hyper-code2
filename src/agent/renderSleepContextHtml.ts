@@ -41,8 +41,8 @@ export default async function (
     const sourceOffset = Math.max(0, Number(generation.sourceOffset ?? 0));
     const hidden = Math.max(0, tailStart);
 
-    return `<div class="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-800">
+    return `<div class="rounded-lg border border-ui-border bg-base-200 px-3 py-2 text-xs text-base-content/80">
   <div class="flex items-center gap-2 font-medium"><i class="ph ph-moon-stars"></i> Компактный контекст активен</div>
-  <div class="mt-1 text-indigo-600">Модель видит консолидацию и свежий хвост. Полная история сохранена; скрыто ${hidden} из ${sourceOffset} исходных сообщений.</div>
-</div>\n${syntheticHtml}${tailHtml ? `\n<div class="flex items-center gap-2 py-1 text-[10px] uppercase tracking-wide text-gray-400"><span class="h-px flex-1 bg-gray-200"></span>свежий хвост<span class="h-px flex-1 bg-gray-200"></span></div>\n${tailHtml}` : ""}`;
+  <div class="mt-1 text-base-content/60">Модель видит консолидацию и свежий хвост. Полная история сохранена; скрыто ${hidden} из ${sourceOffset} исходных сообщений.</div>
+</div>\n${syntheticHtml}${tailHtml ? `\n<div class="flex items-center gap-2 py-1 text-[10px] uppercase tracking-wide text-base-content/45"><span class="h-px flex-1 bg-ui-border"></span>свежий хвост<span class="h-px flex-1 bg-ui-border"></span></div>\n${tailHtml}` : ""}`;
 }

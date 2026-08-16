@@ -1,5 +1,5 @@
 // A small fact about the thing next to it — a state, a count, a face a module
-// wears. daisyUI's `badge`, soft so it sits inside a row without shouting.
+// wears. the shared component layer's `badge`, soft so it sits inside a row without shouting.
 //
 // The tone is written out rather than built into the class name: a class Tailwind
 // only ever sees as `badge-${tone}` is a class it never generates.

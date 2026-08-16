@@ -31,7 +31,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
             : `<tr class="hover:bg-base-200" ${marks}>${cells}</tr>`;
     }).join("");
 
-    // `table-sm` is the density a register needs; daisyUI's default row height is
+    // `table-sm` is the density a register needs; the shared component layer's default row height is
     // built for a landing page, not for a hundred patients.
     return `<div class="border-base-300 bg-base-100 overflow-x-auto rounded-md border ${opts.class ?? ""}">
   <table class="table table-sm table-pin-rows">

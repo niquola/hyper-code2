@@ -22,7 +22,8 @@ test("inspector section renders semantic collapsible shell", () => {
 
 test("status badge uses semantic tones and escapes content", () => {
     const html = statusBadge(ctx, null, { label: "needs <user>", tone: "warning", dot: true });
-    expect(html).toContain("badge-warning");
+    expect(html).toContain("border-error/30");
+    expect(html).toContain("text-error");
     expect(html).toContain("needs &lt;user&gt;");
     expect(html).toContain("bg-current");
 });

@@ -30,7 +30,7 @@ params: Record<string, string> }) {
         const eventsHtml = await ctx.fns.agent.renderEventsHtml({ events, agentId: id });
         const firstIdx = events.length ? Number(events[0]?.idx ?? 0) : 0;
         const head = firstIdx > 0
-            ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${firstIdx}&limit=${limit}" hx-trigger="load-older" hx-target="this" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] text-gray-400 hover:text-gray-600">older messages</button></div>`
+            ? `<div id="msg-head" hx-get="/agent/${encodeURIComponent(id)}/events.html?before=${firstIdx}&limit=${limit}" hx-trigger="load-older" hx-target="this" hx-swap="outerHTML" class="flex justify-center py-1"><button type="button" onclick="htmx.trigger(this.parentElement, 'load-older')" class="rounded-full border border-ui-border bg-base-100 px-3 py-1 text-[10px] text-base-content/45 hover:text-base-content">older messages</button></div>`
             : '';
         return new Response(head + eventsHtml, { headers: { 'content-type': 'text/html; charset=utf-8' } });
     }
@@ -52,7 +52,7 @@ params: Record<string, string> }) {
 
     const lastAssistant = [...events].reverse().find((ev: any) => ev?.type === 'assistant');
     const usageOob = lastAssistant?.usage
-        ? `<span id="context-usage" hx-swap-oob="outerHTML" class="text-xs text-gray-500 font-mono">${formatUsage(lastAssistant.usage)}</span>`
+        ? `<span id="context-usage" hx-swap-oob="outerHTML" class="text-xs text-base-content/55 font-mono">${formatUsage(lastAssistant.usage)}</span>`
         : '';
 
     const nextOffset = maxIdx + 1;

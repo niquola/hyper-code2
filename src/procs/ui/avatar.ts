@@ -8,7 +8,7 @@
  */
 export default function (ctx: Context, _session: Session | null, opts: {name?: string; src?: string; size?: "sm" | "md" | "lg" }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
-    // daisyUI styles `.avatar > div`, and it sizes nothing itself: a child that
+    // the shared component layer styles `.avatar > div`, and it sizes nothing itself: a child that
     // is a `span` gets no centring, and a width with no height is a pill with the
     // initials hanging out of it. So: a div inside a div, and both dimensions.
     const px = opts.size === "lg" ? "h-10 w-10 text-sm" : opts.size === "sm" ? "h-6 w-6 text-xs" : "h-8 w-8 text-xs";

@@ -15,7 +15,7 @@ export default function (ctx: Context, _session: Session | null, opts: {action: 
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const hx = opts.post ? `hx-post="${esc(opts.post)}"` : opts.get ? `hx-get="${esc(opts.get)}"` : "";
     const vals = opts.vals ? ` hx-vals="${esc(JSON.stringify(opts.vals))}"` : "";
-    // daisyUI's `toggle` is a checkbox it styles itself, so the switch is the
+    // the shared component layer's `toggle` is a checkbox it styles itself, so the switch is the
     // input rather than a button wrapping one — the flip still goes through htmx.
     return `<label class="label cursor-pointer justify-start gap-2" ${ctx.fns.procs.ui.attr({ field: opts.name })}>
   ${opts.name ? `<input type="hidden" name="${esc(opts.name)}" value="${opts.on ? "true" : "false"}">` : ""}

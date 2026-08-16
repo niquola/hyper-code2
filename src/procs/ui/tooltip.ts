@@ -1,5 +1,5 @@
 // A hint on hover or focus — a label for an icon button, the full text of a
-// truncated cell. daisyUI's `tooltip` draws the bubble from `data-tip`, CSS only.
+// truncated cell. the shared component layer's `tooltip` draws the bubble from `data-tip`, CSS only.
 /**
  * Perform tooltip for the ui subsystem.
  * @param opts.label The display label.

@@ -9,7 +9,7 @@
 export default function (ctx: Context, _session: Session | null, opts: {page: number; pages: number; href: (page: number) => string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     if (opts.pages <= 1) return "";
-    // daisyUI pages a list with `join` — the buttons sit flush as one control.
+    // the shared component layer pages a list with `join` — the buttons sit flush as one control.
     const link = (p: number, label: string, on = false, disabled = false) => disabled
         ? `<button class="join-item btn btn-sm" disabled>${esc(label)}</button>`
         : `<a class="join-item btn btn-sm ${on ? "btn-active btn-primary" : ""}" href="${esc(opts.href(p))}" hx-get="${esc(opts.href(p))}" hx-target="#main" hx-swap="innerHTML" hx-push-url="true">${esc(label)}</a>`;

@@ -9,7 +9,7 @@
  */
 export default function (ctx: Context, _session: Session | null, opts: {steps: Array<{ label: string; href?: string }>; current: number; class?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
-    // daisyUI's `steps`: the connector line and the numbered bubble are the
+    // the shared component layer's `steps`: the connector line and the numbered bubble are the
     // component's own, so a step is just an `li` that is or is not `step-primary`.
     return `<ul class="steps ${opts.class ?? ""}" ${ctx.fns.procs.ui.attr({ role: "steps" })}>
   ${opts.steps.map((s, i) => {

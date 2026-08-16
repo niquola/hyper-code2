@@ -70,8 +70,8 @@ describe('ui control helpers', () => {
   test('secure-input styling lives in the server-rendered HTMX fragment', async () => {
     const { ctx } = await mkCtx();
     const html = ctx.fns.secureInput.render({ prompt: { id: 'p1', name: 'test-1', title: 'Test', message: 'Enter', kind: 'text', maxlength: 20 } });
-    expect(html).toContain('border border-gray-300');
-    expect(html).toContain('bg-blue-600');
+    expect(html).toContain('input input-bordered');
+    expect(html).toContain('btn btn-primary');
     expect(html).toContain('hx-popup="secureInput.submit"');
     expect(html.match(/hx-popup=/g)?.length).toBe(2);
   });

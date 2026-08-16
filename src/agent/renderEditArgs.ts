@@ -20,10 +20,10 @@ export default async function (
     const code = async (text: any, tone: "remove" | "add") => {
         const html = await ctx.fns.markdown.highlight({ code: String(text ?? ""), lang });
         const cls = tone === "remove"
-            ? "border-red-200 bg-red-50/70 edit-remove"
-            : "border-emerald-200 bg-emerald-50/70 edit-add";
+            ? "border-error/30 bg-error/10 edit-remove"
+            : "border-success/30 bg-success/10 edit-add";
         const sign = tone === "remove" ? "−" : "+";
-        return `<div class="relative overflow-hidden rounded-lg border ${cls}"><span class="absolute left-2 top-1.5 z-10 font-mono text-xs font-bold ${tone === "remove" ? "text-red-500" : "text-emerald-600"}">${sign}</span><div class="pl-5">${html}</div></div>`;
+        return `<div class="relative overflow-hidden rounded-lg border ${cls}"><span class="absolute left-2 top-1.5 z-10 font-mono text-xs font-bold ${tone === "remove" ? "text-error" : "text-success"}">${sign}</span><div class="pl-5">${html}</div></div>`;
     };
 
     const cards: string[] = [];
@@ -43,7 +43,7 @@ export default async function (
         if (edit.oldText != null) blocks.push(await code(edit.oldText, "remove"));
         if (edit.newText != null && edit.newText !== "") blocks.push(await code(edit.newText, "add"));
         if ((op === "replaceLines" || op === "insertBefore" || op === "insertAfter") && edit.text != null) blocks.push(await code(edit.text, "add"));
-        if (op === "delete" && edit.anchor) blocks.push(`<div class="rounded-lg border border-red-200 bg-red-50/70 px-3 py-2 text-xs text-red-700">Delete selected line${edit.endAnchor ? " range" : ""}</div>`);
+        if (op === "delete" && edit.anchor) blocks.push(`<div class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">Delete selected line${edit.endAnchor ? " range" : ""}</div>`);
         cards.push(`<section class="rounded-xl border border-ui-border bg-base-100 p-3 shadow-sm"><div class="mb-2 flex items-center gap-2"><span class="flex size-5 items-center justify-center rounded-full bg-base-200 text-[10px] font-semibold text-base-content/50">${index + 1}</span><span class="text-xs font-semibold text-base-content/70">${esc(label)}</span><span class="ml-auto rounded-md bg-base-200 px-1.5 py-0.5 font-mono text-[10px] text-base-content/50">${esc(location)}</span></div><div class="space-y-2">${blocks.join("") || `<div class="text-xs text-base-content/40">No inline content</div>`}</div></section>`);
     }
 

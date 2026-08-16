@@ -5,7 +5,7 @@
 //
 // `post`/`get` wire it to htmx; without either it is a plain button for a form
 // to submit or for client.js to handle.
-// daisyUI's `btn`. `default` is the quiet outline one a toolbar is full of;
+// the shared component layer's `btn`. `default` is the quiet outline one a toolbar is full of;
 // `primary` is the one action a screen is actually about.
 const TONE = {
     default: "btn-outline", primary: "btn-primary", danger: "btn-error btn-outline",

@@ -2,10 +2,11 @@ import { expect, test } from "bun:test";
 
 const root = new URL("../../../", import.meta.url).pathname;
 
-test("style builder ships explicit daisyUI light and dark themes", async () => {
+test("style builder has no external component framework plugin", async () => {
     const source = await Bun.file(`${root}src/procs/styles/build.ts`).text();
-    expect(source).toContain("themes: light --default, dark;");
-    expect(source).not.toContain("dark --prefersdark");
+    expect(source).toContain('@plugin "@tailwindcss/typography"');
+    expect(source).toContain('Tailwind and Typography provide utilities');
+    expect(source).not.toContain('@plugin "daisy' + 'ui"');
 });
 
 test("app stylesheet leaves color scheme selection to the persisted document theme", async () => {

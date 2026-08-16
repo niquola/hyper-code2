@@ -9,7 +9,7 @@
  */
 export default function (ctx: Context, _session: Session | null, opts: {items: Array<{ label: string; value: string; href?: string }>; value?: string; name?: string }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
-    // daisyUI's `join` is the button group: it squares the inner corners itself,
+    // the shared component layer's `join` is the button group: it squares the inner corners itself,
     // so a segment is a plain `btn` and the chosen one is `btn-active`.
     const seg = (it: { label: string; value: string; href?: string }) => {
         const on = it.value === opts.value;
