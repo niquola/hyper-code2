@@ -208,6 +208,13 @@ declare global {
             search: Injected<typeof import("../plugins/gh/src/gh/search").default>;
             updateIssue: Injected<typeof import("../plugins/gh/src/gh/updateIssue").default>;
             updatePr: Injected<typeof import("../plugins/gh/src/gh/updatePr").default>;
+            gist: {
+                create: Injected<typeof import("../.hyper/gh/gist/create").default>;
+                get: Injected<typeof import("../.hyper/gh/gist/get").default>;
+                list: Injected<typeof import("../.hyper/gh/gist/list").default>;
+                remove: Injected<typeof import("../.hyper/gh/gist/remove").default>;
+                update: Injected<typeof import("../.hyper/gh/gist/update").default>;
+            };
         };
         git: {
             commit: Injected<typeof import("./git/commit").default>;
