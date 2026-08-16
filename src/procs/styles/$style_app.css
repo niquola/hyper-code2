@@ -109,8 +109,8 @@
   --color-base-200: oklch(96.8% 0.001 240);
   --color-base-300: oklch(92.5% 0.003 240);
   --color-canvas: oklch(98.8% 0.001 240);
-  --ui-border: oklch(90.5% 0.004 240);
-  --ui-border-strong: oklch(82% 0.008 240);
+  --ui-border: oklch(88.5% 0.004 240);
+  --ui-border-strong: oklch(88.5% 0.004 240);
   --ui-surface: var(--color-base-100);
   --ui-surface-muted: var(--color-base-200);
 }
