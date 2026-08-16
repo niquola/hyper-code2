@@ -30,6 +30,6 @@ export default function (ctx: Context, _session: Session | null, opts: {id?: str
         : `<i class="ph ph-dots-three" aria-hidden="true"></i>`;
     return `<details class="dropdown ${opts.align === "left" ? "" : "dropdown-end"} ${opts.class ?? ""}" ${ctx.fns.procs.ui.attr({ entity: "menu", id: opts.id })}>
   <summary class="btn btn-xs btn-ghost" ${ctx.fns.procs.ui.attr({ action: "menu" })} aria-haspopup="menu">${trigger}</summary>
-  <ul class="menu dropdown-content border border-base-300 bg-base-100 text-base-content rounded-box z-50 mt-1 w-52 p-2 shadow-lg" role="menu">${opts.items.map(item).join("")}</ul>
+  <ul class="menu dropdown-content border border-ui-border bg-base-100 text-base-content rounded-box z-50 mt-1 w-52 p-2 shadow-lg" role="menu">${opts.items.map(item).join("")}</ul>
 </details>`;
 }

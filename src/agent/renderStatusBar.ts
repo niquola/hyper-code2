@@ -32,19 +32,19 @@ initialUsage?: any }): Promise<string> {
         })) as any[])[0];
         const quiet = lastEv?.t ? Math.round((now - Number(lastEv.t)) / 1000) : null;
         label = `<i class="ph ph-spinner-gap animate-spin" aria-hidden="true"></i><span>${elapsed}s${quiet != null && quiet > 10 ? ` · quiet ${quiet}s` : ''}</span>`;
-        cls = 'text-blue-700 bg-blue-50 border-blue-300';
+        cls = 'text-info bg-info/10 border-ui-border';
     } else if (row?.next_run_at) {
         const waits = Math.max(0, (Number(row.next_run_at) - now) / 1000).toFixed(1);
         label = `queued · ${waits}s`;
-        cls = 'text-amber-700 bg-amber-50 border-amber-300';
+        cls = 'text-warning bg-warning/10 border-ui-border';
     } else if (row?.last_error) {
         // A failed run does NOT auto-retry (by design) — without this badge it
         // looks like a hang. The next user message retries; say so.
         label = 'error';
-        cls = 'text-red-700 bg-red-50 border-red-300';
+        cls = 'text-error bg-error/10 border-ui-border';
     } else {
         label = 'idle';
-        cls = 'text-gray-500 bg-gray-50 border-gray-200';
+        cls = 'text-base-content/55 bg-base-200 border-ui-border';
     }
 
     const url = `/agent/${encodeURIComponent(agentId)}/statusbar`;
@@ -52,7 +52,7 @@ initialUsage?: any }): Promise<string> {
     const statusBadge = row?.last_error && row?.run_state !== 'running'
         ? `<span class="text-xs px-2 py-0.5 rounded border font-mono ${cls} max-w-[16rem] truncate inline-block align-bottom" title="${esc(String(row.last_error))} — send a message to retry">error: ${esc(String(row.last_error).slice(0, 48))}</span>`
         : `<span class="text-xs px-2 py-0.5 rounded border font-mono inline-flex items-center gap-1 ${cls}" title="${row?.run_state === 'running' ? 'running' : esc(label)}">${label}</span>`;
-    const tokensBadge = usage ? `<span title="context tokens" class="text-xs px-2 py-0.5 rounded border border-gray-300 bg-white text-gray-600 font-mono">${(((usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0)) / 1000).toFixed(1)}k</span>` : '';
+    const tokensBadge = usage ? `<span title="context tokens" class="rounded border border-ui-border bg-base-200 px-2 py-0.5 font-mono text-xs text-base-content/65">${(((usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0)) / 1000).toFixed(1)}k</span>` : '';
     // Stop exists only while there is something to stop — a running turn or a
     // queued one. It lives in this fragment because the fragment re-renders
     // every second: the button appears with the run and leaves with it.

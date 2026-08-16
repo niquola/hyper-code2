@@ -74,7 +74,7 @@ ${opts.headExtra ?? ""}
 </head>
 <body hx-ext="popup-rpc" class="bg-base-200 text-base-content text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div id="frame" class="relative flex h-screen">
-  <nav id="quick-bar" aria-label="Quick access" class="flex w-10 shrink-0 flex-col items-center border-r border-base-300 bg-base-200 py-1.5">
+  <nav id="quick-bar" aria-label="Quick access" class="flex w-10 shrink-0 flex-col items-center border-r border-ui-border bg-base-200 py-1.5">
     <button type="button" title="Global menu — ⌘/" aria-label="Open global menu" onclick="window.__navOpen?.()" class="flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content">
       <i class="ph ph-squares-four text-base" aria-hidden="true"></i>
     </button>
@@ -88,7 +88,7 @@ ${opts.headExtra ?? ""}
     <main id="main" hx-history-elt class="min-h-0 min-w-0 flex flex-1 flex-col overflow-y-auto">${opts.main}</main>
   </section>
 </div>
-<dialog id="app-popup" class="m-auto max-h-[85vh] w-[min(48rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-base-300 bg-base-100 p-0 text-base-content shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-[1px]">
+<dialog id="app-popup" class="m-auto max-h-[85vh] w-[min(48rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-ui-border bg-base-100 p-0 text-base-content shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-[1px]">
   <div class="flex max-h-[85vh] flex-col">
     <div class="flex shrink-0 items-center gap-3 border-b border-gray-200 px-5 py-3.5"><h2 id="app-popup-title" class="min-w-0 flex-1 truncate text-sm font-semibold text-gray-800">Details</h2><button id="app-popup-close" type="button" title="Close" aria-label="Close" class="flex size-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"><i class="ph ph-x text-lg"></i></button></div>
     <div id="app-popup-body" class="app-popup-body min-h-0 flex-1 overflow-auto bg-gray-50/60 p-5 text-xs text-gray-700"></div>

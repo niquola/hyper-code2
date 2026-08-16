@@ -120,8 +120,8 @@
    * popups and controls should separate without becoming a white wireframe. */
   --color-base-300: oklch(31% 0.014 252);
   --color-canvas: color-mix(in oklab, var(--color-base-100) 72%, black);
-  --ui-border: oklch(34% 0.014 252);
-  --ui-border-strong: oklch(41% 0.016 252);
+  --ui-border: oklch(38% 0.015 252);
+  --ui-border-strong: oklch(46% 0.018 252);
   --ui-surface: var(--color-base-100);
   --ui-surface-muted: var(--color-base-200);
 }

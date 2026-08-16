@@ -152,8 +152,8 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         // File-changing tools get a stronger outline; errors take precedence.
         const destructive = new Set(['write', 'edit', 'remove', 'rename']).has(String(ev.name ?? ''));
         const cardStyle = ev.isError
-            ? 'border-error/35 bg-error/10 text-error'
-            : destructive ? 'border-base-content/35 bg-base-100 text-base-content/55' : 'border-ui-border bg-base-100 text-base-content/45';
+            ? 'border-error/55 bg-error/10 text-error'
+            : destructive ? 'border-ui-border-strong bg-base-100 text-base-content/65' : 'border-ui-border-strong bg-base-100 text-base-content/60';
         const bodyMethod = agentId && ev.idx != null ? 'agent.toolDetails' : '';
         const title = String(meta.label + ' ' + meta.subject).trim();
 
