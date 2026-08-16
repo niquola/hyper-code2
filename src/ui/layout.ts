@@ -36,14 +36,56 @@ export default async function (ctx: Context, session: Session | null, opts: {
 /* Compact lazy tool links. The tray is assembled client-side so consecutive
    calls occupy one visual row without wrapping each button in extra markup. */
 .tool-tray { display: flex; flex-wrap: wrap; gap: .25rem; align-items: center; }
-.tool.tool-tucked { width: 1.333rem; height: 1.333rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 9999px; }
-.tool.tool-tucked > i { font-size: .7rem; }
+.tool.tool-tucked {
+  width: 1.333rem; height: 1.333rem; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 9999px;
+  background-color: rgb(from var(--color-base-200) r g b / .62);
+  background-image: none;
+  background-position: initial;
+  background-size: initial;
+  border: 1px solid color-mix(in oklab, var(--color-base-content) 14%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in oklab, white 65%, transparent), inset 0 -1px 2px color-mix(in oklab, var(--color-base-content) 10%, transparent), 0 1px 3px color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  backdrop-filter: blur(5px) saturate(135%);
+  -webkit-backdrop-filter: blur(5px) saturate(135%);
+}
+.tool.tool-tucked > i { font-size: .7rem; filter: drop-shadow(0 1px 0 color-mix(in oklab, white 80%, transparent)); }
 .tool { transition: background-color .2s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
-.tool.tool-tucked:hover { background: color-mix(in oklab, var(--color-base-200) 75%, transparent); border-color: var(--color-base-300); box-shadow: 0 3px 8px color-mix(in oklab, var(--color-base-content) 18%, transparent); transform: translateY(-2px) scale(1.15); color: var(--color-base-content); }
+.tool.tool-tucked:hover {
+  background-color: rgb(from var(--color-base-200) r g b / .76);
+  background-image: none;
+  border-color: color-mix(in oklab, var(--color-base-content) 20%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in oklab, white 75%, transparent), inset 0 -2px 3px color-mix(in oklab, var(--color-base-content) 12%, transparent), 0 4px 10px color-mix(in oklab, var(--color-base-content) 16%, transparent);
+  transform: translateY(-2px) scale(1.15);
+  color: var(--color-base-content);
+}
 .tool.tool-tucked:active { transform: translateY(0) scale(1.05); }
 .mermaid-diagram { display: block; width: 100%; max-width: 100%; min-width: 0; overflow: hidden; }
 .mermaid-light { display: block; width: 100%; max-width: 100%; min-width: 0; }
 .mermaid-diagram svg { display: block; width: auto; max-width: 100% !important; height: auto !important; }
+
+.chat-dot-grid {
+  background-color: var(--color-base-200);
+  background-image: radial-gradient(circle, color-mix(in oklab, var(--color-base-content) 9%, transparent) 0 1px, transparent 1.35px);
+  background-position: .5em .5em;
+  background-size: 1em 1em;
+}
+
+.chat-glass,
+.chat-glass-primary {
+  background-size: 1em 1em;
+  background-position: calc(.5em + 1px) calc(.5em + 1px);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.chat-glass {
+  background-color: rgb(from var(--color-base-100) r g b / .86);
+  background-image: radial-gradient(circle, color-mix(in oklab, var(--color-base-content) 5%, transparent) 0 1px, transparent 1.35px);
+}
+.chat-glass-primary {
+  background-color: rgb(20 20 22 / .94);
+  background-image: radial-gradient(circle, rgb(255 255 255 / .12) 0 1px, transparent 1.35px);
+}
 
 /* Highlighted code inside tool detail dialogs. */
 .app-popup-body pre { margin: 0; padding: .75rem 1rem; border-radius: .65rem; background: rgba(0,0,0,.04) !important; white-space: pre-wrap; word-break: break-word; }

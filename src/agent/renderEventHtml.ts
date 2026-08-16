@@ -107,7 +107,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
             : '';
         return '<div class="group relative flex justify-end">'
             + '<div class="relative ml-auto max-w-[80%]">'
-            + '<div class="rounded-xl bg-primary px-4 py-3 text-primary-content whitespace-pre-wrap break-words shadow-sm">'
+            + '<div class="chat-glass-primary rounded-xl px-4 py-3 text-white whitespace-pre-wrap break-words shadow-sm border border-black/20">'
             + appendTime(esc(ev.text) + ragIcon, ev.ts, 'dark')
             + '</div>'
             + '<div class="mt-1 flex justify-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">' + deleteControls(idx, agentId, true, true, 'side') + '</div>'
@@ -135,7 +135,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
             : '<pre class="text-xs whitespace-pre-wrap break-words">' + esc(ev.text || '') + '</pre>';
         return '<div class="group relative flex justify-start">'
             + deleteControls(idx, agentId, true, true)
-            + '<div class="assistant max-w-[90%] rounded-2xl bg-base-100 px-4 py-3 text-base-content shadow-sm border border-ui-border">'
+            + '<div class="assistant chat-glass max-w-[90%] rounded-2xl px-4 py-3 text-base-content shadow-sm border border-ui-border">'
             + '<div class="prose prose-sm max-w-none text-base-content prose-headings:text-base-content prose-p:text-base-content prose-li:text-base-content prose-strong:text-base-content prose-code:text-base-content prose-a:text-base-content/80 prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
             + appendTime(safeHtml, ev.ts, 'light', instructionMarks)
             + '</div>'
@@ -153,7 +153,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         const destructive = new Set(['write', 'edit', 'remove', 'rename']).has(String(ev.name ?? ''));
         const cardStyle = ev.isError
             ? 'border-error/55 bg-error/10 text-error'
-            : destructive ? 'border-ui-border-strong bg-base-100 text-base-content/65' : 'border-ui-border-strong bg-base-100 text-base-content/60';
+            : destructive ? 'border-ui-border-strong bg-transparent text-base-content/65' : 'border-ui-border-strong bg-transparent text-base-content/60';
         const bodyMethod = agentId && ev.idx != null ? 'agent.toolDetails' : '';
         const title = String(meta.label + ' ' + meta.subject).trim();
 
