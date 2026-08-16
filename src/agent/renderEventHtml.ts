@@ -136,7 +136,7 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         return '<div class="group relative flex justify-start">'
             + deleteControls(idx, agentId, true, true)
             + '<div class="assistant max-w-[90%] rounded-2xl bg-base-100 px-4 py-3 text-base-content shadow-sm border border-ui-border">'
-            + '<div class="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
+            + '<div class="prose prose-sm max-w-none text-base-content prose-headings:text-base-content prose-p:text-base-content prose-li:text-base-content prose-strong:text-base-content prose-code:text-base-content prose-a:text-base-content/80 prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
             + appendTime(safeHtml, ev.ts, 'light', instructionMarks)
             + '</div>'
             + usage

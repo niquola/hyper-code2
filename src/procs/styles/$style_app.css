@@ -165,6 +165,31 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
 .bg-ui-surface { background-color: var(--ui-surface) !important; }
 .bg-ui-surface-muted { background-color: var(--ui-surface-muted) !important; }
 
+/* Typography plugin defaults are light-only. Bind every prose descendant to
+ * the project theme so historical assistant messages remain readable in dark. */
+.prose {
+  --tw-prose-body: var(--theme-base-content);
+  --tw-prose-headings: var(--theme-base-content);
+  --tw-prose-lead: color-mix(in oklab, var(--theme-base-content) 75%, transparent);
+  --tw-prose-links: var(--theme-base-content);
+  --tw-prose-bold: var(--theme-base-content);
+  --tw-prose-counters: color-mix(in oklab, var(--theme-base-content) 65%, transparent);
+  --tw-prose-bullets: color-mix(in oklab, var(--theme-base-content) 55%, transparent);
+  --tw-prose-hr: var(--ui-border);
+  --tw-prose-quotes: var(--theme-base-content);
+  --tw-prose-quote-borders: var(--ui-border-strong);
+  --tw-prose-captions: color-mix(in oklab, var(--theme-base-content) 65%, transparent);
+  --tw-prose-code: var(--theme-base-content);
+  --tw-prose-pre-code: var(--theme-base-content);
+  --tw-prose-pre-bg: var(--theme-base-200);
+  --tw-prose-th-borders: var(--ui-border-strong);
+  --tw-prose-td-borders: var(--ui-border);
+}
+
+.prose { color: var(--theme-base-content) !important; }
+.prose :where(p, li, ul, ol, h1, h2, h3, h4, strong, em, blockquote, code, th, td):not(:where([class~="not-prose"] *)) { color: inherit; }
+
+
 /* Inputs are intentionally stronger than structural dividers so white controls
  * remain distinct from white cards in the light theme. */
 .input, .textarea, .select, input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), textarea, select {
