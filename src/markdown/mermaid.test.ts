@@ -19,6 +19,9 @@ describe("markdown.mermaid", () => {
         const html = await mermaid({} as Context, null, { source: "flowchart LR\nA --> B" });
         expect(html).toContain("class=\"mermaid-diagram\"");
         expect(html).toContain("<svg");
+        expect(html).toMatch(/width="[0-9.]+"/);
+        expect(html).toContain('height="auto"');
+        expect(html).toContain('preserveAspectRatio="xMinYMin meet"');
     }, 20000);
 
     test("render strips google font imports", async () => {

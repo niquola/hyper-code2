@@ -50,5 +50,7 @@ export default async function (_ctx: Context, _session: Session | null, opts: { 
         font: "Inter, verdana",
         transparent: true,
     });
-    return "<div class=\"mermaid-diagram\"><span class=\"mermaid-light\" data-ignore>" + stripFontImports(svg) + "</span></div>";
+    const responsive = stripFontImports(svg)
+        .replace(/<svg\b([^>]*)\swidth="([^"]+)"\sheight="[^"]+"([^>]*)>/, '<svg$1$3 width="$2" height="auto" preserveAspectRatio="xMinYMin meet">');
+    return "<div class=\"mermaid-diagram\"><span class=\"mermaid-light\" data-ignore>" + responsive + "</span></div>";
 }
