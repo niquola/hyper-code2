@@ -181,6 +181,16 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
 .prose { color: var(--theme-base-content) !important; }
 .prose :where(p, li, ul, ol, h1, h2, h3, h4, strong, em, blockquote, code, th, td):not(:where([class~="not-prose"] *)) { color: inherit; }
 
+[data-theme="dark"] .prose :not(pre) > code {
+  color: var(--theme-base-content) !important;
+  background-color: color-mix(in oklab, var(--theme-base-300) 70%, transparent);
+}
+[data-theme="dark"] .prose pre:not(.shiki) { color: var(--theme-base-content) !important; }
+[data-theme="dark"] .shiki,
+[data-theme="dark"] .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
 
 /* Inputs are intentionally stronger than structural dividers so white controls
  * remain distinct from white cards in the light theme. */

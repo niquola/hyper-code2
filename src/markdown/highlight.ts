@@ -14,7 +14,7 @@ const ALIASES: Record<string, string> = {
 let _hl: Highlighter | null = null;
 
 export async function getHL(): Promise<Highlighter> {
-    if (!_hl) _hl = await createHighlighter({ themes: ["github-light"], langs: [...LANGS] });
+    if (!_hl) _hl = await createHighlighter({ themes: ["github-light", "github-dark"], langs: [...LANGS] });
     return _hl;
 }
 
@@ -29,7 +29,13 @@ export default async function (_ctx: Context, _session: Session | null, opts: { 
     const hl = await getHL();
     const normalized = ALIASES[safeLang.toLowerCase()] ?? safeLang.toLowerCase();
     if (hl.getLoadedLanguages().includes(normalized as any)) {
-        try { return hl.codeToHtml(safeCode, { lang: normalized, theme: "github-light" }); } catch { /* fall through */ }
+        try {
+            return hl.codeToHtml(safeCode, {
+                lang: normalized,
+                themes: { light: "github-light", dark: "github-dark" },
+                defaultColor: false,
+            });
+        } catch { /* fall through */ }
     }
     return "<pre><code>" + safeCode.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</code></pre>";
 }
