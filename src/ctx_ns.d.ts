@@ -18,6 +18,7 @@ declare global {
             clear: Injected<typeof import("./agent/clear").default>;
             clearReflectionNudge: Injected<typeof import("./agent/clearReflectionNudge").default>;
             compact: Injected<typeof import("./agent/compact").default>;
+            compactContext: Injected<typeof import("./agent/compactContext").default>;
             createFromPopup: Injected<typeof import("./agent/createFromPopup").default>;
             createFromValues: Injected<typeof import("./agent/createFromValues").default>;
             delegate: Injected<typeof import("./agent/delegate").default>;
@@ -710,6 +711,7 @@ declare global {
             controlScript: Injected<typeof import("./ui/controlScript").default>;
             createAgent: Injected<typeof import("./ui/createAgent").default>;
             eval: Injected<typeof import("./ui/eval").default>;
+            inplacePopup: Injected<typeof import("./ui/inplacePopup").default>;
             inspectorSection: Injected<typeof import("./ui/inspectorSection").default>;
             layout: Injected<typeof import("./ui/layout").default>;
             live: Injected<typeof import("./ui/live").default>;

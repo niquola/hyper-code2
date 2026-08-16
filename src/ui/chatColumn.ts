@@ -53,7 +53,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     const lastUsage = lastEvent ? JSON.parse(lastEvent.payload).usage : null;
     const statusBarHtml = await ctx.fns.agent.renderStatusBar({ agentId: id, initialUsage: lastUsage });
 
-    const reflectionHtml = ctx.fns.ui.reflectionDropdown({ agent });
+    const reflectionHtml = await ctx.fns.ui.reflectionDropdown({ agent });
     // Switching and creating agents live in the rail on the far left — the
     const sleep = ctx.fns.agent.normalizeSleepContext({ sleepContext: agent.sleepContext });
     const activeSleep = sleep ? ctx.fns.agent.getSleepGeneration({ sleepContext: sleep, kind: "active" }) : null;
@@ -62,16 +62,17 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     const sleepState = shownSleep?.state ?? {};
     const fullCount = (await ctx.fns.session.getFullMessages({ id })).length;
     const tailCount = activeSleep ? Math.max(0, fullCount - Number(activeSleep.sourceOffset ?? 0)) : 0;
-    const sleepControl = sleep && shownSleep ? `<details class="relative">
-      <summary class="cursor-pointer list-none px-1 ${sleep.mode === 'compact' ? 'text-indigo-600' : 'text-amber-500'} hover:text-indigo-700" title="${sleep.mode === 'compact' ? `compact v${sleep.activeRevision} · tail ${tailCount}` : `sleep draft v${sleep.draftRevision ?? shownSleep.revision}`}" ><i class="ph ${sleep.mode === 'compact' ? 'ph-moon-stars' : 'ph-moon'}"></i>${draftSleep ? `<span class="ml-0.5 rounded-full bg-amber-100 px-1 text-[9px] text-amber-700">v${draftSleep.revision}</span>` : ''}</summary>
-      <div class="absolute right-0 top-6 z-30 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-ui-border bg-base-100 p-3 text-left shadow-xl">
-        <div class="font-medium text-base-content/80">${sleep.mode === 'compact' ? `Active v${sleep.activeRevision} · tail ${tailCount}` : 'Full history active'}${draftSleep ? ` · draft v${draftSleep.revision} ready` : ''}</div>
+    const sleepControl = sleep && shownSleep ? await ctx.fns.ui.inplacePopup({
+        id: `sleep-popover-${id}`,
+        triggerHtml: `<i class="ph ${sleep.mode === 'compact' ? 'ph-moon-stars' : 'ph-moon'}"></i>${draftSleep ? `<span class="ml-0.5 rounded-full bg-amber-100 px-1 text-[9px] text-amber-700">v${draftSleep.revision}</span>` : ''}`,
+        triggerAttrs: `class="px-1 ${sleep.mode === 'compact' ? 'text-indigo-600' : 'text-amber-500'} hover:text-indigo-700" title="${sleep.mode === 'compact' ? `compact v${sleep.activeRevision} · tail ${tailCount}` : `sleep draft v${sleep.draftRevision ?? shownSleep.revision}`}" aria-label="Sleep context"`,
+        panelAttrs: 'aria-label="Sleep context"',
+        contentHtml: `<div class="font-medium text-base-content/80">${sleep.mode === 'compact' ? `Active v${sleep.activeRevision} · tail ${tailCount}` : 'Full history active'}${draftSleep ? ` · draft v${draftSleep.revision} ready` : ''}</div>
         <div class="mt-2 text-base-content/65">${esc(sleepState.situation ?? 'No situation summary')}</div>
         ${sleepState.nextStep ? `<div class="mt-2 text-base-content/55"><span class="font-medium">Next:</span> ${esc(sleepState.nextStep)}</div>` : ''}
         ${(sleepState.openWork ?? []).length ? `<div class="mt-3 border-t border-gray-100 pt-2 font-medium text-base-content/70">Open work</div><ul class="mt-1 list-disc space-y-1 pl-4 text-base-content/55">${sleepState.openWork.slice(0, 5).map((x: any) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
-        <div class="mt-3 flex flex-wrap gap-2">${draftSleep ? `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="activate"><input type="hidden" name="revision" value="${draftSleep.revision}"><button class="rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs text-indigo-700">Use draft v${draftSleep.revision}</button></form>` : ''}${sleep.mode === 'compact' ? `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="deactivate"><button class="rounded border border-ui-border px-2 py-1 text-xs text-base-content/65">Show full history</button></form>` : ''}<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="prepare"><button class="rounded border border-ui-border px-2 py-1 text-xs text-base-content/55">Build next draft</button></form></div>
-      </div>
-    </details>` : `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none" class="inline"><input type="hidden" name="action" value="prepare"><button title="prepare compact sleep context" class="px-1 text-base-content/45 hover:text-indigo-700"><i class="ph ph-bed"></i></button></form>`;
+        <div class="mt-3 flex flex-wrap gap-2">${draftSleep ? `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="activate"><input type="hidden" name="revision" value="${draftSleep.revision}"><button class="rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs text-indigo-700">Use draft v${draftSleep.revision}</button></form>` : ''}${sleep.mode === 'compact' ? `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="deactivate"><button class="rounded border border-ui-border px-2 py-1 text-xs text-base-content/65">Show full history</button></form>` : ''}<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none"><input type="hidden" name="action" value="prepare"><button class="rounded border border-ui-border px-2 py-1 text-xs text-base-content/55">Build next draft</button></form></div>`,
+    }) : `<form hx-post="/agent/${encodeURIComponent(id)}/sleep" hx-swap="none" class="inline"><input type="hidden" name="action" value="prepare"><button title="prepare compact sleep context" class="px-1 text-base-content/45 hover:text-indigo-700"><i class="ph ph-bed"></i></button></form>`;
     // Use the same turn/TTL calculation as the LLM request builder, so the UI
     // shows exactly the reflection instruction that is currently injected.
     const activeInstructions = await ctx.fns.agent.statusLineForTurn({ agent });
@@ -79,15 +80,25 @@ export default async function (ctx: Context, _session: Session | null, opts: {
         .split('\n')
         .find((line: string) => line.startsWith('Reflection nudge: '))
         ?.slice('Reflection nudge: '.length) ?? '';
+    const compactPopup = await ctx.fns.ui.inplacePopup({
+        id: `compact-popover-${id}`,
+        triggerHtml: '<i class="ph ph-arrows-in-line-vertical"></i>',
+        triggerAttrs: 'class="px-1 text-base-content/45 hover:text-indigo-600" title="Compact context" aria-label="Compact context"',
+        panelAttrs: 'aria-label="Compact context"',
+        contentHtml: `<form hx-post="/agent/${encodeURIComponent(id)}/compact" hx-swap="none"><div class="text-sm font-medium">Compact context</div><textarea name="instructions" rows="3" placeholder="Optional focus instructions" class="mt-2 w-full rounded border border-ui-border bg-base-100 p-2 text-xs"></textarea><button type="submit" class="mt-2 rounded bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-700">Compact</button></form>`,
+    });
+
     // header names THIS agent and holds its controls, nothing more.
     return `
-<header class="glass-bar flex h-8 shrink-0 items-center gap-2 border-b border-ui-border px-3 text-xs text-base-content/70">
+<header class="glass-bar relative z-40 mx-auto mt-2 flex h-9 w-[calc(100%-1rem)] max-w-[50rem] shrink-0 items-center gap-2 overflow-visible rounded-2xl border border-ui-border px-3 text-xs text-base-content/70">
   ${ctx.fns.ui.modelLogo({ model: agent.model })}
   <span class="font-mono font-medium text-base-content/80">${esc(String(agent.title ?? id).slice(0, 40) || id)} <span class="text-base-content/45">(${esc(id)})</span></span>
   ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}
   ${statusBarHtml}
   <span class="ml-auto flex items-center gap-1">
   ${reflectionHtml}
+    ${compactPopup}
+
     ${sleepControl}
 
     ${ctx.fns.ui.popup({ method: 'agent.initialPromptPopup', params: { agentId: id }, html: '<i class="ph ph-scroll" aria-hidden="true"></i>', attrs: 'title="Initial prompt" aria-label="Initial prompt" class="px-1 text-base-content/45 hover:text-indigo-600"' })}

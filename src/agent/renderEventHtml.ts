@@ -208,6 +208,19 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
     }
 
 
+    if (ev.type === "compaction_start") {
+        return eventCard({ title: `Compacting context · v${Number(ev.revision ?? 0)}`, icon: 'arrows-in-line-vertical', tone: 'info', badge: badge('working', 'info') });
+    }
+    if (ev.type === "compaction_completed") {
+        const before = Math.round(Number(ev.tokensBefore ?? 0) / 1000);
+        const after = Math.round(Number(ev.tokensAfter ?? 0) / 1000);
+        return eventCard({ title: `Context compacted · ${before}k → ${after}k`, icon: 'arrows-in-line-vertical', tone: 'success', badge: badge(`${Number(ev.keptMessages ?? 0)} kept`, 'success'), details: `<pre class="whitespace-pre-wrap text-xs text-base-content/65">${esc(ev.summary ?? '')}</pre>` });
+    }
+    if (ev.type === "compaction_failed") {
+        return eventCard({ title: 'Context compaction failed', icon: 'warning-circle', tone: 'error', body: `Context unchanged · ${esc(ev.error ?? '')}` });
+    }
+
+
     if (ev.type === "error") {
         // Errors surface as a toast (session.appendErrorEvent notifies) and in
         // the status bar; the row stays in the events table for the audit.

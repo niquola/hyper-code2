@@ -5,13 +5,13 @@
 // taking the whole agent page down with `.map is not a function`.
 const list = (v: any): any[] => Array.isArray(v) ? v : (typeof v === "string" && v.trim() ? [v.trim()] : []);
 
-/** Performs the ui.reflectionDropdown runtime operation. */
+/** Render a resilient, top-layer conversation-reflection panel anchored to its toolbar trigger. */
 /**
- * The reflection state is written by a model, and rows written before any.
+ * Render stored reflection activity, tasks, satisfaction and mistakes without failing on legacy scalar list fields.
  * @param opts.agent Agent associated with the operation.
  */
-export default function (ctx: Context, _session: Session | null, opts: {
-        /** Agent associated with the operation. */ agent: types.agent.Agent }): string {
+export default async function (ctx: Context, _session: Session | null, opts: {
+        /** Agent associated with the operation. */ agent: types.agent.Agent }): Promise<string> {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const agent = opts.agent;
     const reflection = agent.reflection?.state ?? null;
@@ -24,10 +24,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
     if (active) return `<span ${liveAttrs} class="${buttonClass} border-primary/30 bg-primary/10 text-primary" title="Reflection is running" aria-label="Reflection is running"><i class="ph ph-brain animate-spin" aria-hidden="true"></i></span>`;
     if (!reflection) return `<span ${liveAttrs} class="${buttonClass} border-base-300 bg-base-100 text-base-content/40" title="Reflection appears after 3 user messages" aria-label="Reflection pending"><i class="ph ph-brain" aria-hidden="true"></i></span>`;
 
-    return `<details ${liveAttrs} class="relative">
-      <summary class="${buttonClass} cursor-pointer list-none border-primary/30 bg-primary/10 text-primary hover:bg-primary/20" title="Conversation reflection" aria-label="Open conversation reflection"><i class="ph ph-brain" aria-hidden="true"></i></summary>
-      <div class="absolute right-0 top-7 z-30 w-96 max-w-[calc(100vw-2rem)] rounded-lg border border-base-300 bg-base-100 p-3 text-left text-base-content shadow-xl">
-        <div class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-base-content/40">What we are doing</div>
+    const contentHtml = `<div class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-base-content/40">What we are doing</div>
         <div class="font-medium text-base-content">${esc(reflection.activity?.goal ?? 'Unknown')}</div>
         <div class="mt-1 text-base-content/70">${esc(reflection.activity?.currentStep ?? '')}</div>
         ${reflection.activity?.nextStep ? `<div class="mt-2 text-base-content/60"><span class="font-medium">Next:</span> ${esc(reflection.activity.nextStep)}</div>` : ''}
@@ -39,6 +36,13 @@ export default function (ctx: Context, _session: Session | null, opts: {
         ${list(reflection.userSatisfaction?.reasons).length ? `<ul class="mt-1 list-disc space-y-1 pl-4 text-base-content/60">${list(reflection.userSatisfaction?.reasons).map((x: any) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
         <div class="mt-3 border-t border-base-200 pt-2 font-medium text-base-content/80">Mistakes</div>
         ${list(reflection.mistakes).length ? `<ul class="mt-1 space-y-2">${list(reflection.mistakes).map((m: any) => typeof m === 'string' ? `<li><span class="text-base-content/80">${esc(m)}</span></li>` : `<li><span class="text-base-content/80">${esc(m.description)}</span><div class="text-base-content/40">${esc(m.status)} · ${esc(m.lesson)}</div></li>`).join('')}</ul>` : '<div class="mt-1 text-base-content/40">No significant mistakes noted</div>'}
-      </div>
-    </details>`;
+`;
+    const popup = await ctx.fns.ui.inplacePopup({
+        id: `reflection-popover-${agent.id}`,
+        triggerHtml: '<i class="ph ph-brain" aria-hidden="true"></i>',
+        triggerAttrs: `class="${buttonClass} border-primary/30 bg-primary/10 text-primary hover:bg-primary/20" title="Conversation reflection" aria-label="Open conversation reflection"`,
+        panelAttrs: 'aria-label="Conversation reflection"',
+        contentHtml,
+    });
+    return `<span ${liveAttrs} class="inline-flex">${popup}</span>`;
 }
