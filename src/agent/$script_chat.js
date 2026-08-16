@@ -20,6 +20,7 @@
             this.historyAnchor = null;
             this.historyAnchorTop = null;
             this.loadingOlder = false;
+            this.ownSwaps = new WeakSet();
             this.lastAssistant = this.latestAssistant();
         }
 
@@ -27,7 +28,10 @@
             if (!this.messages || !this.form || !this.input) return false;
             const { signal } = this.abort;
             this.messages.addEventListener('scroll', () => {
-                this.shouldStick = this.isNearBottom();
+                // Once the reader leaves the live edge, background swaps must
+                // never reclaim the scroll position. Only an explicit send can
+                // opt back into automatic positioning.
+                if (!this.isNearBottom()) this.shouldStick = false;
                 if (this.messages.scrollTop < 80) this.loadOlder();
             }, { passive: true, signal });
             this.input.addEventListener('keydown', (event) => {
@@ -45,10 +49,10 @@
                 this.shouldStick = true;
             }, { signal });
             this.form.addEventListener('htmx:afterRequest', event => {
-                if (!event.detail?.successful) return;
+                if (event.detail?.elt !== this.form || !event.detail?.successful) return;
                 this.shouldStick = true;
                 this.scrollBottom();
-                requestAnimationFrame(() => { if (this.alive()) this.scrollBottom(); });
+                requestAnimationFrame(() => { if (this.alive() && this.shouldStick) this.scrollBottom(); });
             }, { signal });
             this.arrangeTools(this.messages);
             this.addInheritedNote();
@@ -94,8 +98,16 @@
             htmx.trigger(head, 'load-older');
         }
 
-        beforeSwap(target) {
-            if (target === this.messages || target?.id === 'msg-tail') this.shouldStick = this.isNearBottom();
+        beforeSwap(event) {
+            const target = event.detail?.target;
+            const source = event.detail?.elt;
+            // Ignore late HTMX responses from a chat that has already been
+            // replaced by navigation to another agent.
+            if (!(target && (target === this.messages || this.panel.contains(target)))
+                && !(source && this.panel.contains(source))) return;
+            if (target) this.ownSwaps.add(target);
+            // Do not infer consent to autoscroll from geometry here: a live
+            // fragment can update while the reader happens to be near the end.
             if (target?.id === 'msg-head' && this.messages.contains(target)) {
                 this.historyAnchor = target.nextElementSibling;
                 this.historyAnchorTop = this.historyAnchor?.getBoundingClientRect().top ?? null;
@@ -103,16 +115,22 @@
             }
         }
 
-        afterSwap(target) {
+        afterSwap(event) {
             if (!this.alive()) return;
+            const target = event.detail?.target;
+            const source = event.detail?.elt;
+            const belongsHere = (target && (this.ownSwaps.has(target) || target === this.messages || this.panel.contains(target)))
+                || (source && this.panel.contains(source));
+            if (!belongsHere) return;
             const latestAssistant = this.latestAssistant();
             const hasNewAssistant = latestAssistant && latestAssistant !== this.lastAssistant;
-            if (hasNewAssistant) {
+            if (hasNewAssistant && this.shouldStick) {
                 this.lastAssistant = latestAssistant;
                 this.scrollAssistantTop(latestAssistant);
                 this.shouldStick = false;
-            } else if ((target === this.messages || target?.id === 'msg-tail') && this.shouldStick) {
-                this.scrollBottom();
+            } else {
+                if (hasNewAssistant) this.lastAssistant = latestAssistant;
+                if ((target === this.messages || target?.id === 'msg-tail') && this.shouldStick) this.scrollBottom();
             }
             if (target?.id === 'msg-head') {
                 if (this.historyAnchor?.isConnected && this.historyAnchorTop != null) {
@@ -171,9 +189,9 @@
             current = null;
         }
     });
-    document.body.addEventListener('htmx:beforeSwap', event => current?.beforeSwap(event.detail?.target));
+    document.body.addEventListener('htmx:beforeSwap', event => current?.beforeSwap(event));
     document.body.addEventListener('htmx:afterSwap', event => {
-        current?.afterSwap(event.detail?.target);
+        current?.afterSwap(event);
         mount();
     });
     mount();
