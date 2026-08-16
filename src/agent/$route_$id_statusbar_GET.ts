@@ -12,6 +12,7 @@ params: Record<string, string> }) {
     // leaving a half-broken polling cycle running in the user's tab.
     const row = ((await ctx.fns.procs.db.select({ sql: 'SELECT id FROM agents WHERE id = ?', params: [id] })) as any[])[0];
     if (!row) return new Response('not found', { status: 404 });
-    const html = await ctx.fns.agent.renderStatusBar({ agentId: id });
+    const part = new URL(opts.req.url).searchParams.get('part') === 'stop' ? 'stop' : 'status';
+    const html = await ctx.fns.agent.renderStatusBar({ agentId: id, part: part as 'status' | 'stop' });
     return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
 }

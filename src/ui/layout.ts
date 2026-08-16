@@ -72,13 +72,20 @@ export default async function (ctx: Context, session: Session | null, opts: {
   box-shadow: inset 1px 0 0 rgb(255 255 255 / .18), -1px 0 8px rgb(0 0 0 / .04);
 }
 .glass-bar {
-  background-color: rgb(from var(--color-base-100) r g b / .84) !important;
+  background-color: rgb(from var(--color-base-100) r g b / .68) !important;
   background-image: linear-gradient(110deg, rgb(255 255 255 / .12), transparent 45%, rgb(255 255 255 / .04));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 1px 2px rgb(0 0 0 / .04), 0 8px 24px rgb(0 0 0 / .08);
   backdrop-filter: blur(12px) saturate(115%);
   -webkit-backdrop-filter: blur(12px) saturate(115%);
 }
-.chat-dot-grid { padding-bottom: 6.5rem !important; }
+#chat-panel { position: relative; }
+.chat-dot-grid { padding-top: 4rem !important; padding-bottom: 6.5rem !important; }
+.chat-dot-grid > * {
+  width: 100%;
+  max-width: 48rem;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
 .chat-composer {
   position: relative;
   z-index: 20;
@@ -89,13 +96,14 @@ export default async function (ctx: Context, session: Session | null, opts: {
 }
 .chat-composer > * { pointer-events: auto; }
 .glass-input {
-  min-height: 52px;
+  min-height: 44px;
   max-height: 208px;
-  background-color: rgb(from var(--color-base-100) r g b / .96) !important;
+  background-color: rgb(from var(--color-base-100) r g b / .80) !important;
   box-shadow: 0 0 0 1px rgb(0 0 0 / .04), 0 2px 8px rgb(0 0 0 / .04), 0 4px 80px 8px rgb(0 0 0 / .024);
   backdrop-filter: blur(16px) saturate(115%);
   -webkit-backdrop-filter: blur(16px) saturate(115%);
 }
+.chat-composer .glass-input { padding-right: 3.25rem; }
 .glass-input:hover { box-shadow: 0 0 0 1px rgb(0 0 0 / .05), 0 2px 9px rgb(0 0 0 / .05), 0 4px 80px 8px rgb(0 0 0 / .028); }
 .glass-input:focus {
   box-shadow: 0 0 0 3px rgb(59 130 246 / .72), 0 2px 10px rgb(0 0 0 / .055), 0 4px 80px 8px rgb(0 0 0 / .03);

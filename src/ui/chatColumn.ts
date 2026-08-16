@@ -52,6 +52,16 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     })) as any[])[0];
     const lastUsage = lastEvent ? JSON.parse(lastEvent.payload).usage : null;
     const statusBarHtml = await ctx.fns.agent.renderStatusBar({ agentId: id, initialUsage: lastUsage });
+    const stopControlHtml = await ctx.fns.agent.renderStatusBar({ agentId: id, part: 'stop' });
+    const stopControlRegion = ctx.fns.ui.live({
+        id: 'chat-stop-control',
+        url: `/agent/${encodeURIComponent(id)}/statusbar?part=stop`,
+        topic: `agent:${id}`,
+        every: 5,
+        swap: 'innerHTML',
+        attrs: 'class="pointer-events-none absolute inset-y-0 right-1.5 z-50 flex items-center [&>button]:pointer-events-auto"',
+        html: stopControlHtml,
+    });
 
     const reflectionHtml = await ctx.fns.ui.reflectionDropdown({ agent });
     // Switching and creating agents live in the rail on the far left — the
@@ -90,8 +100,8 @@ export default async function (ctx: Context, _session: Session | null, opts: {
 
     // header names THIS agent and holds its controls, nothing more.
     return `
-<header class="glass-bar relative z-40 mx-auto mt-2 flex h-9 w-[calc(100%-1rem)] max-w-[50rem] shrink-0 items-center gap-2 overflow-visible rounded-2xl border border-ui-border px-3 text-xs text-base-content/70">
-  ${ctx.fns.ui.modelLogo({ model: agent.model })}
+<header class="glass-bar absolute inset-x-0 top-0 z-40 mx-auto mt-2 flex h-11 w-[calc(100%-2rem)] max-w-3xl shrink-0 items-center gap-2.5 overflow-visible rounded-[22px] border border-ui-border pl-2 pr-5 text-xs text-base-content/70">
+  <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-base-100/25 text-base-content/65">${ctx.fns.ui.modelLogo({ model: agent.model, bare: true })}</span>
   <span class="font-mono font-medium text-base-content/80">${esc(String(agent.title ?? id).slice(0, 40) || id)} <span class="text-base-content/45">(${esc(id)})</span></span>
   ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}
   ${statusBarHtml}
@@ -129,9 +139,12 @@ ${agent.sleepContext?.active === true
       hx-post="/agent/${encodeURIComponent(id)}?debounceSeconds=0.1"
       hx-trigger="submit"
       hx-swap="none"
-      hx-on::after-request="this.elements.input.value=''; this.elements.input.focus();">
-  <textarea id="input" name="text" rows="1" placeholder="Message agent…"
-    class="glass-input block h-[52px] w-full resize-none overflow-y-auto rounded-[28px] border-0 px-5 py-[15px] font-sans text-sm leading-[22px] text-base-content placeholder:text-base-content/35 focus:outline-none"></textarea>
+      hx-on::after-request="if (event.detail.elt === this && event.detail.successful) { this.elements.input.value=''; this.elements.input.focus(); }">
+  <div class="relative h-11 w-full">
+    ${stopControlRegion}
+    <textarea id="input" name="text" rows="1" placeholder="Message agent…"
+      class="glass-input block h-11 w-full resize-none overflow-y-auto rounded-[22px] border-0 px-4 py-[11px] font-sans text-sm leading-[22px] text-base-content placeholder:text-base-content/35 focus:outline-none"></textarea>
+  </div>
   <div class="mt-1.5 text-center text-[10px] leading-none text-base-content/35"><kbd>⌘J</kbd> scroll down · <kbd>⌘K</kbd> scroll up · Enter to send</div>
 </form>
 <div class="border-t border-ui-border bg-base-200 px-3 py-1.5 text-[11px] text-base-content/45">

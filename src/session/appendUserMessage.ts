@@ -17,7 +17,7 @@ ts?: number }) {
     }
     const ts = opts.ts ?? Date.now();
     const out = await ctx.fns.session.appendMessage({ id, message: { role: "user", content: text }, ts });
-    const event = { type: "user", text, messageIdx: out.idx } as any;
+    const event = { type: "user", text, messageIdx: out.idx, ts } as any;
     event.html = await ctx.fns.agent.renderEventHtml({ event, agentId: id });
     await ctx.fns.session.appendEvent({ id, event, ts });
     return out;
