@@ -7,15 +7,9 @@ description: "Evidence research over 220M+ peer-reviewed papers through Consensu
 
 Research peer-reviewed literature through the user's logged-in Consensus web subscription. Authentication uses the attached Chrome session: log in once at `consensus.app`; credentials and cookies are never returned by plugin functions.
 
-## Functions
+## Workflow
 
-- `research.ask({ query, thread_id?, limit?, filters?, mode?, incognito?, session? })` — synthesized answer, verdict, consensus meter, grounded citations and enriched papers.
-- `research.search({ query, thread_id?, limit?, filters?, mode?, incognito?, session? })` — ranked papers without synthesis.
-- `research.start({ query, thread_id?, limit?, filters?, mode?, incognito?, session? })` — low-level create/continue primitive.
-- `research.papers({ papers })` — normalize a raw Consensus papers payload.
-- `research.call({ path, method?, body?, session?, raw? })` — low-level same-origin Consensus API request in the logged-in browser.
-
-Use `thread_id` from a previous `ask` or `search` to ask a contextual follow-up.
+Use a synthesized answer when the user needs a conclusion with grounded citations; use ranked paper search when synthesis is unnecessary. Pass the returned `thread_id` into the next question to preserve context.
 
 ```ts
 const first = await ctx.fns.research.ask({

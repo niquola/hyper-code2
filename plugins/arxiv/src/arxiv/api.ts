@@ -68,7 +68,22 @@ function idsFromEntryId(entryId: string): { paperId: string; versionedId: string
     return { paperId: versionedId.replace(/v\d+$/, ""), versionedId };
 }
 
-export default async function (ctx: Context, session: Session | null, opts: { params: Record<string, string> }) {
+/**
+ * Calls the public arXiv Atom API with the required three-second rate limit and
+ * parses feed entries into paper metadata. Use for low-level arXiv parameters.
+ */
+export default async function (
+    ctx: Context,
+    _session: Session | null,
+    opts: {
+        /** Atom query parameters such as `search_query`, `id_list`, and `max_results`. */
+        params: Record<string, string>;
+    },
+): Promise<{
+    papers: types.arxiv.Paper[];
+    error: string | null;
+    meta: { totalResults: number | null; startIndex: number | null; itemsPerPage: number | null; updated: string };
+}> {
     const cache = ((ctx.state as any).arxiv ??= { lastRequestTs: 0 });
     const wait = Math.max(0, RATE_DELAY_MS - (Date.now() - cache.lastRequestTs));
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));

@@ -36,7 +36,6 @@ declare global {
             initialPromptPopup: Injected<typeof import("./agent/initialPromptPopup").default>;
             listPromptPresets: Injected<typeof import("./agent/listPromptPresets").default>;
             listWatches: Injected<typeof import("./agent/listWatches").default>;
-            llmCall: Injected<typeof import("./agent/llmCall").default>;
             markFunctionRag: Injected<typeof import("./agent/markFunctionRag").default>;
             newForm: Injected<typeof import("./agent/newForm").default>;
             nextId: Injected<typeof import("./agent/nextId").default>;
@@ -125,7 +124,6 @@ declare global {
         };
         embeddings: {
             embed: Injected<typeof import("./embeddings/embed").default>;
-            localize: Injected<typeof import("./embeddings/localize").default>;
             openai: Injected<typeof import("./embeddings/openai").default>;
             provider: Injected<typeof import("./embeddings/provider").default>;
         };
@@ -292,6 +290,7 @@ declare global {
         llm: {
             anthropicOAuthConstants: Injected<typeof import("./llm/anthropicOAuthConstants").default>;
             anthropicOAuthStatus: Injected<typeof import("./llm/anthropicOAuthStatus").default>;
+            call: Injected<typeof import("./llm/call").default>;
             completeAnthropicOAuth: Injected<typeof import("./llm/completeAnthropicOAuth").default>;
             connectFetch: Injected<typeof import("./llm/connectFetch").default>;
             decryptOAuthSecret: Injected<typeof import("./llm/decryptOAuthSecret").default>;
@@ -299,6 +298,7 @@ declare global {
             exchangeAnthropicOAuth: Injected<typeof import("./llm/exchangeAnthropicOAuth").default>;
             getAnthropicOAuthToken: Injected<typeof import("./llm/getAnthropicOAuthToken").default>;
             listModels: Injected<typeof import("./llm/listModels").default>;
+            localize: Injected<typeof import("./llm/localize").default>;
             logoutAnthropicOAuth: Injected<typeof import("./llm/logoutAnthropicOAuth").default>;
             oauthEncryptionKey: Injected<typeof import("./llm/oauthEncryptionKey").default>;
             parseAnthropicAuthorizationInput: Injected<typeof import("./llm/parseAnthropicAuthorizationInput").default>;
@@ -328,13 +328,17 @@ declare global {
         };
         plugins: {
             add: Injected<typeof import("./plugins/add").default>;
+            docs: Injected<typeof import("./plugins/docs").default>;
             functions: Injected<typeof import("./plugins/functions").default>;
+            index: Injected<typeof import("./plugins/index").default>;
             list: Injected<typeof import("./plugins/list").default>;
             load: Injected<typeof import("./plugins/load").default>;
             read: Injected<typeof import("./plugins/read").default>;
             readSkill: Injected<typeof import("./plugins/readSkill").default>;
             reload: Injected<typeof import("./plugins/reload").default>;
             remove: Injected<typeof import("./plugins/remove").default>;
+            search: Injected<typeof import("./plugins/search").default>;
+            validate: Injected<typeof import("./plugins/validate").default>;
         };
         procs: {
             auth: {
@@ -849,7 +853,6 @@ declare global {
             type Citation = import("../plugins/research/src/research/Citation").Citation;
             type Filters = import("../plugins/research/src/research/Filters").Filters;
             type Paper = import("../plugins/research/src/research/Paper").Paper;
-            type QueryOpts = import("../plugins/research/src/research/QueryOpts").QueryOpts;
             type SearchResult = import("../plugins/research/src/research/SearchResult").SearchResult;
             type StartResult = import("../plugins/research/src/research/StartResult").StartResult;
         }

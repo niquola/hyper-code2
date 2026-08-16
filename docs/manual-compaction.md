@@ -69,7 +69,7 @@ If there is not enough removable history, return `not_needed` and do not create/
 
 ## Summarizer
 
-Use `agent.llmCall` without tools and a Codex-style handoff prompt:
+Use `llm.call` without tools, passing the agent model and stable session ID, with a Codex-style handoff prompt:
 
 ```text
 Create a concise continuation checkpoint for another coding agent.

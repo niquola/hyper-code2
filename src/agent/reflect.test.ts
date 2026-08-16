@@ -9,7 +9,7 @@ describe("agent.reflect", () => {
         expect((await ctx.fns.agent.reflect({ agent, every: 3 })).started).toBe(false);
         await ctx.fns.session.appendUserMessage({ id: agent.id, text: "m2" });
 
-        ctx.state.registry.agent.llmCall = async () => ({
+        ctx.state.registry.llm.call = async () => ({
             text: JSON.stringify({
                 activity: { goal: "test reflection", currentStep: "testing", status: "verifying", nextStep: null },
                 tasks: [{ title: "add tasks", status: "done", nextStep: null }],

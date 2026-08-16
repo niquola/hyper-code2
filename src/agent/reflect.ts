@@ -65,8 +65,9 @@ export default async function (
                 content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
             }));
             const system = `Ты — фоновый рефлексирующий агент. Обнови рефлексию основного агента по новому фрагменту диалога. Не отвечай пользователю и не продолжай задачу. Определи: что сейчас делается, текущий этап и следующий шаг; конкретные задачи; удовлетворённость пользователя только по явным сигналам (отсутствие критики не означает удовлетворённость); значимые ошибки агента, их влияние, статус и урок. Не считай обычное исследование вариантов ошибкой. Рекурсивно обновляй tasks: сохраняй незавершённые, объединяй дубли, меняй статусы по фактам и оставляй не более 5 последних done. Также создай reflectionNudge — одну короткую практическую инструкцию основному агенту на ближайшие ходы, только если она поможет избежать наблюдаемой ошибки или лучше продолжить текущую работу. Это не пересказ цели и не общая банальность. Если полезной инструкции нет, верни null. Не переопределяй явные инструкции пользователя. Сохраняй актуальные прежние выводы и удаляй устаревшие. Верни только JSON с полями activity {goal,currentStep,status: exploring|planning|executing|verifying|blocked,nextStep}, tasks [{title,status: todo|doing|blocked|done,nextStep}], userSatisfaction {level: unknown|dissatisfied|mixed|satisfied,trend: unknown|declining|stable|improving,confidence,reasons}, mistakes [{description,impact,status: unresolved|corrected|accepted,lesson}], reflectionNudge: null | {text,reason,expiresAfterTurns: 1..9}.`;
-            const call = await ctx.fns.agent.llmCall({
-                agent: child,
+            const call = await ctx.fns.llm.call({
+                model: child.model,
+                sessionId: child.id,
                 system,
                 user: `Предыдущая рефлексия:\n${JSON.stringify(previous?.state ?? null)}\n\nНовый фрагмент диалога:\n${JSON.stringify(segment)}`,
                 temperature: 0.2,

@@ -58,7 +58,7 @@ export default async function (
     await ctx.fns.session.appendEventWithHtml({ id: parent.id, type: "compaction_start", payload: { revision } });
     try {
       const prompt = "Create a concise continuation checkpoint for another coding agent. Include current goal, progress, decisions and rationale, constraints, rejected approaches, files changed/read, errors, unresolved issues, exact identifiers/paths/references, and clear next steps. Recent messages after this summary will be preserved verbatim. Do not repeat runtime/system instructions. Do not continue the task." + (opts.instructions?.trim() ? "\n\nFocus instructions: " + opts.instructions.trim() : "");
-      const call = await ctx.fns.agent.llmCall({ agent: child, system: prompt, user: JSON.stringify(effective.map(compactMessage)), temperature: 0.1 });
+      const call = await ctx.fns.llm.call({ model: child.model, sessionId: child.id, system: prompt, user: JSON.stringify(effective.map(compactMessage)), temperature: 0.1 });
       const summary = String(call.text ?? "").trim();
       if (!summary) throw new Error("compaction summary was empty");
       const summaryMessage = { role: "user", content: summary, message_type: "compaction_summary" };

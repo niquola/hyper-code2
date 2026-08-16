@@ -66,11 +66,11 @@ export default async function (
         content.length > sliced.length ? '[truncated; original chars=' + content.length + ']' : '',
     ].filter(Boolean).join('\n');
 
-    const result = await ctx.fns.agent.llmCall({
-        agent,
+    const result = await ctx.fns.llm.call({
+        model: model || agent.model,
+        sessionId: agent.id,
         system,
         user,
-        model,
     });
 
     return {

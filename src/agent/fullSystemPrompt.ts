@@ -32,7 +32,7 @@ agent: types.agent.Agent }): Promise<string> {
     // in every request.
     const plugins = ctx.fns.plugins.list({}) as any[];
     const pluginBlock = plugins.length
-        ? `\n\n## Mounted plugins\n\n${plugins.map((p: any) => `- ${p.name}: ${p.description || p.namespaces.join(", ")}`).join("\n")}\n\nPlugin workflow (ordinary functions, call through eval):\n1. ctx.fns.plugins.list({}) — compact mounted catalogue.\n2. await ctx.fns.plugins.read({ name }) — metadata + SKILL.md text; read this before using a plugin.\n3. ctx.fns.plugins.functions({ name }) — dotted function names and live signatures.\n4. Call the selected function through ctx.fns.<namespace>.<function>({ ... }).\nManage plugins with plugins.load/add/remove/reload. Do not assume every plugin function is a native tool.`
+        ? `\n\n## Mounted plugins\n\n${plugins.map((p: any) => `- ${p.name}: ${p.description || p.namespaces.join(", ")}`).join("\n")}\n\nPlugin workflow (ordinary functions, call through eval):\n1. Translate the user's capability intent into a concise English search query, regardless of the user's language.\n2. await ctx.fns.plugins.search({ query }) — search both plugin workflows (SKILL.md) and live function documentation. Do this before guessing a plugin or function name.\n3. await ctx.fns.plugins.read({ name }) — read the selected plugin's human-written workflow overview plus generated function docs, schemas and return types.\n4. Call the selected function through ctx.fns.<namespace>.<function>({ ... }).\nUse ctx.fns.plugins.functions({ name }) only for a compact generated catalogue. Manage plugins with plugins.load/add/remove/reload. Do not assume every plugin function is a native tool.`
         : "";
 
     const perAgent = (agent.systemPrompt ?? "").trim();

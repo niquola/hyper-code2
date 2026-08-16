@@ -2,7 +2,10 @@
 export default async function (
     ctx: Context,
     _session: Session | null,
-    opts: { /** arXiv paper ID. */ id: string },
+    opts: {
+        /** Identifier of the paper whose authors and metadata form the citation. */
+        id: string;
+    },
 ): Promise<{ id: string; key: string; bibtex: string }> {
     const paper = await ctx.fns.arxiv.get({ id: opts.id });
     const year = paper.published.slice(0, 4) || "????";

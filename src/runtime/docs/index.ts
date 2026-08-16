@@ -38,7 +38,7 @@ async function runIndex(
     const previous = new Map(existing.map((row: any) => [row.name, row]));
     const provider = await ctx.fns.embeddings.provider({});
     const model = provider === "off" ? null : await ctx.fns.settings.getString({ module: "embeddings", scopeType: "global", key: "model", fallback: "text-embedding-3-large" });
-    const localizationModel = await ctx.fns.settings.getString({ module: "embeddings", scopeType: "global", key: "localizationModel", fallback: "gpt-4o-mini" }) || "gpt-4o-mini";
+    const localizationModel = await ctx.fns.settings.modelDefault({});
     const locales = parseLocales(await ctx.fns.settings.getString({ module: "embeddings", scopeType: "global", key: "locales", fallback: "ru" }));
     const localesKey = locales.join(",");
     const canonical: Array<{ doc: any; namespace: string; text: string; hash: string }> = docs.map((doc: any) => {
@@ -54,10 +54,12 @@ async function runIndex(
     const localizationBatch = localizationTodo.slice(0, Math.max(1, Math.min(100, Number(opts.localizationBatch ?? 25))));
     let localized = 0;
     const generated = new Map<string, string>();
-    if (provider !== "off" && locales.length && localizationBatch.length) {
+    const localizationFailed = new Set<string>();
+    if (locales.length && localizationBatch.length) {
         try {
-            const result = await ctx.fns.embeddings.localize({ functions: localizationBatch.map(item => ({ name: item.doc.name, text: item.text })), locales, model: localizationModel });
+            const result = await ctx.fns.llm.localize({ functions: localizationBatch.map(item => ({ name: item.doc.name, text: item.text })), locales, model: localizationModel });
             for (const [name, text] of Object.entries(result.localized)) generated.set(name, text);
+            for (const name of result.failed ?? []) localizationFailed.add(name);
             localized = generated.size;
         } catch (error: any) {
             return { indexed: 0, localized: 0, pendingLocalization: localizationTodo.length, embedded: 0, deleted, provider, failed: String(error?.message ?? error) };
@@ -69,9 +71,11 @@ async function runIndex(
         const { doc, namespace, hash } = item;
         const old: any = previous.get(doc.name);
         const oldLocalized = validLocalizedText(old?.localized_text) ? String(old.localized_text) : "";
-        const localizedText = generated.get(doc.name) ?? oldLocalized;
+        const generatedText = generated.get(doc.name);
+        const localizedText = generatedText ?? oldLocalized;
+        const localizedIsCurrent = Boolean(generatedText) || (!localizationFailed.has(doc.name) && old?.localization_hash === localizationIdentity(hash, localizationModel, localesKey));
         const searchText = [item.text, localizedText].filter(Boolean).join("\n").slice(0, 38_000);
-        const localizationHash = localizedText ? localizationIdentity(hash, localizationModel, localesKey) : null;
+        const localizationHash = localizedIsCurrent && localizedText ? localizationIdentity(hash, localizationModel, localesKey) : null;
         const retrievalHash = Bun.hash(searchText).toString(16);
         await ctx.fns.procs.db.run({
             sql: `INSERT INTO functions (name, namespace, summary, doc, signature, opts_type, return_type, params_schema, rel, line,
@@ -87,7 +91,7 @@ async function runIndex(
                     embedding_provider=CASE WHEN functions.content_hash = ? THEN functions.embedding_provider ELSE NULL END,
                     embedding_model=CASE WHEN functions.content_hash = ? THEN functions.embedding_model ELSE NULL END`,
             params: [doc.name, namespace, doc.summary ?? "", doc.doc ?? "", doc.signature ?? "", doc.optsType ?? "", doc.returnType ?? "", JSON.stringify(doc.paramsSchema ?? {}), doc.rel ?? "", doc.line ?? null,
-                searchText, retrievalHash, localizedText, localizedText ? "openai" : null, localizedText ? localizationModel : null, localizedText ? localesKey : null, localizationHash, now,
+                searchText, retrievalHash, localizedText, localizedText ? localizationModel.split(":")[0] : null, localizedText ? localizationModel : null, localizedText ? localesKey : null, localizationHash, now,
                 retrievalHash, retrievalHash, retrievalHash],
         });
         if (opts.force || old?.content_hash !== retrievalHash || !old?.embedded || old?.embedding_provider !== provider || old?.embedding_model !== model) changed.push({ name: doc.name, text: searchText, hash: retrievalHash });

@@ -60,7 +60,7 @@ The canonical English retrieval document combines the dotted and split camelCase
 
 Localization happens during indexing, never through query-time regex rewriting.
 
-`gpt-4.1-mini` generates Russian retrieval text for each function containing its exact capability, synonyms and grammatical forms, specific requests, broad intents where the function is the correct first operation, and colloquial examples.
+`llm.localize` uses the configured `llm.defaultModel` (including subscription-backed Codex or Claude providers) to generate Russian retrieval text for each function containing its exact capability, synonyms and grammatical forms, specific requests, broad intents where the function is the correct first operation, and colloquial examples.
 
 Structured JSON Schema output requires `{name, text}`. One function is generated per response, with up to five requests concurrent.
 
@@ -140,7 +140,7 @@ The Russian query проверять почту retrieves gmail.list in top five
 - embeddings.model: text-embedding-3-large;
 - embeddings.dimensions: 1536;
 - embeddings.locales: localized retrieval locales, currently ru;
-- embeddings.localizationModel: gpt-4.1-mini;
+- llm.defaultModel: provider-qualified model used by llm.localize when no override is passed; subscription-backed Codex or Claude models are supported;
 - agent.function_rag_enabled: persisted per agent, default false.
 
 Secrets are setting references such as env://OPENAI_API_KEY or an available secret provider reference; raw keys must not be logged or stored in source.

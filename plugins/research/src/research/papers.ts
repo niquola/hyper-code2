@@ -5,7 +5,10 @@
 export default function (
     _ctx: Context,
     _session: Session | null,
-    opts: { /** Raw `papers` array returned by Consensus. */ papers: any[] },
+    opts: {
+        /** Raw Consensus paper records to normalize into stable metadata. */
+        papers: any[];
+    },
 ): types.research.Paper[] {
     return (opts.papers ?? []).map((raw: any) => {
         const badges = raw.badges ?? {};

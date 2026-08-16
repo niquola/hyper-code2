@@ -63,7 +63,7 @@ export default async function (
                 ? { previous: baseGeneration.state, newMessages: messages.slice(priorOffset).map(compactMessage) }
                 : { previous: null, messages: messages.map(compactMessage) };
             const system = `Ты консолидируешь историю рабочего агента перед сном. Не продолжай задачу и не отвечай пользователю. Сохрани точные требования пользователя, текущую цель, решения, подтверждённые факты, изменённые файлы и артефакты, тесты и коммиты, значимые ошибки, незавершённые задачи и следующий шаг. Не выдумывай факты. Удаляй болтовню, повторы и подробности завершённых tool-вызовов, но сохраняй их существенный результат. Обнови предыдущую консолидацию новыми сообщениями. Верни только JSON: {situation:string, requirements:string[], decisionsAndFacts:string[], workLog:string[], openWork:string[], mistakesToAvoid:string[], nextStep:string}.`;
-            const call = await ctx.fns.agent.llmCall({ agent: child, system, user: JSON.stringify(input), temperature: 0.1 });
+            const call = await ctx.fns.llm.call({ model: child.model, sessionId: child.id, system, user: JSON.stringify(input), temperature: 0.1 });
             const state = parseJson(call.text);
             for (const key of ["requirements", "decisionsAndFacts", "workLog", "openWork", "mistakesToAvoid"]) {
                 if (!Array.isArray(state?.[key])) throw new Error(`invalid sleep state: ${key}`);

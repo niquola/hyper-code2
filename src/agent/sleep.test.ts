@@ -9,7 +9,7 @@ describe("agent.sleep", () => {
             await ctx.fns.session.appendUserMessage({ id: agent.id, text: `question ${i}` });
             await ctx.fns.session.appendAssistantMessage({ id: agent.id, msg: { content: `answer ${i}` } });
         }
-        ctx.state.registry.agent.llmCall = async () => ({ text: JSON.stringify({
+        ctx.state.registry.llm.call = async () => ({ text: JSON.stringify({
             situation: "testing sleep", requirements: ["keep facts"], decisionsAndFacts: ["decision"],
             workLog: ["tests ran"], openWork: ["activate"], mistakesToAvoid: ["do not delete"], nextStep: "activate",
         }) });

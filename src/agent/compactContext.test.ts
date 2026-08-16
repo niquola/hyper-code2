@@ -13,7 +13,7 @@ describe("agent.compactContext", () => {
     const ctx = await mkTestCtx();
     const agent = await seeded(ctx);
     const before = await ctx.fns.session.getMessages({ id: agent.id });
-    ctx.state.registry.agent.llmCall = () => ({ text: "handoff summary", finishReason: "stop", usage: {}, raw: {} });
+    ctx.state.registry.llm.call = () => ({ text: "handoff summary", finishReason: "stop", usage: {}, raw: {} });
     const result = await ctx.fns.agent.compactContext({ agent });
     expect(result.status).toBe("compacted");
     expect(await ctx.fns.session.getMessages({ id: agent.id })).toEqual(before);
@@ -34,7 +34,7 @@ describe("agent.compactContext", () => {
     await ctx.fns.session.appendMessage({ id: agent.id, message: { role: "assistant", content: "", tool_calls: [{ id: "c1", name: "x", args: {} }] } });
     await ctx.fns.session.appendMessage({ id: agent.id, message: { role: "tool", content: "ok", tool_call_id: "c1" } });
     await ctx.fns.session.syncAgentState({ agent });
-    ctx.state.registry.agent.llmCall = () => ({ text: "summary", finishReason: "stop", usage: {}, raw: {} });
+    ctx.state.registry.llm.call = () => ({ text: "summary", finishReason: "stop", usage: {}, raw: {} });
     await ctx.fns.agent.compactContext({ agent });
     const root = await ctx.fns.session.getMessages({ id: agent.id });
     const tail = root.slice(agent.sleepContext.generations.at(-1).tailStart);
@@ -45,7 +45,7 @@ describe("agent.compactContext", () => {
   test("marks draft stale when root changes during summarization", async () => {
     const ctx = await mkTestCtx();
     const agent = await seeded(ctx);
-    ctx.state.registry.agent.llmCall = async () => {
+    ctx.state.registry.llm.call = async () => {
       await ctx.fns.session.appendMessage({ id: agent.id, message: { role: "user", content: "concurrent" } });
       return { text: "stale summary", finishReason: "stop", usage: {}, raw: {} };
     };
@@ -59,7 +59,7 @@ describe("agent.compactContext", () => {
     const ctx = await mkTestCtx();
     const agent = await seeded(ctx);
     const inputs: string[] = [];
-    ctx.state.registry.agent.llmCall = (_c: any, _s: any, opts: any) => {
+    ctx.state.registry.llm.call = (_c: any, _s: any, opts: any) => {
       inputs.push(String(opts.user));
       return { text: inputs.length === 1 ? "summary one" : "summary two", finishReason: "stop", usage: {}, raw: {} };
     };
@@ -78,7 +78,7 @@ describe("agent.compactContext", () => {
   test("summarizer failure leaves no active projection", async () => {
     const ctx = await mkTestCtx();
     const agent = await seeded(ctx);
-    ctx.state.registry.agent.llmCall = () => { throw new Error("boom"); };
+    ctx.state.registry.llm.call = () => { throw new Error("boom"); };
     await expect(ctx.fns.agent.compactContext({ agent })).rejects.toThrow("boom");
     expect(agent.sleepContext.activeRevision).toBeNull();
     expect(agent.sleepContext.generations.at(-1).status).toBe("failed");

@@ -20,8 +20,9 @@ export default async function (
     const recent = messages.slice(-30).map((m: any, i: number) => ({ index: messages.length - 30 + i, role: m.role, content: m.content }));
     const system = `Ты проверяешь достижение внешней рабочей цели агента. Не решай задачу. Верни только JSON {status: achieved|continue|needs_user|blocked, reason:string, nextStep?:string, evidence?:string[]}. Оценивай только саму цель и реальные результаты работы. Никогда не требуй в качестве доказательства будущий статус goal-check, карточку achieved, запись собственного решения или завершение самого цикла проверки — это самореферентные служебные артефакты. achieved допустим при конкретных доказательствах результата. continue — если агент может самостоятельно сделать следующий рабочий шаг. needs_user — если нужен ответ/выбор пользователя. blocked — если продолжение невозможно. Слова агента "готово" сами по себе не доказательство.`;
     try {
-        const result = await ctx.fns.agent.llmCall({
-            agent: opts.agent,
+        const result = await ctx.fns.llm.call({
+            model: opts.agent.model,
+            sessionId: opts.agent.id,
             system,
             user: JSON.stringify({ goal: goal.statement, candidateAnswer: opts.candidateAnswer, recent }),
             temperature: 0,
