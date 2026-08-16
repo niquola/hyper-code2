@@ -43,8 +43,6 @@
   --color-border-subtle: var(--color-base-300);
   --color-ui-border: var(--ui-border);
   --color-ui-border-strong: var(--ui-border-strong);
-  --color-ui-surface: var(--ui-surface);
-  --color-ui-surface-muted: var(--ui-surface-muted);
   --color-text-primary: var(--color-base-content);
   --color-text-heading: var(--color-base-content);
   --color-text-muted: color-mix(in oklab, var(--color-base-content) 70%, transparent);
@@ -129,8 +127,6 @@
   --ui-border: oklch(88.5% 0.004 240);
   --ui-border-strong: oklch(88.5% 0.004 240);
   --ui-input-border: oklch(72% 0.008 240);
-  --ui-surface: var(--color-base-100);
-  --ui-surface-muted: var(--color-base-200);
   /* GitHub-inspired restrained palette: neutral ink plus green/red states. */
 }
 
@@ -150,8 +146,6 @@
   --ui-border: oklch(38% 0.015 252);
   --ui-border-strong: oklch(46% 0.018 252);
   --ui-input-border: oklch(50% 0.018 252);
-  --ui-surface: var(--color-base-100);
-  --ui-surface-muted: var(--color-base-200);
 }
 
 body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
@@ -162,8 +156,6 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
 .border-ui-border { border-color: var(--ui-border) !important; }
 .border-ui-border-strong { border-color: var(--ui-border-strong) !important; }
 .border-ui-input { border-color: var(--ui-input-border) !important; }
-.bg-ui-surface { background-color: var(--ui-surface) !important; }
-.bg-ui-surface-muted { background-color: var(--ui-surface-muted) !important; }
 
 /* Typography plugin defaults are light-only. Bind every prose descendant to
  * the project theme so historical assistant messages remain readable in dark. */
@@ -484,6 +476,10 @@ summary::-webkit-details-marker { display: none; }
 .badge-soft { background:var(--color-base-200); }
 .input,.textarea,.select { width:100%; border:1px solid var(--ui-input-border); border-radius:.45rem; background:var(--color-base-100); color:var(--color-base-content); padding:.5rem .65rem; outline:none; }
 .input:focus,.textarea:focus,.select:focus { border-color:var(--color-primary); box-shadow:0 0 0 2px color-mix(in oklab,var(--color-primary) 12%,transparent); }
+.input-bordered,.textarea-bordered,.select-bordered { border-color:var(--ui-input-border); }
+.input-group { display:flex; align-items:stretch; }
+.input-group > * + * { margin-left:-1px; }
+
 .input-sm,.textarea-sm,.select-sm { min-height:2rem; padding:.35rem .55rem; font-size:.75rem; }
 .textarea { min-height:5rem; }
 .select { appearance:auto; }
@@ -502,9 +498,11 @@ summary::-webkit-details-marker { display: none; }
 .card-title { font-size:.95rem; font-weight:650; }
 .card-actions { display:flex; align-items:center; gap:.5rem; }
 .alert { display:flex; align-items:flex-start; gap:.6rem; border:1px solid var(--ui-border); border-radius:.6rem; background:var(--color-base-200); padding:.75rem; color:var(--color-base-content); }
+.alert-soft { background:color-mix(in oklab,var(--color-base-200) 70%,transparent); }
 .table { width:100%; border-collapse:collapse; color:var(--color-base-content); }
 .table th,.table td { border-bottom:1px solid var(--ui-border); padding:.55rem .7rem; text-align:left; }
 .table-sm th,.table-sm td { padding:.35rem .5rem; font-size:.75rem; }
+.table-pin-rows thead { position:sticky; top:0; z-index:1; background:var(--color-base-100); }
 .menu { display:flex; flex-direction:column; padding:.35rem; color:var(--color-base-content); }
 .menu li>a,.menu li>button { display:flex; width:100%; align-items:center; gap:.5rem; border-radius:.4rem; padding:.45rem .6rem; }
 .menu li>a:hover,.menu li>button:hover { background:var(--color-base-200); }
@@ -516,8 +514,11 @@ summary::-webkit-details-marker { display: none; }
 .join-item:last-child { border-radius:0 .45rem .45rem 0; }
 .avatar { display:inline-flex; align-items:center; justify-content:center; overflow:hidden; border-radius:9999px; }
 .avatar img { width:100%; height:100%; object-fit:cover; }
+.avatar-placeholder { background:var(--color-base-200); color:var(--color-base-content); }
 .status { display:inline-block; width:.5rem; height:.5rem; border-radius:9999px; background:currentColor; }
 .tooltip { position:relative; }
+.tooltip::after { content:attr(data-tip); position:absolute; bottom:calc(100% + .35rem); left:50%; transform:translateX(-50%); max-width:18rem; border-radius:.35rem; background:var(--theme-base-content); color:var(--theme-base-100); padding:.3rem .45rem; font-size:.6875rem; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .12s; z-index:60; }
+.tooltip:hover::after,.tooltip:focus-visible::after,.tooltip:focus-within::after { opacity:1; }
 .breadcrumbs { overflow-x:auto; }
 .breadcrumbs ul { display:flex; align-items:center; white-space:nowrap; }
 .breadcrumbs li+li::before { content:"/"; margin:0 .45rem; color:color-mix(in oklab,var(--color-base-content) 35%,transparent); }
