@@ -30,9 +30,12 @@ export default async function (ctx: Context, _session: Session | null, _opts: {
   <div class="mt-4 flex flex-wrap gap-2">${opts.methods.map((m) => settingsLink(m)).join("")}</div>
 </article>`;
 
-    // One row per credential slot, with its quota. A second Claude or ChatGPT
-    // login is only useful if you can see which of them still has room.
-    const accounts = await ctx.fns.llm.listAccounts({}).catch(() => [] as any[]);
+    // Fetch live quota for the connection page rather than waiting until each
+    // account happens to complete an LLM turn. Failures stay per-account inside
+    // refreshUsage, so one unavailable provider never breaks /llms.
+    const inventory = await ctx.fns.llm.listAccounts({}).catch(() => [] as any[]);
+    await ctx.fns.llm.refreshUsage({ accounts: inventory.map((a: any) => ({ provider: a.provider, account: a.account })) }).catch(() => undefined);
+    const accounts = await ctx.fns.llm.listAccounts({}).catch(() => inventory);
     const logins = ctx.fns.llm.accountLoginStatus?.({}) ?? [];
 
     const oauthLabel = oauth.needsReconnect ? "reconnect required" : oauth.connected ? expiryLabel(oauth.expiresAt) : oauth.loginStatus === "pending" ? "login pending" : undefined;

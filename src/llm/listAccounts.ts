@@ -33,6 +33,7 @@ export default async function (
     available: boolean;
     usedPercent: number | null;
     resetsAt: number | null;
+    planType: string | null;
     parkedAgents: number;
 }>> {
     const now = opts?.now ?? Date.now();
@@ -97,6 +98,7 @@ function entry(provider: string, account: string, source: "file" | "oauth" | "ke
         available: !(known?.parkedAgents > 0) && (usedPercent == null || usedPercent < 100),
         usedPercent,
         resetsAt: known?.resetsAt ?? null,
+        planType: known?.planType ?? null,
         parkedAgents: known?.parkedAgents ?? 0,
     };
 }

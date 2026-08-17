@@ -18,9 +18,9 @@ describe("managed Anthropic OAuth connections UI", () => {
         const res = await ctx.fns.procs.http.dispatch({ url: "/llms" });
         expect(res.status).toBe(200);
         const html = await res.text();
-        expect(html).toContain("Accounts from filesystem &amp; Keychain");
-        expect(html).toContain("Managed by Hyper");
-        expect(html).toContain("Claude Code");
+        expect(html).toContain("Codex");
+        expect(html).toContain("Claude");
+        expect(html).toContain("Add Claude account");
         expect(html).toContain('hx-popup="llms.loginPopupFor"');
         expect(html).toContain('&quot;provider&quot;:&quot;claude-code&quot;');
         expect(html).not.toContain("access_enc");
@@ -38,8 +38,8 @@ describe("managed Anthropic OAuth connections UI", () => {
         const pending = [...ctx.state.llm.anthropicOAuth.pending.values()][0] as any;
         const page = await ctx.fns.procs.http.dispatch({ url: "/llms" });
         const html = await page.text();
-        expect(html).toContain("Accounts from filesystem &amp; Keychain");
-        expect(html).toContain("Managed by Hyper");
+        expect(html).toContain("Codex");
+        expect(html).toContain("Claude");
         expect(html).not.toContain(pending.verifier);
         expect(html).not.toContain("sk-ant-oat");
     });

@@ -93,6 +93,32 @@ export default async function (
 
     const messages = [...bootstrap, ...base];
 
+    // Check for large tool call arguments before sending to LLM.
+    // If a write/edit call has content > 100 KB, block it and instruct model.
+    const LARGE_CONTENT_THRESHOLD = 100_000; // bytes
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role === 'assistant' && lastMsg?.tool_calls?.length) {
+        for (const call of lastMsg.tool_calls) {
+            const contentArg = call.args?.content;
+            if (typeof contentArg === 'string' && contentArg.length > LARGE_CONTENT_THRESHOLD) {
+                // Remove the oversized calls from this message
+                lastMsg.tool_calls = lastMsg.tool_calls.filter((c: any) => !(typeof c.args?.content === 'string' && c.args.content.length > LARGE_CONTENT_THRESHOLD));
+                // Inject a guidance message instead
+                const sizeKb = Math.round(contentArg.length / 1024);
+                messages.push({
+                    role: 'user' as const,
+                    content: `⚠️ Large payload detected (${sizeKb} KB). To avoid token limit truncation, use one of these strategies:\n` +
+                        `1. Generate content with eval, then write: const big = await ctx.fns.tools.eval({code: "..."}); await ctx.fns.files.write({path, content: big})\n` +
+                        `2. Split into multiple smaller write/edit calls\n` +
+                        `3. Use bash to create the file directly\n\n` +
+                        `Reconsider your approach and try again.`,
+                    excluded_from_cursor: true,
+                });
+                break;
+            }
+        }
+    }
+
     // A transcript that ENDS with an assistant message is a "prefill" request:
     // the model is asked to continue its own half-written turn. It happens
     // normally here — a run answers a mid-run user message with a terminal

@@ -1,7 +1,7 @@
 /**
  * How much of a subscription's quota is spent, as last reported by the
- * provider. Recorded by llm.recordUsage from response headers and stream
- * payloads; never fetched on its own.
+ * provider. Recorded by llm.recordUsage from response headers, stream payloads,
+ * and the explicit provider refresh performed for the /llms page.
  */
 export type UsageSnapshot = {
     /** Provider name, e.g. "codex". */

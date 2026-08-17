@@ -32,7 +32,7 @@ export default async function (
         system,
         messages: ctx.fns.llm.toAnthropicMessages({ messages: convo }),
         stream: true,
-        max_tokens: 8192,
+        max_tokens: 16384,
     };
 
     // Native tool_use blocks, in JSON protocol mode only (see agent.wireTools).

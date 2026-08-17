@@ -131,5 +131,5 @@ function modelOf(provider: string, account: string, agents: any[]): string {
         const parsed = splitModel(model);
         if (parsed.provider === provider && parsed.account === account) return model;
     }
-    return `${provider}:`;
+    return `${provider}${account === "default" ? "" : `/${account}`}:`;
 }

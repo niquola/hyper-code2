@@ -317,6 +317,7 @@ declare global {
             refreshClaudeCode: Injected<typeof import("./llm/refreshClaudeCode").default>;
             refreshCodex: Injected<typeof import("./llm/refreshCodex").default>;
             refreshKimiCode: Injected<typeof import("./llm/refreshKimiCode").default>;
+            refreshUsage: Injected<typeof import("./llm/refreshUsage").default>;
             removeAccount: Injected<typeof import("./llm/removeAccount").default>;
             resolveEndpoint: Injected<typeof import("./llm/resolveEndpoint").default>;
             saveAnthropicOAuth: Injected<typeof import("./llm/saveAnthropicOAuth").default>;

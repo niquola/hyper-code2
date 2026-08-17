@@ -13,18 +13,36 @@ describe("agent.modelPicker", () => {
         const response = await ctx.fns.agent.modelPicker({ agentId: agent.id });
         expect(response.status).toBe(200);
         const html = await response.text();
-        expect(html).toContain("Provider and model");
+        expect(html).toContain("Provider, account and model");
         expect(html).toContain("mock:test");
         expect(html).toContain("mock:other");
         expect(html).toContain("OpenAI API");
         expect(html).toContain('aria-current="true"');
         expect(html).toContain(`/agent/${agent.id}/model`);
         expect(html).toContain("data-model-provider-tab");
-        expect(html).toContain('aria-selected="true"');
+        expect(html).toContain('name="scope" value="agent"');
+        expect(html).toContain("aria-selected");
         expect(html).toContain("data-model-provider-panel");
         expect(html).toContain('class="hidden min-h-0"');
 
     });
+
+    test("expands named credential accounts into concrete model routes", async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: "codex:gpt-test" });
+        ctx.fns.llm.listModels = async () => ({ codex: ["codex:gpt-test"] });
+        ctx.fns.llm.listAccounts = async () => ([
+            { provider: "codex", account: "default", available: true, usedPercent: 84, planType: "team" },
+            { provider: "codex", account: "persona", available: true, usedPercent: 0, planType: "pro" },
+        ]);
+
+        const html = await (await ctx.fns.agent.modelPicker({ agentId: agent.id })).text();
+        expect(html).toContain("codex/persona:gpt-test");
+        expect(html).toContain("16% left");
+        expect(html).toContain("100% left");
+        expect(html).toContain("This changes only agent");
+    });
+
 
     test("keeps the current route visible when it is absent from the catalogue", async () => {
         const ctx: any = await mkTestCtx();

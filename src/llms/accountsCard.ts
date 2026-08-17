@@ -1,23 +1,23 @@
-// Account inventory in two explicit ownership groups. Shared UI primitives own
-// rows, headings, buttons and toolbars; this module only supplies account data.
-/** Renders grouped subscription accounts with shared UI components. */
+// One account surface grouped by provider. Credential storage is an adapter
+// detail, never the information architecture of the page.
+/** Renders subscription accounts consistently in provider-oriented groups. */
 /**
- * Render filesystem/Keychain accounts separately from credentials managed and
- * encrypted by Hyper. Uses procs.ui heading/row/button/toolbar primitives and
- * ui.popup triggers — no hand-authored button colour classes.
+ * Render one account list grouped by provider, independent of where each
+ * credential is stored. Every provider uses the same row shape, plan/quota
+ * fields and add-account action; storage ownership appears only as a secondary
+ * badge and tooltip.
  *
  * @param opts.accounts Credential rows from llm.listAccounts.
  * @param opts.logins Safe progress state from llm.accountLoginStatus.
  * @param opts.now Current time in ms, for testing.
  */
 export default function (ctx: Context, _session: Session | null, opts: {
-    /** Rows produced by llm.listAccounts. */ accounts: Array<{ provider: string; account: string; label: string; model: string; source: "file" | "oauth" | "keychain"; available: boolean; usedPercent: number | null; resetsAt: number | null; parkedAgents: number }>;
+    /** Rows produced by llm.listAccounts. */ accounts: Array<{ provider: string; account: string; label: string; model: string; source: "file" | "oauth" | "keychain"; available: boolean; usedPercent: number | null; planType: string | null; resetsAt: number | null; parkedAgents: number }>;
     /** Login flows currently pending or recently completed. */ logins?: Array<{ provider: string; account: string; status: "pending" | "connected" | "failed"; verificationUri: string | null; userCode: string | null; error: string | null }>;
     /** Current timestamp in ms. */ now?: number;
 }): string {
     const now = opts.now ?? Date.now();
     const esc = (x: any) => ctx.fns.procs.ui.escape({ text: String(x ?? "") });
-    const providerName = (p: string) => p === "anthropic-oauth" ? "Claude" : p === "claude-code" ? "Claude Code" : p === "kimi-coding" ? "Kimi Coding" : p === "codex" ? "Codex" : p;
     const prefix = (a: typeof opts.accounts[number]) => `${a.provider}${a.account === "default" ? "" : `/${a.account}`}:`;
 
     const remove = (a: typeof opts.accounts[number]) => {
@@ -28,21 +28,28 @@ export default function (ctx: Context, _session: Session | null, opts: {
         const used = a.usedPercent;
         const quota = !a.available ? `limit exhausted${a.resetsAt ? ` · resets ${humanDelay(a.resetsAt-now)}` : ""}` : used == null ? "usage unavailable" : `${Math.round(used)}% used · ${Math.round(100-used)}% left`;
         const status = !a.available || (used != null && used >= 75) ? "limit" : used != null && used >= 50 ? "warning" : "ready";
+        const storage = storageLabel(a.source);
         return ctx.fns.procs.ui.row({ entity: "llm-account", id: `${a.provider}/${a.account}`, status, cells: [
-            { role: "provider", html: `${ctx.fns.ui.modelLogo?.({ model: a.model || `${a.provider}:`, bare: true }) ?? ""}<span class="ml-2 font-medium">${esc(providerName(a.provider))}</span>`, class: "flex w-40 shrink-0 items-center" },
-            { role: "account", text: a.account === "default" ? "main" : a.account, class: "w-24 shrink-0 font-mono text-xs text-base-content/55" },
+            { role: "account", text: a.account === "default" ? "main" : a.account, class: "w-28 shrink-0 font-mono text-xs font-medium" },
+            ...(a.planType ? [{ role: "plan", text: planName(a.provider, a.planType), title: `Subscription plan: ${a.planType}`, class: "badge badge-sm shrink-0 capitalize text-base-content/65" }] : []),
             { role: "prefix", text: prefix(a), title: prefix(a), class: "min-w-0 flex-1 truncate font-mono text-[11px] text-base-content/40" },
+            { role: "storage", text: storage.text, title: storage.title, class: "hidden shrink-0 text-[10px] text-base-content/40 lg:block" },
             { role: "quota", text: quota, class: `shrink-0 text-[11px] ${status === "limit" ? "text-error" : status === "warning" ? "text-warning" : "text-success"}` },
             ...(a.parkedAgents ? [{ role: "parked", text: `${a.parkedAgents} parked`, class: "badge badge-sm shrink-0 text-warning" }] : []),
         ], right: remove(a) });
     };
-    const group = (title: string, meta: string, accounts: typeof opts.accounts) => {
-        const heading = ctx.fns.procs.ui.heading({ title, meta });
-        return `<section>${heading}<div class="mt-2 overflow-hidden rounded-xl border border-ui-border bg-base-100">${accounts.length ? accounts.map(row).join("") : ctx.fns.procs.ui.empty({ title: "No accounts", text: meta })}</div></section>`;
-    };
 
-    const external = (opts.accounts ?? []).filter(a => a.source !== "oauth");
-    const managed = (opts.accounts ?? []).filter(a => a.source === "oauth");
+    const providers = [
+        { id: "codex", title: "Codex", icon: "codex:gpt", accounts: opts.accounts.filter(a => a.provider === "codex"), add: addButton(ctx, "codex", "Add Codex account") },
+        { id: "claude", title: "Claude", icon: "claude-code:claude", accounts: opts.accounts.filter(a => a.provider === "claude-code" || a.provider === "anthropic-oauth"), add: addButton(ctx, "claude-code", "Add Claude account") },
+        { id: "kimi", title: "Kimi Coding", icon: "kimi-coding:k3", accounts: opts.accounts.filter(a => a.provider === "kimi-coding"), add: ctx.fns.procs.ui.button({ action: "add-kimi", label: "+ Add account", tone: "default", size: "sm", disabled: true, title: "Kimi multi-login is not wired yet" }) },
+    ];
+    const providerSections = providers.map(p => {
+        const title = `${ctx.fns.ui.modelLogo?.({ model: p.icon, bare: true }) ?? ""}<span>${esc(p.title)}</span>`;
+        const heading = ctx.fns.procs.ui.heading({ title: p.title, meta: `${p.accounts.length} connected account${p.accounts.length === 1 ? "" : "s"}`, actions: p.add });
+        return `<section data-provider="${p.id}"><div class="[&_h2]:flex [&_h2]:items-center [&_h2]:gap-2">${heading.replace(esc(p.title), title)}</div><div class="mt-2 overflow-hidden rounded-xl border border-ui-border bg-base-100">${p.accounts.length ? p.accounts.map(row).join("") : ctx.fns.procs.ui.empty({ title: `No ${p.title} accounts`, text: "Use Add account to connect one." })}</div></section>`;
+    }).join("");
+
     const flowRows = (opts.logins ?? []).map(f => ctx.fns.procs.ui.row({ entity: "llm-login", id: `${f.provider}/${f.account}`, status: f.status, cells: [
         { role: "provider", text: providerName(f.provider), class: "w-36 shrink-0 font-medium" },
         { role: "account", text: f.account, class: "w-24 shrink-0 font-mono text-xs" },
@@ -50,12 +57,14 @@ export default function (ctx: Context, _session: Session | null, opts: {
         ...(f.userCode ? [{ role: "device-code", text: f.userCode, class: "select-all shrink-0 rounded bg-base-200 px-2 py-1 font-mono text-sm font-semibold tracking-wider" }] : []),
     ], right: ctx.fns.ui.popup({ method: "llms.loginProgressFor", params: { provider: f.provider, account: f.account }, tone: "default", size: "xs", html: "Continue login" }) })).join("");
 
-    const addClaude = ctx.fns.ui.popup({ method: "llms.loginPopupFor", params: { provider: "claude-code" }, tone: "default", html: `<i class="ph ph-plus"></i> Claude` });
-    const addCodex = ctx.fns.ui.popup({ method: "llms.loginPopupFor", params: { provider: "codex" }, tone: "default", html: `<i class="ph ph-plus"></i> Codex` });
-    const addKimi = ctx.fns.procs.ui.button({ action: "add-kimi", label: "+ Kimi", tone: "default", disabled: true, title: "Kimi multi-login is not wired yet" });
-    const toolbar = ctx.fns.procs.ui.toolbar({ left: `<span class="text-xs text-base-content/50">Add account</span>`, right: `${addClaude}${addCodex}${addKimi}` });
-
-    const html = `<div class="space-y-6">${group("Accounts from filesystem & Keychain", "Owned by the official CLI; Hyper never stores these tokens.", external)}<div class="border-t border-ui-border"></div>${group("Managed by Hyper", "OAuth tokens encrypted in Postgres; removable from this page.", managed)}${flowRows ? `<section>${ctx.fns.procs.ui.heading({ title: "Logins in progress", meta: "Safe authorization status only." })}<div class="mt-2 overflow-hidden rounded-xl border border-ui-border bg-base-100">${flowRows}</div></section>` : ""}<div class="rounded-xl border border-ui-border bg-base-200 p-3">${toolbar}</div></div>`;
+    const html = `<div class="space-y-6">${providerSections}${flowRows ? `<section>${ctx.fns.procs.ui.heading({ title: "Logins in progress", meta: "Safe authorization status only." })}<div class="mt-2 overflow-hidden rounded-xl border border-ui-border bg-base-100">${flowRows}</div></section>` : ""}</div>`;
     return ctx.fns.ui.live({ id: "llm-accounts", url: "/llms/accounts", topic: "llm-accounts", every: 10, attrs: 'class="block"', html });
 }
+
+function addButton(ctx: Context, provider: "claude-code" | "codex", title: string): string {
+    return ctx.fns.ui.popup({ method: "llms.loginPopupFor", params: { provider }, tone: "default", size: "sm", html: `<i class="ph ph-plus" aria-hidden="true"></i><span>${ctx.fns.procs.ui.escape({ text: title })}</span>` });
+}
+function storageLabel(source:string){return source==="oauth"?{text:"Encrypted by Hyper",title:"OAuth credential encrypted and stored by Hyper"}:source==="keychain"?{text:"Keychain",title:"Credential stored by the official CLI in macOS Keychain"}:{text:"CLI storage",title:"Credential stored in an isolated official CLI directory"};}
+function providerName(p:string){return p==="anthropic-oauth"?"Claude":p==="claude-code"?"Claude Code":p==="kimi-coding"?"Kimi Coding":p==="codex"?"Codex":p;}
+function planName(provider:string, plan:string){const p=String(plan).toLowerCase();if(provider==="codex"&&p==="prolite")return "ChatGPT Go";return p==="pro"?"Pro":p==="max"?"Max":p==="team"?"Team":p==="enterprise"?"Enterprise":plan;}
 function humanDelay(ms:number){const m=Math.floor(Math.max(0,ms)/60000),h=Math.floor(m/60),d=Math.floor(h/24);return d?`${d}d ${h%24}h`:h?`${h}h ${m%60}m`:`${m}m`;}
