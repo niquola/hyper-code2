@@ -11,6 +11,7 @@ id: string }): Promise<types.agent.Agent | null> {
         id: row.id,
         model: row.model,
         title: row.title ?? "",
+        reasoningEffort: row.reasoning_effort || "auto",
         workspaceDir: row.workspace_dir || process.cwd(),
         systemPrompt: row.system_prompt,
         tools: row.tools == null ? undefined : (typeof row.tools === 'string' ? JSON.parse(row.tools) : row.tools),

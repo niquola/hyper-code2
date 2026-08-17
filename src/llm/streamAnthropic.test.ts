@@ -24,6 +24,7 @@ function mkCtx(): Context {
         llm: {
             resolveEndpoint: () => ({ url: "http://mock/v1/messages", modelId: "claude-x", apiKey: "k", provider: "anthropic", api: "anthropic" }),
             parseSSE: (opts: any) => parseSSE(ctx, null, opts),
+            resolveReasoningEffort: async () => ({ requested: "high", applied: "high", mode: "anthropic-adaptive", downgraded: false, reason: null }),
             connectFetch: (o: any) => fetch(o.url, o.init),
             toAnthropicMessages: (opts: any) => toAnthropicMessages(ctx, null, opts),
         },
@@ -51,6 +52,15 @@ describe("streamAnthropic — offline (mocked fetch + shared parseSSE)", () => {
         expect(res.usage.completion_tokens).toBe(5);
         expect(deltas.join("")).toBe("Hello");
     });
+
+    test("sends adaptive thinking and Anthropic output effort", async () => {
+        let request: any;
+        globalThis.fetch = (async (_url:any, init:any) => { request = JSON.parse(init.body); return sseResponse(); }) as any;
+        await stream(mkCtx(), null, { agent: { ...agent(), reasoningEffort: "high" } });
+        expect(request.thinking).toEqual({ type: "adaptive" });
+        expect(request.output_config).toEqual({ effort: "high" });
+    });
+
 
     test("handles Kimi-style SSE (no space after colon) + thinking deltas", async () => {
         globalThis.fetch = (async () => sseResponse(

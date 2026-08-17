@@ -2,6 +2,8 @@ export type Agent = {
     id: string;
     model: string;
     title: string;
+    /** Durable preference for model-side reasoning intensity. */
+    reasoningEffort?: types.llm.ReasoningEffort;
     workspaceDir: string;
     systemPrompt: string;
     /** Narrow this agent to a subset of the declared tools (wire names). Unset

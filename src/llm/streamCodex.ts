@@ -27,6 +27,7 @@ export default async function (
     const { agent } = opts;
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
     const apiKey = await ctx.fns.llm.refreshCodex({ account: ep.account }) ?? ep.apiKey;
+    const reasoning = await ctx.fns.llm.resolveReasoningEffort({ model: agent.model, effort: agent.reasoningEffort ?? "auto" });
     if (!apiKey) throw new Error("codex: no access_token (run /settings → login)");
     const accountId = extractAccountId(apiKey);
 
@@ -43,6 +44,7 @@ export default async function (
         prompt_cache_key: agent.id,
     };
 
+    body.reasoning = { effort: reasoning.applied === "off" ? "none" : reasoning.applied, summary: "auto" };
     // Native function_call items, in JSON protocol mode only (agent.wireTools).
     const tools = ctx.fns.agent.wireTools({ agent, api: "responses" });
     if (tools.length) {

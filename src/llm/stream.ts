@@ -18,6 +18,7 @@ export default async function (
     const { agent } = opts;
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
     const started = performance.now();
+    const reasoning = await ctx.fns.llm.resolveReasoningEffort({ model: agent.model, effort: agent.reasoningEffort ?? "auto" });
     let firstEventMs: number | undefined;
     const onEvent = (ev: any) => {
         firstEventMs ??= Math.round((performance.now() - started) * 100) / 100;
@@ -27,6 +28,9 @@ export default async function (
         "llm.provider": ep.provider,
         "llm.model": ep.modelId,
         "agent.id": agent.id,
+        "llm.reasoning_effort.requested": reasoning.requested,
+        "llm.reasoning_effort.applied": reasoning.applied,
+        "llm.reasoning_mode": reasoning.mode,
     };
     const request = async () => {
         const wireOpts = { ...opts, onEvent };

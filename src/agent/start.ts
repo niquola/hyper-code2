@@ -30,6 +30,7 @@ export default async function (
         id,
         model: opts.model,
         title: String(opts.title ?? "").trim().slice(0, 120),
+        reasoningEffort: "auto",
         workspaceDir,
         systemPrompt: opts.systemPrompt ?? "",
         messages: [],

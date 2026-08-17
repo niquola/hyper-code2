@@ -28,6 +28,7 @@ function mkCtx(): Context {
         llm: {
             resolveEndpoint: () => ({ url: "http://mock/codex", modelId: "gpt-x", apiKey: "", provider: "codex", api: "responses" }),
             refreshCodex: async () => fakeJwt,
+            resolveReasoningEffort: async () => ({ requested: "high", applied: "high", mode: "openai-effort", downgraded: false, reason: null }),
             toCodexInput: (opts: any) => toCodexInput(ctx, null, opts),
             parseSSE: (opts: any) => parseSSE(ctx, null, opts),
             connectFetch: (o: any) => fetch(o.url, o.init),
@@ -56,6 +57,14 @@ describe("streamCodex — offline (mocked fetch + shared parseSSE)", () => {
         expect(res.usage.completion_tokens).toBe(4);
         expect(deltas.join("")).toBe("Hello");
     });
+
+    test("sends the applied effort in the Responses reasoning object", async () => {
+        let request: any;
+        globalThis.fetch = (async (_url:any, init:any) => { request = JSON.parse(init.body); return sseResponse('data: [DONE]\\n\\n'); }) as any;
+        await stream(mkCtx(), null, { agent: { ...agent(), reasoningEffort: "high" } });
+        expect(request.reasoning).toEqual({ effort: "high", summary: "auto" });
+    });
+
 
     test("captures reasoning_summary deltas as thinking", async () => {
         globalThis.fetch = (async () => sseResponse(

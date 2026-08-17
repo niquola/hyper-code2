@@ -25,6 +25,7 @@ declare global {
             delegateTask: Injected<typeof import("./agent/delegateTask").default>;
             deliverWakes: Injected<typeof import("./agent/deliverWakes").default>;
             deliverWatch: Injected<typeof import("./agent/deliverWatch").default>;
+            effortPicker: Injected<typeof import("./agent/effortPicker").default>;
             executeBash: Injected<typeof import("./agent/executeBash").default>;
             finishTask: Injected<typeof import("./agent/finishTask").default>;
             fullSystemPrompt: Injected<typeof import("./agent/fullSystemPrompt").default>;
@@ -58,6 +59,7 @@ declare global {
             setAutomation: Injected<typeof import("./agent/setAutomation").default>;
             setGoal: Injected<typeof import("./agent/setGoal").default>;
             setModel: Injected<typeof import("./agent/setModel").default>;
+            setReasoningEffort: Injected<typeof import("./agent/setReasoningEffort").default>;
             setSleepActive: Injected<typeof import("./agent/setSleepActive").default>;
             setStatusLine: Injected<typeof import("./agent/setStatusLine").default>;
             sleep: Injected<typeof import("./agent/sleep").default>;
@@ -294,6 +296,7 @@ declare global {
             users: Injected<typeof import("../plugins/google/src/gworkspace/users").default>;
         };
         llm: {
+            accountAuthHealth: Injected<typeof import("./llm/accountAuthHealth").default>;
             accountCredentialExists: Injected<typeof import("./llm/accountCredentialExists").default>;
             accountCredentialPath: Injected<typeof import("./llm/accountCredentialPath").default>;
             accountLoginStatus: Injected<typeof import("./llm/accountLoginStatus").default>;
@@ -315,6 +318,7 @@ declare global {
             oauthEncryptionKey: Injected<typeof import("./llm/oauthEncryptionKey").default>;
             parseAnthropicAuthorizationInput: Injected<typeof import("./llm/parseAnthropicAuthorizationInput").default>;
             parseSSE: Injected<typeof import("./llm/parseSSE").default>;
+            reasoningCapabilities: Injected<typeof import("./llm/reasoningCapabilities").default>;
             recordUsage: Injected<typeof import("./llm/recordUsage").default>;
             refreshClaudeCode: Injected<typeof import("./llm/refreshClaudeCode").default>;
             refreshCodex: Injected<typeof import("./llm/refreshCodex").default>;
@@ -322,6 +326,7 @@ declare global {
             refreshUsage: Injected<typeof import("./llm/refreshUsage").default>;
             removeAccount: Injected<typeof import("./llm/removeAccount").default>;
             resolveEndpoint: Injected<typeof import("./llm/resolveEndpoint").default>;
+            resolveReasoningEffort: Injected<typeof import("./llm/resolveReasoningEffort").default>;
             saveAnthropicOAuth: Injected<typeof import("./llm/saveAnthropicOAuth").default>;
             startAccountLogin: Injected<typeof import("./llm/startAccountLogin").default>;
             startAnthropicOAuth: Injected<typeof import("./llm/startAnthropicOAuth").default>;
@@ -827,6 +832,8 @@ declare global {
         }
         namespace llm {
             type FailureInfo = import("./llm/FailureInfo").FailureInfo;
+            type ReasoningEffort = import("./llm/ReasoningEffort").ReasoningEffort;
+            type ReasoningProfile = import("./llm/ReasoningProfile").ReasoningProfile;
             type UsageSnapshot = import("./llm/UsageSnapshot").UsageSnapshot;
             type UsageWindow = import("./llm/UsageWindow").UsageWindow;
         }

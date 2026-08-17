@@ -23,6 +23,7 @@ export default async function (
     const { agent } = opts;
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
 
+    const reasoning = await ctx.fns.llm.resolveReasoningEffort({ model: agent.model, effort: agent.reasoningEffort ?? "auto" });
     // buildLlmRequest keeps the required Claude Code identity in the top-level
     // system field for both externally managed and hyper-code2-managed OAuth.
     const { system, messages: convo } = await ctx.fns.agent.buildLlmRequest({ agent });
@@ -35,6 +36,12 @@ export default async function (
         max_tokens: 16384,
     };
 
+    if (reasoning.mode === "anthropic-adaptive" && reasoning.applied !== "off") {
+        body.thinking = { type: "adaptive" };
+        body.output_config = { effort: reasoning.applied === "xhigh" ? "max" : reasoning.applied };
+    } else if (reasoning.mode === "anthropic-adaptive") {
+        body.thinking = { type: "disabled" };
+    }
     // Native tool_use blocks, in JSON protocol mode only (see agent.wireTools).
     const tools = ctx.fns.agent.wireTools({ agent, api: "anthropic" });
     if (tools.length) body.tools = tools;

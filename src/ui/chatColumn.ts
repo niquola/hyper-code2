@@ -105,6 +105,14 @@ export default async function (ctx: Context, _session: Session | null, opts: {
         attrs: `class="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-base-100/25 text-base-content/65 transition hover:bg-base-100/60 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/25" title="Change provider or model · ${esc(agent.model)}" aria-label="Change provider or model: ${esc(agent.model)}"`,
     });
 
+    const reasoning = await ctx.fns.llm.resolveReasoningEffort({ model: agent.model, effort: agent.reasoningEffort ?? "auto" });
+    const effortLabel = (agent.reasoningEffort ?? "auto") === "auto" ? `Auto · ${reasoning.applied}` : reasoning.applied;
+    const effortControl = ctx.fns.ui.popup({
+        method: 'agent.effortPicker',
+        params: { agentId: id },
+        html: `<i class="ph ph-brain" aria-hidden="true"></i><span class="hidden sm:inline capitalize">${esc(effortLabel)}</span>`,
+        attrs: `class="inline-flex h-7 items-center gap-1 rounded-full border border-ui-border bg-base-100/35 px-2 text-[10px] font-medium text-base-content/60 transition hover:border-primary/30 hover:bg-primary/10 hover:text-primary" title="Reasoning effort · ${esc(effortLabel)}" aria-label="Change reasoning effort: ${esc(effortLabel)}"`,
+    });
     const statusLinePopup = await ctx.fns.ui.inplacePopup({
         id: `status-line-popover-${id}`,
         triggerHtml: `<span id="status-line-label-${esc(id)}" class="min-w-0 truncate"><i class="ph ph-note-pencil mr-1"></i>${agent.statusLine ? esc(agent.statusLine) : 'add prompt inject…'}${agent.statusLine && Number(agent.statusLineEvery ?? 1) > 1 ? ` · every ${Number(agent.statusLineEvery)} turns` : ''}</span>`,
@@ -122,6 +130,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
   ${statusBarHtml}
   <span class="ml-auto flex items-center gap-1">
   ${reflectionHtml}
+    ${effortControl}
     ${compactPopup}
 
     ${sleepControl}
