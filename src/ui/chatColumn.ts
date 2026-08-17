@@ -113,6 +113,16 @@ export default async function (ctx: Context, _session: Session | null, opts: {
         html: `<i class="ph ph-brain" aria-hidden="true"></i><span class="hidden sm:inline capitalize">${esc(effortLabel)}</span>`,
         attrs: `class="inline-flex h-7 items-center gap-1 rounded-full border border-ui-border bg-base-100/35 px-2 text-[10px] font-medium text-base-content/60 transition hover:border-primary/30 hover:bg-primary/10 hover:text-primary" title="Reasoning effort · ${esc(effortLabel)}" aria-label="Change reasoning effort: ${esc(effortLabel)}"`,
     });
+    const workspaceDir = String(agent.workspaceDir ?? '').trim();
+    const workspaceName = workspaceDir.split('/').filter(Boolean).pop() || workspaceDir;
+    const workspaceControl = workspaceDir ? ctx.fns.ui.popup({
+        method: 'agent.workspaceFilesPopup',
+        params: { agentId: id },
+        html: `<i class="ph ph-folder-open shrink-0" aria-hidden="true"></i><span class="max-w-48 truncate">${esc(workspaceName)}</span>`,
+        attrs: `class="hidden min-w-0 items-center gap-1 text-[9px] leading-none text-base-content/40 transition hover:text-primary sm:inline-flex" title="Files · ${esc(workspaceDir)}" aria-label="Open files in ${esc(workspaceDir)}"`,
+    }) : '';
+
+
     const statusLinePopup = await ctx.fns.ui.inplacePopup({
         id: `status-line-popover-${id}`,
         triggerHtml: `<span id="status-line-label-${esc(id)}" class="min-w-0 truncate"><i class="ph ph-note-pencil mr-1"></i>${agent.statusLine ? esc(agent.statusLine) : 'add prompt inject…'}${agent.statusLine && Number(agent.statusLineEvery ?? 1) > 1 ? ` · every ${Number(agent.statusLineEvery)} turns` : ''}</span>`,
@@ -125,7 +135,10 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     return `
 <header class="glass-bar absolute inset-x-0 top-0 z-40 mx-auto mt-2 flex h-11 w-[calc(100%-2rem)] max-w-3xl shrink-0 items-center gap-2.5 overflow-visible rounded-[22px] border border-ui-border pl-2 pr-5 text-xs text-base-content/70">
   ${modelControl}
-  <span class="font-mono font-medium text-base-content/80">${esc(String(agent.title ?? id).slice(0, 40) || id)} <span class="text-base-content/45">(${esc(id)})</span></span>
+  <span class="flex min-w-0 flex-col">
+    <span class="truncate font-mono font-medium leading-4 text-base-content/80">${esc(String(agent.title ?? id).slice(0, 40) || id)} <span class="text-base-content/45">(${esc(id)})</span></span>
+    ${workspaceControl}
+  </span>
   ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}
   ${statusBarHtml}
   <span class="ml-auto flex items-center gap-1">

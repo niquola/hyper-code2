@@ -137,7 +137,7 @@ export default async function (ctx: Context, session: Session | null, opts: {
 }
 .chat-glass-primary {
   background-color: rgb(20 20 22 / .94);
-  background-image: radial-gradient(circle, rgb(255 255 255 / .12) 0 1px, transparent 1.35px);
+  background-image: radial-gradient(circle, rgb(255 255 255 / .23) 0 1.1px, transparent 1.5px);
 }
 
 /* Highlighted code inside tool detail dialogs. */
