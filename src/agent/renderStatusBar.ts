@@ -80,7 +80,7 @@ initialUsage?: any;
     // the run, but CSS anchors it inside the composer instead of the top bar.
     const busy = row?.run_state === 'running' || !!row?.next_run_at;
     const stopBtn = busy
-        ? ctx.fns.procs.ui.button({ action: 'stop', entity: 'agent', id: agentId, post: `/agent/${encodeURIComponent(agentId)}/stop`, swap: 'none', title: 'stop this run', ariaLabel: 'Stop generation', tone: 'neutral', class: 'size-8 rounded-full shadow-md', html: '<span class="block size-2.5 rounded-[2px] bg-white" aria-hidden="true"></span>' })
+        ? ctx.fns.procs.ui.button({ action: 'stop', entity: 'agent', id: agentId, post: `/agent/${encodeURIComponent(agentId)}/stop`, swap: 'none', title: 'stop this run', ariaLabel: 'Stop generation', tone: 'primary', class: 'size-8 rounded-full shadow-md', html: '<span class="block size-2.5 rounded-[2px] bg-white" aria-hidden="true"></span>' })
         : '';
     if (part === 'stop') return stopBtn;
     // The SSE stream is the real trigger (it dispatches hyper-tick on every
