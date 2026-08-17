@@ -15,7 +15,8 @@ test("inspector section renders semantic collapsible shell", () => {
     });
     expect(html).toContain("<details open");
     expect(html).toContain("border-ui-border");
-    expect(html).toContain("bg-base-200");
+    expect(html).toContain("bg-transparent");
+    expect(html).toContain("bg-base-100/25");
     expect(html).toContain("Plan &lt;unsafe&gt;");
     expect(html).toContain("<strong>trusted body</strong>");
 });

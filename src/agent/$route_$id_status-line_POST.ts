@@ -7,14 +7,21 @@ req: Request;
         /** Values bound to the operation. */
 params: Record<string, string> }) {
     const form = await opts.req.formData();
+    const text = String(form.get('text') ?? '');
+    const every = Number(form.get('every') ?? 1);
     try {
         await ctx.fns.agent.setStatusLine({
             id: opts.params.id!,
-            text: String(form.get('text') ?? ''),
-            every: Number(form.get('every') ?? 1),
+            text,
+            every,
         });
     } catch (error: any) {
         return new Response(error?.message ?? 'Invalid status line', { status: 400 });
     }
-    return new Response(null, { status: 204, headers: { 'HX-Refresh': 'true' } });
+    const esc = (value: string) => ctx.fns.procs.ui.escape({ text: value });
+    const label = text.trim() || 'add prompt inject…';
+    const suffix = text.trim() && every > 1 ? ` · every ${every} turns` : '';
+    return new Response(`<i class="ph ph-note-pencil mr-1"></i>${esc(label)}${esc(suffix)}`, {
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+    });
 }

@@ -62,14 +62,14 @@ export default async function (ctx: Context, session: Session | null, opts: {
 .tool.tool-tucked:active { transform: translateY(0) scale(1.05); }
 #quick-bar,
 .glass-panel {
-  background-color: rgb(from var(--color-base-200) r g b / .72);
-  background-image: linear-gradient(110deg, rgb(255 255 255 / .12), transparent 45%, rgb(255 255 255 / .04));
-  box-shadow: inset -1px 0 0 rgb(255 255 255 / .18), 1px 0 8px rgb(0 0 0 / .04);
+  background-color: rgb(from var(--color-base-100) r g b / .68);
+  background-image: linear-gradient(110deg, rgb(255 255 255 / .16), transparent 48%, rgb(255 255 255 / .05));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 1px 2px rgb(0 0 0 / .04), 0 8px 24px rgb(0 0 0 / .08);
   backdrop-filter: blur(12px) saturate(115%);
   -webkit-backdrop-filter: blur(12px) saturate(115%);
 }
 .glass-panel {
-  box-shadow: inset 1px 0 0 rgb(255 255 255 / .18), -1px 0 8px rgb(0 0 0 / .04);
+  box-shadow: inherit;
 }
 .glass-bar {
   background-color: rgb(from var(--color-base-100) r g b / .68) !important;
@@ -171,7 +171,7 @@ ${opts.headExtra ?? ""}
 </head>
 <body hx-ext="popup-rpc" class="bg-base-200 text-base-content text-sm h-screen"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div id="frame" class="relative flex h-screen">
-  <nav id="quick-bar" aria-label="Quick access" class="flex w-10 shrink-0 flex-col items-center border-r border-ui-border py-1.5">
+  <nav id="quick-bar" aria-label="Quick access" class="my-2 ml-2 mr-1 flex h-[calc(100%-1rem)] w-10 shrink-0 flex-col items-center rounded-2xl border border-ui-border py-2 shadow-sm">
     ${ctx.fns.procs.ui.button({ action: "open-global-menu", html: '<i class="ph ph-squares-four text-base" aria-hidden="true"></i>', appearance: "plain", title: "Global menu — ⌘/", ariaLabel: "Open global menu", class: "flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content", attrs: { onclick: "window.__navOpen?.()" } })}
     ${ctx.fns.procs.ui.button({ action: "toggle-theme", html: '<i class="ph ph-moon" aria-hidden="true"></i>', appearance: "plain", title: "Switch color theme", ariaLabel: "Switch color theme", class: "mt-1 flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content", attrs: { id: "theme-toggle", "aria-pressed": "false" } })}
     <div id="quick-items" class="mt-2 flex min-h-0 flex-1 flex-col items-center gap-1" aria-label="Pinned pages"></div>

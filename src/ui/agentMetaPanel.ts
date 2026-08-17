@@ -33,11 +33,11 @@ export default function (ctx: Context, _session: Session | null, opts: {
         `<div id="agent-meta-${section}-${esc(agent.id)}" data-meta-section="${section}">`
         + ctx.fns.ui.agentMetaSection({ agent, section, team: opts.team, archivedTeam: opts.archivedTeam, models: opts.models, accounts: opts.accounts })
         + `</div>`;
-    return `<aside id="agent-meta-${esc(agent.id)}" class="glass-panel flex h-full w-80 shrink-0 flex-col border-l border-ui-border text-base-content">
-      <header class="glass-bar flex h-8 shrink-0 items-center gap-2 border-b border-ui-border px-3">
+    return `<aside id="agent-meta-${esc(agent.id)}" class="glass-panel my-2 mr-2 ml-1 flex h-[calc(100%-1rem)] w-80 shrink-0 flex-col overflow-hidden rounded-2xl border border-ui-border text-base-content shadow-sm">
+      <header class="glass-bar flex h-9 shrink-0 items-center gap-2 border-b border-ui-border px-3">
         <i class="ph ph-sidebar-simple text-sm text-base-content/45" aria-hidden="true"></i><span class="min-w-0 flex-1 truncate text-xs font-semibold text-base-content">Agent inspector</span><span class="font-mono text-[10px] text-base-content/40">${esc(agent.id)}</span>
       </header>
-      <div class="flex-1 overflow-y-auto bg-base-200">
+      <div class="flex-1 overflow-y-auto bg-transparent">
         ${slot("goal")}
         ${slot("automation")}
         ${slot("wake")}

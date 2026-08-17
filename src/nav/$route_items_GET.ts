@@ -19,6 +19,10 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         childrenByParent.set(String(candidate.parentId), children);
     }
     const agentByHref = new Map(agents.map((agent: any) => [`/agent/${encodeURIComponent(agent.id)}`, agent]));
+    const hotAgents = (await ctx.fns.procs.db.select({
+        sql: `SELECT a.id FROM kv h JOIN agents a ON a.id = substring(h.key FROM 5) WHERE h.key LIKE 'hot:%' AND a.archived_at IS NULL ORDER BY h.value::bigint DESC LIMIT 5`,
+        params: [],
+    }) as any[]).map((row: any) => agents.find((agent: any) => String(agent.id) === String(row.id))).filter(Boolean);
     const group = (item: any) => {
         const hint = String(item.hint ?? "").toLowerCase();
         if (hint.includes("agent")) return "Chats";
@@ -74,8 +78,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     if (q) {
         html = `<div class="p-2">${items.map(row).join("")}</div>`;
     } else {
+        const quick = hotAgents.length ? `<section class="mb-3 border-b border-ui-border pb-2"><h4 class="mb-1 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-base-content/45">Quick</h4>${hotAgents.map((agent: any) => agentRow(agent)).join("")}</section>` : "";
         const groups = ["Chats", "Projects & files", "Plugins", "System"];
-        html = `<div class="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">${groups.map(name => {
+        html = `${quick}<div class="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">${groups.map(name => {
             const own = items.filter(item => group(item) === name);
             const content = name === "Chats"
                 ? chats()

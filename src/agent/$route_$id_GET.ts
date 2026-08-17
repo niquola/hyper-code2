@@ -20,6 +20,10 @@ params: Record<string, string> }) {
     }
     if (!agent) return new Response("Not Found", { status: 404 });
 
+    await ctx.fns.procs.db.run({
+        sql: `INSERT INTO kv(key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+        params: [`hot:${id}`, String(Date.now())],
+    });
     const chat = await ctx.fns.ui.chatColumn({ agentId: id });
     const [team, archivedTeam] = await Promise.all([
         ctx.fns.agent.team({ agent }),

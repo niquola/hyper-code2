@@ -105,6 +105,14 @@ export default async function (ctx: Context, _session: Session | null, opts: {
         attrs: `class="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-base-100/25 text-base-content/65 transition hover:bg-base-100/60 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/25" title="Change provider or model · ${esc(agent.model)}" aria-label="Change provider or model: ${esc(agent.model)}"`,
     });
 
+    const statusLinePopup = await ctx.fns.ui.inplacePopup({
+        id: `status-line-popover-${id}`,
+        triggerHtml: `<span id="status-line-label-${esc(id)}" class="min-w-0 truncate"><i class="ph ph-note-pencil mr-1"></i>${agent.statusLine ? esc(agent.statusLine) : 'add prompt inject…'}${agent.statusLine && Number(agent.statusLineEvery ?? 1) > 1 ? ` · every ${Number(agent.statusLineEvery)} turns` : ''}</span>`,
+        triggerAttrs: 'class="min-w-0 max-w-full truncate text-[10px] text-base-content/45 hover:text-base-content/70" title="Edit prompt inject" aria-label="Edit prompt inject"',
+        panelAttrs: 'aria-label="Edit prompt inject"',
+        contentHtml: `<div class="min-w-0 space-y-3"><label class="block min-w-0 text-xs font-medium text-base-content/70">Prompt inject<textarea form="status-line-form-${esc(id)}" name="text" maxlength="500" rows="4" placeholder="Answer briefly and to the point…" class="mt-1 block w-full min-w-0 max-w-full box-border resize-y rounded-lg border border-ui-input bg-base-100 px-3 py-2 text-xs text-base-content">${esc(agent.statusLine ?? '')}</textarea></label><label class="block min-w-0 text-xs font-medium text-base-content/70">Apply every <input form="status-line-form-${esc(id)}" name="every" type="number" min="1" max="100" value="${Math.max(1, Number(agent.statusLineEvery ?? 1))}" class="mt-1 block w-full min-w-0 max-w-full box-border rounded-lg border border-ui-input bg-base-100 px-3 py-2 text-xs text-base-content"></label>${ctx.fns.procs.ui.button({ action: 'save-status-line', label: 'Save', type: 'submit', tone: 'primary', class: 'w-full', attrs: { form: `status-line-form-${id}` } })}</div>`,
+    });
+
     // header names THIS agent and holds its controls, nothing more.
     return `
 <header class="glass-bar absolute inset-x-0 top-0 z-40 mx-auto mt-2 flex h-11 w-[calc(100%-2rem)] max-w-3xl shrink-0 items-center gap-2.5 overflow-visible rounded-[22px] border border-ui-border pl-2 pr-5 text-xs text-base-content/70">
@@ -145,27 +153,16 @@ ${agent.sleepContext?.active === true
       hx-trigger="submit"
       hx-swap="none"
       hx-on::after-request="if (event.detail.elt === this && event.detail.successful) { this.elements.input.value=''; this.elements.input.focus(); }">
+  <div class="mb-1.5 text-center text-[10px] leading-none text-base-content/35"><kbd>⌘J</kbd> scroll down · <kbd>⌘K</kbd> scroll up · Enter to send</div>
   <div class="relative h-11 w-full">
     ${stopControlRegion}
     <textarea id="input" name="text" rows="1" placeholder="Message agent…"
       class="glass-input block h-11 w-full resize-none overflow-y-auto rounded-[22px] border-0 px-4 py-[11px] font-sans text-sm leading-[22px] text-base-content placeholder:text-base-content/35 focus:outline-none"></textarea>
   </div>
-  <div class="mt-1.5 text-center text-[10px] leading-none text-base-content/35"><kbd>⌘J</kbd> scroll down · <kbd>⌘K</kbd> scroll up · Enter to send</div>
+  <div class="mt-1.5 flex min-w-0 justify-center px-4">${statusLinePopup}</div>
 </form>
-<div class="border-t border-ui-border bg-base-200 px-3 py-1.5 text-[11px] text-base-content/45">
-  <details class="group">
-    <summary class="cursor-pointer list-none truncate hover:text-base-content/65" title="Edit status line"><i class="ph ph-note-pencil"></i> ${agent.statusLine ? esc(agent.statusLine) : 'add status line…'}${agent.statusLine && Number(agent.statusLineEvery ?? 1) > 1 ? ` · every ${Number(agent.statusLineEvery)} turns` : ''}</summary>
-    <form hx-post="/agent/${encodeURIComponent(id)}/status-line" hx-swap="none" class="mt-2 flex items-end gap-2 pb-1">
-      <label class="min-w-0 flex-1">Instruction
-        <input name="text" maxlength="500" value="${esc(agent.statusLine ?? '')}" placeholder="Answer briefly and to the point…" class="mt-1 w-full rounded border border-ui-border bg-base-100 px-2 py-1 text-xs text-base-content/70">
-      </label>
-      <label class="w-20">Every
-        <input name="every" type="number" min="1" max="100" value="${Math.max(1, Number(agent.statusLineEvery ?? 1))}" class="mt-1 w-full rounded border border-ui-border bg-base-100 px-2 py-1 text-xs text-base-content/70">
-      </label>
-      ${ctx.fns.procs.ui.button({ action: 'save-status-line', label: 'save', type: 'submit', appearance: 'plain', class: 'rounded border border-ui-border bg-base-100 px-2 py-1 text-xs text-base-content/65 hover:bg-base-200' })}
-    </form>
-  </details>
-</div>
+
+<form id="status-line-form-${esc(id)}" hx-post="/agent/${encodeURIComponent(id)}/status-line" hx-target="#status-line-label-${esc(id)}" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful) document.getElementById('status-line-popover-${esc(id)}')?.hidePopover()"></form>
   ${reflectionNudge ? `<div class="flex items-start gap-2 border-t border-violet-100 bg-violet-50/60 px-3 py-2 text-[11px] leading-4 text-violet-700" title="Active reflection instruction"><i class="ph ph-brain mt-0.5 shrink-0" aria-hidden="true"></i><span class="min-w-0 flex-1">${esc(reflectionNudge)}</span>${ctx.fns.procs.ui.button({ action: 'dismiss-reflection-nudge', html: '<i class="ph ph-x"></i>', appearance: 'plain', post: `/agent/${encodeURIComponent(id)}/reflection-nudge/delete`, target: 'closest div', swap: 'outerHTML', title: 'Dismiss reflection nudge', ariaLabel: 'Dismiss reflection nudge', class: '-mr-1 -mt-1 inline-flex size-6 shrink-0 items-center justify-center rounded text-violet-400 hover:bg-violet-100 hover:text-violet-700' })}</div>` : ''}
 
 `;

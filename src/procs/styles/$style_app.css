@@ -229,7 +229,8 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
 .inplace-popup-panel {
   position: fixed; inset: auto; top: anchor(bottom); right: anchor(right);
   margin-top: 0.375rem; width: min(20rem, calc(100vw - 2rem));
-  max-height: calc(100dvh - 4rem); overflow: auto;
+  max-height: calc(100dvh - 4rem); overflow-y: auto; overflow-x: hidden;
+  box-sizing: border-box;
   border: 1px solid var(--ui-border); border-radius: 0.5rem;
   background: var(--color-base-100); color: var(--theme-base-content);
   padding: 0.75rem; box-shadow: 0 12px 36px rgb(0 0 0 / 0.24);

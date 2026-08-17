@@ -42,8 +42,8 @@ export default function (
     const actions = opts.actions ? `<span class="ml-auto flex shrink-0 items-center gap-1">${opts.actions}</span>` : '';
     const heading = `${icon}<span class="min-w-0 flex-1 truncate text-xs font-semibold text-base-content">${esc(opts.title)}</span>${badge}${actions}`;
     const content = opts.html.trim() || (opts.empty ? `<p class="text-xs leading-5 text-base-content/50">${esc(opts.empty)}</p>` : '');
-    const body = `<div class="border-t border-ui-border px-3 py-3">${content}</div>`;
+    const body = `<div class="border-t border-ui-border bg-transparent px-3 py-3">${content}</div>`;
     const extra = opts.className ? ` ${opts.className}` : '';
-    if (opts.collapsible) return `<details ${opts.open ? 'open' : ''} class="group border-b border-ui-border bg-base-200${extra}"><summary class="flex min-h-10 cursor-pointer list-none items-center gap-2 px-3 py-2 hover:bg-base-200/60">${heading}<i class="ph ph-caret-down text-[10px] text-base-content/40 transition-transform group-open:rotate-180" aria-hidden="true"></i></summary>${body}</details>`;
-    return `<section class="border-b border-ui-border bg-base-200${extra}"><div class="flex min-h-10 items-center gap-2 px-3 py-2">${heading}</div>${body}</section>`;
+    if (opts.collapsible) return `<details ${opts.open ? 'open' : ''} class="group border-b border-ui-border bg-transparent${extra}"><summary class="flex min-h-10 cursor-pointer list-none items-center gap-2 bg-base-100/25 px-3 py-2 hover:bg-base-100/45">${heading}<i class="ph ph-caret-down text-[10px] text-base-content/40 transition-transform group-open:rotate-180" aria-hidden="true"></i></summary>${body}</details>`;
+    return `<section class="border-b border-ui-border bg-transparent${extra}"><div class="flex min-h-10 items-center gap-2 bg-base-100/25 px-3 py-2">${heading}</div>${body}</section>`;
 }
