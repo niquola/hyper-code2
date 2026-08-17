@@ -1,0 +1,8 @@
+{
+  "label": "settings",
+  "href": "/settings",
+  "hint": "page · runtime configuration",
+  "icon": "ph-gear",
+  "group": "System",
+  "order": 40
+}

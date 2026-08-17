@@ -53,6 +53,7 @@
       "procs/migrate": {},
       "procs/repl": {},
       "agent": {},
+      "cron": {},
       "procs/http": {
         "port": 3010
       }

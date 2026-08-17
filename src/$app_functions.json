@@ -1,0 +1,8 @@
+{
+  "label": "functions",
+  "href": "/functions",
+  "hint": "page · searchable runtime API documentation",
+  "icon": "ph-function",
+  "group": "System",
+  "order": 20
+}

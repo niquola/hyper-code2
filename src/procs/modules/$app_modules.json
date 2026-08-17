@@ -1,0 +1,8 @@
+{
+  "label": "modules",
+  "href": "/procs/modules",
+  "hint": "page · mounted runtime modules",
+  "icon": "ph-package",
+  "group": "System",
+  "order": 60
+}

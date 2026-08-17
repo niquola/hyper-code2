@@ -30,9 +30,12 @@ test("GET /functions renders searchable live runtime documentation", async () =>
 
 test("functions page is present in the global navigation", async () => {
     const items = await ctx.fns.nav.items({ q: "functions", limit: 10 });
-    expect(items).toContainEqual({
+    expect(items).toContainEqual(expect.objectContaining({
         label: "functions",
         href: "/functions",
         hint: "page · searchable runtime API documentation",
-    });
+        icon: "ph-function",
+        group: "System",
+        order: 20,
+    }));
 });

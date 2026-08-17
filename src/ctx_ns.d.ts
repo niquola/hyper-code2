@@ -111,9 +111,26 @@ declare global {
             text: Injected<typeof import("../plugins/browser/src/browser/text").default>;
             title: Injected<typeof import("../plugins/browser/src/browser/title").default>;
         };
+        calendar: {
+            prepareToday: Injected<typeof import("../.hyper/calendar/prepareToday").default>;
+            wakeMaster: Injected<typeof import("../.hyper/calendar/wakeMaster").default>;
+        };
         cdp: {
             send: Injected<typeof import("../plugins/browser/src/cdp/send").default>;
             session: Injected<typeof import("../plugins/browser/src/cdp/session").default>;
+        };
+        cron: {
+            add: Injected<typeof import("./cron/add").default>;
+            claim: Injected<typeof import("./cron/claim").default>;
+            defer: Injected<typeof import("./cron/defer").default>;
+            list: Injected<typeof import("./cron/list").default>;
+            panel: Injected<typeof import("./cron/panel").default>;
+            recover: Injected<typeof import("./cron/recover").default>;
+            remove: Injected<typeof import("./cron/remove").default>;
+            runNow: Injected<typeof import("./cron/runNow").default>;
+            runOne: Injected<typeof import("./cron/runOne").default>;
+            wakeWorker: Injected<typeof import("./cron/wakeWorker").default>;
+            workerLoop: Injected<typeof import("./cron/workerLoop").default>;
         };
         dev: {
             ping: Injected<typeof import("./dev/ping").default>;

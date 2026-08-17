@@ -1,0 +1,8 @@
+{
+  "label": "new agent",
+  "href": "/agent/new",
+  "hint": "page · create a chat agent",
+  "icon": "ph-plus-circle",
+  "group": "Chats",
+  "order": 70
+}

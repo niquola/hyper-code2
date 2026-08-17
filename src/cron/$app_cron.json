@@ -1,0 +1,8 @@
+{
+  "label": "cron tasks",
+  "href": "/cron",
+  "hint": "page · durable background jobs",
+  "icon": "ph-clock",
+  "group": "System",
+  "order": 80
+}

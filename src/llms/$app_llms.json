@@ -1,0 +1,8 @@
+{
+  "label": "LLM connections",
+  "href": "/llms",
+  "hint": "page · models and authentication",
+  "icon": "ph-brain",
+  "group": "System",
+  "order": 50
+}

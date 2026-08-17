@@ -1,8 +1,7 @@
-// Resources available in the global menu: core pages, agent chats, and the
-// installed plugins themselves. Plugin routes are discovered through search
-// providers rather than dumped into the default overview.
+// Resources available in the global menu: declarative app pages, installed
+// plugins, and agent chats. Static pages are owned by `$app_*.json` files.
 /**
- * Lists navigation destinations for core pages, plugins, and agent chats.
+ * Lists navigation destinations for declared apps, plugins, and agent chats.
  * @param opts.q Optional case-insensitive filter applied to labels, URLs, and hints.
  * @param opts.limit Maximum number of navigation items to return.
  */
@@ -14,21 +13,12 @@ export default async function (
     const q = (opts.q ?? "").trim().toLowerCase();
     const limit = opts.limit ?? 20;
 
-    const agents = (await ctx.fns.session.list({}).catch(() => [])).map((a: any): types.nav.Item => ({
-        label: `${a.id} · ${String(a.title ?? "").slice(0, 60)}`,
-        href: `/agent/${encodeURIComponent(a.id)}`,
-        hint: `agent · ${a.model} · ${a.turns} turns`,
-    }));
-
-    const pages: types.nav.Item[] = [
-        { label: "search transcripts", href: "/search", hint: "page" },
-        { label: "functions", href: "/functions", hint: "page · searchable runtime API documentation" },
-        { label: "files", href: "/files", hint: "page" },
-        { label: "settings", href: "/settings", hint: "page" },
-        { label: "LLM connections", href: "/llms", hint: "page · models and authentication" },
-        { label: "modules", href: "/procs/modules", hint: "page" },
-        { label: "new agent", href: "/agent/new", hint: "page" },
-    ];
+    const apps: types.nav.Item[] = Object.values((ctx.state as any).nav?.apps ?? {})
+        .sort((a: any, b: any) => Number(a.order) - Number(b.order) || String(a.label).localeCompare(String(b.label)))
+        .map((app: any): types.nav.Item => ({
+            label: String(app.label), href: String(app.href), hint: String(app.hint ?? "page"),
+            icon: String(app.icon ?? "ph-gear"), group: String(app.group ?? "System"), order: Number(app.order ?? 100),
+        }));
 
     const seenPluginPaths = new Set<string>();
     const plugins: types.nav.Item[] = ctx.fns.plugins.list({})
@@ -42,9 +32,17 @@ export default async function (
             label: plugin.label || plugin.name,
             href: `/plugins/${encodeURIComponent(plugin.name)}`,
             hint: `plugin · ${plugin.description || plugin.namespaces?.join(", ") || plugin.name}`,
+            icon: "ph-plugs", group: "Plugins",
         }));
 
-    const all = [...pages, ...plugins, ...agents];
-    const hit = (i: types.nav.Item) => !q || i.label.toLowerCase().includes(q) || i.href.toLowerCase().includes(q) || (i.hint ?? "").toLowerCase().includes(q);
+    const agents = (await ctx.fns.session.list({}).catch(() => [])).map((agent: any): types.nav.Item => ({
+        label: `${agent.id} · ${String(agent.title ?? "").slice(0, 60)}`,
+        href: `/agent/${encodeURIComponent(agent.id)}`,
+        hint: `agent · ${agent.model} · ${agent.turns} turns`,
+        group: "Chats",
+    }));
+
+    const all = [...apps, ...plugins, ...agents];
+    const hit = (item: types.nav.Item) => !q || item.label.toLowerCase().includes(q) || item.href.toLowerCase().includes(q) || (item.hint ?? "").toLowerCase().includes(q);
     return all.filter(hit).slice(0, limit);
 }

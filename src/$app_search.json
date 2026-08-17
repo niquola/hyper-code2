@@ -1,0 +1,8 @@
+{
+  "label": "search transcripts",
+  "href": "/search",
+  "hint": "page · search agent conversations",
+  "icon": "ph-magnifying-glass",
+  "group": "System",
+  "order": 10
+}

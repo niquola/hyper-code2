@@ -1,0 +1,8 @@
+{
+  "label": "files",
+  "href": "/files",
+  "hint": "page · project files",
+  "icon": "ph-folder",
+  "group": "Projects & files",
+  "order": 30
+}

@@ -2,6 +2,26 @@
 
 ## Direction
 
+## Declarative navigation apps
+
+A module that owns a user-facing page can publish it to global navigation with a `$app_<name>.json` file. The `nav/$loader_app.ts` loader collects these declarations; `nav.items` merges them with core pages, plugins, and agents.
+
+```json
+{
+  "label": "cron tasks",
+  "href": "/cron",
+  "hint": "page · durable background jobs",
+  "icon": "ph-clock",
+  "group": "System",
+  "order": 80
+}
+```
+
+`label` and `href` are required. `href` must be a local absolute path beginning with a single `/`. `icon` is an optional Phosphor class, `group` selects the global-menu section, and numeric `order` provides stable ordering among app declarations. Defaults are `ph-gear`, `System`, and `100`.
+
+Core static pages use the same declarations as module pages; `nav.items` contains no hard-coded page catalogue. Dynamic plugin pages and agent chats continue to come from their own registries.
+
+
 **Simplicity first. DB-first. htmx long-poll. One in-process worker, runs in parallel.**
 
 Everything durable lives in Postgres (paradedb). Everything visible to the user comes from a normal HTTP fetch. There is no queue table — debounce and run-state are columns on `agents`. Realtime is one in-process condvar; it carries no data, only "go look in the DB".

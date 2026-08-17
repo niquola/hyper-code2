@@ -24,6 +24,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         params: [],
     }) as any[]).map((row: any) => agents.find((agent: any) => String(agent.id) === String(row.id))).filter(Boolean);
     const group = (item: any) => {
+        if (item.group) return String(item.group);
         const hint = String(item.hint ?? "").toLowerCase();
         if (hint.includes("agent")) return "Chats";
         if (item.href === "/files" || hint.includes("project") || hint.includes("file")) return "Projects & files";
@@ -44,7 +45,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
 </a>`;
         }
         return `<a href="${esc(item.href)}" class="nav-row flex min-h-8 items-center gap-2 rounded px-2 py-1 text-sm outline-none hover:bg-base-200/60">
-  <i class="ph ${group(item) === "Projects & files" ? "ph-folder" : group(item) === "Plugins" ? "ph-plugs" : "ph-gear"} shrink-0 text-base-content/45"></i>
+  <i class="ph ${esc(item.icon || (group(item) === "Projects & files" ? "ph-folder" : group(item) === "Plugins" ? "ph-plugs" : "ph-gear"))} shrink-0 text-base-content/45"></i>
   <span class="min-w-0 flex-1 truncate">${esc(item.label)}</span>
   ${item.hint ? `<span class="max-w-32 shrink-0 truncate text-[10px] text-base-content/45">${esc(item.hint)}</span>` : ""}
 </a>`;
