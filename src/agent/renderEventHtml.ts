@@ -99,12 +99,12 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
         const ragIcon = ragNames.length
             ? '<span class="group/rag relative ml-1.5 inline-flex align-middle text-indigo-200" aria-label="Function RAG retrieved ' + ragNames.length + ' functions" tabindex="0"><i class="ph ph-function text-xs" aria-hidden="true"></i><span role="tooltip" class="pointer-events-none invisible absolute bottom-full right-0 z-30 mb-2 w-max max-w-[32rem] whitespace-pre-wrap rounded-lg border border-ui-border bg-base-100 px-3 py-2 font-mono text-[10px] leading-4 text-base-content/70 opacity-0 shadow-xl transition group-hover/rag:visible group-hover/rag:opacity-100 group-focus/rag:visible group-focus/rag:opacity-100">' + esc(injected) + '</span></span>'
             : '';
-        return '<div class="group relative flex justify-end">'
+        return '<div class="group relative flex justify-end pb-0">'
             + '<div class="relative ml-auto max-w-[80%]">'
             + '<div class="chat-glass-primary rounded-xl px-4 py-3 text-white whitespace-pre-wrap break-words shadow-sm border border-black/20">'
             + appendTime(esc(ev.text) + ragIcon, ev.ts, 'dark')
             + '</div>'
-            + '<div class="mt-1 flex justify-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">' + deleteControls(ctx, idx, agentId, true, true, 'side') + '</div>'
+            + '<div class="absolute left-full top-1/2 z-10 ml-2 flex -translate-y-1/2 gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">' + deleteControls(ctx, idx, agentId, true, true, 'side') + '</div>'
             + '</div></div>';
     }
 
@@ -128,13 +128,14 @@ function appendTime(html: string, ts: any, tone: 'dark' | 'light', suffix = ''):
             ? rawHtml
             : '<pre class="text-xs whitespace-pre-wrap break-words">' + esc(ev.text || '') + '</pre>';
         return '<div class="group relative flex justify-start">'
-            + deleteControls(ctx, idx, agentId, true, true)
             + '<div class="assistant chat-glass w-full rounded-2xl px-4 py-3 text-base-content shadow-sm border border-ui-border">'
             + '<div class="prose prose-sm max-w-none text-base-content prose-headings:text-base-content prose-p:text-base-content prose-li:text-base-content prose-strong:text-base-content prose-code:text-base-content prose-a:text-base-content/80 prose-p:my-1 prose-headings:my-2 prose-pre:my-2">'
             + appendTime(safeHtml, ev.ts, 'light', instructionMarks)
             + '</div>'
             + usage
-            + '</div></div>';
+            + '</div>'
+            + '<div class="absolute left-full top-1/2 z-10 ml-2 flex -translate-y-1/2 gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">' + deleteControls(ctx, idx, agentId, true, true, 'side') + '</div>'
+            + '</div>';
     }
 
     if (ev.type === "thinking") {
