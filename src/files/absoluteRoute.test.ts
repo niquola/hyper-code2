@@ -49,4 +49,49 @@ describe("GET /files/absolute — path-based Files URLs", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    test("preserves embed mode while internally dispatching the Files page", async () => {
+        const ctx = await mkTestCtx();
+        const dir = await mkdtemp(join(tmpdir(), "hyper-files-absolute-"));
+        try {
+            await writeFile(join(dir, "readme.md"), "# Embedded");
+            await ctx.fns.procs.http.loadRoutes({});
+            const url = await ctx.fns.files.browserUrl({ path: join(dir, "readme.md") });
+            const response = await ctx.fns.procs.http.dispatch({ url: `${url}?embed=1&wide=1`, headers: { accept: "text/html" } });
+            const html = await response.text();
+            expect(response.status).toBe(200);
+            expect(html).toContain("Embedded");
+            expect(html).not.toContain('id="quick-bar"');
+            expect(html).toContain("max-w-none");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("embed namespace survives relative navigation without query propagation", async () => {
+        const ctx = await mkTestCtx();
+        const dir = await mkdtemp(join(tmpdir(), "hyper-files-embed-"));
+        try {
+            await writeFile(join(dir, "one.md"), "[next](./two.md)");
+            await writeFile(join(dir, "two.md"), "# Embedded two");
+            await ctx.fns.procs.http.loadRoutes({});
+            const ordinary = await ctx.fns.files.browserUrl({ path: join(dir, "one.md") });
+            const one = ordinary.replace("/files/absolute/", "/files/embed/");
+            const page = await ctx.fns.procs.http.dispatch({ url: one, headers: { accept: "text/html" } });
+            const html = await page.text();
+            expect(page.status).toBe(200);
+            expect(html).not.toContain('id="quick-bar"');
+            expect(html).toContain("/files/embed/");
+
+            const two = new URL("./two.md", "http://localhost" + one).pathname;
+            expect(two).toContain("/files/embed/");
+            const next = await ctx.fns.procs.http.dispatch({ url: two, headers: { accept: "text/html" } });
+            expect(next.status).toBe(200);
+            expect(await next.text()).toContain("Embedded two");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+
 });

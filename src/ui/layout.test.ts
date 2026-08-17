@@ -51,4 +51,24 @@ describe("ui.layout", () => {
     });
 
 
+
+    test("embed mode renders only the page surface for iframe previews", async () => {
+        const ctx: any = await mkTestCtx();
+        const session: any = { url: new URL("http://localhost/files/absolute/tmp/readme.md?embed=1"), req: new Request("http://localhost/files/absolute/tmp/readme.md?embed=1") };
+        const html = await ctx.state.registry.ui.layout(ctx, session, { main: "<p>embedded</p>", title: "file" });
+        expect(html).toContain("<p>embedded</p>");
+        expect(html).not.toContain('id="quick-bar"');
+        expect(html).not.toContain('id="app-popup"');
+        expect(html).not.toContain('id="nav-overlay"');
+        expect(html).toContain("window.parent.postMessage({type:'ui.close-popup'}");
+    });
+
+
+    test("host layout closes its popup when an embedded Files frame sends Escape", async () => {
+        const ctx: any = await mkTestCtx();
+        const html = await ctx.fns.ui.layout({ main: "", title: "t" });
+        expect(html).toContain("event.data?.type!=='ui.close-popup'");
+        expect(html).toContain("dialog.close()");
+    });
+
 });

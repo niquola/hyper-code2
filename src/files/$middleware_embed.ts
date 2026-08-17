@@ -1,19 +1,16 @@
 import { stat } from "node:fs/promises";
 
-// Path-based Files URLs make the filesystem hierarchy visible to the browser:
-// /files/absolute/Users/me/project/docs/readme.md. A request for an existing
-// file renders the Files page; a relative asset request under that URL streams
-// the file itself, so Markdown images and HTML/CSS resources work naturally.
+// /files/embed/<absolute path> is the stable iframe namespace. Relative links
+// stay below /files/embed automatically, so embed mode cannot fall off during
+// Markdown, breadcrumb, directory, or tab navigation.
 /**
- * Serves path-based Files UI pages and relative assets under `/files/absolute`.
- * Use the canonical URL produced by `files.browserUrl`; this middleware handles
- * any number of path segments because ordinary runtime routes match fixed arity.
- * @param opts.req Incoming GET or HEAD request below `/files/absolute`.
+ * Serves embedded Files UI pages and their relative assets under `/files/embed`.
+ * @param opts.req Incoming GET or HEAD request below `/files/embed`.
  */
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request; params: Record<string, string> }) {
     if (opts.req.method !== "GET" && opts.req.method !== "HEAD") return;
     const url = new URL(opts.req.url);
-    const prefix = "/files/absolute";
+    const prefix = "/files/embed";
     if (url.pathname !== prefix && !url.pathname.startsWith(prefix + "/")) return;
 
     let decoded: string;
@@ -29,10 +26,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     if (info.isDirectory() || url.searchParams.has("tab") || isPageRequest(opts.req, absolute)) {
         const target = new URL("/files", url.origin);
         target.searchParams.set("path", absolute);
+        target.searchParams.set("embed", "1");
         const tab = url.searchParams.get("tab");
         if (tab) target.searchParams.set("tab", tab);
-        if (url.searchParams.get("embed") === "1") target.searchParams.set("embed", "1");
-        if (url.searchParams.get("wide") === "1") target.searchParams.set("wide", "1");
         const headers: Record<string, string> = {};
         for (const name of ["accept", "hx-request", "x-hyper-fragment"]) {
             const value = opts.req.headers.get(name);
@@ -47,8 +43,6 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
 function isPageRequest(req: Request, path: string): boolean {
     const accept = req.headers.get("accept") ?? "";
     if (accept.includes("text/html") || accept === "" || accept === "*/*") return true;
-    // Browser address-bar requests commonly send */*. Keep known document
-    // extensions navigable while assets requested by img/video/css stream raw.
     return /\.(?:md|markdown|txt|ts|tsx|js|jsx|mjs|cjs|json|ya?ml|toml|css|html?|xml|sql|py|rs|go|java|sh|bash|zsh|diff)$/i.test(path)
         && !accept.startsWith("image/") && !accept.startsWith("audio/") && !accept.startsWith("video/");
 }

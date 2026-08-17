@@ -7,6 +7,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { /
     const url = new URL(opts.req.url);
     const path = url.searchParams.get("path") ?? "";
     const tab = url.searchParams.get("tab") ?? "";
+    const embedded = url.searchParams.get("embed") === "1";
+    const wide = url.searchParams.get("wide") === "1";
     const abs = ctx.fns.files.resolveSafe({ path });
     const st = await stat(abs).catch(() => null);
     if (!st) {
@@ -17,29 +19,29 @@ export default async function (ctx: Context, _session: Session | null, opts: { /
         };
     }
 
-    if (st.isDirectory()) return renderDir(ctx, path);
+    if (st.isDirectory()) return renderDir(ctx, path, wide, embedded);
 
     // User is already navigating here — add to tabs but don't broadcast
     // (self-echo would cancel the in-flight nav and re-trigger it).
     ctx.fns.files.open({ path, broadcast: false });
-    return renderFile(ctx, path, tab);
+    return renderFile(ctx, path, tab, wide, embedded);
 }
 
-async function renderDir(ctx: Context, path: string) {
+async function renderDir(ctx: Context, path: string, wide = false, embedded = false) {
     const entries = await ctx.fns.files.list({ path });
-    const crumbs = await breadcrumbs(ctx, path);
+    const crumbs = await breadcrumbs(ctx, path, embedded);
     const rows = (await Promise.all(entries.map(async (e, index) => {
         // Joining an absolute parent must not double the slash: "/" + "Users".
         const full = path ? `${path.replace(/\/$/, "")}/${e.name}` : e.name;
         const icon = e.isDir ? "ph-folder text-gray-500" : fileIcon(e.name);
-        const href = await ctx.fns.files.browserUrl({ path: full });
+        const href = await browserHref(ctx, full, embedded);
         return `<a href="${href}" class="group grid min-h-9 grid-cols-[minmax(0,1fr)_7rem] items-center border-t border-gray-200 px-4 text-sm hover:bg-gray-50 ${index === 0 ? "border-t-0" : ""}">
 <span class="flex min-w-0 items-center gap-3"><i class="ph ${icon} text-base"></i><span class="truncate text-gray-900 group-hover:text-blue-600 group-hover:underline">${esc(e.name)}</span></span>
 <span class="text-right text-xs text-gray-400">${e.isDir ? "Directory" : fileKind(e.name)}</span>
 </a>`;
     }))).join("");
-    const body = `<div class="dot-grid-surface flex-1 overflow-y-auto px-5 py-5">
-<div class="mx-auto w-full max-w-5xl">
+    const body = `<div class="dot-grid-surface flex-1 overflow-y-auto ${wide ? "p-2" : "px-5 py-5"}">
+<div class="mx-auto w-full ${wide ? "max-w-none" : "max-w-5xl"}">
   <div class="mb-4 flex min-w-0 items-center gap-2 text-sm text-gray-600">${crumbs}</div>
   <div class="overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm">
     <div class="flex h-10 items-center gap-2 border-b border-gray-300 bg-gray-50 px-4">
@@ -53,7 +55,7 @@ async function renderDir(ctx: Context, path: string) {
     return { title: path || "files", main: page(body) };
 }
 
-async function renderFile(ctx: Context, path: string, tabParam: string) {
+async function renderFile(ctx: Context, path: string, tabParam: string, wide = false, embedded = false) {
     const name = basename(path);
     const ext = extname(name).slice(1).toLowerCase();
     const isMd = ext === "md" || ext === "markdown";
@@ -72,7 +74,7 @@ async function renderFile(ctx: Context, path: string, tabParam: string) {
     const tabCls = (id: string) => id === tab
         ? "border-b-2 border-orange-500 px-3 py-2 text-sm font-semibold text-gray-900"
         : "border-b-2 border-transparent px-3 py-2 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900";
-    const fileUrl = await ctx.fns.files.browserUrl({ path });
+    const fileUrl = await browserHref(ctx, path, embedded);
     const tabLink = (id: string, label: string) =>
         `<a href="${fileUrl}?tab=${id}" class="${tabCls(id)}">${label}</a>`;
 
@@ -118,10 +120,10 @@ async function renderFile(ctx: Context, path: string, tabParam: string) {
         contentEl = `<div class="flex-1 overflow-auto text-xs bg-white [&_pre]:m-0 [&_pre]:rounded-none [&_pre]:p-4">${html}</div>`;
     }
 
-    const crumbs = await breadcrumbs(ctx, path);
+    const crumbs = await breadcrumbs(ctx, path, embedded);
     const body = `
-<div class="dot-grid-surface flex-1 min-h-0 overflow-auto px-5 py-5">
-  <div class="mx-auto flex min-h-full w-full max-w-5xl flex-col">
+<div class="dot-grid-surface flex-1 min-h-0 overflow-auto ${wide ? "p-2" : "px-5 py-5"}">
+  <div class="mx-auto flex min-h-full w-full ${wide ? "max-w-none" : "max-w-5xl"} flex-col">
     <div class="mb-4 flex min-w-0 items-center gap-2 text-sm">${crumbs}</div>
     <div class="flex min-h-[32rem] flex-1 flex-col overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm">
       <div class="shrink-0 border-b border-gray-300 bg-gray-50 px-4 pt-3">
@@ -153,18 +155,24 @@ function page(body: string): string {
 // keep the leading slash, or the second crumb would point at a relative path
 // resolved against a different base. The rail links a workdir by its absolute
 // path, so this is the normal case now, not a corner one.
-async function breadcrumbs(ctx: Context, path: string): Promise<string> {
+async function breadcrumbs(ctx: Context, path: string, embedded = false): Promise<string> {
     const absolute = path.startsWith("/");
     const parts = path.split("/").filter(Boolean);
     const rootPath = absolute ? "/" : "";
     const rootLabel = absolute ? "/" : "workspace";
-    const links = [`<a href="${await ctx.fns.files.browserUrl({ path: rootPath })}" class="font-semibold text-blue-600 hover:underline">${rootLabel}</a>`];
+    const links = [`<a href="${await browserHref(ctx, rootPath, embedded)}" class="font-semibold text-blue-600 hover:underline">${rootLabel}</a>`];
     for (let i = 0; i < parts.length; i++) {
         const sub = (absolute ? "/" : "") + parts.slice(0, i + 1).join("/");
-        links.push(`<a href="${await ctx.fns.files.browserUrl({ path: sub })}" class="font-semibold text-blue-600 hover:underline">${esc(parts[i]!)}</a>`);
+        links.push(`<a href="${await browserHref(ctx, sub, embedded)}" class="font-semibold text-blue-600 hover:underline">${esc(parts[i]!)}</a>`);
     }
     return links.join(` <i class="ph ph-caret-right text-[10px] text-gray-400"></i> `);
 }
+
+async function browserHref(ctx: Context, path: string, embedded: boolean): Promise<string> {
+    const url = await ctx.fns.files.browserUrl({ path });
+    return embedded ? url.replace("/files/absolute/", "/files/embed/") : url;
+}
+
 
 function fileIcon(name: string): string {
     const ext = extname(name).slice(1).toLowerCase();
