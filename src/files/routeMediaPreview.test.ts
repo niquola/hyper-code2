@@ -15,7 +15,8 @@ describe("GET /files — media preview", () => {
             const page = await ctx.fns.procs.http.dispatch({ url: `/files?path=${encodeURIComponent(path)}` });
             const html = await page.text();
             expect(page.status).toBe(200);
-            expect(html).toContain(`<img src="/files/raw?path=${encodeURIComponent(path)}"`);
+            const mediaUrl = await ctx.fns.files.browserUrl({ path });
+            expect(html).toContain(`<img src="${mediaUrl}"`);
             expect(html).toContain("Preview");
             expect(html).not.toContain(">Code</a>");
             expect(html).not.toContain(">Edit</a>");
@@ -38,7 +39,7 @@ describe("GET /files — media preview", () => {
                 await writeFile(path, new Uint8Array([0]));
                 const html = await (await ctx.fns.procs.http.dispatch({ url: `/files?path=${encodeURIComponent(path)}` })).text();
                 expect(html).toContain(element);
-                expect(html).toContain(`/files/raw?path=${encodeURIComponent(path)}`);
+                expect(html).toContain(await ctx.fns.files.browserUrl({ path }));
             }
         } finally {
             await rm(dir, { recursive: true, force: true });

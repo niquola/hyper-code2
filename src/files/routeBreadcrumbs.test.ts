@@ -12,8 +12,8 @@ describe("GET /files — breadcrumbs", () => {
         const res = await ctx.fns.procs.http.dispatch({ url: "/files?path=src" });
         expect(res.status).toBe(200);
         const html = await res.text();
-        expect(html).toContain(`<a href="/files" class="font-semibold text-blue-600 hover:underline">workspace</a>`);
-        expect(html).toContain(`href="/files?path=src"`);
+        expect(html).toContain(`<a href="${await ctx.fns.files.browserUrl({ path: "" })}" class="font-semibold text-blue-600 hover:underline">workspace</a>`);
+        expect(html).toContain(`href="${await ctx.fns.files.browserUrl({ path: "src" })}"`);
     });
 
     test("an absolute path keeps the leading slash in every crumb", async () => {
@@ -24,11 +24,11 @@ describe("GET /files — breadcrumbs", () => {
         const html = await res.text();
 
         // Root crumb is "/", not an unlabelled link.
-        expect(html).toContain(`<a href="/files?path=%2F" class="font-semibold text-blue-600 hover:underline">/</a>`);
+        expect(html).toContain(`<a href="${await ctx.fns.files.browserUrl({ path: "/" })}" class="font-semibold text-blue-600 hover:underline">/</a>`);
         expect(html).not.toContain(`hover:underline"></a>`);
         // Every intermediate crumb is absolute too.
         for (const part of dir.split("/").filter(Boolean).map((_, i, all) => "/" + all.slice(0, i + 1).join("/"))) {
-            expect(html).toContain(`href="/files?path=${encodeURIComponent(part)}"`);
+            expect(html).toContain(`href="${await ctx.fns.files.browserUrl({ path: part })}"`);
         }
     });
 
@@ -36,7 +36,7 @@ describe("GET /files — breadcrumbs", () => {
         const ctx = await mkTestCtx();
         const res = await ctx.fns.procs.http.dispatch({ url: `/files?path=${encodeURIComponent(process.cwd())}` });
         const html = await res.text();
-        expect(html).toContain(`href="/files?path=${encodeURIComponent(process.cwd() + "/src")}"`);
+        expect(html).toContain(`href="${await ctx.fns.files.browserUrl({ path: process.cwd() + "/src" })}"`);
         // Not a blanket search: the page's favicon is a data: URI full of %2F.
         expect(html).not.toContain(`/files?path=${encodeURIComponent(process.cwd())}%2F%2F`);
         // Phosphor icons, like the rest of the UI.
@@ -57,7 +57,7 @@ describe("GET /files — reachable as an htmx fragment", () => {
         const html = await res.text();
         expect(res.status).toBe(200);
         expect(html).not.toContain("<!doctype");
-        expect(html).toContain("/files?path=");
+        expect(html).toContain("/files/absolute/");
     });
 
     test("the editor boots from inside main, not from head", async () => {
@@ -87,4 +87,15 @@ describe("GET /files — reachable as an htmx fragment", () => {
         expect(res.status).toBe(200);
         expect(html).toContain("prose");
     });
+
+    test("a file view uses the same centered GitHub-width container as a directory", async () => {
+        const ctx = await mkTestCtx();
+        const res = await ctx.fns.procs.http.dispatch({ url: "/files?path=README.md&tab=preview", headers: hx });
+        const html = await res.text();
+        expect(res.status).toBe(200);
+        expect(html).toContain("mx-auto flex min-h-full w-full max-w-5xl flex-col");
+        expect(html).toContain("rounded-md border border-gray-300 bg-white shadow-sm");
+        expect(html).toContain("dot-grid-surface");
+    });
+
 });

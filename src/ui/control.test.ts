@@ -51,9 +51,9 @@ describe('ui control helpers', () => {
     const { ctx, emitted } = await mkCtx();
     const res = await ctx.fns.ui.openFile({ path: 'src/x.ts' });
     expect(res.opened).toBe('src/x.ts');
-    expect(res.url).toBe('/files?path=src%2Fx.ts');
+    expect(res.url).toBe('/files/absolute/src/x.ts');
     expect((ctx.state as any).openedFiles).toEqual(['src/x.ts']);
-    expect(emitted[0]).toEqual({ type: 'ui.navigate', path: '/files?path=src%2Fx.ts' });
+    expect(emitted[0]).toEqual({ type: 'ui.navigate', path: '/files/absolute/src/x.ts' });
   });
 
   test('secure-input SSE lifecycle is owned by popup.js, not legacy control.js', async () => {

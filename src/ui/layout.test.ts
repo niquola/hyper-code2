@@ -43,4 +43,12 @@ describe("ui.layout", () => {
         expect(html).toContain('class="bg-base-200 text-base-content text-sm h-screen"');
     });
 
+    test("provides one reusable dotted surface for chat and content pages", async () => {
+        const ctx: any = await mkTestCtx();
+        const html = await ctx.fns.ui.layout({ main: "", title: "t" });
+        expect(html).toContain(".dot-grid-surface {");
+        expect(html).toContain("background-image: radial-gradient");
+    });
+
+
 });

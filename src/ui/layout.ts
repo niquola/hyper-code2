@@ -79,6 +79,14 @@ export default async function (ctx: Context, session: Session | null, opts: {
   -webkit-backdrop-filter: blur(12px) saturate(115%);
 }
 #chat-panel { position: relative; }
+.dot-grid-surface {
+  background-color: var(--color-base-200);
+  background-image: radial-gradient(circle, color-mix(in oklab, var(--color-base-content) 9%, transparent) 0 1px, transparent 1.35px);
+  background-position: 8px 8px;
+  background-size: 16px 16px;
+  background-attachment: local;
+}
+
 .chat-dot-grid { padding-top: 4rem !important; padding-bottom: 6.5rem !important; }
 .chat-dot-grid > * {
   width: 100%;
@@ -113,13 +121,6 @@ export default async function (ctx: Context, session: Session | null, opts: {
 .mermaid-light { display: block; width: 100%; max-width: 100%; min-width: 0; }
 .mermaid-diagram svg { display: block; width: auto; max-width: 100% !important; height: auto !important; }
 
-.chat-dot-grid {
-  background-color: var(--color-base-200);
-  background-image: radial-gradient(circle, color-mix(in oklab, var(--color-base-content) 9%, transparent) 0 1px, transparent 1.35px);
-  background-position: 8px 8px;
-  background-size: 16px 16px;
-  background-attachment: local;
-}
 
 .chat-glass,
 .chat-glass-primary {

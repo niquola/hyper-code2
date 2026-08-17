@@ -27,17 +27,18 @@ export default async function (ctx: Context, _session: Session | null, opts: { /
 
 async function renderDir(ctx: Context, path: string) {
     const entries = await ctx.fns.files.list({ path });
-    const crumbs = breadcrumbs(path);
-    const rows = entries.map((e, index) => {
+    const crumbs = await breadcrumbs(ctx, path);
+    const rows = (await Promise.all(entries.map(async (e, index) => {
         // Joining an absolute parent must not double the slash: "/" + "Users".
         const full = path ? `${path.replace(/\/$/, "")}/${e.name}` : e.name;
         const icon = e.isDir ? "ph-folder text-gray-500" : fileIcon(e.name);
-        return `<a href="/files?path=${encodeURIComponent(full)}" class="group grid min-h-9 grid-cols-[minmax(0,1fr)_7rem] items-center border-t border-gray-200 px-4 text-sm hover:bg-gray-50 ${index === 0 ? "border-t-0" : ""}">
+        const href = await ctx.fns.files.browserUrl({ path: full });
+        return `<a href="${href}" class="group grid min-h-9 grid-cols-[minmax(0,1fr)_7rem] items-center border-t border-gray-200 px-4 text-sm hover:bg-gray-50 ${index === 0 ? "border-t-0" : ""}">
 <span class="flex min-w-0 items-center gap-3"><i class="ph ${icon} text-base"></i><span class="truncate text-gray-900 group-hover:text-blue-600 group-hover:underline">${esc(e.name)}</span></span>
 <span class="text-right text-xs text-gray-400">${e.isDir ? "Directory" : fileKind(e.name)}</span>
 </a>`;
-    }).join("");
-    const body = `<div class="flex-1 overflow-y-auto bg-white px-5 py-5">
+    }))).join("");
+    const body = `<div class="dot-grid-surface flex-1 overflow-y-auto px-5 py-5">
 <div class="mx-auto w-full max-w-5xl">
   <div class="mb-4 flex min-w-0 items-center gap-2 text-sm text-gray-600">${crumbs}</div>
   <div class="overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm">
@@ -71,8 +72,9 @@ async function renderFile(ctx: Context, path: string, tabParam: string) {
     const tabCls = (id: string) => id === tab
         ? "border-b-2 border-orange-500 px-3 py-2 text-sm font-semibold text-gray-900"
         : "border-b-2 border-transparent px-3 py-2 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900";
+    const fileUrl = await ctx.fns.files.browserUrl({ path });
     const tabLink = (id: string, label: string) =>
-        `<a href="/files?path=${encodeURIComponent(path)}&tab=${id}" class="${tabCls(id)}">${label}</a>`;
+        `<a href="${fileUrl}?tab=${id}" class="${tabCls(id)}">${label}</a>`;
 
     const tabs: string[] = [];
     if (isMd || isHtml || isMedia) tabs.push(tabLink("preview", "Preview"));
@@ -82,7 +84,7 @@ async function renderFile(ctx: Context, path: string, tabParam: string) {
     }
 
     let contentEl = "";
-    const rawUrl = `/files/raw?path=${encodeURIComponent(path)}`;
+    const rawUrl = fileUrl;
     if (tab === "preview" && isImage) {
         contentEl = `<div class="flex flex-1 items-center justify-center overflow-auto bg-[linear-gradient(45deg,#e5e7eb_25%,transparent_25%),linear-gradient(-45deg,#e5e7eb_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e5e7eb_75%),linear-gradient(-45deg,transparent_75%,#e5e7eb_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0px] p-8"><img src="${rawUrl}" alt="${esc(name)}" class="max-h-full max-w-full object-contain shadow-lg" loading="eager"></div>`;
     } else if (tab === "preview" && isVideo) {
@@ -116,21 +118,27 @@ async function renderFile(ctx: Context, path: string, tabParam: string) {
         contentEl = `<div class="flex-1 overflow-auto text-xs bg-white [&_pre]:m-0 [&_pre]:rounded-none [&_pre]:p-4">${html}</div>`;
     }
 
-    const crumbs = breadcrumbs(path);
+    const crumbs = await breadcrumbs(ctx, path);
     const body = `
-<div class="shrink-0 border-b border-gray-300 bg-white px-5 pt-4">
-  <div class="mb-2 flex min-w-0 items-center gap-2 text-sm">${crumbs}</div>
-  <div class="flex min-w-0 items-center gap-2">
-    <i class="ph ${fileIcon(name)} text-gray-500"></i>
-    <span class="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">${esc(name)}</span>
-    <span id="save-status" class="text-xs hidden"></span>
-    ${tab === "edit" ? `<label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer"><input type="checkbox" id="vim-toggle" class="w-3 h-3">vim</label>` : ""}
-    <span class="shrink-0 text-xs text-gray-400">${isMedia ? ext.toUpperCase() : `${content.length} chars · ${content.split("\n").length} lines`}</span>
+<div class="dot-grid-surface flex-1 min-h-0 overflow-auto px-5 py-5">
+  <div class="mx-auto flex min-h-full w-full max-w-5xl flex-col">
+    <div class="mb-4 flex min-w-0 items-center gap-2 text-sm">${crumbs}</div>
+    <div class="flex min-h-[32rem] flex-1 flex-col overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm">
+      <div class="shrink-0 border-b border-gray-300 bg-gray-50 px-4 pt-3">
+        <div class="flex min-w-0 items-center gap-2">
+          <i class="ph ${fileIcon(name)} text-gray-500"></i>
+          <span class="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">${esc(name)}</span>
+          <span id="save-status" class="text-xs hidden"></span>
+          ${tab === "edit" ? `<label class="flex cursor-pointer items-center gap-1 text-xs text-gray-500"><input type="checkbox" id="vim-toggle" class="h-3 w-3">vim</label>` : ""}
+          <span class="shrink-0 text-xs text-gray-400">${isMedia ? ext.toUpperCase() : `${content.length} chars · ${content.split("\n").length} lines`}</span>
+        </div>
+        <nav class="mt-2 flex items-end gap-1">${tabs.join("")}</nav>
+      </div>
+      ${tab === "edit" ? `<div id="vim-status" class="hidden shrink-0 bg-gray-800 px-3 py-0.5 font-mono text-xs text-gray-100"></div>` : ""}
+      ${contentEl}
+    </div>
   </div>
-  <nav class="mt-2 flex items-end gap-1">${tabs.join("")}</nav>
-</div>
-${tab === "edit" ? `<div id="vim-status" class="hidden bg-gray-800 text-gray-100 text-xs px-3 py-0.5 font-mono shrink-0"></div>` : ""}
-${contentEl}`;
+</div>`;
 
     return { title: path, main: page(body) };
 }
@@ -145,16 +153,15 @@ function page(body: string): string {
 // keep the leading slash, or the second crumb would point at a relative path
 // resolved against a different base. The rail links a workdir by its absolute
 // path, so this is the normal case now, not a corner one.
-function breadcrumbs(path: string): string {
+async function breadcrumbs(ctx: Context, path: string): Promise<string> {
     const absolute = path.startsWith("/");
     const parts = path.split("/").filter(Boolean);
-    const root = absolute
-        ? `<a href="/files?path=%2F" class="font-semibold text-blue-600 hover:underline">/</a>`
-        : `<a href="/files" class="font-semibold text-blue-600 hover:underline">workspace</a>`;
-    const links = [root];
+    const rootPath = absolute ? "/" : "";
+    const rootLabel = absolute ? "/" : "workspace";
+    const links = [`<a href="${await ctx.fns.files.browserUrl({ path: rootPath })}" class="font-semibold text-blue-600 hover:underline">${rootLabel}</a>`];
     for (let i = 0; i < parts.length; i++) {
         const sub = (absolute ? "/" : "") + parts.slice(0, i + 1).join("/");
-        links.push(`<a href="/files?path=${encodeURIComponent(sub)}" class="font-semibold text-blue-600 hover:underline">${esc(parts[i]!)}</a>`);
+        links.push(`<a href="${await ctx.fns.files.browserUrl({ path: sub })}" class="font-semibold text-blue-600 hover:underline">${esc(parts[i]!)}</a>`);
     }
     return links.join(` <i class="ph ph-caret-right text-[10px] text-gray-400"></i> `);
 }

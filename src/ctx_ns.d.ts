@@ -137,6 +137,7 @@ declare global {
         };
         files: {
             applyEdits: Injected<typeof import("./files/applyEdits").default>;
+            browserUrl: Injected<typeof import("./files/browserUrl").default>;
             close: Injected<typeof import("./files/close").default>;
             editHashline: Injected<typeof import("./files/editHashline").default>;
             exists: Injected<typeof import("./files/exists").default>;
@@ -151,6 +152,7 @@ declare global {
             open: Injected<typeof import("./files/open").default>;
             parseAnchor: Injected<typeof import("./files/parseAnchor").default>;
             parseHashlineEdit: Injected<typeof import("./files/parseHashlineEdit").default>;
+            rawResponse: Injected<typeof import("./files/rawResponse").default>;
             read: Injected<typeof import("./files/read").default>;
             readHashline: Injected<typeof import("./files/readHashline").default>;
             remove: Injected<typeof import("./files/remove").default>;

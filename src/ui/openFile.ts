@@ -10,7 +10,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     // not a browser navigation command. Use the same ui.navigate transport as
     // openAgent so the visible tab actually moves to our Files screen.
     ctx.fns.files.open({ path: resolved, broadcast: false });
-    const url = `/files?path=${encodeURIComponent(resolved)}`;
+    const url = await ctx.fns.files.browserUrl({ path: resolved });
     ctx.fns.procs.events.emit({ event: { type: "ui.navigate", path: url } });
     return { opened: resolved, url };
 }
