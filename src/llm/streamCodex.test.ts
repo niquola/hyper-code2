@@ -30,6 +30,7 @@ function mkCtx(): Context {
             refreshCodex: async () => fakeJwt,
             resolveReasoningEffort: async () => ({ requested: "high", applied: "high", mode: "openai-effort", downgraded: false, reason: null }),
             toCodexInput: (opts: any) => toCodexInput(ctx, null, opts),
+            accountAuthHealth: async () => [],
             parseSSE: (opts: any) => parseSSE(ctx, null, opts),
             connectFetch: (o: any) => fetch(o.url, o.init),
         },

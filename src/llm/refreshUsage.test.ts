@@ -62,4 +62,17 @@ describe("llm.refreshUsage", () => {
         ]);
         expect(calls).toBe(1);
     });
+
+    test("marks Codex account reconnect-required on usage 401 and clears after success", async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.state.registry.llm.refreshCodex = async () => "token";
+        ctx.state.registry.llm.connectFetch = async () => new Response("unauthorized", { status: 401 });
+        const failed = await ctx.fns.llm.refreshUsage({ accounts: [{ provider: "codex", account: "expired" }], maxAgeMs: 0, now: NOW });
+        expect(failed[0]).toMatchObject({ status: "failed", error: "usage endpoint returned 401" });
+        expect(await ctx.fns.llm.accountAuthHealth({ action: "get", provider: "codex", account: "expired" })).toMatchObject([{ needsReconnect: true }]);
+        ctx.state.registry.llm.connectFetch = async () => new Response(JSON.stringify({ rate_limit: { primary_window: { used_percent: 1, reset_after_seconds: 60 } } }), { status: 200 });
+        const refreshed = await ctx.fns.llm.refreshUsage({ accounts: [{ provider: "codex", account: "expired" }], maxAgeMs: 0, now: NOW + 1 });
+        expect(refreshed[0]?.status).toBe("refreshed");
+        expect(await ctx.fns.llm.accountAuthHealth({ action: "get", provider: "codex", account: "expired" })).toEqual([]);
+    });
 });

@@ -72,7 +72,11 @@ export default async function (
         if (opts.signal?.aborted) throw new Error("aborted");
         try {
             res = await ctx.fns.llm.connectFetch({ url: ep.url, init: { method: "POST", headers, body: bodyJson, signal: opts.signal } });
-            if (res.ok) break;
+            if (res.ok) {
+                await ctx.fns.llm.accountAuthHealth({ action: "clear", provider: ep.provider, account: ep.account });
+                break;
+            }
+            if (res.status === 401) await ctx.fns.llm.accountAuthHealth({ action: "mark", provider: ep.provider, account: ep.account });
             const errText = await res.text();
             // A spent subscription window is NOT retryable: no number of
             // attempts brings the quota back before resets_at, and every one of

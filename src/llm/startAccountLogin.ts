@@ -68,6 +68,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
         flow.status = code === 0 && exists ? "connected" : "failed";
         if (flow.status === "failed") flow.error = code === 0 ? "login finished without storing a credential" : `login exited with code ${code}`;
         await ctx.fns.llm.accountRegistry({ action: flow.status === "connected" ? "connect" : "fail", provider, account, dir: path.dir, error: flow.error }).catch(() => undefined);
+        if (flow.status === "connected") await ctx.fns.llm.accountAuthHealth({ action: "clear", provider, account }).catch(() => undefined);
         // A successful login is now represented by the durable account row.
         // Keeping the progress row produced a stale "connected + device code"
         // banner that looked like login had done nothing.

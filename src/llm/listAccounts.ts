@@ -35,6 +35,7 @@ export default async function (
     resetsAt: number | null;
     planType: string | null;
     parkedAgents: number;
+    needsReconnect: boolean;
 }>> {
     const now = opts?.now ?? Date.now();
     const filter = opts?.provider;
@@ -42,13 +43,15 @@ export default async function (
 
     const usage = await ctx.fns.llm.usageOverview({ now });
     const byKey = new Map(usage.map((u: any) => [`${u.provider}:${u.account}`, u]));
+    const health = await ctx.fns.llm.accountAuthHealth({ action: "list" });
+    const reconnectKeys = new Set(health.filter((item: any) => item.needsReconnect).map((item: any) => `${item.provider}:${item.account}`));
 
     // File-backed logins: the default path plus every "auth.<account>.json"
     // sibling. One naming convention, so a second login needs no new code.
     for (const [provider, path] of [["codex", ".codex/auth.json"], ["kimi-coding", ".kimi/credentials/kimi-code.json"]] as const) {
         if (filter && filter !== provider) continue;
         for (const account of await discoverFileAccounts(ctx, provider, path)) {
-            out.push(entry(provider, account, "file", byKey));
+            out.push(entry(provider, account, "file", byKey, reconnectKeys));
         }
     }
 
@@ -61,7 +64,7 @@ export default async function (
             params: ["anthropic-oauth"],
         })) as any[];
         for (const row of rows) {
-            const item = entry("anthropic-oauth", String(row.account ?? "default"), "oauth", byKey);
+            const item = entry("anthropic-oauth", String(row.account ?? "default"), "oauth", byKey, reconnectKeys);
             item.label = row.label ? String(row.label) : (item.account === "default" ? "Claude managed" : item.account);
             out.push(item);
         }
@@ -73,20 +76,21 @@ export default async function (
     if (!filter || filter === "claude-code") {
         for (const account of await discoverDirectoryAccounts(ctx, "claude-code")) {
             if (ctx.fns.llm.accountCredentialExists({ provider: "claude-code", account })) {
-                out.push(entry("claude-code", account, "keychain", byKey));
+                out.push(entry("claude-code", account, "keychain", byKey, reconnectKeys));
             }
         }
         if (!out.some((a) => a.provider === "claude-code" && a.account === "default") && byKey.has("claude-code:default")) {
-            out.push(entry("claude-code", "default", "keychain", byKey));
+            out.push(entry("claude-code", "default", "keychain", byKey, reconnectKeys));
         }
     }
 
     return out;
 }
 
-function entry(provider: string, account: string, source: "file" | "oauth" | "keychain", byKey: Map<string, any>) {
+function entry(provider: string, account: string, source: "file" | "oauth" | "keychain", byKey: Map<string, any>, reconnectKeys: Set<string>) {
     const known = byKey.get(`${provider}:${account}`);
     const usedPercent = known?.usedPercent ?? null;
+    const needsReconnect = reconnectKeys.has(`${provider}:${account}`);
     return {
         provider,
         account,
@@ -95,7 +99,8 @@ function entry(provider: string, account: string, source: "file" | "oauth" | "ke
         source,
         // "Available" means there is quota left to switch INTO — the whole point
         // of listing accounts while one of them is exhausted.
-        available: !(known?.parkedAgents > 0) && (usedPercent == null || usedPercent < 100),
+        available: !needsReconnect && !(known?.parkedAgents > 0) && (usedPercent == null || usedPercent < 100),
+        needsReconnect,
         usedPercent,
         resetsAt: known?.resetsAt ?? null,
         planType: known?.planType ?? null,

@@ -71,6 +71,7 @@ export default async function (ctx: Context, _session: Session | null, opts?: {
         console.warn(`[codex] could not write refreshed creds: ${e?.message}`);
     }
     console.log(`[codex] refreshed OK`);
+    await ctx.fns.llm.accountAuthHealth({ action: "clear", provider: "codex", account });
     return newAccess;
 }
 

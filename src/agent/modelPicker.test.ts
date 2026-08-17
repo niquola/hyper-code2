@@ -74,4 +74,15 @@ describe("agent.modelPicker", () => {
         expect((await ctx.fns.session.load({ id: agent.id })).model).toBe("mock:other");
     });
 
+    test("renders reconnect-required accounts and disables their models", async () => {
+        const ctx: any = await mkTestCtx();
+        const agent = await ctx.fns.agent.start({ model: "codex:gpt-test" });
+        ctx.fns.llm.listModels = async () => ({ codex: ["codex:gpt-test"] });
+        ctx.fns.llm.listAccounts = async () => ([{ provider: "codex", account: "expired", available: false, needsReconnect: true, usedPercent: null, planType: null }]);
+        const html = await (await ctx.fns.agent.modelPicker({ agentId: agent.id })).text();
+        expect(html).toContain("Reconnect required");
+        expect(html).toContain("codex/expired:gpt-test");
+        expect(html).toMatch(/codex\/expired:gpt-test[\s\S]*?disabled/);
+    });
+
 });

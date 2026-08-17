@@ -73,7 +73,7 @@ export default async function (
             const selected = account.account === currentRoute.account && entry.provider === currentRoute.provider || (entry.provider !== currentRoute.provider && accountIndex === 0);
             const quota = account.usedPercent == null ? "usage —" : `${Math.round(100 - account.usedPercent)}% left`;
             const plan = account.planType ? planName(entry.provider, account.planType) : "";
-            const html = `<span class="min-w-0 flex-1"><span class="block truncate text-xs font-medium">${esc(account.account === "default" ? "main" : account.account)}</span><span class="block truncate text-[9px] text-base-content/40">${esc([plan, quota].filter(Boolean).join(" · "))}</span></span>${!account.available ? '<span class="text-[9px] text-error">limit</span>' : ""}`;
+            const html = `<span class="min-w-0 flex-1"><span class="block truncate text-xs font-medium">${esc(account.account === "default" ? "main" : account.account)}</span><span class="block truncate text-[9px] text-base-content/40">${esc([plan, quota].filter(Boolean).join(" · "))}</span></span>${account.needsReconnect ? '<span class="text-[9px] text-error">Reconnect required</span>' : !account.available ? '<span class="text-[9px] text-error">limit</span>' : ""}`;
             return ctx.fns.procs.ui.button({ action: "select-model-account", html, ariaLabel: `Use account ${account.account}`, disabled: !account.available && !selected, class: `flex w-full items-center gap-2 rounded-lg text-left ${selected ? "bg-primary/10 text-primary" : "text-base-content/65"}`, attrs: { "data-model-account-tab": true, "aria-selected": selected, onclick: accountScript(accountIndex) } });
         }).join("");
         const modelPanels = entry.accounts.map((account, accountIndex) => {
@@ -96,11 +96,11 @@ export default async function (
     return new Response(ctx.fns.ui.popupContent({ title: "Provider, account and model", kind: "model-picker", class: "w-full max-w-3xl", html }), { headers: { "content-type": "text/html; charset=utf-8" } });
 }
 
-type Account = { provider: string; account: string; available: boolean; usedPercent: number | null; planType: string | null };
+type Account = { provider: string; account: string; available: boolean; needsReconnect: boolean; usedPercent: number | null; planType: string | null };
 function accountsFor(provider: string, rows: any[], current: ReturnType<typeof parseRoute>): Account[] {
-    const found = rows.filter(row => row.provider === provider).map(row => ({ provider, account: String(row.account ?? "default"), available: row.available !== false, usedPercent: row.usedPercent ?? null, planType: row.planType ?? null }));
-    if (!found.length) found.push({ provider, account: "default", available: true, usedPercent: null, planType: null });
-    if (provider === current.provider && !found.some(row => row.account === current.account)) found.unshift({ provider, account: current.account, available: true, usedPercent: null, planType: null });
+    const found = rows.filter(row => row.provider === provider).map(row => ({ provider, account: String(row.account ?? "default"), available: row.available !== false, needsReconnect: row.needsReconnect === true, usedPercent: row.usedPercent ?? null, planType: row.planType ?? null }));
+    if (!found.length) found.push({ provider, account: "default", available: true, needsReconnect: false, usedPercent: null, planType: null });
+    if (provider === current.provider && !found.some(row => row.account === current.account)) found.unshift({ provider, account: current.account, available: true, needsReconnect: false, usedPercent: null, planType: null });
     return found.sort((a, b) => Number(b.account === current.account && provider === current.provider) - Number(a.account === current.account && provider === current.provider));
 }
 function parseRoute(model:string){const m=/^([a-z][\w-]*)(?:\/([\w.-]+))?:(.+)$/.exec(model);return {provider:m?.[1]??"lmstudio",account:m?.[2]??"default",modelId:m?.[3]??model};}

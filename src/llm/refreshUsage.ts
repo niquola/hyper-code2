@@ -42,6 +42,7 @@ export default async function (
         try {
             if (provider === "codex") await refreshCodex(ctx, account, timeoutMs, now);
             else await refreshClaude(ctx, provider as "claude-code" | "anthropic-oauth", account, timeoutMs, now);
+            await ctx.fns.llm.accountAuthHealth({ action: "clear", provider, account });
             await ctx.fns.procs.db.run({ sql: "INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", params: [cacheKey, String(now)] });
             return { provider, account, status: "refreshed" as const, error: null };
         } catch (error: any) {
@@ -65,7 +66,10 @@ export default async function (
                 "user-agent": "codex-cli",
             } },
         });
-        if (!res.ok) throw new Error(`usage endpoint returned ${res.status}`);
+        if (!res.ok) {
+            if (res.status === 401) await ctx.fns.llm.accountAuthHealth({ action: "mark", provider: "codex", account });
+            throw new Error(`usage endpoint returned ${res.status}`);
+        }
         const data: any = await res.json();
         const detail = data?.rate_limit ?? data?.rate_limits?.find?.((x: any) => x?.limit_id === "codex") ?? data?.rate_limits?.[0];
         const primary = normalizeCodexWindow(detail?.primary_window ?? detail?.primary, now);
