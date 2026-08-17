@@ -116,8 +116,8 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     const workspaceDir = String(agent.workspaceDir ?? '').trim();
     const workspaceName = workspaceDir.split('/').filter(Boolean).pop() || workspaceDir;
     const workspaceControl = workspaceDir ? ctx.fns.ui.popup({
-        method: 'agent.workspaceFilesPopup',
-        params: { agentId: id },
+        method: 'ui.previewFile',
+        params: { path: workspaceDir, mode: 'auto', title: workspaceName },
         html: `<i class="ph ph-folder-open shrink-0" aria-hidden="true"></i><span class="max-w-48 truncate">${esc(workspaceName)}</span>`,
         attrs: `class="hidden min-w-0 items-center gap-1 text-[9px] leading-none text-base-content/40 transition hover:text-primary sm:inline-flex" title="Files · ${esc(workspaceDir)}" aria-label="Open files in ${esc(workspaceDir)}"`,
     }) : '';

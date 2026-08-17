@@ -85,7 +85,6 @@ declare global {
             watchPredicate: Injected<typeof import("./agent/watchPredicate").default>;
             wireTools: Injected<typeof import("./agent/wireTools").default>;
             workerLoop: Injected<typeof import("./agent/workerLoop").default>;
-            workspaceFilesPopup: Injected<typeof import("./agent/workspaceFilesPopup").default>;
         };
         arxiv: {
             api: Injected<typeof import("../plugins/arxiv/src/arxiv/api").default>;
