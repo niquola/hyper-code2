@@ -40,12 +40,10 @@ params: Record<string, string> }) {
     const eventsHtml = await ctx.fns.agent.renderEventsHtml({ events, agentId: id });
 
     // This poll only runs while the chat is on screen, so it IS the reader:
-    // move the seen watermark to the newest message. The rail's unread badge
-    // (session.list) counts assistant messages past this mark — an open chat
-    // never accumulates unread, exactly the WhatsApp rule.
+    // move the event watermark past every user-facing completion signal.
     await ctx.fns.procs.db.run({
         sql: `INSERT INTO kv (key, value)
-              SELECT 'seen:' || ?, COALESCE(MAX(idx), -1)::text FROM messages WHERE agent_id = ?
+              SELECT 'seen-at:' || ?, COALESCE(MAX(ts), -1)::text FROM events WHERE agent_id = ?
               ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
         params: [id, id],
     }).catch(() => { /* a missed mark is a badge that lingers one poll */ });

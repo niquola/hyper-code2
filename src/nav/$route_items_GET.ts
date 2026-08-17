@@ -60,6 +60,13 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         agentGroups.set(key, list);
     }
     const agentRow = (agent: any, nested = false) => row({ href: `/agent/${encodeURIComponent(agent.id)}`, label: agent.title || agent.id, hint: nested ? "subagent" : "agent" });
+    const quickAgentRow = (agent: any) => {
+        const active = agent.runState !== "idle";
+        const badge = Number(agent.unread ?? 0) > 0
+            ? `<span class="min-w-[1.1rem] shrink-0 rounded-full bg-emerald-500 px-1 text-center text-[10px] font-semibold leading-4 text-white">${agent.unread > 99 ? "99+" : agent.unread}</span>`
+            : "";
+        return `<a href="/agent/${encodeURIComponent(agent.id)}" class="nav-row flex min-h-7 items-center gap-1.5 rounded px-1.5 py-0.5 text-left outline-none hover:bg-base-200">${ctx.fns.ui.modelLogo({ model: agent.model, active, bare: true, compact: true })}<span class="min-w-0 flex-1 truncate text-xs text-base-content/80">${esc(agent.title || agent.id)} <span class="font-mono text-[10px] font-normal text-base-content/45">(${esc(agent.id)})</span></span>${badge}</a>`;
+    };
     const chats = () => [...agentGroups.entries()].map(([dir, list]) => `<section class="mb-2">
   ${dir === "(no workdir)"
       ? `<h4 class="mb-0.5 px-1.5 text-[10px] font-semibold text-base-content/45">${dir}</h4>`
@@ -78,12 +85,12 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     if (q) {
         html = `<div class="p-2">${items.map(row).join("")}</div>`;
     } else {
-        const quick = hotAgents.length ? `<section class="mb-3 border-b border-ui-border pb-2"><h4 class="mb-1 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-base-content/45">Quick</h4>${hotAgents.map((agent: any) => agentRow(agent)).join("")}</section>` : "";
+        const quick = hotAgents.length ? `<section class="mb-3 border-b border-ui-border pb-2"><h4 class="mb-1 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-base-content/45">Quick</h4>${hotAgents.map((agent: any) => quickAgentRow(agent)).join("")}</section>` : "";
         const groups = ["Chats", "Projects & files", "Plugins", "System"];
-        html = `${quick}<div class="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">${groups.map(name => {
+        html = `<div class="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">${groups.map(name => {
             const own = items.filter(item => group(item) === name);
             const content = name === "Chats"
-                ? chats()
+                ? `${quick}${chats()}`
                 : name === "Projects & files"
                     ? `${projects()}${own.map(row).join("")}`
                     : own.map(row).join("");

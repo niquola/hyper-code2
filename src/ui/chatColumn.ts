@@ -19,7 +19,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     // poll keeps moving it while the chat stays open.
     await ctx.fns.procs.db.run({
         sql: `INSERT INTO kv (key, value)
-              SELECT 'seen:' || ?, COALESCE(MAX(idx), -1)::text FROM messages WHERE agent_id = ?
+              SELECT 'seen-at:' || ?, COALESCE(MAX(ts), -1)::text FROM events WHERE agent_id = ?
               ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
         params: [id, id],
     }).catch(() => { /* a lingering badge, not a broken page */ });

@@ -26,4 +26,18 @@ describe("session.list", () => {
         expect(rows[0]!.title).toBe("(empty)");
         expect(rows[0]!.model).toBe("m2");
     });
+    test("unread counts only assistant text and explicit stop events", async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.fns.agent.renderEventHtml = async () => '';
+        const agent = await ctx.fns.agent.start({ model: "m1" });
+        await ctx.fns.session.save({ agent });
+        await ctx.fns.session.appendEvent({ id: agent.id, event: { type: "tool_call", name: "read" } });
+        await ctx.fns.session.appendEvent({ id: agent.id, event: { type: "assistant", text: "" } });
+        expect((await ctx.fns.session.list()).find((a: any) => a.id === agent.id)?.unread).toBe(0);
+        await ctx.fns.session.appendEvent({ id: agent.id, event: { type: "assistant", text: "done" } });
+        await ctx.fns.session.appendEvent({ id: agent.id, event: { type: "error", error: "stopped by user" } });
+        expect((await ctx.fns.session.list()).find((a: any) => a.id === agent.id)?.unread).toBe(2);
+    });
+
+
 });

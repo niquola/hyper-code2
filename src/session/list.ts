@@ -18,10 +18,9 @@ includeArchived?: boolean }): Promise<Array<{
     // Postgres folds unquoted aliases to lowercase — camelCase aliases must be quoted.
     // created_at / updated_at / COUNT(*) are BIGINTs and come back as strings → Number().
     //
-    // `unread` is WhatsApp's number: assistant messages past the reader's
-    // watermark. The watermark lives in kv as seen:<agent id>, written by the
-    // open chat's poll (agent/$route_$id_events.html_GET) — so having the chat
-    // open IS reading it, and a badge only grows on agents you are not looking at.
+    // `unread` counts only user-facing completion signals after the event
+    // watermark: a non-empty assistant text response, or an explicit stop.
+    // Tool calls, lifecycle updates, timers and other service events stay silent.
     const rows = (await ctx.fns.procs.db.select({
         sql: `SELECT
             a.id,
@@ -35,8 +34,14 @@ includeArchived?: boolean }): Promise<Array<{
             COALESCE(a.parent_id, NULLIF((a.scratchpad::jsonb #>> '{delegation,parentId}'), ''), NULLIF((a.scratchpad::jsonb #>> '{delegateTask,parentId}'), '')) AS "parentId",
             ((a.scratchpad::jsonb #>> '{delegation,parentId}') IS NOT NULL OR (a.scratchpad::jsonb #>> '{delegateTask,parentId}') IS NOT NULL) AS delegated,
             COALESCE((SELECT COUNT(*) FROM messages m WHERE m.agent_id = a.id AND m.role = 'user'), 0) AS turns,
-            COALESCE((SELECT COUNT(*) FROM messages m WHERE m.agent_id = a.id AND m.role = 'assistant'
-                AND m.idx > COALESCE((SELECT k.value::int FROM kv k WHERE k.key = 'seen:' || a.id), -1)), 0) AS unread,
+            COALESCE((SELECT COUNT(*) FROM events e WHERE e.agent_id = a.id
+                AND e.ts > COALESCE(
+                    (SELECT k.value::bigint FROM kv k WHERE k.key = 'seen-at:' || a.id),
+                    (SELECT MAX(m.ts) FROM messages m WHERE m.agent_id = a.id AND m.idx <= COALESCE((SELECT k.value::int FROM kv k WHERE k.key = 'seen:' || a.id), -1)),
+                    -1
+                )
+                AND ((e.type = 'assistant' AND NULLIF(BTRIM(e.payload::jsonb ->> 'text'), '') IS NOT NULL)
+                  OR (e.type = 'error' AND (e.payload::jsonb ->> 'error') LIKE 'stopped by user%'))), 0) AS unread,
             (SELECT content FROM messages m WHERE m.agent_id = a.id AND m.role = 'user' ORDER BY idx LIMIT 1) AS "firstUser"
         FROM agents a
         ${opts?.includeArchived ? "" : "WHERE a.archived_at IS NULL"}
