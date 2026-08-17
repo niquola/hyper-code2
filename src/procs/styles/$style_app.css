@@ -181,6 +181,19 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
 .prose { color: var(--theme-base-content) !important; }
 .prose :where(p, li, ul, ol, h1, h2, h3, h4, strong, em, blockquote, code, th, td):not(:where([class~="not-prose"] *)) { color: inherit; }
 
+[data-theme="dark"] .prose :where(p, li, ul, ol, h1, h2, h3, h4, h5, h6, strong, b, em, blockquote, th, td, figcaption):not(:where([class~="not-prose"] *)) {
+  color: var(--theme-base-content) !important;
+}
+[data-theme="dark"] .prose :where(a):not(:where([class~="not-prose"] *)) {
+  color: color-mix(in oklab, var(--theme-base-content) 82%, var(--theme-info)) !important;
+}
+[data-theme="dark"] .prose :where(blockquote):not(:where([class~="not-prose"] *)) {
+  border-color: var(--ui-border-strong) !important;
+}
+[data-theme="dark"] .prose :where(hr):not(:where([class~="not-prose"] *)) {
+  border-color: var(--ui-border) !important;
+}
+
 [data-theme="dark"] .prose :not(pre) > code {
   color: var(--theme-base-content) !important;
   background-color: color-mix(in oklab, var(--theme-base-300) 70%, transparent);
