@@ -16,7 +16,7 @@ const SERVICE_HOOK = "services.service.";
 
 /**
  * Load the boot subsystem operation.
- * @param opts.strict The strict value used by the operation.
+ * @param opts.strict Fail loading when any discovered runtime file cannot be imported. @default false
  */
 export default async function (ctx: Context, _session: Session | null, opts: { strict?: boolean } = {}): Promise<void> {
     const { default: scan } = await import("../project/scan?t=" + Date.now());
@@ -39,6 +39,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { s
 // implementation of what a `$route_` or a `$hook_` MEANS, not two that drift.
 export async function apply(ctx: Context, entries: any[], mounted: any[], opts: { strict?: boolean } = {}): Promise<void> {
     // Kept so anything that needs the file list after boot (lifecycle order, the
+    assertUserPluginCollisions(entries, mounted);
     // module records, a build) can read it instead of scanning again.
     (((ctx.state as any).procs ??= {}).boot ??= {}).entries = entries;
     // The framework's own loaders are imported by name before anything else —
@@ -309,6 +310,29 @@ function selfAware(ctx: any, namespace: string): any {
     });
     return derived;
 }
+
+function assertUserPluginCollisions(entries: any[], mounted: any[]): void {
+    const userRoots = new Set(mounted.filter((root: any) => root.source === "user").map((root: any) => root.dir));
+    if (!userRoots.size) return;
+
+    const owners = new Map<string, any>();
+    const conflicts: string[] = [];
+    for (const entry of entries) {
+        const fnName = entry.moduleDir === "." ? entry.runtimeName : `${entry.moduleDir.replaceAll("/", ".")}.${entry.runtimeName}`;
+        const key = entry.kind === "fn"
+            ? `function ${fnName}`
+            : entry.kind === "route" ? `route ${entry.method} ${entry.routePath}` : null;
+        if (!key) continue;
+        const previous = owners.get(key);
+        if (previous && (userRoots.has(entry.rootDir) || userRoots.has(previous.rootDir))) {
+            conflicts.push(`${key}: ${previous.root} conflicts with ${entry.root}`);
+        } else if (!previous) {
+            owners.set(key, entry);
+        }
+    }
+    if (conflicts.length) throw new Error(`USER_PLUGINS collisions are not allowed:\n${conflicts.map(item => `  - ${item}`).join("\n")}`);
+}
+
 
 // Set value at a nested path in a tree, creating intermediate objects. Shared by
 // loadFns and repl/load so registry nesting has ONE implementation.

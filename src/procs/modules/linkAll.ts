@@ -53,7 +53,7 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
     // catalogue, and those are the user's own — already visible to their agent
     // from their home, and nothing this project should be quietly adopting.
     const ours = (await ctx.fns.procs.modules.paths({}))
-        .filter(p => !p.plugin && !p.prefixed)
+        .filter(p => p.kind === "module" && !p.prefixed)
         .map(p => resolve(p.dir) + "/");
     for (const m of await ctx.fns.procs.modules.catalog({})) {
         if (!m.skill || folders.has(m.name)) continue;

@@ -28,7 +28,7 @@ export type State = Array<{
     place: "left" | "right";
     preview: { files: string; fn: string } | null;
     // where it came from
-    source: "core" | "project" | "platform" | "external";
+    source: "core" | "official" | "user" | "project" | "platform" | "external";
     from: string | null;                // the git url / package / path an external came from
     dir: string;                        // the module folder — manifest and SKILL.md live here
     // introspection — read off its files

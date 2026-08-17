@@ -35,7 +35,7 @@ export type Root = {
     prefix?: string;
     folder?: string;   // the module directory itself — manifest and SKILL.md live here
     label?: string; icon?: string; description?: string; skill?: string | null;
-    source?: "core" | "project" | "platform" | "external"; from?: string | null;
+    source?: "core" | "official" | "user" | "project" | "platform" | "external"; from?: string | null;
     // The process itself — the framework and the host's own src. Mounted always,
     // removable never, and not a module anybody manages.
     self?: boolean;
@@ -49,7 +49,7 @@ export type Root = {
 
 /**
  * Discovers the source roots mounted into this process in override order.
- * Includes framework and host roots plus enabled core, project, platform, and external modules.
+ * Includes framework and host roots plus official, user, project, platform, and external modules.
  */
 export default async function (ctx: Context, session: Session | null, _opts?: {}): Promise<Root[]> {
     const coreSrc = resolve(import.meta.dir, "../..");     // the framework's src root — this file lives in src/procs/modules/
@@ -130,7 +130,7 @@ export default async function (ctx: Context, session: Session | null, _opts?: {}
     // Every folder already spoken for, by its real path — the roots above plus
     // whatever this loop has taken.
     const seen = new Set<string>(await Promise.all(out.map(r => realpath(r.folder ?? r.dir).catch(() => r.folder ?? r.dir))));
-    for (const { dir: searchDir, prefixed } of await modulePaths(ctx, session, {})) {
+    for (const { dir: searchDir, prefixed, kind } of await modulePaths(ctx, session, {})) {
         for (const name of await readdir(searchDir).catch(() => [] as string[])) {
             // Kept as it was found — a host that installs an app by symlink
             // (`EHR/apps/ehr`) should say where IT put it, not where the file
@@ -152,9 +152,18 @@ export default async function (ctx: Context, session: Session | null, _opts?: {}
             // never imported and never registered. "Not started" is not a
             // boundary; "not mounted" is.
             if (declared[namespace] === false) continue;
-            const source = ownDirs.includes(searchDir) ? "core" : searchDir.startsWith(workdir + "/") ? "project" : "platform";
-            const optional = manifest.optional === true || source === "platform";
-            const plugin = manifest.plugin === true || optional;
+            const source: Root["source"] = kind === "official"
+                ? "official"
+                : kind === "user"
+                    ? "user"
+                    : ownDirs.includes(searchDir)
+                        ? "core"
+                        : searchDir.startsWith(workdir + "/") ? "project" : "platform";
+            // USER_PLUGINS is an explicit writable mount root: every valid child
+            // is active without a workspace.json declaration. Official and
+            // platform plugins keep their existing opt-in behavior.
+            const optional = kind === "user" ? false : manifest.optional === true || source === "platform";
+            const plugin = kind === "official" || kind === "user" || manifest.plugin === true || optional;
             // `"modules": { "*": {} }` — mount the whole library without naming it
             // module by module. A host (the EHR) wants every function it ships
             // available to the apps it installs; it does NOT want the machine's
@@ -164,7 +173,7 @@ export default async function (ctx: Context, session: Session | null, _opts?: {}
             // under its own folder name, so a host points at a directory of
             // projects rather than naming them one by one.
             const wildcard = ("*" in declared && source !== "platform") || prefixed;
-            if (optional && !wildcard && !(namespace in declared)) continue;
+            if (kind !== "user" && optional && !wildcard && !(namespace in declared)) continue;
             seen.add(real);
             out.push({
                 ...await describe(ctx, session, { dir, name: namespace, manifest }),

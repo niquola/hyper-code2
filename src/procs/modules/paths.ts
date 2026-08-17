@@ -23,31 +23,21 @@ import workdir, { expandHome } from "../project/workdir";
 // gets every app in every project without naming them one by one.
 const DEFAULTS = ["./modules"];
 
-// Where PLUGINS are looked for — the directories whose subfolders are offered as
-// a catalogue rather than mounted because the host ships them. The default is
-// the agent's skill directories, which is what makes a skill a plugin; a host
-// says otherwise with `"procs": { "plugins": [...] }` in its package.json, and a
-// run with `PROCS_PLUGINS` (colon-separated).
-//
-// `PROCS_PLUGINS=""` is the clean path: no catalogue at all, nothing read out of
-// anybody's home folder. That matters everywhere that is not a laptop — a
-// deploy, a test, a demo of what a fresh clone does — because otherwise the
-// composition of the process depends on whose machine it runs on.
-// hyper-code2: the plugin catalogue is project-local. Upstream also reads the
-// Claude/Codex skill homes, but those hold prompt/document skills rather than
-// executable modules, and offering them in /procs/modules invites mounting a
-// directory that has no code to run. A host can still name another catalogue
-// explicitly through procs.plugins or PROCS_PLUGINS.
+// Official plugins are shipped by the host and configured through `procs.plugins`
+// or `PROCS_PLUGINS`. User plugins are a separate writable root outside the host
+// repository. Every valid direct child of `USER_PLUGINS` is mounted automatically.
+// An absent or empty `USER_PLUGINS` disables that layer.
 const PLUGIN_DEFAULTS: string[] = [];
 
-// `plugin` marks the ones that are a CATALOGUE rather than this host's own
-// library: the machine's skill directories and the project's, whose contents
-// belong to whoever wrote them. What the host itself ships is the rest.
-export type SearchPath = { dir: string; prefixed: boolean; plugin: boolean };
+export type SearchPath = {
+    dir: string;
+    prefixed: boolean;
+    kind: "module" | "official" | "user";
+};
 
 /**
- * Resolves existing, deduplicated module and plugin search paths.
- * Honors `PROCS_PATH` and `PROCS_PLUGINS`, then package configuration and defaults.
+ * Resolves existing, deduplicated module, official-plugin, and user-plugin roots.
+ * Honors `PROCS_PATH`, `PROCS_PLUGINS`, and `USER_PLUGINS` without creating paths.
  */
 export default async function (ctx: Context, session: Session | null, _opts?: {}): Promise<SearchPath[]> {
     const root = projectRoot(ctx, session, {});
@@ -61,17 +51,22 @@ export default async function (ctx: Context, session: Session | null, _opts?: {}
             .then((pkg: any) => ((pkg.procs ?? pkg.proc)?.plugins as string[] | undefined) ?? PLUGIN_DEFAULTS)
             .catch(() => PLUGIN_DEFAULTS);
     const own = ctx.env.PROCS_PATH ? ctx.env.PROCS_PATH.split(":").filter(Boolean) : (declared?.length ? declared : DEFAULTS);
-    const paths = [...own.map(path => ({ path, plugin: false })), ...plugins.map(path => ({ path, plugin: true }))];
+    const user = (ctx.env.USER_PLUGINS ?? "").trim();
+    const paths: Array<{ path: string; kind: SearchPath["kind"] }> = [
+        ...own.map(path => ({ path, kind: "module" as const })),
+        ...plugins.map(path => ({ path, kind: "official" as const })),
+        ...(user ? [{ path: user, kind: "user" as const }] : []),
+    ];
     const out: SearchPath[] = [];
-    for (const { path, plugin } of paths) {
+    for (const { path, kind } of paths) {
         const prefixed = path.endsWith("/*");
         const bare = prefixed ? path.slice(0, -2) : path;
-        // realpath collapses the symlinks the agent homes point at each other
-        // with, so the same directory is not scanned (and mounted) twice.
+        // realpath collapses aliases and symlinks so one plugin is never loaded
+        // twice when roots overlap.
         const base = bare.startsWith("./") || bare.startsWith("../") ? root : project;
         const dir = await realpath(resolve(base, expandHome(bare))).catch(() => null);
         if (!dir || out.some(p => p.dir === dir)) continue;
-        if (await Bun.file(dir).stat().then(s => s.isDirectory()).catch(() => false)) out.push({ dir, prefixed, plugin });
+        if (await Bun.file(dir).stat().then(s => s.isDirectory()).catch(() => false)) out.push({ dir, prefixed, kind });
     }
     return out;
 }
