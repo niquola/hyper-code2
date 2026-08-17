@@ -12,8 +12,16 @@ async function opSecret(ref: string) {
     return value;
 }
 
+type TelegramClientSingleton = { client?: TelegramClient; connecting?: Promise<TelegramClient> | null };
+const telegramClientKey = Symbol.for("hyper-code2.telegram.client.singleton");
+
 async function connected(ctx: Context) {
-    const cache = ((ctx.state as any).telegram ??= {});
+    const root = globalThis as typeof globalThis & { [telegramClientKey]?: TelegramClientSingleton };
+    const cache = (root[telegramClientKey] ??= {});
+    // Adopt a pre-singleton client once during hot reload instead of opening the
+    // same persisted StringSession a second time in this process.
+    const legacy = (ctx.state as any).telegram;
+    if (!cache.client?.connected && legacy?.client?.connected) cache.client = legacy.client;
     if (cache.client?.connected) return cache.client;
     const [configRaw, sessionString] = await Promise.all([
         opSecret("op://hyper/telegram config.json/value"),

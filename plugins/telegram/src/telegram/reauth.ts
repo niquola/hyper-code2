@@ -16,9 +16,15 @@ type ReauthFlight = {
     generation: number;
 };
 type ReauthSingleton = { flight?: ReauthFlight; generation: number };
+type TelegramClientSingleton = { client?: TelegramClient; connecting?: Promise<TelegramClient> | null };
 const reauthKey = Symbol.for("hyper-code2.telegram.reauth.singleton");
-const globalState = globalThis as typeof globalThis & { [reauthKey]?: ReauthSingleton };
+const telegramClientKey = Symbol.for("hyper-code2.telegram.client.singleton");
+const globalState = globalThis as typeof globalThis & {
+    [reauthKey]?: ReauthSingleton;
+    [telegramClientKey]?: TelegramClientSingleton;
+};
 const reauthSingleton = (globalState[reauthKey] ??= { generation: 0 });
+const clientSingleton = (globalState[telegramClientKey] ??= {});
 
 async function opSecret(ref: string) {
     const path = [`${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin", process.env.PATH ?? ""].join(":");
@@ -29,17 +35,26 @@ async function opSecret(ref: string) {
 }
 
 async function saveSession(session: string) {
-    const get = Bun.spawn(["op", "item", "get", "telegram session.txt", "--vault", "hyper", "--format=json"], { stdout: "pipe", stderr: "pipe" });
-    const [raw, getCode] = await Promise.all([new Response(get.stdout).text(), get.exited]);
-    if (getCode !== 0) throw new Error("Could not read Telegram session item from 1Password");
+    const get = Bun.spawn(["op", "item", "get", "telegram session.txt", "--vault", "hyper", "--format=json", "--reveal"], { stdout: "pipe", stderr: "pipe" });
+    const [raw, getError, getCode] = await Promise.all([new Response(get.stdout).text(), new Response(get.stderr).text(), get.exited]);
+    if (getCode !== 0) throw new Error(`Could not read Telegram session item from 1Password: ${getError.trim()}`);
     const item = JSON.parse(raw);
     const field = item.fields?.find((x: any) => x.label === "value");
     if (!field) throw new Error("Telegram session item has no concealed value field");
     field.value = session;
-    const edit = Bun.spawn(["op", "item", "edit", "telegram session.txt", "--vault", "hyper", "-"], { stdin: "pipe", stdout: "ignore", stderr: "pipe" });
+
+    // Piped JSON is the supported 1Password template-edit mode. Do not pass a
+    // literal "-" item argument: that edits an item named "-" on some CLI
+    // versions and can report success without touching the intended item.
+    const edit = Bun.spawn(["op", "item", "edit", item.id, "--vault", "hyper"], { stdin: "pipe", stdout: "pipe", stderr: "pipe" });
     edit.stdin.write(JSON.stringify(item));
     edit.stdin.end();
-    if (await edit.exited) throw new Error("Could not save Telegram session to 1Password");
+    const [editOutput, editError, editCode] = await Promise.all([new Response(edit.stdout).text(), new Response(edit.stderr).text(), edit.exited]);
+    if (editCode !== 0) throw new Error(`Could not save Telegram session to 1Password: ${editError.trim() || editOutput.trim()}`);
+
+    // Success is only real after a read-after-write comparison.
+    const persisted = (await opSecret("op://hyper/telegram session.txt/value")).trim();
+    if (persisted !== session.trim()) throw new Error("Telegram session verification failed after writing to 1Password");
 }
 
 async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: boolean }) {
@@ -70,10 +85,13 @@ async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: 
     const config = JSON.parse(configRaw);
     if (!Number.isInteger(config.apiId) || !config.apiHash || !config.phone) throw new Error("Telegram config requires apiId, apiHash and phone");
 
-    const state = ((ctx.state as any).telegram ??= {});
-    const old = state.client;
+    const legacy = (ctx.state as any).telegram;
+    if (!clientSingleton.client?.connected && legacy?.client?.connected) clientSingleton.client = legacy.client;
+    const old = clientSingleton.client;
     if (old) await old.disconnect().catch(() => {});
-    state.client = null;
+    clientSingleton.client = undefined;
+    clientSingleton.connecting = null;
+    if (legacy) legacy.client = null;
 
     /**
  * Direct finite auth flow. Do not use TelegramClient.start(): GramJS wraps
@@ -135,7 +153,10 @@ async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: 
         }
 
         await saveSession(String(client.session.save()));
-        state.client = client;
+        clientSingleton.client = client;
+        clientSingleton.connecting = null;
+        const legacy = ((ctx.state as any).telegram ??= {});
+        legacy.client = client;
         return { authorized: true, alreadyAuthorized: false, id: me.id?.toString() ?? "", name: [me.firstName, me.lastName].filter(Boolean).join(" "), username: me.username ?? null, savedTo: "1Password" };
     } catch (error) {
         await client.disconnect().catch(() => {});
