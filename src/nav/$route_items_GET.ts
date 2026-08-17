@@ -86,7 +86,8 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     if (q) {
         html = `<div class="p-2">${items.map(row).join("")}</div>`;
     } else {
-        const quick = hotAgents.length ? `<section class="mb-3 border-b border-ui-border pb-2"><h4 class="mb-1 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-base-content/45">Quick</h4>${hotAgents.map((agent: any) => quickAgentRow(agent)).join("")}</section>` : "";
+        const newAgent = `<a href="/agent/new" class="nav-row mb-1 flex min-h-10 items-center gap-2 rounded-lg border border-ui-border bg-base-100/35 px-3 py-2 text-left text-base-content shadow-sm outline-none transition hover:border-ui-border-strong hover:bg-base-100/60 hover:text-primary"><i class="ph ph-plus-circle shrink-0 text-lg text-primary" aria-hidden="true"></i><span class="min-w-0 flex-1 text-xs">New agent</span></a>`;
+        const quick = `<section class="mb-3 border-b border-ui-border pb-2"><h4 class="mb-1 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-base-content/45">Quick</h4>${newAgent}${hotAgents.map((agent: any) => quickAgentRow(agent)).join("")}</section>`;
         const groups = ["Chats", "Projects & files", "Plugins", "System"];
         html = `<div class="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">${groups.map(name => {
             const own = items.filter(item => group(item) === name);
