@@ -79,6 +79,19 @@ describe("agent.compactContext", () => {
   });
 
 
+  test("does not send unsupported sampling parameters to the summarizer", async () => {
+    const ctx = await mkTestCtx();
+    const agent = await seeded(ctx);
+    let callOpts: any;
+    ctx.state.registry.llm.call = (_c: any, _s: any, opts: any) => {
+      callOpts = opts;
+      return { text: "summary", finishReason: "stop", usage: {}, raw: {} };
+    };
+    await ctx.fns.agent.compactContext({ agent });
+    expect(callOpts.temperature).toBeUndefined();
+  });
+
+
   test("summarizer failure leaves no active projection", async () => {
     const ctx = await mkTestCtx();
     const agent = await seeded(ctx);
