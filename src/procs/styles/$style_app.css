@@ -186,6 +186,11 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
   background-color: color-mix(in oklab, var(--theme-base-300) 70%, transparent);
 }
 [data-theme="dark"] .prose pre:not(.shiki) { color: var(--theme-base-content) !important; }
+[data-theme="light"] .shiki,
+[data-theme="light"] .shiki span {
+  color: var(--shiki-light) !important;
+  background-color: var(--shiki-light-bg) !important;
+}
 [data-theme="dark"] .shiki,
 [data-theme="dark"] .shiki span {
   color: var(--shiki-dark) !important;
