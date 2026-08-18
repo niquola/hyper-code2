@@ -21,7 +21,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
     for (const m of opts.messages) {
         if (m?.role === "tool") {
             const parts = toParts(m.content);
-            const text = parts.filter((p: any) => p.type === "text").map((p: any) => p.text).join("\n");
+            const text = textParts(parts).join("\n");
             out.push({ role: "tool", tool_call_id: m.tool_call_id, content: text || "(image attached below)" });
             const images = parts.filter((p: any) => p.type === "image").map((p: any) => ({ type: "image_url", image_url: { url: `data:${p.mimeType};base64,${p.data}` } }));
             if (images.length) out.push({ role: "user", content: images });
@@ -29,7 +29,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
         }
 
         const parts = toParts(m?.content);
-        const text = parts.filter((p: any) => p.type === "text").map((p: any) => p.text).join("\n");
+        const text = textParts(parts).join("\n");
         const images = parts.filter((p: any) => p.type === "image").map((p: any) => ({ type: "image_url", image_url: { url: `data:${p.mimeType};base64,${p.data}` } }));
         const calls = m?.tool_calls ?? [];
         if (!calls.length) {
@@ -54,5 +54,15 @@ export default function (ctx: Context, _session: Session | null, opts: {
 function toParts(content: any): types.tools.Content[] {
     if (typeof content === "string") return content ? [{ type: "text", text: content }] : [];
     if (!Array.isArray(content)) return content == null ? [] : [{ type: "text", text: JSON.stringify(content) }];
-    return content.filter((p: any) => p?.type === "text" && typeof p.text === "string" || p?.type === "image" && typeof p.data === "string" && typeof p.mimeType === "string");
+    return content.filter((p: any) => p?.type === "text" && typeof p.text === "string"
+        || p?.type === "image" && typeof p.data === "string" && typeof p.mimeType === "string"
+        || p?.type === "document" && typeof p.fileName === "string");
+}
+
+// Chat-completions has no portable PDF block. Preserve the local path and
+// bounded extracted text so the model can reason now and inspect with tools.
+function textParts(parts: types.tools.Content[]): string[] {
+    return parts.flatMap((p: any) => p.type === "text" ? [p.text]
+        : p.type === "document" ? [`[Attached PDF: ${p.fileName}${p.path ? `\nLocal path: ${p.path}` : ""}]${p.extractedText ? `\n\n${p.extractedText}` : ""}`]
+        : []);
 }

@@ -1,94 +1,54 @@
-/** Handles the id post HTTP route.  * @param opts.req Incoming HTTP request.
- * @param opts.params Route path parameters.
-*/
-export default async function (ctx: Context, _session: Session | null, opts: {
-        /** Incoming HTTP request. */
-req: Request;
-        /** Values bound to the operation. */
-params: Record<string, string> }) {
+/** Accepts text and multipart file attachments as one durable user turn. */
+export default async function (ctx: Context, _session: Session | null, opts: { /** Incoming request. */ req: Request; /** Route values. */ params: Record<string, string> }) {
     const req = opts.req;
     const id = opts.params.id!;
     let agent = (ctx.state as any).agent?.[id];
     if (!agent) {
-        agent = (await ctx.fns.session?.load?.({ id })) ?? null;
-        if (agent) {
-            (ctx.state as any).agent ??= {};
-            (ctx.state as any).agent[id] = agent;
-        }
+        agent = (await ctx.fns.session.load({ id })) ?? null;
+        if (agent) { (ctx.state as any).agent ??= {}; (ctx.state as any).agent[id] = agent; }
     }
-    if (!agent) return Response.json({ error: 'not found' }, { status: 404 });
+    if (!agent) return Response.json({ error: "not found" }, { status: 404 });
 
-    const text = await readSubmittedText(req);
-    if (!text) return Response.json({ error: 'empty input' }, { status: 400 });
+    let text = "";
+    let files: File[] = [];
+    const ct = String(req.headers.get("content-type") ?? "");
+    if (ct.startsWith("multipart/form-data") || ct.startsWith("application/x-www-form-urlencoded")) {
+        const form = await req.formData();
+        if (form.has("text")) text = typeof form.get("text") === "string" ? String(form.get("text")).trim() : "";
+        else {
+            const lines: string[] = [];
+            for (const [name, value] of form.entries()) if (typeof value === "string") lines.push(`${name}: ${value}`);
+            text = lines.join("\n").trim();
+        }
+        files = [...form.getAll("files"), ...form.getAll("file")].filter(value => value instanceof File && value.size > 0) as File[];
+    } else text = (await req.text()).trim();
+    if (!text && files.length === 0) return Response.json({ error: "empty input" }, { status: 400 });
 
-    const url = new URL(req.url);
-    const explicitSeconds = url.searchParams.get('debounceSeconds');
-    // Priority: ?debounceSeconds query > per-agent setting > declared agent.debounceMs > 5s.
-    const perAgent = await ctx.fns.settings?.getNumber?.({
-        module: 'ui', scopeType: 'agent', scopeId: agent.id, key: 'debounceMs',
-    });
-    const declared = await ctx.fns.settings?.getNumber?.({
-        module: 'agent', scopeType: 'global', key: 'debounceMs',
-    });
-    const debounceMs = explicitSeconds != null
-        ? Math.max(0, Number(explicitSeconds) * 1000)
-        : (perAgent ?? declared ?? 5000);
-    const sendAt = Date.now() + debounceMs;
+    let uploads: Awaited<ReturnType<typeof ctx.fns.attachments.saveUploads>> = [];
+    try { uploads = await ctx.fns.attachments.saveUploads({ agentId: id, files }); }
+    catch (error: any) { return Response.json({ error: String(error?.message ?? error) }, { status: 400 }); }
 
-    const userAppend = await ctx.fns.session.appendUserMessage({ id: agent.id, text });
+    const content: types.tools.Content[] = [];
+    if (text) content.push({ type: "text", text });
+    content.push(...uploads.map(item => item.ref));
+    const ts = Date.now();
+    const userAppend = await ctx.fns.session.appendMessage({ id, message: { role: "user", content: uploads.length ? content : text }, ts });
+    if (uploads.length) await ctx.fns.attachments.commitUploads({ agentId: id, messageIdx: userAppend.idx, uploads });
+    const event: any = { type: "user", text, attachments: uploads.map(item => item.meta), messageIdx: userAppend.idx, ts };
+    event.html = await ctx.fns.agent.renderEventHtml({ event, agentId: id });
+    await ctx.fns.session.appendEvent({ id, event, ts });
     await ctx.fns.session.syncAgentState({ agent });
 
-    // Schedule (or push back) the next run on the agent row itself.
-    // GREATEST(...) keeps the latest message bumping the debounce window forward.
-    await ctx.fns.procs.db.run({
-        sql: `UPDATE agents
-            SET next_run_at = GREATEST(COALESCE(next_run_at, 0), ?),
-                updated_at  = ?
-          WHERE id = ?`,
-        params: [sendAt, Date.now(), agent.id],
-    });
+    const url = new URL(req.url);
+    const explicitSeconds = url.searchParams.get("debounceSeconds");
+    const perAgent = await ctx.fns.settings.getNumber({ module: "ui", scopeType: "agent", scopeId: id, key: "debounceMs" });
+    const declared = await ctx.fns.settings.getNumber({ module: "agent", scopeType: "global", key: "debounceMs" });
+    const debounceMs = explicitSeconds != null ? Math.max(0, Number(explicitSeconds) * 1000) : (perAgent ?? declared ?? 5000);
+    const sendAt = Date.now() + debounceMs;
+    await ctx.fns.procs.db.run({ sql: `UPDATE agents SET next_run_at=GREATEST(COALESCE(next_run_at,0),?), updated_at=? WHERE id=?`, params: [sendAt, Date.now(), id] });
     ctx.fns.agent.wakeWorker({});
 
-    if ((req.headers?.get?.('hx-request') ?? '') === 'true') {
-        return new Response(null, { status: 204 });
-    }
-    // Plain browser HTML form submit (e.g. a <form method="POST"> emitted from
-    // an §html marker) — bounce back to the agent page so the user lands on
-    // the chat with their submission already in flight. Detect by Accept header
-    // preferring text/html and the absence of an XHR/Fetch JSON intent.
-    const accept = String(req.headers?.get?.('accept') ?? '');
-    const wantsHtml = accept.includes('text/html');
-    if (wantsHtml) {
-        return new Response(null, { status: 303, headers: { location: `/agent/${encodeURIComponent(agent.id)}` } });
-    }
-    return Response.json({
-        ok: true,
-        sendAt,
-        messageIdx: userAppend.idx,
-    });
-}
-
-// Read the user's submitted text. Three input shapes are accepted:
-// 1. form `text=...` (the default chat-input single-field form) → use as-is.
-// 2. multi-field form (no `text` field present) → serialize every name/value
-//    pair into a "key: value" block so an §html-emitted form can collect
-//    structured data without the agent having to invent a custom protocol.
-// 3. plain text body (non-form Content-Type) → trimmed body.
-async function readSubmittedText(req: any): Promise<string> {
-    const ct = String(req.headers?.get?.('content-type') ?? '');
-    if (ct.startsWith('application/x-www-form-urlencoded') || ct.startsWith('multipart/form-data')) {
-        const fd = await req.formData();
-        const direct = fd.get('text');
-        // Presence of the canonical chat field selects the single-field shape,
-        // even when it is blank. Falling through would serialize it as the
-        // literal message `text:`.
-        if (fd.has('text')) return typeof direct === 'string' ? direct.trim() : '';
-        const lines: string[] = [];
-        for (const [name, value] of (fd as any).entries()) {
-            if (typeof value !== 'string') continue;
-            lines.push(`${name}: ${value}`);
-        }
-        return lines.join('\n').trim();
-    }
-    return (await req.text()).trim();
+    if (req.headers.get("hx-request") === "true") return new Response(null, { status: 204 });
+    if (String(req.headers.get("accept") ?? "").includes("text/html")) return new Response(null, { status: 303, headers: { location: `/agent/${encodeURIComponent(id)}` } });
+    return Response.json({ ok: true, sendAt, messageIdx: userAppend.idx, attachments: uploads.map(item => item.meta) });
 }

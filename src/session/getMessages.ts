@@ -25,7 +25,7 @@ export default async function (
             if (typeof content === "string" && content.startsWith("[")) {
                 try {
                     const parsed = JSON.parse(content);
-                    if (Array.isArray(parsed) && parsed.every((x: any) => x?.type === "text" || x?.type === "image")) content = parsed;
+                    if (Array.isArray(parsed) && parsed.every((x: any) => ["text", "image", "document", "image_ref", "document_ref"].includes(String(x?.type)))) content = parsed;
                 } catch { /* prose, not structured content */ }
             }
             m.content = content;

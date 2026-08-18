@@ -40,9 +40,13 @@ export default async function (
 
 function isContent(value: any): value is types.tools.Content {
     return value?.type === "text" && typeof value.text === "string"
-        || value?.type === "image" && typeof value.data === "string" && typeof value.mimeType === "string";
+        || value?.type === "image" && typeof value.data === "string" && typeof value.mimeType === "string"
+        || value?.type === "document" && typeof value.data === "string" && value.mimeType === "application/pdf";
 }
 
 function contentNote(value: types.tools.Content): string {
-    return value.type === "image" ? `[image: ${value.mimeType}]` : value.text;
+    if (value.type === "image") return `[image: ${value.mimeType}]`;
+    if (value.type === "document") return `[document: ${value.fileName}]`;
+    if (value.type === "text") return value.text;
+    return `[attachment: ${value.fileName}]`;
 }

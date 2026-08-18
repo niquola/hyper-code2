@@ -31,5 +31,6 @@ ts?: number }): Promise<{ count: number }> {
         });
     }
     await ctx.fns.procs.db.run({ sql: 'UPDATE agents SET updated_at = ? WHERE id = ?', params: [ts, id] });
+    await ctx.fns.attachments.gc({});
     return { count: messages.length };
 }

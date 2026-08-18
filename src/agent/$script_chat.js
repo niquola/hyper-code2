@@ -14,6 +14,9 @@
             this.form = panel.querySelector('#form');
             this.input = panel.querySelector('#input');
             this.agentId = this.messages?.dataset.agentId || panel.dataset.agentId || '';
+            this.fileInput = panel.querySelector('#files');
+            this.attachButton = panel.querySelector('[data-attach-button]');
+            this.attachmentTray = panel.querySelector('[data-attachments]');
             this.inheritedCount = Number(this.messages?.dataset.inheritedCount || 0);
             this.abort = new AbortController();
             this.shouldStick = true;
@@ -35,23 +38,35 @@
                 if (this.messages.scrollTop < 80) this.loadOlder();
             }, { passive: true, signal });
             this.input.addEventListener('keydown', (event) => {
+                if (event.isComposing || event.key === 'Process') return;
                 if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
-                    if (!this.input.value.trim()) return;
+                    if (!this.input.value.trim() && !this.fileInput?.files?.length) return;
                     this.form.requestSubmit();
                 }
             }, { signal });
+            this.attachButton?.addEventListener('click', () => this.fileInput?.click(), { signal });
+            this.fileInput?.addEventListener('change', () => this.renderAttachments(), { signal });
+            this.input.addEventListener('paste', event => {
+                const files = [...(event.clipboardData?.items || [])].filter(item => item.kind === 'file').map(item => item.getAsFile()).filter(Boolean);
+                if (!files.length) return;
+                event.preventDefault();
+                const text = event.clipboardData?.getData('text/plain') || '';
+                if (text) this.insertText(text);
+                this.addFiles(files);
+            }, { signal });
+            this.form.addEventListener('dragover', event => { event.preventDefault(); this.form.classList.add('ring-2', 'ring-primary/40'); }, { signal });
+            this.form.addEventListener('dragleave', event => { if (!this.form.contains(event.relatedTarget)) this.form.classList.remove('ring-2', 'ring-primary/40'); }, { signal });
+            this.form.addEventListener('drop', event => { event.preventDefault(); this.form.classList.remove('ring-2', 'ring-primary/40'); this.addFiles([...(event.dataTransfer?.files || [])]); }, { signal });
             this.form.addEventListener('submit', event => {
-                if (!this.input.value.trim()) return event.preventDefault();
-                // Sending is an explicit return to the live edge. Set this
-                // before the user event arrives so the next #msg-tail swap also
-                // remains pinned to the bottom.
+                if (!this.input.value.trim() && !this.fileInput?.files?.length) return event.preventDefault();
                 this.shouldStick = true;
             }, { signal });
             this.form.addEventListener('htmx:afterRequest', event => {
                 if (event.detail?.elt !== this.form || !event.detail?.successful) return;
                 this.shouldStick = true;
                 this.scrollBottom();
+                this.renderAttachments();
                 requestAnimationFrame(() => { if (this.alive() && this.shouldStick) this.scrollBottom(); });
             }, { signal });
             this.arrangeTools(this.messages);
@@ -66,6 +81,45 @@
             return true;
         }
 
+
+        insertText(text) {
+            const start = this.input.selectionStart, end = this.input.selectionEnd;
+            this.input.setRangeText(text, start, end, 'end');
+            this.input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        addFiles(files) {
+            if (!this.fileInput || !files.length) return;
+            const dt = new DataTransfer();
+            for (const file of [...(this.fileInput.files || []), ...files].slice(0, 10)) dt.items.add(file);
+            this.fileInput.files = dt.files;
+            this.renderAttachments();
+        }
+
+        removeFile(index) {
+            const dt = new DataTransfer();
+            [...(this.fileInput?.files || [])].forEach((file, i) => { if (i !== index) dt.items.add(file); });
+            this.fileInput.files = dt.files;
+            this.renderAttachments();
+        }
+
+        renderAttachments() {
+            if (!this.attachmentTray || !this.fileInput) return;
+            const files = [...(this.fileInput.files || [])];
+            this.attachmentTray.replaceChildren();
+            this.attachmentTray.classList.toggle('hidden', files.length === 0);
+            this.attachmentTray.classList.toggle('flex', files.length > 0);
+            files.forEach((file, index) => {
+                const chip = document.createElement('div');
+                chip.className = 'flex max-w-56 items-center gap-2 rounded-lg border border-ui-border bg-base-100 px-2 py-1.5 text-xs';
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img'); img.className = 'size-9 rounded object-cover'; img.src = URL.createObjectURL(file); img.onload = () => URL.revokeObjectURL(img.src); chip.append(img);
+                } else { const icon = document.createElement('i'); icon.className = 'ph ph-file text-base-content/45'; chip.append(icon); }
+                const name = document.createElement('span'); name.className = 'min-w-0 flex-1 truncate'; name.textContent = file.name; chip.append(name);
+                const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'text-base-content/40 hover:text-red-600'; remove.innerHTML = '<i class="ph ph-x"></i>'; remove.addEventListener('click', () => this.removeFile(index), { signal: this.abort.signal }); chip.append(remove);
+                this.attachmentTray.append(chip);
+            });
+        }
         alive() { return current === this && this.panel.isConnected && !this.abort.signal.aborted; }
         isNearBottom() { return this.messages.scrollHeight - this.messages.scrollTop - this.messages.clientHeight <= STICKY_BOTTOM_PX; }
         scrollBottom() { this.messages.scrollTop = this.messages.scrollHeight; }

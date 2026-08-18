@@ -28,7 +28,7 @@ export default function (
         }
         if (m.role === "tool") {
             const content = parts(m.content);
-            const text = content.filter((p: any) => p.type === "text").map((p: any) => p.text).join("\n");
+            const text = asText(content).join("\n");
             input.push({ type: "function_call_output", call_id: m.tool_call_id, output: text || "(image attached below)" });
             for (const part of content) if (part.type === "image") {
                 input.push({ type: "message", role: "user", content: [{ type: "input_image", detail: "auto", image_url: `data:${part.mimeType};base64,${part.data}` }] });
@@ -36,9 +36,11 @@ export default function (
             continue;
         }
         if (m.role === "user") {
-            const content = parts(m.content).map((part: any) => part.type === "image"
-                ? { type: "input_image", detail: "auto", image_url: `data:${part.mimeType};base64,${part.data}` }
-                : { type: "input_text", text: part.text });
+            const content: any[] = parts(m.content).flatMap<any>((part: any): any[] => part.type === "image"
+                ? [{ type: "input_image", detail: "auto", image_url: `data:${part.mimeType};base64,${part.data}` }]
+                : part.type === "document"
+                    ? [{ type: "input_text", text: asText([part])[0] }]
+                    : [{ type: "input_text", text: part.text }]);
             if (content.length) input.push({ type: "message", role: "user", content });
             continue;
         }
@@ -62,5 +64,13 @@ export default function (
 function parts(content: any): types.tools.Content[] {
     if (typeof content === "string") return content ? [{ type: "text", text: content }] : [];
     if (!Array.isArray(content)) return content == null ? [] : [{ type: "text", text: JSON.stringify(content) }];
-    return content.filter((p: any) => p?.type === "text" && typeof p.text === "string" || p?.type === "image" && typeof p.data === "string" && typeof p.mimeType === "string");
+    return content.filter((p: any) => p?.type === "text" && typeof p.text === "string"
+        || p?.type === "image" && typeof p.data === "string" && typeof p.mimeType === "string"
+        || p?.type === "document" && typeof p.fileName === "string");
+}
+
+function asText(parts: types.tools.Content[]): string[] {
+    return parts.flatMap((p: any) => p.type === "text" ? [p.text]
+        : p.type === "document" ? [`[Attached PDF: ${p.fileName}${p.path ? `\nLocal path: ${p.path}` : ""}]${p.extractedText ? `\n\n${p.extractedText}` : ""}`]
+        : []);
 }

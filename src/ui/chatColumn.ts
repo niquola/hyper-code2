@@ -173,13 +173,17 @@ ${agent.sleepContext?.active === true
       class="chat-composer mx-auto w-[calc(100%-2rem)] max-w-3xl pb-2 pt-3"
       hx-post="/agent/${encodeURIComponent(id)}?debounceSeconds=0.1"
       hx-trigger="submit"
+      hx-encoding="multipart/form-data"
       hx-swap="none"
-      hx-on::after-request="if (event.detail.elt === this && event.detail.successful) { this.elements.input.value=''; this.elements.input.focus(); }">
+      hx-on::after-request="if (event.detail.elt === this && event.detail.successful) { this.elements.input.value=''; this.elements.files.value=''; this.querySelector('[data-attachments]')?.replaceChildren(); this.elements.input.focus(); }">
   <div class="mb-1.5 text-center text-[10px] leading-none text-base-content/35"><kbd>⌘J</kbd> scroll down · <kbd>⌘K</kbd> scroll up · Enter to send</div>
-  <div class="relative h-11 w-full">
+  <div data-attachments class="mb-2 hidden flex-wrap gap-2 rounded-xl border border-ui-border bg-base-100/70 p-2"></div>
+  <div class="relative min-h-11 w-full">
+    <input id="files" name="files" type="file" multiple class="hidden" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/*,.md,.json,.xml,.html,.css,.js,.ts,.tsx,.jsx,.yml,.yaml,.csv,.log">
+    <button type="button" data-attach-button class="absolute left-1.5 top-1.5 z-20 flex size-8 items-center justify-center rounded-full text-base-content/45 hover:bg-base-100 hover:text-primary" title="Attach files" aria-label="Attach files"><i class="ph ph-paperclip"></i></button>
     ${stopControlRegion}
     <textarea id="input" name="text" rows="1" placeholder="Message agent…"
-      class="glass-input block h-11 w-full resize-none overflow-y-auto rounded-[22px] border-0 px-4 py-[11px] font-sans text-sm leading-[22px] text-base-content placeholder:text-base-content/35 focus:outline-none"></textarea>
+      class="glass-input block min-h-11 w-full resize-none overflow-y-auto rounded-[22px] border-0 py-[11px] pl-11 pr-12 font-sans text-sm leading-[22px] text-base-content placeholder:text-base-content/35 focus:outline-none"></textarea>
   </div>
   <div class="mt-1.5 flex min-w-0 justify-center px-4">${statusLinePopup}</div>
 </form>

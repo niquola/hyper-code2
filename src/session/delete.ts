@@ -9,6 +9,7 @@ id: string }): Promise<{ ok: boolean }> {
         await ctx.fns.procs.db.run({ sql: "DELETE FROM messages WHERE agent_id = ?", params: [id] });
         await ctx.fns.procs.db.run({ sql: "DELETE FROM events WHERE agent_id = ?", params: [id] });
         await ctx.fns.events.emitAgentsChanged({ agentId: id, reason: "delete" });
+        await ctx.fns.attachments.gc({});
     }
     return { ok: removed };
 }

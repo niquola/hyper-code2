@@ -61,5 +61,6 @@ from: number }): Promise<{ ok: boolean; from?: number; reason?: string }> {
         await ctx.fns.procs.db.run({ sql: "DELETE FROM events WHERE agent_id = ? AND idx >= ?", params: [id, boundaryEventIdx] });
     }
 
+    await ctx.fns.attachments.gc({});
     return { ok: true, from: effectiveFrom };
 }

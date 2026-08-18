@@ -48,5 +48,6 @@ idx: number }): Promise<{ ok: boolean; reason?: string }> {
         }
     }
 
+    await ctx.fns.attachments.gc({});
     return { ok: true };
 }

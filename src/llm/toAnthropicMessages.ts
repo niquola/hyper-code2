@@ -53,6 +53,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
         const parts = toParts(m?.content);
         const text = parts.filter((p: any) => p.type === "text").map((p: any) => p.text).join("\n");
         const images = parts.filter((p): p is Extract<types.tools.Content, { type: "image" }> => p.type === "image");
+        const documents = parts.filter((p): p is Extract<types.tools.Content, { type: "document" }> => p.type === "document");
 
         if (role === "tool") {
             push("user", {
@@ -62,6 +63,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
                 ...(m.isError ? { is_error: true } : {}),
             });
             for (const image of images) push("user", { type: "image", source: { type: "base64", media_type: image.mimeType, data: image.data } });
+            for (const document of documents) push("user", { type: "document", source: { type: "base64", media_type: document.mimeType, data: document.data }, title: document.fileName });
             continue;
         }
 
@@ -69,6 +71,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
 
         if (text.trim() !== "") push(role, { type: "text", text });
         for (const image of images) push(role, { type: "image", source: { type: "base64", media_type: image.mimeType, data: image.data } });
+        for (const document of documents) push(role, { type: "document", source: { type: "base64", media_type: document.mimeType, data: document.data }, title: document.fileName });
         for (const call of m?.tool_calls ?? []) {
             push("assistant", { type: "tool_use", id: call.id, name: call.name, input: call.args ?? {} });
         }
@@ -88,5 +91,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
 function toParts(content: any): types.tools.Content[] {
     if (typeof content === "string") return content ? [{ type: "text", text: content }] : [];
     if (!Array.isArray(content)) return content == null ? [] : [{ type: "text", text: JSON.stringify(content) }];
-    return content.filter((p: any) => p?.type === "text" && typeof p.text === "string" || p?.type === "image" && typeof p.data === "string" && typeof p.mimeType === "string");
+    return content.filter((p: any) => p?.type === "text" && typeof p.text === "string"
+        || p?.type === "image" && typeof p.data === "string" && typeof p.mimeType === "string"
+        || p?.type === "document" && typeof p.data === "string" && p.mimeType === "application/pdf" && typeof p.fileName === "string");
 }
