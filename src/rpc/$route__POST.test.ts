@@ -3,7 +3,11 @@ import route from './$route__POST';
 
 const ctx: any = { fns: {
     demo: { hello: ({ name }: any) => `<b>Hello ${name}</b>` },
-    procs: { log: { info: () => {}, warn: () => {} }, http: { toResponse: ({ value }: any) => new Response(value, { headers: { 'content-type': 'text/html' } }) } },
+    procs: {
+        auth: { authenticate: () => ({ sub: 'test', name: 'Test' }) },
+        log: { info: () => {}, warn: () => {} },
+        http: { toResponse: ({ value }: any) => new Response(value, { headers: { 'content-type': 'text/html' } }) },
+    },
 } };
 const call = (body: any, headers: any = {}) => route(ctx, null, { req: new Request('http://localhost/rpc', { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json', ...headers } }) });
 
@@ -11,6 +15,13 @@ test('trusted rpc dispatches ctx.fns with an opts object', async () => {
     const res = await call({ method: 'demo.hello', params: { name: 'Ada' } });
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('<b>Hello Ada</b>');
+});
+
+test('rpc rejects a request without an authenticated session', async () => {
+    const authenticate = ctx.fns.procs.auth.authenticate;
+    ctx.fns.procs.auth.authenticate = () => null;
+    try { expect((await call({ method: 'demo.hello', params: {} })).status).toBe(401); }
+    finally { ctx.fns.procs.auth.authenticate = authenticate; }
 });
 
 test('trusted rpc rejects cross-origin and prototype paths', async () => {

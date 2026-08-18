@@ -7,6 +7,11 @@ const BLOCKED = new Set(['__proto__', 'prototype', 'constructor']);
 
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
     const req = opts.req;
+    // RPC drives privileged UI/runtime functions. Browser calls carry the
+    // authenticated session cookie; unauthenticated LAN requests must never
+    // become a generic ctx.fns gateway.
+    const user = await ctx.fns.procs.auth.authenticate({ req });
+    if (!user) return Response.json({ error: 'authentication required' }, { status: 401 });
     const origin = req.headers.get('origin');
     const target = new URL(req.url);
     if (origin && origin !== target.origin) return Response.json({ error: 'cross-origin rpc refused' }, { status: 403 });

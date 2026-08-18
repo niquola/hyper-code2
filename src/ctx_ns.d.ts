@@ -154,6 +154,13 @@ declare global {
             emitAgentsChanged: Injected<typeof import("./events/emitAgentsChanged").default>;
             refreshAgentMeta: Injected<typeof import("./events/refreshAgentMeta").default>;
         };
+        external: {
+            authorize: Injected<typeof import("./external/authorize").default>;
+            authorizeRepl: Injected<typeof import("./external/authorizeRepl").default>;
+            mountSkills: Injected<typeof import("./external/mountSkills").default>;
+            replToken: Injected<typeof import("./external/replToken").default>;
+            token: Injected<typeof import("./external/token").default>;
+        };
         files: {
             applyEdits: Injected<typeof import("./files/applyEdits").default>;
             browserUrl: Injected<typeof import("./files/browserUrl").default>;

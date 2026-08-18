@@ -10,6 +10,21 @@ The agent acts by emitting `§eval` / `§write:<path>` / `§bash` / `§html` mar
 
 **All sessions are in Postgres and fully agent-accessible.** Every turn's messages and UI events for every agent are rows in the `hyper` Postgres (paradedb, `~/.hyper/docker-compose.yml`). The agent reads its own + other agents' history with a one-liner: `§eval\nctx.fns.procs.db.select({ sql: "SELECT … FROM messages …" })`. Useful for recalling prior work, mining patterns, or building custom indexes.
 
+## External coding harnesses
+
+The live runtime is available to trusted local Claude Code, Codex, and other shell-capable harnesses through the `hyper` CLI:
+
+```sh
+hyper plugin search "GitHub pull request review"
+hyper function read gh.pr
+hyper tools
+hyper tool call find --json '{"path":"src","pattern":"*.ts"}'
+hyper repl 'return await ctx.fns.gh.me({})'
+hyper skills mount
+```
+
+The CLI provides live plugin/function discovery, schema-validated declared-tool calls, a separately-tokened loopback-only arbitrary REPL, and managed `hyper-*` skill links. See [External coding harnesses](docs/external-harnesses.md) for setup, commands, and the security model.
+
 
 ## UI architecture: HTMX first
 

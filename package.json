@@ -6,6 +6,7 @@
   "scripts": {
     "start": "bun 'src/$main.ts'",
     "repl": "bun script/repl.ts",
+    "hyper": "bun script/hyper.ts",
     "cli": "bun script/cli.ts",
     "test": "bun test"
   },
@@ -52,6 +53,7 @@
       },
       "procs/migrate": {},
       "procs/repl": {},
+      "external": {},
       "agent": {},
       "cron": {},
       "procs/http": {
