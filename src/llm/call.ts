@@ -50,8 +50,8 @@ async function responses(ctx: Context, endpoint: any, opts: any) {
     };
     const format = responsesFormat(opts.response_format);
     if (format) body.text.format = format;
-    // ChatGPT Codex backend controls output limits; max_output_tokens is not accepted.
-    if (opts.temperature != null) body.temperature = opts.temperature;
+    // ChatGPT Codex backend controls output limits and sampling; neither
+    // max_output_tokens nor temperature is accepted by the subscription API.
     const response = await fetch(endpoint.url, {
         method: "POST",
         headers: {
@@ -75,7 +75,8 @@ async function openAI(endpoint: any, opts: any) {
     if (opts.temperature != null) body.temperature = opts.temperature;
     if (opts.max_tokens != null) body.max_tokens = opts.max_tokens;
     if (opts.response_format != null) body.response_format = opts.response_format;
-    const response = await fetch(endpoint.url, { method: "POST", headers: { "content-type": "application/json", ...(endpoint.apiKey ? { authorization: `Bearer ${endpoint.apiKey}` } : {}) }, body: JSON.stringify(body) });
+    let response = await fetch(endpoint.url, { method: "POST", headers: { "content-type": "application/json", ...(endpoint.apiKey ? { authorization: `Bearer ${endpoint.apiKey}` } : {}) }, body: JSON.stringify(body) });
+    response = await retryWithoutUnsupportedTemperature(response, body, () => fetch(endpoint.url, { method: "POST", headers: { "content-type": "application/json", ...(endpoint.apiKey ? { authorization: `Bearer ${endpoint.apiKey}` } : {}) }, body: JSON.stringify(body) }));
     if (!response.ok) throw new Error(`${endpoint.provider} ${response.status}: ${await response.text()}`);
     const raw: any = await response.json();
     const choice = raw?.choices?.[0] ?? {};
@@ -109,21 +110,22 @@ async function anthropic(ctx: Context, endpoint: any, opts: any) {
     if (opts.system) body.system = opts.system;
     if (opts.temperature != null) body.temperature = opts.temperature;
     let response = await fetch(endpoint.url, { method: "POST", headers, body: JSON.stringify(body) });
-    if (!response.ok) {
-        // Newer Anthropic models reject `temperature` outright (400 "deprecated
-        // for this model"). Every internal caller — reflection, sleep, compact
-        // — passes a low temperature for determinism, so the whole background
-        // machinery died on those models. Drop the knob and ask once more.
-        const detail = await response.text();
-        if (response.status === 400 && body.temperature != null && /temperature/i.test(detail) && /deprecat|not support|unsupported/i.test(detail)) {
-            delete body.temperature;
-            response = await fetch(endpoint.url, { method: "POST", headers, body: JSON.stringify(body) });
-            if (!response.ok) throw new Error(`${endpoint.provider} ${response.status}: ${await response.text()}`);
-        } else throw new Error(`${endpoint.provider} ${response.status}: ${detail}`);
-    }
+    response = await retryWithoutUnsupportedTemperature(response, body, () => fetch(endpoint.url, { method: "POST", headers, body: JSON.stringify(body) }));
+    if (!response.ok) throw new Error(`${endpoint.provider} ${response.status}: ${await response.text()}`);
     const raw: any = await response.json();
     return { text: (raw.content ?? []).filter((x: any) => x.type === "text").map((x: any) => x.text).join(""), finishReason: raw.stop_reason ?? null, usage: raw.usage, raw };
 }
+
+async function retryWithoutUnsupportedTemperature(response: Response, body: any, retry: () => Promise<Response>): Promise<Response> {
+    if (response.ok || response.status !== 400 || body.temperature == null) return response;
+    const detail = await response.text();
+    if (!/temperature/i.test(detail) || !/deprecat|not support|unsupported/i.test(detail)) {
+        throw new Error(`400: ${detail}`);
+    }
+    delete body.temperature;
+    return retry();
+}
+
 
 async function readResponsesSSE(response: Response): Promise<any> {
     if (!response.body) throw new Error("codex: empty response body");

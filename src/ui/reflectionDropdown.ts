@@ -19,10 +19,10 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     const active = !!running?.has(agent.id);
     const liveAttrs = `id="reflection-${esc(agent.id)}" hx-get="/agent/${encodeURIComponent(agent.id)}/reflection" hx-trigger="hyper-live from:body, every 60s" hx-target="this" hx-swap="outerHTML" data-live-topic="agent:${esc(agent.id)}"`;
 
-    const buttonClass = 'inline-flex size-7 items-center justify-center rounded-md border transition focus:outline-none focus:ring-2 focus:ring-primary/30';
+    const buttonClass = 'inline-flex size-7 items-center justify-center rounded-md border-0 bg-transparent text-base-content/45 transition hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-primary/30';
 
-    if (active) return `<span ${liveAttrs} class="${buttonClass} border-primary/30 bg-primary/10 text-primary" title="Reflection is running" aria-label="Reflection is running"><i class="ph ph-brain animate-spin" aria-hidden="true"></i></span>`;
-    if (!reflection) return `<span ${liveAttrs} class="${buttonClass} border-base-300 bg-base-100 text-base-content/40" title="Reflection appears after 3 user messages" aria-label="Reflection pending"><i class="ph ph-brain" aria-hidden="true"></i></span>`;
+    if (active) return `<span ${liveAttrs} class="${buttonClass} text-primary" title="Reflection is running" aria-label="Reflection is running"><i class="ph ph-brain animate-spin" aria-hidden="true"></i></span>`;
+    if (!reflection) return `<span ${liveAttrs} class="${buttonClass}" title="Reflection appears after 3 user messages" aria-label="Reflection pending"><i class="ph ph-brain" aria-hidden="true"></i></span>`;
 
     const contentHtml = `<div class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-base-content/40">What we are doing</div>
         <div class="font-medium text-base-content">${esc(reflection.activity?.goal ?? 'Unknown')}</div>
@@ -40,7 +40,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     const popup = await ctx.fns.ui.inplacePopup({
         id: `reflection-popover-${agent.id}`,
         triggerHtml: '<i class="ph ph-brain" aria-hidden="true"></i>',
-        triggerAttrs: `class="${buttonClass} border-primary/30 bg-primary/10 text-primary hover:bg-primary/20" title="Conversation reflection" aria-label="Open conversation reflection"`,
+        triggerAttrs: `class="${buttonClass}" title="Conversation reflection" aria-label="Open conversation reflection"`,
         panelAttrs: 'aria-label="Conversation reflection"',
         contentHtml,
     });

@@ -142,8 +142,8 @@ export default async function (ctx: Context, _session: Session | null, opts: {
   ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}
   ${statusBarHtml}
   <span class="ml-auto flex items-center gap-1">
-  ${reflectionHtml}
     ${effortControl}
+    ${reflectionHtml}
     ${compactPopup}
 
     ${sleepControl}
