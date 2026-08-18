@@ -7,6 +7,24 @@
 
     let returnFocus = null;
 
+    const present = (dialog, kind = '') => {
+        const shell = dialog?.firstElementChild;
+        const body = document.getElementById('app-popup-body');
+        const file = kind === 'file-preview';
+        if (dialog) {
+            dialog.style.width = file ? 'min(90rem, calc(100vw - 2rem))' : '';
+            dialog.style.height = file ? '97vh' : '';
+            dialog.style.maxHeight = file ? '97vh' : '';
+        }
+        if (shell) {
+            shell.style.height = file ? '100%' : '';
+            shell.style.maxHeight = file ? '100%' : '';
+        }
+        if (body) body.className = file
+            ? 'app-popup-body min-h-0 flex-1 overflow-hidden bg-base-200 p-0'
+            : 'app-popup-body min-h-0 flex-1 overflow-auto bg-base-200/60 p-5 text-xs text-base-content/70';
+    };
+
     window.hyperPopup = {
         open(title = '', kind = '') {
             const dialog = document.getElementById('app-popup');
@@ -16,15 +34,23 @@
             if (heading) heading.textContent = title;
             if (dialog && kind) dialog.dataset.popupKind = kind;
             if (dialog && !dialog.open) dialog.showModal();
+            present(dialog, kind);
         },
         close() {
             const dialog = document.getElementById('app-popup');
             if (dialog?.open) dialog.close();
             if (dialog) delete dialog.dataset.popupKind;
             const focusTarget = returnFocus?.isConnected ? returnFocus : document.getElementById('input');
+            present(dialog, '');
             returnFocus = null;
             focusTarget?.focus();
         },
+        content(html, title = '', kind = '') {
+            const body = document.getElementById('app-popup-body');
+            if (body) body.innerHTML = html;
+            this.open(title, kind);
+        },
+
         loading(title = '', kind = '') {
             this.open(title, kind);
             const body = document.getElementById('app-popup-body');

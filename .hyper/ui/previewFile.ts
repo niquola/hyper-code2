@@ -11,7 +11,7 @@
  */
 export default async function (
     ctx: Context,
-    _session: Session | null,
+    session: Session | null,
     opts: {
         /** Workspace-relative or absolute file or directory path to open. */
         path: string;
@@ -22,7 +22,7 @@ export default async function (
         /** Deprecated compatibility option; Files UI loads the complete file. @default 200000 @minimum 1 @maximum 1000000 */
         maxChars?: number;
     },
-): Promise<{ path: string; mode: "auto" | "preview" | "source"; url: string }> {
+): Promise<string | { path: string; mode: "auto" | "preview" | "source"; url: string }> {
     const path = ctx.fns.files.resolveSafe({ path: opts.path });
     const info = await ctx.fns.files.stat({ path });
     if (!info) throw new Error(`file not found: ${opts.path}`);
@@ -41,32 +41,12 @@ export default async function (
         html: `<iframe src="${escapeAttribute(url)}" title="${escapeAttribute(title)}" class="block h-full w-full border-0 bg-base-200" loading="eager"></iframe>`,
     });
 
-    await ctx.fns.ui.eval({ code: `(() => {
-      const dialog = document.getElementById('app-popup');
-      const body = document.getElementById('app-popup-body');
-      if (!dialog || !body) return;
-      dialog.style.width = 'min(90rem, calc(100vw - 2rem))';
-      dialog.style.height = '97vh';
-      dialog.style.maxHeight = '97vh';
-      const shell = dialog.firstElementChild;
-      if (shell) {
-        shell.style.height = '100%';
-        shell.style.maxHeight = '100%';
-      }
-      body.className = 'app-popup-body min-h-0 flex-1 overflow-hidden bg-base-200 p-0';
-      body.innerHTML = ${JSON.stringify(html)};
-      window.hyperPopup?.open(${JSON.stringify(title)}, 'file-preview');
-      dialog.addEventListener('close', () => {
-        dialog.style.removeProperty('width');
-        dialog.style.removeProperty('height');
-        dialog.style.removeProperty('max-height');
-        if (shell) {
-          shell.style.removeProperty('height');
-          shell.style.removeProperty('max-height');
-        }
-        body.className = 'app-popup-body min-h-0 flex-1 overflow-auto bg-base-200/60 p-5 text-xs text-base-content/70';
-      }, { once: true });
-    })()` });
+    // Popup RPC owns the swap into #app-popup-body. Returning the fragment is
+    // essential: returning our metadata object makes procs.http.toResponse emit
+    // JSON, which htmx then paints over the iframe created by ui.eval.
+    if (session?.url?.pathname === "/rpc") return html;
+
+    await ctx.fns.ui.eval({ code: `window.hyperPopup?.content(${JSON.stringify(html)}, ${JSON.stringify(title)}, 'file-preview')` });
     return { path, mode, url };
 }
 
