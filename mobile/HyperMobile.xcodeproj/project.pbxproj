@@ -10,6 +10,12 @@
 		100000000000000000000001 /* HyperMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000001 /* HyperMobileApp.swift */; };
 		100000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000002 /* ContentView.swift */; };
 		100000000000000000000003 /* HyperWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000003 /* HyperWebView.swift */; };
+		100000000000000000000004 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000006 /* Models.swift */; };
+		100000000000000000000005 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000007 /* APIClient.swift */; };
+		100000000000000000000006 /* AgentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000008 /* AgentStore.swift */; };
+		100000000000000000000007 /* NativeRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000009 /* NativeRootView.swift */; };
+		100000000000000000000008 /* NativeChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000A /* NativeChatView.swift */; };
+		100000000000000000000009 /* WebFallbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000B /* WebFallbackView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -18,6 +24,12 @@
 		200000000000000000000003 /* HyperWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperWebView.swift; sourceTree = "<group>"; };
 		200000000000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		200000000000000000000005 /* Hyper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hyper.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000006 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		200000000000000000000007 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		200000000000000000000008 /* AgentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentStore.swift; sourceTree = "<group>"; };
+		200000000000000000000009 /* NativeRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeRootView.swift; sourceTree = "<group>"; };
+		20000000000000000000000A /* NativeChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeChatView.swift; sourceTree = "<group>"; };
+		20000000000000000000000B /* WebFallbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebFallbackView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -45,6 +57,12 @@
 				200000000000000000000001 /* HyperMobileApp.swift */,
 				200000000000000000000002 /* ContentView.swift */,
 				200000000000000000000003 /* HyperWebView.swift */,
+				200000000000000000000006 /* Models.swift */,
+				200000000000000000000007 /* APIClient.swift */,
+				200000000000000000000008 /* AgentStore.swift */,
+				200000000000000000000009 /* NativeRootView.swift */,
+				20000000000000000000000A /* NativeChatView.swift */,
+				20000000000000000000000B /* WebFallbackView.swift */,
 				200000000000000000000004 /* Info.plist */,
 			);
 			path = HyperMobile;
@@ -129,6 +147,12 @@
 				100000000000000000000001 /* HyperMobileApp.swift in Sources */,
 				100000000000000000000002 /* ContentView.swift in Sources */,
 				100000000000000000000003 /* HyperWebView.swift in Sources */,
+				100000000000000000000004 /* Models.swift in Sources */,
+				100000000000000000000005 /* APIClient.swift in Sources */,
+				100000000000000000000006 /* AgentStore.swift in Sources */,
+				100000000000000000000007 /* NativeRootView.swift in Sources */,
+				100000000000000000000008 /* NativeChatView.swift in Sources */,
+				100000000000000000000009 /* WebFallbackView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
