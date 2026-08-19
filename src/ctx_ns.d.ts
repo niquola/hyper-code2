@@ -95,20 +95,26 @@ declare global {
             search: Injected<typeof import("../plugins/arxiv/src/arxiv/search").default>;
         };
         browser: {
+            act: Injected<typeof import("../plugins/browser/src/browser/act").default>;
+            check: Injected<typeof import("../plugins/browser/src/browser/check").default>;
             click: Injected<typeof import("../plugins/browser/src/browser/click").default>;
             closeSessions: Injected<typeof import("../plugins/browser/src/browser/closeSessions").default>;
             evaluate: Injected<typeof import("../plugins/browser/src/browser/evaluate").default>;
+            fill: Injected<typeof import("../plugins/browser/src/browser/fill").default>;
             googleAI: Injected<typeof import("../plugins/browser/src/browser/googleAI").default>;
             googleAIFollowUp: Injected<typeof import("../plugins/browser/src/browser/googleAIFollowUp").default>;
             googleSearch: Injected<typeof import("../plugins/browser/src/browser/googleSearch").default>;
+            hover: Injected<typeof import("../plugins/browser/src/browser/hover").default>;
             navigate: Injected<typeof import("../plugins/browser/src/browser/navigate").default>;
-            readPage: Injected<typeof import("../plugins/browser/src/browser/readPage").default>;
+            press: Injected<typeof import("../plugins/browser/src/browser/press").default>;
             research: Injected<typeof import("../plugins/browser/src/browser/research").default>;
             screenshot: Injected<typeof import("../plugins/browser/src/browser/screenshot").default>;
+            scroll: Injected<typeof import("../plugins/browser/src/browser/scroll").default>;
+            select: Injected<typeof import("../plugins/browser/src/browser/select").default>;
+            snapshot: Injected<typeof import("../plugins/browser/src/browser/snapshot").default>;
             tabClose: Injected<typeof import("../plugins/browser/src/browser/tabClose").default>;
             tabs: Injected<typeof import("../plugins/browser/src/browser/tabs").default>;
-            text: Injected<typeof import("../plugins/browser/src/browser/text").default>;
-            title: Injected<typeof import("../plugins/browser/src/browser/title").default>;
+            type: Injected<typeof import("../plugins/browser/src/browser/type").default>;
         };
         calendar: {
             prepareToday: Injected<typeof import("../.hyper/calendar/prepareToday").default>;

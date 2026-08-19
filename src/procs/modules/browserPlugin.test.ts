@@ -17,6 +17,6 @@ test("mounts the project browser plugin and exposes its namespaces", () => {
     // Mounted means callable: the namespaces have to be in ctx.fns, not merely
     // listed in the modules table.
     expect(typeof ctx.fns.browser.tabs).toBe("function");
-    expect(typeof ctx.fns.browser.title).toBe("function");
+    expect(typeof ctx.fns.browser.snapshot).toBe("function");
     expect(typeof ctx.fns.cdp.send).toBe("function");
 });
