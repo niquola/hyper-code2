@@ -25,6 +25,12 @@
     },
     "crme": {
       "path": "/Users/niquola/.hyper/user/crme"
+    },
+    "hackernews": {
+      "path": "plugins/hackernews"
+    },
+    "substack": {
+      "path": "plugins/substack"
     }
   }
 }

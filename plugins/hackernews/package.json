@@ -1,0 +1,1 @@
+{"name":"hackernews","private":true,"type":"module","procs":{"src":"src","label":"Hacker News","icon":"ph-y-combinator-logo","optional":true,"description":"Standalone incremental Hacker News Algolia mirror with feed cursors and run history."}}

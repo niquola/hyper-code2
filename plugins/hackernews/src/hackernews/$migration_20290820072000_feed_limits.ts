@@ -1,0 +1,2 @@
+const sql=`ALTER TABLE hackernews.feeds ADD COLUMN IF NOT EXISTS fetch_limit integer NOT NULL DEFAULT 20;UPDATE hackernews.feeds SET fetch_limit=CASE key WHEN 'front' THEN 6 WHEN 'ai' THEN 5 WHEN 'databases' THEN 15 ELSE fetch_limit END;`;
+export default{up:async(ctx:Context)=>{await ctx.fns.procs.db.exec({sql})},down:async(ctx:Context)=>{await ctx.fns.procs.db.exec({sql:"ALTER TABLE hackernews.feeds DROP COLUMN IF EXISTS fetch_limit"})}};

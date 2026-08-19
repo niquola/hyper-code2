@@ -1,0 +1,2 @@
+/** Returns compact Hacker News feed, story, membership and run counts. */
+export default async function(ctx:Context,_session:Session|null,_opts?:{}):Promise<{feeds:number;stories:number;memberships:number;runs:number}>{return(await ctx.fns.procs.db.select({sql:`SELECT (SELECT count(*)::int FROM hackernews.feeds) feeds,(SELECT count(*)::int FROM hackernews.stories) stories,(SELECT count(*)::int FROM hackernews.feed_stories) memberships,(SELECT count(*)::int FROM hackernews.runs) runs`,params:[]}))[0];}

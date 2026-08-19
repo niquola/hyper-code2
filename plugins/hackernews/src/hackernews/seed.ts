@@ -1,0 +1,2 @@
+/** Seeds the three legacy Hacker News feed definitions without running them. */
+export default async function(ctx:Context,_session:Session|null,_opts?:{}):Promise<{feeds:number}>{await ctx.fns.hackernews.addFeed({key:"front",label:"Front page",mode:"front",query:"",limit:6});await ctx.fns.hackernews.addFeed({key:"ai",label:"AI",mode:"fresh",query:"AI machine learning LLM agents",limit:5});await ctx.fns.hackernews.addFeed({key:"databases",label:"Databases",mode:"fresh",query:"postgresql clickhouse duckdb sqlite postgres database",limit:15});return{feeds:3};}

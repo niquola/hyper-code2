@@ -1,0 +1,2 @@
+const sql=`ALTER TABLE substack.posts ADD COLUMN IF NOT EXISTS external_id text;UPDATE substack.posts SET external_id=coalesce(external_id,id::text);CREATE UNIQUE INDEX IF NOT EXISTS substack_posts_external_id_idx ON substack.posts(publication_key,external_id);`;
+export default{up:async(ctx:Context)=>{await ctx.fns.procs.db.exec({sql})},down:async(ctx:Context)=>{await ctx.fns.procs.db.exec({sql:"DROP INDEX IF EXISTS substack.substack_posts_external_id_idx;ALTER TABLE substack.posts DROP COLUMN IF EXISTS external_id"})}};

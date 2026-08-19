@@ -1,0 +1,6 @@
+/** Reads paginated Substack archive metadata through the publication's browser origin.
+ * @param opts.host Publication hostname used as the browser origin.
+ * @param opts.max Maximum archive metadata rows returned.
+ * @param opts.session Named authenticated Hyper Browser session.
+ */
+export default async function(ctx:Context,_session:Session|null,opts:{/** Publication hostname. */host:string;/** Maximum posts. @default 50 @minimum 1 @maximum 500 */max?:number;/** Browser session name. @default substack */session?:string}):Promise<any[]>{const session=opts.session??"substack",max=Math.max(1,Math.min(500,opts.max??50));await ctx.fns.browser.navigate({session,url:`https://${opts.host}/`,settleMs:1800});const out=[];for(let offset=0;offset<max;offset+=12){const page=await ctx.fns.browser.evaluate({session,awaitPromise:true,expression:`fetch('/api/v1/archive?sort=new&offset=${offset}&limit=12',{headers:{accept:'application/json'}}).then(async r=>{if(!r.ok)throw new Error('HTTP '+r.status);const a=await r.json();return(Array.isArray(a)?a:[]).map(p=>({id:p.id,slug:p.slug,title:p.title,subtitle:p.subtitle||null,date:p.post_date,audience:p.audience,url:p.canonical_url,reactions:p.reaction_count||0,comments:p.comment_count||0}))})`});out.push(...page);if(page.length<12)break}return out.slice(0,max);}

@@ -138,6 +138,15 @@ declare global {
             meetings: Injected<typeof import("../../.hyper/user/circleback/src/circleback/meetings").default>;
             sql: Injected<typeof import("../../.hyper/user/circleback/src/circleback/sql").default>;
         };
+        crme: {
+            find: Injected<typeof import("../../.hyper/user/crme/src/crme/find").default>;
+            get: Injected<typeof import("../../.hyper/user/crme/src/crme/get").default>;
+            parse: Injected<typeof import("../../.hyper/user/crme/src/crme/parse").default>;
+            publish: Injected<typeof import("../../.hyper/user/crme/src/crme/publish").default>;
+            publishKnowledge: Injected<typeof import("../../.hyper/user/crme/src/crme/publishKnowledge").default>;
+            stats: Injected<typeof import("../../.hyper/user/crme/src/crme/stats").default>;
+            sync: Injected<typeof import("../../.hyper/user/crme/src/crme/sync").default>;
+        };
         cron: {
             add: Injected<typeof import("./cron/add").default>;
             claim: Injected<typeof import("./cron/claim").default>;
@@ -363,6 +372,15 @@ declare global {
             user: Injected<typeof import("../plugins/google/src/gworkspace/user").default>;
             users: Injected<typeof import("../plugins/google/src/gworkspace/users").default>;
         };
+        hackernews: {
+            addFeed: Injected<typeof import("../plugins/hackernews/src/hackernews/addFeed").default>;
+            listFeeds: Injected<typeof import("../plugins/hackernews/src/hackernews/listFeeds").default>;
+            seed: Injected<typeof import("../plugins/hackernews/src/hackernews/seed").default>;
+            stats: Injected<typeof import("../plugins/hackernews/src/hackernews/stats").default>;
+            stories: Injected<typeof import("../plugins/hackernews/src/hackernews/stories").default>;
+            sync: Injected<typeof import("../plugins/hackernews/src/hackernews/sync").default>;
+            syncAll: Injected<typeof import("../plugins/hackernews/src/hackernews/syncAll").default>;
+        };
         healthrepo: {
             diary: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/diary").default>;
             exportDocuments: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/exportDocuments").default>;
@@ -382,6 +400,7 @@ declare global {
             find: Injected<typeof import("../plugins/knowledge/src/knowledge/find").default>;
             get: Injected<typeof import("../plugins/knowledge/src/knowledge/get").default>;
             importFiles: Injected<typeof import("../plugins/knowledge/src/knowledge/importFiles").default>;
+            link: Injected<typeof import("../plugins/knowledge/src/knowledge/link").default>;
             matchPerson: Injected<typeof import("../plugins/knowledge/src/knowledge/matchPerson").default>;
             observe: Injected<typeof import("../plugins/knowledge/src/knowledge/observe").default>;
             rebuildSearch: Injected<typeof import("../plugins/knowledge/src/knowledge/rebuildSearch").default>;
@@ -390,6 +409,18 @@ declare global {
             types: Injected<typeof import("../plugins/knowledge/src/knowledge/types").default>;
             upsert: Injected<typeof import("../plugins/knowledge/src/knowledge/upsert").default>;
             validate: Injected<typeof import("../plugins/knowledge/src/knowledge/validate").default>;
+        };
+        linkedin: {
+            company: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/company").default>;
+            feed: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/feed").default>;
+            hash: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/hash").default>;
+            importNewsState: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/importNewsState").default>;
+            profile: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/profile").default>;
+            search: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/search").default>;
+            seedTrackedPeople: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/seedTrackedPeople").default>;
+            stats: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/stats").default>;
+            syncFeed: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/syncFeed").default>;
+            trackedPeople: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/trackedPeople").default>;
         };
         llm: {
             accountAuthHealth: Injected<typeof import("./llm/accountAuthHealth").default>;
@@ -461,17 +492,23 @@ declare global {
             addMedication: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/addMedication").default>;
             addObservation: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/addObservation").default>;
             conditions: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/conditions").default>;
+            createDiary: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/createDiary").default>;
+            deleteDiary: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/deleteDiary").default>;
             diary: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/diary").default>;
             doc: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/doc").default>;
             documents: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/documents").default>;
+            getDiary: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/getDiary").default>;
             hypotheses: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/hypotheses").default>;
             lastSync: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/lastSync").default>;
+            listDiary: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/listDiary").default>;
             medications: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/medications").default>;
             observations: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/observations").default>;
+            runSync: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/runSync").default>;
             setHypothesis: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/setHypothesis").default>;
             sql: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/sql").default>;
             stats: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/stats").default>;
             sync: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/sync").default>;
+            updateDiary: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/updateDiary").default>;
             vitals: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/vitals").default>;
         };
         nav: {
@@ -836,6 +873,19 @@ declare global {
             inspect: Injected<typeof import("./skill/inspect").default>;
             uptime: Injected<typeof import("../.hyper/skill/uptime").default>;
             wordCount: Injected<typeof import("./skill/wordCount").default>;
+        };
+        substack: {
+            add: Injected<typeof import("../plugins/substack/src/substack/add").default>;
+            archive: Injected<typeof import("../plugins/substack/src/substack/archive").default>;
+            discover: Injected<typeof import("../plugins/substack/src/substack/discover").default>;
+            importNewsState: Injected<typeof import("../plugins/substack/src/substack/importNewsState").default>;
+            list: Injected<typeof import("../plugins/substack/src/substack/list").default>;
+            post: Injected<typeof import("../plugins/substack/src/substack/post").default>;
+            posts: Injected<typeof import("../plugins/substack/src/substack/posts").default>;
+            seedLegacy: Injected<typeof import("../plugins/substack/src/substack/seedLegacy").default>;
+            status: Injected<typeof import("../plugins/substack/src/substack/status").default>;
+            sync: Injected<typeof import("../plugins/substack/src/substack/sync").default>;
+            syncAll: Injected<typeof import("../plugins/substack/src/substack/syncAll").default>;
         };
         tasks: {
             create: Injected<typeof import("../plugins/tasks/src/tasks/create").default>;
