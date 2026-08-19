@@ -3,10 +3,25 @@
 // Capability calls use the scoped external token; `repl` intentionally uses the
 // stronger loopback-only REPL token and may execute arbitrary ctx code.
 const argv = process.argv.slice(2);
-const workdir = expand(process.env.WORKDIR ?? process.cwd());
-const runtime = workdir + "/.runtime";
-const port = (await Bun.file(runtime + "/port").text().catch(() => "")).trim();
-if (!port) fail(`No ${runtime}/port — is Hyper running for this WORKDIR?`);
+// Which workspace to talk to. An explicit WORKDIR always wins; otherwise the
+// current directory is used only if a Hyper actually runs there, so calling
+// `hyper` from anywhere (/tmp, another repo) still reaches the running one
+// instead of failing with "no .runtime/port".
+const candidates = [
+    process.env.WORKDIR,
+    process.cwd(),
+    await Bun.file(expand("~/.hyper/workdir")).text().catch(() => "").then(t => t.trim() || undefined),
+    "~/hyper-code2",
+].filter(Boolean).map(dir => expand(dir as string));
+
+let workdir = "", runtime = "", port = "";
+for (const dir of candidates) {
+    const found = (await Bun.file(dir + "/.runtime/port").text().catch(() => "")).trim();
+    if (!found) continue;
+    workdir = dir; runtime = dir + "/.runtime"; port = found;
+    break;
+}
+if (!port) fail(`No .runtime/port in any of: ${candidates.join(", ")} — is Hyper running?`);
 const base = `http://127.0.0.1:${port}`;
 
 const [command, sub, ...rest] = argv;

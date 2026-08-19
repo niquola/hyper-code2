@@ -19,6 +19,12 @@
     },
     "rss": {
       "path": "plugins/rss"
+    },
+    "linkedin": {
+      "path": "/Users/niquola/.hyper/user/linkedin"
+    },
+    "crme": {
+      "path": "/Users/niquola/.hyper/user/crme"
     }
   }
 }

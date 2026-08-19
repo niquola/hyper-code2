@@ -80,8 +80,8 @@ Each namespace also exposes a generic `<ns>.api({ path|url, method?, body?, acco
 ## Call it
 
 ```sh
-uni 'await ctx.fns.google.accounts({})'
-uni 'await ctx.fns.gmail.list({ query: "is:unread", max: 5 })'
+hyper repl 'await ctx.fns.google.accounts({})'
+hyper repl 'await ctx.fns.gmail.list({ query: "is:unread", max: 5 })'
 ```
 
 ## Popular usage
@@ -95,7 +95,7 @@ Mined from real session history (most-used first). **Known accounts** (pass as `
 - `gmail.labels / filterCreate / unsubscribe / download / attachments / draft / reply / send` — labels, filters, one-click unsubscribe, save attachments, compose.
 
 ```sh
-uni 'await ctx.fns.gmail.list({ query: "is:unread", max: 10, account: "niquola@health-samurai.io" })'
-uni 'await ctx.fns.gmail.list({ query: "from:github.com newer_than:1d", max: 10 })'
-uni 'await ctx.fns.gmail.get({ id: "<messageId>", account: "niquola@gmail.com" })'
+hyper repl 'await ctx.fns.gmail.list({ query: "is:unread", max: 10, account: "niquola@health-samurai.io" })'
+hyper repl 'await ctx.fns.gmail.list({ query: "from:github.com newer_than:1d", max: 10 })'
+hyper repl 'await ctx.fns.gmail.get({ id: "<messageId>", account: "niquola@gmail.com" })'
 ```
