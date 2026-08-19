@@ -1,0 +1,8 @@
+{
+  "label": "knowledge",
+  "href": "/knowledge",
+  "hint": "page · people, organizations, products, concepts and sourced relations",
+  "icon": "ph-graph",
+  "group": "Knowledge",
+  "order": 20
+}

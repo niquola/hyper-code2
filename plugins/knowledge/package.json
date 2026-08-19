@@ -1,0 +1,12 @@
+{
+  "name": "knowledge",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "Knowledge",
+    "icon": "ph-graph",
+    "optional": true,
+    "description": "Typed people, organizations, products and concepts with provenance, relations and full-text search in an isolated Postgres schema."
+  }
+}

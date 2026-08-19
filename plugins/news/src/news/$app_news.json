@@ -1,0 +1,8 @@
+{
+  "label": "news",
+  "href": "/news",
+  "hint": "page · durable archive and reader",
+  "icon": "ph-newspaper",
+  "group": "Knowledge",
+  "order": 30
+}

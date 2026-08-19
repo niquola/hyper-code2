@@ -388,6 +388,31 @@ declare global {
             mermaid: Injected<typeof import("./markdown/mermaid").default>;
             render: Injected<typeof import("./markdown/render").default>;
         };
+        knowledge: {
+            ensure: Injected<typeof import("../plugins/knowledge/src/knowledge/ensure").default>;
+            find: Injected<typeof import("../plugins/knowledge/src/knowledge/find").default>;
+            get: Injected<typeof import("../plugins/knowledge/src/knowledge/get").default>;
+            importFiles: Injected<typeof import("../plugins/knowledge/src/knowledge/importFiles").default>;
+            matchPerson: Injected<typeof import("../plugins/knowledge/src/knowledge/matchPerson").default>;
+            observe: Injected<typeof import("../plugins/knowledge/src/knowledge/observe").default>;
+            rebuildSearch: Injected<typeof import("../plugins/knowledge/src/knowledge/rebuildSearch").default>;
+            resolve: Injected<typeof import("../plugins/knowledge/src/knowledge/resolve").default>;
+            stats: Injected<typeof import("../plugins/knowledge/src/knowledge/stats").default>;
+            types: Injected<typeof import("../plugins/knowledge/src/knowledge/types").default>;
+            upsert: Injected<typeof import("../plugins/knowledge/src/knowledge/upsert").default>;
+            validate: Injected<typeof import("../plugins/knowledge/src/knowledge/validate").default>;
+        };
+        news: {
+            ensure: Injected<typeof import("../plugins/news/src/news/ensure").default>;
+            get: Injected<typeof import("../plugins/news/src/news/get").default>;
+            list: Injected<typeof import("../plugins/news/src/news/list").default>;
+            put: Injected<typeof import("../plugins/news/src/news/put").default>;
+            search: Injected<typeof import("../plugins/news/src/news/search").default>;
+            setLiked: Injected<typeof import("../plugins/news/src/news/setLiked").default>;
+            setRead: Injected<typeof import("../plugins/news/src/news/setRead").default>;
+            sources: Injected<typeof import("../plugins/news/src/news/sources").default>;
+            stats: Injected<typeof import("../plugins/news/src/news/stats").default>;
+        };
         nav: {
             items: Injected<typeof import("./nav/items").default>;
         };

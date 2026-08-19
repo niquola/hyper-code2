@@ -25,6 +25,11 @@ hyper skills mount
 
 The CLI provides live plugin/function discovery, schema-validated declared-tool calls, a separately-tokened loopback-only arbitrary REPL, and managed `hyper-*` skill links. See [External coding harnesses](docs/external-harnesses.md) for setup, commands, and the security model.
 
+## Core applications
+
+- **[Knowledge](plugins/knowledge/SKILL.md)** — typed entities, provenance and relations in the isolated `knowledge` schema; UI at `/knowledge`.
+- **[News](docs/news.md)** — durable source-neutral archive, search, read/like state and keyboard slideshow; UI at `/news`.
+
 
 ## UI architecture: HTMX first
 

@@ -10,6 +10,12 @@
     "tasks": {},
     "google": {},
     "research": {},
-    "arxiv": {}
+    "arxiv": {},
+    "knowledge": {
+      "path": "plugins/knowledge"
+    },
+    "news": {
+      "path": "plugins/news"
+    }
   }
 }
