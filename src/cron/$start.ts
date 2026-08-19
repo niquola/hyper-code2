@@ -6,6 +6,7 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
     }
     await ctx.fns.cron.recover({});
     (ctx.state as any).cron ??= {};
+    await ctx.fns.cron.reconcile({});
     (ctx.state as any).cron.running = true;
     queueMicrotask(() => ctx.fns.cron.workerLoop({}).catch((error: any) =>
         ctx.fns.procs.log.error({ event: "cron.worker.crashed", msg: String(error?.stack ?? error) })));

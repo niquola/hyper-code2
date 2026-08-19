@@ -1,21 +1,22 @@
 // gdoc.upload — upload a local file to Google Drive (multipart). WRITE OP.
-// ctx.fns.gdoc.upload({ path: "/tmp/report.pdf", name?: "Report.pdf", public?: false })
+// ctx.fns.gdoc.upload({ path: "/tmp/report.pdf", name?: "Report.pdf", folder?: "folder-id-or-url", public?: false })
 // → { id, name, link, downloadLink, size }
 // `public: true` grants anyone-with-link reader access (default false — private).
 /**
- * Upload content as a Google document.
+ * Upload an arbitrary local file to Google Drive, optionally into a folder.
  *
  * @param opts - Options for the operation.
- * @param opts.path - API-relative path or local destination path, as applicable.
- * @param opts.name - Resource name.
- * @param opts.public - Whether the created document should receive public link access.
+ * @param opts.path - Absolute or workspace-relative path of the local file to upload.
+ * @param opts.name - File name in Google Drive; defaults to the local basename.
+ * @param opts.folder - Destination folder ID or Google Drive folder URL; omit to upload to My Drive root.
+ * @param opts.public - Whether anyone with the link can read the uploaded file. @default false
  * @param opts.account - Google account email to use; defaults to `GOOGLE_ACCOUNT` when supported.
  */
 export default async function (
     ctx: Context,
     session: Session | null,
-    opts: { path: string; name?: string; public?: boolean; account?: string },
-) {
+    opts: { path: string; name?: string; folder?: string; public?: boolean; account?: string },
+): Promise<{ id: string; name: string; link?: string; downloadLink: string; size: number; parents: string[] }> {
     if (!opts?.path) throw new Error("gdoc.upload requires { path }");
     const { access_token } = await ctx.fns.google.token({ account: opts.account });
     const file = Bun.file(opts.path);
@@ -23,11 +24,16 @@ export default async function (
 
     const content = await file.arrayBuffer();
     const name = opts.name || opts.path.split("/").pop() || "file";
+    const extractId = (value: string): string => {
+        const match = value.match(/\/folders\/([a-zA-Z0-9_-]+)/) || value.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        return match ? match[1]! : value.trim();
+    };
+    const folder = opts.folder ? extractId(opts.folder) : undefined;
     const boundary = "-------314159265358979323846";
     const body = new Blob([
         `\r\n--${boundary}\r\n`,
         "Content-Type: application/json; charset=UTF-8\r\n\r\n",
-        JSON.stringify({ name }),
+        JSON.stringify({ name, ...(folder ? { parents: [folder] } : {}) }),
         `\r\n--${boundary}\r\n`,
         "Content-Type: application/octet-stream\r\n\r\n",
         content,
@@ -35,7 +41,7 @@ export default async function (
     ]);
 
     const res = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink,size",
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink,size,parents",
         { method: "POST", headers: { Authorization: `Bearer ${access_token}`, "Content-Type": `multipart/related; boundary=${boundary}` }, body },
     );
     const result: any = await res.json();
@@ -53,5 +59,6 @@ export default async function (
         id: result.id, name: result.name, link: result.webViewLink,
         downloadLink: `https://drive.google.com/uc?export=download&id=${result.id}`,
         size: parseInt(result.size) || content.byteLength,
+        parents: result.parents ?? [],
     };
 }

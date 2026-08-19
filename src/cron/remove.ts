@@ -1,19 +1,11 @@
 /**
- * Cancels pending occurrences of a named cron schedule.
- *
- * Deletes pending jobs and prevents a currently running recurring occurrence from scheduling another occurrence after it finishes.
- * @param opts.name Exact schedule name to cancel.
+ * Removes an ad-hoc cron task or disables a file-declared task.
+ * @param opts.name Exact task name.
  */
-export default async function (
-    ctx: Context,
-    session: Session | null,
-    opts: {
-        /** Exact schedule name to cancel. */
-        name: string;
-    },
-): Promise<{ removed: number; runningDisabled: number }> {
-    const name = String(opts.name ?? "").trim(); if (!name) throw new Error("cron.remove requires name");
-    const disabled = await ctx.fns.procs.db.run({ sql: "UPDATE cron_jobs SET every_ms = NULL WHERE name = ? AND status = 'running' AND every_ms IS NOT NULL", params: [name] });
-    const removed = await ctx.fns.procs.db.run({ sql: "DELETE FROM cron_jobs WHERE name = ? AND status = 'pending'", params: [name] });
-    ctx.fns.cron.wakeWorker({}); return { removed: removed.changes, runningDisabled: disabled.changes };
+export default async function (ctx: Context, _session: Session | null, opts: {
+    /** Exact task name. */ name: string;
+}): Promise<{ removed: number; disabled: number }> {
+    const rows=await ctx.fns.procs.db.select({sql:"SELECT source FROM cron_tasks WHERE name=?",params:[opts.name]}); const task:any=rows[0]; if(!task) return {removed:0,disabled:0};
+    if(task.source==='declared'){const r=await ctx.fns.procs.db.run({sql:"UPDATE cron_tasks SET enabled=FALSE,updated_at=? WHERE name=?",params:[Date.now(),opts.name]}); ctx.fns.cron.wakeWorker({}); return {removed:0,disabled:r.changes};}
+    const r=await ctx.fns.procs.db.run({sql:"DELETE FROM cron_tasks WHERE name=? AND state='idle'",params:[opts.name]}); ctx.fns.cron.wakeWorker({}); return {removed:r.changes,disabled:0};
 }

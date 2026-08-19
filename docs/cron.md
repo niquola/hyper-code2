@@ -1,18 +1,28 @@
 # Embedded cron tasks
 
-## Scope
+Hyper executes durable background runtime functions with an embedded worker in the HTTP Bun process.
 
-Hyper runs a small durable cron queue for background runtime functions. Jobs are stored in Postgres and executed by an embedded worker in the HTTP Bun process.
+## Storage model
 
-The MVP intentionally supports only:
+Cron uses two Postgres tables:
 
-- recurring fixed-delay intervals (`every: "15m"`);
-- one-shot jobs (`in: "30m"` or an absolute `at` time);
-- runtime function targets such as `google.syncCalendar`;
-- JSON-compatible arguments and results;
-- a small execution history in `cron_jobs`.
+- `cron_tasks` — one row per task: function, arguments, schedule, `next_run_at`, operational `enabled` status, worker state, and declaration source;
+- `cron_runs` — immutable execution history with scheduled/start/finish times, status, result, and error.
 
-It does **not** support cron expressions, time zones, retries, subprocess isolation, hard timeouts, or multiple scheduler owners.
+Recurring definitions may be version-controlled in `$cron_<name>.ts` files:
+
+```ts
+// .hyper/calendar/$cron_calendar-master-hourly.ts
+export default {
+  fn: "calendar.wakeMaster",
+  every: "1h",
+  args: { account: "niquola@health-samurai.io" },
+};
+```
+
+The `$loader_cron.ts` loader collects definitions and `cron.reconcile` loads them into `cron_tasks`. File definitions own `fn`, `args`, and interval. The database owns operational state, especially `enabled`, `state`, and `next_run_at`. Reconciliation preserves an existing task's enabled status and next run. Removing a declaration disables its task rather than deleting history.
+
+Tasks created through `cron.add` or `cron.defer` have source `adhoc` and live entirely in Postgres.
 
 ## API
 
@@ -32,47 +42,35 @@ await ctx.fns.cron.defer({
   args: {},
 });
 
-await ctx.fns.cron.defer({
-  name: "calendar-at",
-  fn: "google.syncCalendar",
-  at: "2029-02-01T09:00:00Z",
-});
-
 await ctx.fns.cron.list({ limit: 100 });
+await ctx.fns.cron.runs({ name: "calendar-sync", limit: 100 });
 await ctx.fns.cron.runNow({ name: "calendar-sync" });
+await ctx.fns.cron.setEnabled({ name: "calendar-sync", enabled: false });
 await ctx.fns.cron.remove({ name: "calendar-sync" });
 ```
 
-Intervals accept a positive number of seconds or strings composed from `d`, `h`, `m`, and `s`, for example `1d`, `30m`, or `1h30m`.
+Intervals accept positive seconds or strings such as `1d`, `30m`, and `1h30m`.
 
-## Execution model
+## Execution
 
-`cron_jobs` contains both pending occurrences and completed history. The worker atomically changes a due row from `pending` to `running`, invokes the registered `ctx.fns.<namespace>.<function>`, and records `done` or `error`. A recurring job schedules its next occurrence after completion, so intervals are **fixed-delay** and do not overlap under normal operation.
+The worker atomically claims one due enabled `cron_tasks` row, switches it to `running`, and inserts a `cron_runs` row in the same statement. It invokes the registered runtime function and records `done` or `error`. An interval task receives a new `next_run_at` after completion, giving fixed-delay semantics. A one-shot task becomes disabled after its run.
 
-On process startup, `running` rows left by an earlier process exit are marked as errors. Recurring interrupted rows get one new pending occurrence. The worker polls Postgres at most every 30 seconds and also uses an in-process wake signal for immediate local changes.
+On startup, interrupted running rows are marked as errors and tasks return to `idle`. The worker polls Postgres at most every 30 seconds and also uses an in-process wake signal. It runs up to four jobs concurrently. A hanging function cannot be forcibly killed; subprocess isolation remains future work.
 
-Execution is embedded and concurrent (up to four jobs by default). A hanging function cannot be forcibly killed and consumes one worker slot. This is the main reason to consider subprocess workers later.
+## UI
 
-## Web UI
+Open `/cron` or choose **cron tasks** from global navigation. The main page shows one row per task with:
 
-Open `/cron` or choose **cron tasks** from global navigation. The page provides:
+- enabled/disabled and worker state;
+- next execution and interval;
+- latest run status/error;
+- `Run now` and `Enable/Disable` controls.
 
-- a five-second live view of pending, running, completed, and failed occurrences;
-- forms for recurring interval tasks and relative one-shot tasks;
-- `Run now` and `Remove` actions for pending schedules;
-- compact argument and first-line error inspection.
+Selecting a task opens `/cron/:name`, which shows the definition and run history. The forms create ad-hoc recurring and relative one-shot tasks.
 
-The MVP form accepts relative one-shot durations only. Use `cron.defer({ at })` through the runtime API for absolute timestamps. Arguments must be a JSON object.
-
-
-## Operations and limitations
+## Limitations
 
 - Set `CRON_WORKER=off` to disable execution in a process.
-- Only one process should have the embedded worker enabled.
-- Postgres is the durable source of truth; the wake signal is only an optimization.
-- `cron.remove` cancels pending occurrences but preserves completed history.
-- `cron.runNow` moves an existing pending occurrence to the current time.
-- Results are truncated to a marker when serialized JSON exceeds 8 KiB.
-- Failed recurring jobs continue on their normal interval; automatic retries are not part of the MVP.
-
-A future standalone worker can reuse `claim`, `runOne`, and the same table without changing task declarations.
+- Only one embedded scheduler owner should be enabled.
+- Cron expressions, time zones, retries, hard timeouts, and retention policies are not implemented.
+- Results larger than 8 KiB are replaced by a truncation marker.

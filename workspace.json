@@ -19,9 +19,6 @@
     },
     "rss": {
       "path": "plugins/rss"
-    },
-    "focus": {
-      "path": "/Users/niquola/.hyper/user/focus"
     }
   }
 }

@@ -18,7 +18,7 @@ export default async function (
             inflight.add(promise);
         }
         if (!state.running) break;
-        if (!claimed) { const rows = await ctx.fns.procs.db.select({ sql: "SELECT MIN(run_at) AS next FROM cron_jobs WHERE status = 'pending'" }); const next = Number((rows[0] as any)?.next ?? Date.now() + maxIdleMs); await wait(Math.min(maxIdleMs, Math.max(50, next - Date.now()))); }
+        if (!claimed) { const rows = await ctx.fns.procs.db.select({ sql: "SELECT MIN(next_run_at) AS next FROM cron_tasks WHERE enabled AND state='idle' AND next_run_at IS NOT NULL" }); const next = Number((rows[0] as any)?.next ?? Date.now() + maxIdleMs); await wait(Math.min(maxIdleMs, Math.max(50, next - Date.now()))); }
     }
     if (inflight.size) await Promise.allSettled([...inflight]);
 }

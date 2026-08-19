@@ -1,26 +1,25 @@
 /**
- * Executes one already claimed cron occurrence.
- *
- * Internal worker primitive that invokes the target runtime function, stores its result or error, and schedules the next fixed-delay occurrence.
- * @param opts.id Claimed cron job identifier.
+ * Executes one claimed cron run and advances its task schedule.
+ * @param opts.id Running cron run identifier.
  */
-export default async function (
-    ctx: Context,
-    session: Session | null,
-    opts: {
-        /** Claimed cron job identifier. */
-        id: number;
-    },
-): Promise<{ id: number; name: string; status: string; ms: number }> {
-    const rows = await ctx.fns.procs.db.select({ sql: "SELECT * FROM cron_jobs WHERE id = ? AND status = 'running'", params: [opts.id] });
-    const job: any = rows[0]; if (!job) throw new Error(`cron.runOne: running job ${opts.id} not found`);
-    const segments = String(job.fn).split("."); let target: any = ctx.fns; for (const segment of segments) target = target?.[segment];
+export default async function (ctx: Context, _session: Session | null, opts: {
+    /** Running cron run identifier. */ id: number;
+}): Promise<{ id: number; name: string; status: string; ms: number }> {
+    const rows = await ctx.fns.procs.db.select({ sql: "SELECT * FROM cron_runs WHERE id=? AND status='running'", params: [opts.id] });
+    const run: any = rows[0]; if (!run) throw new Error(`cron.runOne: running run ${opts.id} not found`);
+    let target: any = ctx.fns; for (const segment of String(run.fn).split(".")) target = target?.[segment];
     const started = Date.now(); let status = "done", result: any = null, error: string | null = null;
-    try { if (typeof target !== "function") throw new Error(`unknown runtime function: ${job.fn}`); result = await target(typeof job.args === "string" ? JSON.parse(job.args) : (job.args ?? {})); }
+    try { if (typeof target !== "function") throw new Error(`unknown runtime function: ${run.fn}`); result = await target(typeof run.args === "string" ? JSON.parse(run.args) : (run.args ?? {})); }
     catch (cause: any) { status = "error"; error = String(cause?.stack ?? cause?.message ?? cause).slice(0, 16000); }
-    let resultJson = "null"; try { const json = JSON.stringify(result ?? null); resultJson = json.length <= 8192 ? json : JSON.stringify({ truncated: true, bytes: json.length }); } catch { resultJson = JSON.stringify({ unserializable: true }); }
-    const finished = Date.now(); const updated = await ctx.fns.procs.db.select({ sql: `UPDATE cron_jobs SET status = ?, result = ?::jsonb, error = ?, finished_at = ? WHERE id = ? RETURNING every_ms AS "everyMs"`, params: [status, resultJson, error, finished, job.id] });
-    const everyMs = Number((updated[0] as any)?.everyMs ?? 0);
-    if (everyMs > 0) await ctx.fns.procs.db.run({ sql: `INSERT INTO cron_jobs (name, fn, args, run_at, every_ms, status, created_at) VALUES (?, ?, ?::jsonb, ?, ?, 'pending', ?)`, params: [job.name, job.fn, JSON.stringify(job.args ?? {}), finished + everyMs, everyMs, finished] });
-    ctx.fns.cron.wakeWorker({}); return { id: Number(job.id), name: String(job.name), status, ms: finished - started };
+    let resultJson = "null"; try { const json=JSON.stringify(result ?? null); resultJson=json.length<=8192?json:JSON.stringify({truncated:true,bytes:json.length}); } catch { resultJson=JSON.stringify({unserializable:true}); }
+    const finished = Date.now();
+    await ctx.fns.procs.db.run({ sql: "UPDATE cron_runs SET status=?, result=?::jsonb, error=?, finished_at=? WHERE id=?", params: [status, resultJson, error, finished, run.id] });
+    await ctx.fns.procs.db.run({
+        sql: `UPDATE cron_tasks SET state='idle',
+                 next_run_at=CASE WHEN enabled AND schedule_type='interval' AND every_ms IS NOT NULL THEN ? + every_ms ELSE NULL END,
+                 enabled=CASE WHEN schedule_type='once' THEN FALSE ELSE enabled END,
+                 updated_at=? WHERE name=?`,
+        params: [finished, finished, run.task_name],
+    });
+    ctx.fns.cron.wakeWorker({}); return { id:Number(run.id), name:String(run.task_name), status, ms:finished-started };
 }
