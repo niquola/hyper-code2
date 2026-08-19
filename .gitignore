@@ -5,7 +5,12 @@ node_modules
 out
 dist
 *.tgz
+mobile/.derived/
+mobile/.derived-device/
+mobile/.runtime/
 
+mobile/**/*.xcuserstate
+mobile/**/xcuserdata/
 # code coverage
 coverage
 *.lcov

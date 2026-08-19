@@ -28,6 +28,7 @@ export default async function (ctx: Context, session: Session | null, opts: {
 <head>
 <meta charset="utf-8">
 <script>(function(){try{var saved=localStorage.getItem('hyper-theme');var theme=saved==='light'||saved==='dark'?saved:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme}catch(_){document.documentElement.dataset.theme='light';document.documentElement.style.colorScheme='light'}})()</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>${esc(pageTitle)}</title>
 <script src="/ui/vendor/tailwind.js"></script>
 <link rel="icon" href="${favicon}" type="image/svg+xml">
@@ -147,6 +148,57 @@ export default async function (ctx: Context, session: Session | null, opts: {
 .app-popup-body .edit-preview pre { border-radius: 0; background: transparent !important; }
 .app-popup-body .edit-remove pre { background: transparent !important; }
 .app-popup-body .edit-add pre { background: transparent !important; }
+
+@media (max-width: 700px) {
+  html, body, #frame { width: 100%; height: 100dvh; min-height: 0; overflow: hidden; }
+  body { -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+  #quick-bar { display: none !important; }
+  #page-view, #main { width: 100%; height: 100dvh; min-height: 0; overflow: hidden; }
+  #mobile-nav-button { display: inline-flex !important; position: fixed; z-index: 49; top: max(.4rem, env(safe-area-inset-top)); left: .5rem; width: 2.75rem; height: 2.75rem; align-items: center; justify-content: center; border-radius: 9999px; border: 1px solid var(--color-ui-border); background: rgb(from var(--color-base-100) r g b / .82); color: color-mix(in oklab, var(--color-base-content) 72%, transparent); box-shadow: inset 0 1px 0 rgb(255 255 255 / .25), 0 5px 18px rgb(0 0 0 / .14); backdrop-filter: blur(16px) saturate(120%); -webkit-backdrop-filter: blur(16px) saturate(120%); touch-action: manipulation; }
+  #mobile-nav-button:active { transform: scale(.94); }
+  #chat-panel > header { padding-left: 3.1rem !important; }
+  #nav-overlay { padding: max(.5rem, env(safe-area-inset-top)) .5rem max(.5rem, env(safe-area-inset-bottom)) !important; }
+  #nav-overlay [role="dialog"] { border-radius: 1.25rem; }
+  #nav-overlay .nav-row { min-height: 3rem; }
+  [data-page="agent"] { width: 100%; height: 100%; min-height: 0; overflow: hidden; }
+  [data-page="agent"] > aside[id^="agent-meta-"] { display: none !important; }
+  #chat-panel { width: 100%; min-width: 0; }
+  #chat-panel > header { width: calc(100% - 1rem) !important; max-width: none !important; margin-top: .4rem !important; padding-right: .55rem !important; gap: .4rem !important; }
+  button, a, select, input[type="checkbox"], input[type="radio"] { touch-action: manipulation; }
+  #chat-panel > header button, #chat-panel > header a { min-width: 2.25rem; min-height: 2.25rem; display: inline-flex; align-items: center; justify-content: center; }
+  #chat-panel > header select { min-height: 2.25rem; }
+  .chat-composer button { min-width: 2.75rem; min-height: 2.75rem; }
+  .chat-composer [data-attach-button] { left: 0; top: 0; }
+
+  #chat-panel > header > span:nth-of-type(1) { flex: 1; }
+  #chat-panel > header > span.ml-auto { max-width: 3.25rem; overflow: hidden; }
+  #chat-panel > header > span.ml-auto > :not(:first-child) { display: none !important; }
+  #messages, #messages > *, #messages .assistant, #messages .user, #messages .tool { min-width: 0; max-width: 100%; }
+  #messages { overflow-x: hidden !important; }
+  #messages .tool { min-width: 2.25rem; min-height: 2.25rem; padding: .45rem; touch-action: manipulation; }
+  #messages button[data-action="delete-one"], #messages button[data-action="delete-from"] { min-width: 2.25rem; min-height: 2.25rem; }
+  #messages [data-load-older] { min-height: 2.75rem; padding-inline: 1rem; }
+
+  #messages .sr-only { width: 1px !important; max-width: 1px !important; overflow: hidden !important; white-space: nowrap !important; }
+
+  #messages .group > .relative > .absolute { display: none !important; }
+
+  #messages [class*="max-w-"] { min-width: 0; }
+  #messages .prose, #messages p, #messages li, #messages td, #messages th { overflow-wrap: anywhere; word-break: break-word; }
+  #messages pre, #messages .shiki { max-width: 100%; overflow-x: auto !important; overflow-wrap: normal; word-break: normal; }
+  #messages img, #messages video, #messages svg, #messages table { max-width: 100%; }
+  #messages table { display: block; overflow-x: auto; }
+  .chat-composer > * { max-width: 100%; min-width: 0; }
+
+  .chat-dot-grid { padding: 3.75rem .5rem 6.25rem !important; }
+  .chat-dot-grid > * { max-width: 100% !important; }
+  .chat-composer { width: calc(100% - .75rem) !important; max-width: none !important; margin-bottom: max(.25rem, env(safe-area-inset-bottom)) !important; padding-top: .5rem !important; }
+  .chat-composer > div:first-child { display: none; }
+  .chat-composer .glass-input { font-size: 16px !important; }
+  #app-popup { width: calc(100vw - 1rem) !important; max-height: calc(100dvh - 1rem) !important; }
+  #app-popup > div { max-height: calc(100dvh - 1rem) !important; }
+}
+
 </style>
 
 <style>
@@ -177,6 +229,7 @@ ${opts.headExtra ?? ""}
 </head>
 <body hx-ext="popup-rpc" class="bg-base-200 text-base-content text-sm h-screen${embedded ? " overflow-hidden" : ""}"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
 <div id="frame" class="relative flex h-screen">
+  ${embedded ? "" : ctx.fns.procs.ui.button({ action: "open-global-menu-mobile", html: '<i class="ph ph-squares-four text-xl" aria-hidden="true"></i>', appearance: "plain", title: "Agents and pages", ariaLabel: "Open agents and pages", class: "hidden", attrs: { id: "mobile-nav-button", onclick: "window.__navOpen?.()" } })}
   ${embedded ? "" : `<nav id="quick-bar" aria-label="Quick access" class="my-2 ml-2 mr-1 flex h-[calc(100%-1rem)] w-10 shrink-0 flex-col items-center rounded-2xl border border-ui-border py-2 shadow-sm">
     ${ctx.fns.procs.ui.button({ action: "open-global-menu", html: '<i class="ph ph-squares-four text-base" aria-hidden="true"></i>', appearance: "plain", title: "Global menu — ⌘/", ariaLabel: "Open global menu", class: "flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content", attrs: { onclick: "window.__navOpen?.()" } })}
     ${ctx.fns.procs.ui.button({ action: "toggle-theme", html: '<i class="ph ph-moon" aria-hidden="true"></i>', appearance: "plain", title: "Switch color theme", ariaLabel: "Switch color theme", class: "mt-1 flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content", attrs: { id: "theme-toggle", "aria-pressed": "false" } })}

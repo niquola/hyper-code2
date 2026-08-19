@@ -1,0 +1,127 @@
+import SwiftUI
+import UIKit
+import WebKit
+
+enum WebNavigationAction { case back, forward, reload }
+
+struct WebNavigationCommand: Equatable {
+    let id = UUID()
+    let action: WebNavigationAction
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
+}
+
+struct HyperWebView: UIViewRepresentable {
+    let urlString: String
+    let command: WebNavigationCommand?
+    @Binding var isLoading: Bool
+    @Binding var canGoBack: Bool
+    @Binding var canGoForward: Bool
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .default()
+        configuration.allowsInlineMediaPlayback = true
+
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
+        webView.allowsBackForwardNavigationGestures = true
+        webView.scrollView.keyboardDismissMode = .interactive
+        webView.isInspectable = true
+        context.coordinator.webView = webView
+        context.coordinator.load(urlString, in: webView)
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        context.coordinator.parent = self
+        if context.coordinator.requestedURL != urlString {
+            context.coordinator.load(urlString, in: webView)
+        }
+        if let command, context.coordinator.lastCommand != command.id {
+            context.coordinator.lastCommand = command.id
+            switch command.action {
+            case .back: if webView.canGoBack { webView.goBack() }
+            case .forward: if webView.canGoForward { webView.goForward() }
+            case .reload: webView.reload()
+            }
+        }
+    }
+
+    static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        webView.stopLoading()
+        webView.navigationDelegate = nil
+        webView.uiDelegate = nil
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+        var parent: HyperWebView
+        weak var webView: WKWebView?
+        var requestedURL = ""
+        var lastCommand: UUID?
+
+        init(parent: HyperWebView) { self.parent = parent }
+
+        func load(_ value: String, in webView: WKWebView) {
+            requestedURL = value
+            guard let url = URL(string: value), url.scheme != nil else {
+                webView.loadHTMLString(Self.errorPage("Invalid server URL"), baseURL: nil)
+                update(loading: false, webView: webView)
+                return
+            }
+            webView.load(URLRequest(url: url, cachePolicy: .reloadRevalidatingCacheData))
+        }
+
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            update(loading: true, webView: webView)
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            update(loading: false, webView: webView)
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            show(error, in: webView)
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            show(error, in: webView)
+        }
+
+        private func show(_ error: Error, in webView: WKWebView) {
+            webView.loadHTMLString(Self.errorPage((error as NSError).localizedDescription), baseURL: nil)
+            update(loading: false, webView: webView)
+        }
+
+        private func update(loading: Bool, webView: WKWebView) {
+            DispatchQueue.main.async {
+                self.parent.isLoading = loading
+                self.parent.canGoBack = webView.canGoBack
+                self.parent.canGoForward = webView.canGoForward
+            }
+        }
+
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                     for navigationAction: WKNavigationAction,
+                     windowFeatures: WKWindowFeatures) -> WKWebView? {
+            if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
+                UIApplication.shared.open(url)
+            }
+            return nil
+        }
+
+        private static func errorPage(_ message: String) -> String {
+            let escaped = message
+                .replacingOccurrences(of: "&", with: "&amp;")
+                .replacingOccurrences(of: "<", with: "&lt;")
+                .replacingOccurrences(of: ">", with: "&gt;")
+            return """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <style>body{font:17px -apple-system;padding:64px 24px;background:#111;color:#eee}p{color:#aaa;line-height:1.45}code{color:#8bd}</style>
+            <h2>Can’t connect to Hyper</h2><p>\(escaped)</p><p>Start Hyper on the Mac and check <code>http://localhost:3010</code> in Settings.</p>
+            """
+        }
+    }
+}
