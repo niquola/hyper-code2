@@ -24,7 +24,19 @@ Read-only access to the user's personal Telegram account through GramJS/MTProto.
 
 The live MTProto client and session are internal and are never returned by plugin functions.
 
-This version has no mark-read, sync, or local Postgres mirror operations.
+This version has no mark-read or general local Telegram mirror operations.
+
+## News-channel producer
+
+Telegram owns a durable broadcast-channel catalogue in `telegram.news_channels`; each channel has an independent JSON cursor (`maxMessageId`, `newestDate`). `telegram.news_posts` stores message content hashes and News links so edits are detected and unchanged posts are skipped.
+
+- `telegram.newsDiscover({ folder?, add? })` — discover broadcast channels in a Telegram folder; excludes `Haiku` and `Just links` by default.
+- `telegram.newsChannelAdd({ chat, title, folderId?, enabled? })` — add or update a channel.
+- `telegram.newsChannels({ enabled? })` — list channels, cursors and post counts.
+- `telegram.newsSyncChannel({ chat, max? })` — incrementally sync one channel through `news.put`.
+- `telegram.newsSync({ max? })` — explicitly sync all enabled channels.
+
+The producer never writes `news.items` directly. It ships no cron declaration; scheduling, if desired, belongs to the host. `Just links` remains disabled because link-following and article summarization require a separate producer.
 
 ## Write functions
 

@@ -764,6 +764,12 @@ declare global {
             start: Injected<typeof import("../plugins/tasks/src/tasks/start").default>;
         };
         telegram: {
+            newsChannelAdd: Injected<typeof import("../plugins/telegram/src/telegram/newsChannelAdd").default>;
+            newsChannels: Injected<typeof import("../plugins/telegram/src/telegram/newsChannels").default>;
+            newsDiscover: Injected<typeof import("../plugins/telegram/src/telegram/newsDiscover").default>;
+            newsHash: Injected<typeof import("../plugins/telegram/src/telegram/newsHash").default>;
+            newsSync: Injected<typeof import("../plugins/telegram/src/telegram/newsSync").default>;
+            newsSyncChannel: Injected<typeof import("../plugins/telegram/src/telegram/newsSyncChannel").default>;
             contacts: Injected<typeof import("../plugins/telegram/src/telegram/contacts").default>;
             createFolder: Injected<typeof import("../plugins/telegram/src/telegram/createFolder").default>;
             dialogs: Injected<typeof import("../plugins/telegram/src/telegram/dialogs").default>;
