@@ -12,7 +12,7 @@
  * @param opts.now Current time in ms, for testing.
  */
 export default function (ctx: Context, _session: Session | null, opts: {
-    /** Rows produced by llm.listAccounts. */ accounts: Array<{ provider: string; account: string; label: string; model: string; source: "file" | "oauth" | "keychain"; available: boolean; usedPercent: number | null; planType: string | null; resetsAt: number | null; parkedAgents: number }>;
+    /** Rows produced by llm.listAccounts. */ accounts: Array<{ provider: string; account: string; label: string; model: string; source: "file" | "oauth" | "keychain"; available: boolean; usedPercent: number | null; planType: string | null; resetsAt: number | null; parkedAgents: number; needsReconnect?: boolean }>;
     /** Login flows currently pending or recently completed. */ logins?: Array<{ provider: string; account: string; status: "pending" | "connected" | "failed"; verificationUri: string | null; userCode: string | null; error: string | null }>;
     /** Current timestamp in ms. */ now?: number;
 }): string {
@@ -29,14 +29,19 @@ export default function (ctx: Context, _session: Session | null, opts: {
         const quota = !a.available ? `limit exhausted${a.resetsAt ? ` · resets ${humanDelay(a.resetsAt-now)}` : ""}` : used == null ? "usage unavailable" : `${Math.round(used)}% used · ${Math.round(100-used)}% left`;
         const status = !a.available || (used != null && used >= 75) ? "limit" : used != null && used >= 50 ? "warning" : "ready";
         const storage = storageLabel(a.source);
-        return ctx.fns.procs.ui.row({ entity: "llm-account", id: `${a.provider}/${a.account}`, status, cells: [
+        const reconnect = a.needsReconnect
+            ? ctx.fns.ui.popup({ method: "llms.loginPopupFor", params: { provider: a.provider === "anthropic-oauth" ? "claude-code" : a.provider, account: a.account }, tone: "warning", size: "xs", html: `<i class="ph ph-arrow-clockwise" aria-hidden="true"></i><span>Reconnect</span>` })
+            : "";
+        const actions = `<span class="flex items-center gap-1">${reconnect}${remove(a)}</span>`;
+        return ctx.fns.procs.ui.row({ entity: "llm-account", id: `${a.provider}/${a.account}`, status: a.needsReconnect ? "error" : status, cells: [
             { role: "account", text: a.account === "default" ? "main" : a.account, class: "w-28 shrink-0 font-mono text-xs font-medium" },
             ...(a.planType ? [{ role: "plan", text: planName(a.provider, a.planType), title: `Subscription plan: ${a.planType}`, class: "badge badge-sm shrink-0 capitalize text-base-content/65" }] : []),
             { role: "prefix", text: prefix(a), title: prefix(a), class: "min-w-0 flex-1 truncate font-mono text-[11px] text-base-content/40" },
             { role: "storage", text: storage.text, title: storage.title, class: "hidden shrink-0 text-[10px] text-base-content/40 lg:block" },
             { role: "quota", text: quota, class: `shrink-0 text-[11px] ${status === "limit" ? "text-error" : status === "warning" ? "text-warning" : "text-success"}` },
+            ...(a.needsReconnect ? [{ role: "auth", text: "authentication required", class: "shrink-0 text-[11px] font-medium text-error" }] : []),
             ...(a.parkedAgents ? [{ role: "parked", text: `${a.parkedAgents} parked`, class: "badge badge-sm shrink-0 text-warning" }] : []),
-        ], right: remove(a) });
+        ], right: actions });
     };
 
     const providers = [

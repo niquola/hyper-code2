@@ -7,15 +7,17 @@ const BLOCKED = new Set(['__proto__', 'prototype', 'constructor']);
 
 export default async function (ctx: Context, _session: Session | null, opts: { req: Request }) {
     const req = opts.req;
-    // RPC drives privileged UI/runtime functions. Browser calls carry the
-    // authenticated session cookie; unauthenticated LAN requests must never
-    // become a generic ctx.fns gateway.
-    const user = await ctx.fns.procs.auth.authenticate({ req });
-    if (!user) return Response.json({ error: 'authentication required' }, { status: 401 });
     const origin = req.headers.get('origin');
     const target = new URL(req.url);
+    const fetchSite = req.headers.get('sec-fetch-site');
     if (origin && origin !== target.origin) return Response.json({ error: 'cross-origin rpc refused' }, { status: 403 });
-    if (req.headers.get('sec-fetch-site') === 'cross-site') return Response.json({ error: 'cross-site rpc refused' }, { status: 403 });
+    if (fetchSite === 'cross-site') return Response.json({ error: 'cross-site rpc refused' }, { status: 403 });
+    // The app itself can run without login. In that mode, permit only a real
+    // same-origin browser request; scripts/curl on the LAN still need a signed
+    // session because they do not carry the browser's Origin + Fetch Metadata.
+    const user = await ctx.fns.procs.auth.authenticate({ req });
+    const sameOriginBrowser = origin === target.origin && fetchSite === 'same-origin';
+    if (!user && !sameOriginBrowser) return Response.json({ error: 'authentication required' }, { status: 401 });
     const length = Number(req.headers.get('content-length') ?? 0);
     if (length > 256_000) return Response.json({ error: 'rpc body too large' }, { status: 413 });
 

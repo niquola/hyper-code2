@@ -11,12 +11,13 @@
  */
 export default function (ctx: Context, _session: Session | null, opts: {
     /** Provider to authenticate. */ provider: "claude-code" | "codex";
+    /** Existing account slot to reconnect. */ account?: string;
 }): string {
     const provider = opts.provider;
     if (provider !== "claude-code" && provider !== "codex") throw new Error("unsupported provider");
     return ctx.fns.ui.popupContent({
-        title: provider === "claude-code" ? "Add Claude Code account" : "Add Codex account",
+        title: opts.account ? `Reconnect ${opts.account}` : provider === "claude-code" ? "Add Claude Code account" : "Add Codex account",
         kind: "login",
-        html: ctx.fns.llms.loginPopup({ provider, flow: null }),
+        html: ctx.fns.llms.loginPopup({ provider, flow: null, account: opts.account }),
     });
 }

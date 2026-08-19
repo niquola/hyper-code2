@@ -12,7 +12,7 @@ const ctx: any = { fns: {
     } },
     ui: {
         modelLogo: () => "logo",
-        popup: () => "popup",
+        popup: (o: any) => JSON.stringify(o),
         live: ({ html }: any) => html,
     },
 } };
@@ -30,4 +30,15 @@ test("accounts card groups consistently by provider and renders plan/storage met
     expect(html).toContain('"role":"storage","text":"Encrypted by Hyper"');
     expect(html).not.toContain("Accounts from filesystem");
     expect(html).not.toContain("Managed by Hyper");
+});
+
+test("shows a reconnect action only on the broken account", () => {
+    const html = accountsCard(ctx, null, { accounts: [
+        { provider: "codex", account: "persona", label: "persona", model: "codex/persona:gpt", source: "file", available: true, usedPercent: 10, planType: "team", resetsAt: null, parkedAgents: 1, needsReconnect: true },
+        { provider: "codex", account: "healthy", label: "healthy", model: "codex/healthy:gpt", source: "file", available: true, usedPercent: 20, planType: "team", resetsAt: null, parkedAgents: 0, needsReconnect: false },
+    ] });
+    expect(html).toContain("authentication required");
+    expect(html).toContain("llms.loginPopupFor");
+    expect(html).toContain('\\"account\\":\\"persona\\"');
+    expect(html).not.toContain('llms.loginPopupFor\\",\\"params\\":{\\"provider\\":\\"codex\\",\\"account\\":\\"healthy\\"');
 });

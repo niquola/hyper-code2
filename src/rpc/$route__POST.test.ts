@@ -17,10 +17,15 @@ test('trusted rpc dispatches ctx.fns with an opts object', async () => {
     expect(await res.text()).toBe('<b>Hello Ada</b>');
 });
 
-test('rpc rejects a request without an authenticated session', async () => {
+test('rpc rejects an unauthenticated non-browser request but allows same-origin app UI', async () => {
     const authenticate = ctx.fns.procs.auth.authenticate;
     ctx.fns.procs.auth.authenticate = () => null;
-    try { expect((await call({ method: 'demo.hello', params: {} })).status).toBe(401); }
+    try {
+        expect((await call({ method: 'demo.hello', params: {} })).status).toBe(401);
+        const res = await call({ method: 'demo.hello', params: { name: 'UI' } }, { origin: 'http://localhost', 'sec-fetch-site': 'same-origin' });
+        expect(res.status).toBe(200);
+        expect(await res.text()).toBe('<b>Hello UI</b>');
+    }
     finally { ctx.fns.procs.auth.authenticate = authenticate; }
 });
 
