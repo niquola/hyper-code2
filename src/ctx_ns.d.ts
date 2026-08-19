@@ -194,6 +194,14 @@ declare global {
             stat: Injected<typeof import("./files/stat").default>;
             write: Injected<typeof import("./files/write").default>;
         };
+        focus: {
+            add: Injected<typeof import("../../.hyper/user/focus/src/focus/add").default>;
+            archive: Injected<typeof import("../../.hyper/user/focus/src/focus/archive").default>;
+            event: Injected<typeof import("../../.hyper/user/focus/src/focus/event").default>;
+            get: Injected<typeof import("../../.hyper/user/focus/src/focus/get").default>;
+            list: Injected<typeof import("../../.hyper/user/focus/src/focus/list").default>;
+            task: Injected<typeof import("../../.hyper/user/focus/src/focus/task").default>;
+        };
         gcal: {
             api: Injected<typeof import("../plugins/google/src/gcal/api").default>;
             calendars: Injected<typeof import("../plugins/google/src/gcal/calendars").default>;
