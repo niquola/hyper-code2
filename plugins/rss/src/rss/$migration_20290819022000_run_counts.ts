@@ -1,0 +1,2 @@
+const sql=`ALTER TABLE rss.runs ADD COLUMN IF NOT EXISTS updated integer NOT NULL DEFAULT 0; ALTER TABLE rss.runs ADD COLUMN IF NOT EXISTS unchanged integer NOT NULL DEFAULT 0;`;
+export default {up:async(ctx:Context)=>{await ctx.fns.procs.db.exec({sql})},down:async(ctx:Context)=>{await ctx.fns.procs.db.exec({sql:"ALTER TABLE rss.runs DROP COLUMN IF EXISTS unchanged; ALTER TABLE rss.runs DROP COLUMN IF EXISTS updated"})}};

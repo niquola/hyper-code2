@@ -640,6 +640,19 @@ declare global {
             search: Injected<typeof import("../plugins/research/src/research/search").default>;
             start: Injected<typeof import("../plugins/research/src/research/start").default>;
         };
+        rss: {
+            add: Injected<typeof import("../plugins/rss/src/rss/add").default>;
+            ensure: Injected<typeof import("../plugins/rss/src/rss/ensure").default>;
+            get: Injected<typeof import("../plugins/rss/src/rss/get").default>;
+            hash: Injected<typeof import("../plugins/rss/src/rss/hash").default>;
+            importNewsState: Injected<typeof import("../plugins/rss/src/rss/importNewsState").default>;
+            list: Injected<typeof import("../plugins/rss/src/rss/list").default>;
+            load: Injected<typeof import("../plugins/rss/src/rss/load").default>;
+            loadAll: Injected<typeof import("../plugins/rss/src/rss/loadAll").default>;
+            parse: Injected<typeof import("../plugins/rss/src/rss/parse").default>;
+            remove: Injected<typeof import("../plugins/rss/src/rss/remove").default>;
+            seedLegacy: Injected<typeof import("../plugins/rss/src/rss/seedLegacy").default>;
+        };
         runtime: {
             docs: {
                 get: Injected<typeof import("./runtime/docs/get").default>;

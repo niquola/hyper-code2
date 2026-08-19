@@ -16,6 +16,9 @@
     },
     "news": {
       "path": "plugins/news"
+    },
+    "rss": {
+      "path": "plugins/rss"
     }
   }
 }

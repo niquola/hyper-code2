@@ -1,0 +1,2 @@
+/** POST /rss/add — adds a feed from the management form. */
+export default async function(ctx:Context,_session:Session|null,opts:{req:Request;params:Record<string,string>}){const f=await opts.req.formData();await ctx.fns.rss.add({key:String(f.get("key")??""),label:String(f.get("label")??""),url:String(f.get("url")??""),category:String(f.get("category")??"")||undefined});return new Response(null,{status:303,headers:{location:"/rss"}})}
