@@ -48,17 +48,22 @@ struct NativeChatView: View {
                             LiveAssistantBubble(partial: partial)
                                 .id("live-assistant")
                         }
-                    }.padding(.horizontal, 12).padding(.vertical, 14)
+                    }.padding(.horizontal, 12).padding(.vertical, 12)
+                    .transaction { $0.animation = nil }
                 }
                 .defaultScrollAnchor(.bottom)
-                .onChange(of: store.events.count) { _, _ in
+                .onChange(of: store.events.last?.idx) { _, _ in
                     if let last = items.last {
                         var transaction = Transaction()
                         transaction.disablesAnimations = true
                         withTransaction(transaction) { proxy.scrollTo(last.id, anchor: .bottom) }
                     }
                 }
-                .onChange(of: store.partial?.revision) { _, revision in if revision != nil { proxy.scrollTo("live-assistant", anchor: .bottom) } }
+                .onChange(of: store.partial?.revision) { _, revision in
+                    guard revision != nil else { return }
+                    var transaction = Transaction(); transaction.disablesAnimations = true
+                    withTransaction(transaction) { proxy.scrollTo("live-assistant", anchor: .bottom) }
+                }
             }
                 Composer(text: $draft, focused: $focused, sending: store.isSending, running: store.isRunning, send: send, stop: stop)
             }
@@ -168,7 +173,7 @@ private struct LiveAssistantBubble: View {
                 NativeMessageText(text: partial.text)
                 HStack(spacing: 5) { ProgressView().controlSize(.mini); Text("Responding…").font(.caption2).foregroundStyle(.secondary) }
             }
-            .padding(.horizontal, 13).padding(.vertical, 10)
+            .padding(.horizontal, 12).padding(.vertical, 9)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
             .textSelection(.enabled)
             Spacer(minLength: 32)
@@ -179,9 +184,9 @@ private struct LiveAssistantBubble: View {
 private struct EventBubble: View {
     let event: MobileEvent
     private var isUser: Bool { event.type == "user" }
-    var body: some View { HStack(alignment: .bottom) { if isUser { Spacer(minLength: 54) }; VStack(alignment: .leading, spacing: 6) { if let text = event.text, !text.isEmpty { NativeMessageText(text: text) }; ForEach(Array(event.attachments.enumerated()), id: \.offset) { _, attachment in Label(attachment.name ?? "Attachment", systemImage: "paperclip").font(.caption) } }.padding(.horizontal, 13).padding(.vertical, 10).background(isUser ? Color.accentColor : (event.type == "error" ? Color.red.opacity(0.13) : Color(.secondarySystemGroupedBackground)), in: RoundedRectangle(cornerRadius: 17, style: .continuous)).foregroundStyle(isUser ? Color.white : Color.primary).textSelection(.enabled); if !isUser { Spacer(minLength: 32) } } }
+    var body: some View { HStack(alignment: .bottom) { if isUser { Spacer(minLength: 54) }; VStack(alignment: .leading, spacing: 6) { if let text = event.text, !text.isEmpty { NativeMessageText(text: text) }; ForEach(Array(event.attachments.enumerated()), id: \.offset) { _, attachment in Label(attachment.name ?? "Attachment", systemImage: "paperclip").font(.caption) } }.padding(.horizontal, 12).padding(.vertical, 9).background(isUser ? Color.accentColor : (event.type == "error" ? Color.red.opacity(0.13) : Color(.secondarySystemGroupedBackground)), in: RoundedRectangle(cornerRadius: 17, style: .continuous)).foregroundStyle(isUser ? Color.white : Color.primary).textSelection(.enabled); if !isUser { Spacer(minLength: 32) } } }
 }
-private struct NativeMessageText: View { let text: String; var body: some View { if let attributed = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) { Text(attributed).font(.body).fixedSize(horizontal: false, vertical: true) } else { Text(text).font(.body) } } }
+private struct NativeMessageText: View { let text: String; var body: some View { if let attributed = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) { Text(attributed).font(.callout).fixedSize(horizontal: false, vertical: true) } else { Text(text).font(.callout) } } }
 private struct Composer: View {
     @Binding var text: String
     var focused: FocusState<Bool>.Binding

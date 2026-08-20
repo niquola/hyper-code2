@@ -31,6 +31,7 @@ final class ChatStore: ObservableObject {
     @Published var partial: PartialAssistant?
     private var nextAfter = 0
     private var pollTask: Task<Void, Never>?
+    private var pollInFlight = false
 
     func start(baseURL: URL, agentID: String) async {
         pollTask?.cancel()
@@ -62,9 +63,12 @@ final class ChatStore: ObservableObject {
         isSending = true
         defer { isSending = false }
         do {
-            _ = try await APIClient(baseURL: baseURL).send(agentID: agentID, text: value)
-            await poll(baseURL: baseURL, agentID: agentID)
+            let response = try await APIClient(baseURL: baseURL).send(agentID: agentID, text: value)
+            let optimistic = MobileEvent(idx: response.eventIdx, ts: Date().timeIntervalSince1970 * 1000, type: "user", text: value, name: nil, preview: value, isError: false, attachments: [])
+            merge([optimistic])
+            nextAfter = max(nextAfter, response.eventIdx + 1)
             isRunning = true
+            partial = nil
             error = nil
             return true
         } catch { self.error = error.localizedDescription; return false }
@@ -76,16 +80,23 @@ final class ChatStore: ObservableObject {
     }
 
     private func poll(baseURL: URL, agentID: String) async {
+        guard !pollInFlight else { return }
+        pollInFlight = true
+        defer { pollInFlight = false }
         do {
             let page = try await APIClient(baseURL: baseURL).events(agentID: agentID, after: nextAfter, limit: 200)
-            if !page.events.isEmpty {
-                let existing = Set(events.map(\.idx))
-                events.append(contentsOf: page.events.filter { !existing.contains($0.idx) })
-            }
-            nextAfter = page.nextAfter
+            merge(page.events)
+            nextAfter = max(nextAfter, page.nextAfter)
             isRunning = page.isRunning
             error = nil
             partial = page.partial
         } catch { self.error = error.localizedDescription }
+    }
+
+    private func merge(_ incoming: [MobileEvent]) {
+        guard !incoming.isEmpty else { return }
+        var byIndex = Dictionary(uniqueKeysWithValues: events.map { ($0.idx, $0) })
+        for event in incoming { byIndex[event.idx] = event }
+        events = byIndex.values.sorted { $0.idx < $1.idx }
     }
 }
