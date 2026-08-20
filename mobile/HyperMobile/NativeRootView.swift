@@ -86,7 +86,10 @@ struct NativeRootView: View {
         if !agents.isEmpty {
             Section {
                 ForEach(agents) { agent in
-                    NavigationLink(value: agent) { AgentRow(agent: agent) }
+                    ZStack {
+                        AgentRow(agent: agent)
+                        NavigationLink(value: agent) { EmptyView() }.opacity(0)
+                    }
                         .listRowSeparator(.hidden)
                         .swipeActions(edge: .leading) {
                             Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") }.tint(.orange)
