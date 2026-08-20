@@ -54,8 +54,9 @@ struct NativeRootView: View {
                         Button { showingNewAgent = true } label: {
                             Label("New chat", systemImage: "plus").font(.headline.weight(.semibold))
                                 .padding(.horizontal, 22).frame(height: 52)
-                                .foregroundStyle(.primary)
-                                .hyperGlass(Capsule(), interactive: true)
+                                .foregroundStyle(Color(.systemBackground))
+                                .background(Color.primary.opacity(0.94), in: Capsule())
+                                .overlay(Capsule().stroke(Color(.systemBackground).opacity(0.16), lineWidth: 0.5))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("New chat")
@@ -99,7 +100,9 @@ struct NativeRootView: View {
         .task {
             if !tunnelDefaultApplied { serverURL = "https://hyper.tunnel.apki.dev"; tunnelDefaultApplied = true }
             await reload()
+            if let baseURL { store.startRefreshing(baseURL: baseURL) }
         }
+        .onDisappear { store.stopRefreshing() }
         .sheet(isPresented: $showingNewAgent) { if let baseURL { NewAgentView(baseURL: baseURL) { _ in showingNewAgent = false; Task { await reload() } } } }
         .sheet(isPresented: $showingSettings) { NativeSettingsView(serverURL: $serverURL) { Task { await reload() } } }
         .sheet(isPresented: $showingWeb) { NavigationStack { HyperWebViewScreen(urlString: serverURL) } }
@@ -112,8 +115,12 @@ struct NativeRootView: View {
 
     @ViewBuilder private func agentSection(_ title: String, _ agents: [AgentSummary]) -> some View {
         if !agents.isEmpty {
-            Section {
-                ForEach(agents) { agent in
+            Text(title).font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                .padding(.top, 6).padding(.bottom, 1)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+            ForEach(agents) { agent in
                     ZStack {
                         AgentRow(agent: agent)
                         NavigationLink(value: agent) { EmptyView() }.opacity(0)
@@ -130,11 +137,7 @@ struct NativeRootView: View {
                         .swipeActions(edge: .leading) {
                             Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") }.tint(.orange)
                         }
-                        .contextMenu { Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") } }
-                }
-            } header: {
-                Text(title).font(.caption2.weight(.semibold)).foregroundStyle(.secondary).textCase(nil)
-                    .padding(.top, 2).padding(.bottom, 0)
+                    .contextMenu { Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") } }
             }
         }
     }
@@ -165,7 +168,12 @@ private struct AgentRow: View {
             ZStack {
                 Circle().fill(projectColor.gradient).frame(width: 38, height: 38)
                 Text(initial).font(.headline.weight(.semibold)).foregroundStyle(.white)
-                if agent.isRunning { Circle().fill(Color(.systemBackground)).frame(width: 12, height: 12).overlay(Circle().fill(.green).frame(width: 8, height: 8)).offset(x: 15, y: 15) }
+                if agent.isRunning {
+                    TimelineView(.animation(minimumInterval: 0.35)) { timeline in
+                        let phase = Int(timeline.date.timeIntervalSinceReferenceDate * 3) % 3
+                        HStack(spacing: 2) { ForEach(0..<3, id: \.self) { index in Circle().fill(projectColor).frame(width: 3.5, height: 3.5).opacity(index == phase ? 1 : 0.25) } }
+                    }
+                }
             }
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {

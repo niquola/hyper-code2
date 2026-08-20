@@ -25,6 +25,16 @@ struct NativeChatView: View {
     @State private var showingDeleteConfirmation = false
     @State private var actionMessage: String?
     @State private var actionInFlight = false
+    @State private var showingModelPicker = false
+    @State private var currentModel: String
+
+    init(agent: AgentSummary, baseURL: URL, onRead: @escaping () -> Void) {
+        self.agent = agent
+        self.baseURL = baseURL
+        self.onRead = onRead
+        _currentModel = State(initialValue: agent.model)
+    }
+
     private var items: [ChatItem] {
         var result: [ChatItem] = [], tools: [MobileEvent] = []
         func flush() { if !tools.isEmpty { result.append(.tools(tools)); tools.removeAll() } }
@@ -57,6 +67,7 @@ struct NativeChatView: View {
                     }.padding(.horizontal, 12).padding(.vertical, 12)
                     .transaction { $0.animation = nil }
                 }
+                .scrollDismissesKeyboard(.interactively)
                 .defaultScrollAnchor(.bottom)
                 .onChange(of: store.events.last?.idx) { _, _ in
                     if let last = items.last {
@@ -71,7 +82,7 @@ struct NativeChatView: View {
                     withTransaction(transaction) { proxy.scrollTo("live-assistant", anchor: .bottom) }
                 }
             }
-                AttachmentComposer(text: $draft, attachments: $attachments, focused: $focused, sending: store.isSending, running: store.isRunning, send: send, stop: stop)
+                AttachmentComposer(text: $draft, attachments: $attachments, focused: $focused, sending: store.isSending, running: store.isRunning, send: sendAction, stop: stopAction)
             }
         }
         .background(Color(.systemGroupedBackground))
@@ -89,30 +100,11 @@ struct NativeChatView: View {
                     if shouldOpen { dismiss() }
                 }
         )
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                VStack(spacing: 2) {
-                    Text(agent.title).font(.headline).lineLimit(1)
-                    AgentActivityStatus(running: store.isRunning)
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button { compact() } label: { Label("Compact context", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") }
-                        .disabled(store.isRunning || actionInFlight)
-                    Divider()
-                    Button(role: .destructive) { showingDeleteConfirmation = true } label: { Label("Delete chat", systemImage: "trash") }
-                        .disabled(actionInFlight)
-                } label: {
-                    Image(systemName: "ellipsis").font(.headline).frame(width: 38, height: 38)
-                        .background(Color(.secondarySystemBackground), in: Circle())
-                }
-                .accessibilityLabel("Chat actions")
-            }
-        }
+        .toolbar { chatToolbar }
         .task { await store.start(baseURL: baseURL, agentID: agent.id) }
         .onDisappear { store.stopPolling(); onRead() }
         .sheet(item: $selectedTool) { event in ToolDetailSheet(baseURL: baseURL, agentID: agent.id, event: event) }
+        .sheet(isPresented: $showingModelPicker) { ModelPickerSheet(baseURL: baseURL, agentID: agent.id, selection: $currentModel) }
         .alert("Delete this chat?", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) { deleteChat() }
@@ -122,6 +114,24 @@ struct NativeChatView: View {
         } message: { Text(actionMessage ?? "") }
     }
 
+    @ToolbarContentBuilder private var chatToolbar: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            VStack(spacing: 2) { Text(agent.title).font(.headline).lineLimit(1); AgentActivityStatus(running: store.isRunning) }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button { showingModelPicker = true } label: { Label("Change model", systemImage: "cpu") }
+                Button { compact() } label: { Label("Compact context", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") }.disabled(store.isRunning || actionInFlight)
+                Divider()
+                Button(role: .destructive) { showingDeleteConfirmation = true } label: { Label("Delete chat", systemImage: "trash") }.disabled(actionInFlight)
+            } label: { Image(systemName: "ellipsis").font(.headline).frame(width: 38, height: 38).background(Color(.secondarySystemBackground), in: Circle()) }
+                .accessibilityLabel("Chat actions")
+        }
+    }
+
+    private var sendAction: () -> Void { { send() } }
+    private var stopAction: () -> Void { { stop() } }
+    private var modelDisplayName: String { currentModel.split(separator: ":", maxSplits: 1).last.map(String.init) ?? currentModel }
     private func send() {
         let value = draft, selected = attachments
         Task { if await store.send(value, attachments: selected, baseURL: baseURL, agentID: agent.id) { draft = ""; attachments = [] } }

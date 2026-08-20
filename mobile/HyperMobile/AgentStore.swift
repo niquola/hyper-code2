@@ -6,6 +6,7 @@ final class AgentListStore: ObservableObject {
     @Published var agents: [AgentSummary] = []
     @Published var isLoading = false
     @Published var error: String?
+    private var refreshTask: Task<Void, Never>?
 
     func setPinned(_ agent: AgentSummary, pinned: Bool, baseURL: URL) async {
         do { _ = try await APIClient(baseURL: baseURL).setPinned(agentID: agent.id, pinned: pinned); await load(baseURL: baseURL) }
@@ -13,9 +14,22 @@ final class AgentListStore: ObservableObject {
     }
 
 
-    func load(baseURL: URL) async {
-        isLoading = true
-        defer { isLoading = false }
+    func startRefreshing(baseURL: URL) {
+        refreshTask?.cancel()
+        refreshTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                guard let self, !Task.isCancelled else { break }
+                await self.load(baseURL: baseURL, showLoading: false)
+            }
+        }
+    }
+
+    func stopRefreshing() { refreshTask?.cancel(); refreshTask = nil }
+
+    func load(baseURL: URL, showLoading: Bool = true) async {
+        if showLoading { isLoading = true }
+        defer { if showLoading { isLoading = false } }
         do { agents = try await APIClient(baseURL: baseURL).agents(); error = nil }
         catch { self.error = error.localizedDescription }
     }

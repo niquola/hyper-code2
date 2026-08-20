@@ -10,6 +10,7 @@ struct APIClient {
     private let session: URLSession
     private struct CreateAgentBody: Encodable { let title: String; let workspaceDir: String; let model: String; let systemPrompt: String; let createWorkspaceDir: Bool }
 
+    private struct ModelBody: Encodable { let model: String }
     init(baseURL: URL, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.session = session
@@ -71,6 +72,11 @@ struct APIClient {
         req.httpBody = body
         return try await decode(req)
     }
+
+    func changeModel(agentID: String, model: String) async throws -> ModelChangeResponse {
+        try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/model", method: "POST", body: ModelBody(model: model))
+    }
+
 
     func compact(agentID: String) async throws -> CompactResponse {
         try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/compact", method: "POST", body: [String: String]())

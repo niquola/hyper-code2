@@ -77,6 +77,7 @@ struct DeleteAgentResponse: Codable { let version: Int; let ok: Bool; let agentI
 
 struct ArchiveAgentResponse: Codable { let version: Int; let ok: Bool; let agentId: String; let archived: Bool }
 struct StopResponse: Codable { let version: Int; let ok: Bool; let agentId: String }
+struct ModelChangeResponse: Codable { let version: Int; let ok: Bool; let model: String; let from: String? }
 struct PinResponse: Codable { let version: Int; let agentId: String; let pinned: Bool }
 struct ReadResponse: Codable { let version: Int; let ok: Bool; let agentId: String; let seenAt: Double }
 struct ToolDetailResponse: Codable { let version: Int; let event: ToolDetail }
