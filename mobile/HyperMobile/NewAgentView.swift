@@ -9,6 +9,7 @@ struct NewAgentView: View {
     @State private var workspace = ""
     @State private var model = ""
     @State private var systemPrompt = ""
+    @State private var provider = ""
     @State private var loading = false
     @State private var error: String?
 
@@ -17,10 +18,13 @@ struct NewAgentView: View {
             Form {
                 Section("Agent") {
                     TextField("Name (optional)", text: $title)
-                    Picker("Model", selection: $model) {
-                        if model.isEmpty { Text("Default").tag("") }
-                        ForEach(options?.models ?? []) { item in Text(item.model).tag(item.model) }
+                    Picker("Provider", selection: $provider) {
+                        ForEach(providers, id: \.self) { Text($0).tag($0) }
                     }
+                    Picker("Model", selection: $model) {
+                        ForEach(modelsForProvider) { item in Text(modelLabel(item.model)).tag(item.model) }
+                    }
+                    .disabled(provider.isEmpty)
                 }
                 Section("Workspace") {
                     Picker("Recent folder", selection: $workspace) {
@@ -46,12 +50,35 @@ struct NewAgentView: View {
         }
         .presentationDetents([.large])
         .task { await loadOptions() }
+        .onChange(of: provider) { _, newProvider in
+            if !modelsForProvider.contains(where: { $0.model == model }) {
+                model = (options?.models.first { $0.provider == newProvider })?.model ?? ""
+            }
+        }
+    }
+
+    private var providers: [String] {
+        Array(Set((options?.models ?? []).map(\.provider))).sorted()
+    }
+
+    private var modelsForProvider: [MobileModel] {
+        (options?.models ?? []).filter { $0.provider == provider }
+    }
+
+    private func modelLabel(_ value: String) -> String {
+        value.split(separator: ":", maxSplits: 1).last.map(String.init) ?? value
     }
 
     private func loadOptions() async {
         loading = true; defer { loading = false }
-        do { let value = try await APIClient(baseURL: baseURL).newAgentOptions(); options = value; model = value.defaultModel; workspace = value.workspaces.first ?? "" }
-        catch { self.error = error.localizedDescription }
+        do {
+            let value = try await APIClient(baseURL: baseURL).newAgentOptions()
+            options = value
+            let defaultItem = value.models.first { $0.model == value.defaultModel } ?? value.models.first
+            provider = defaultItem?.provider ?? ""
+            model = defaultItem?.model ?? ""
+            workspace = value.workspaces.first ?? ""
+        } catch { self.error = error.localizedDescription }
     }
 
     private func create() {
