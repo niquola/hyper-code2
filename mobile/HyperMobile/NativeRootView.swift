@@ -39,7 +39,7 @@ struct NativeRootView: View {
             }
             .navigationTitle("Hyper")
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Agents, folders, IDs")
-            .navigationDestination(for: AgentSummary.self) { agent in if let baseURL { NativeChatView(agent: agent, baseURL: baseURL) } }
+            .navigationDestination(for: AgentSummary.self) { agent in if let baseURL { NativeChatView(agent: agent, baseURL: baseURL) { Task { await reload() } } } }
             .toolbar { ToolbarItemGroup(placement: .topBarTrailing) { Button { showingWeb = true } label: { Image(systemName: "safari") }.accessibilityLabel("Open web interface"); Button { showingSettings = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("Connection settings") } }
         }
         .task {

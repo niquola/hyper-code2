@@ -56,6 +56,10 @@ struct APIClient {
         try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/pin", method: "POST", body: PinBody(pinned: pinned))
     }
 
+    func markRead(agentID: String) async throws -> ReadResponse {
+        try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/read", method: "POST", body: [String: String]())
+    }
+
     private func escaped(_ value: String) -> String { value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? value }
     private func url(_ path: String) -> URL { baseURL.appending(path: path) }
 

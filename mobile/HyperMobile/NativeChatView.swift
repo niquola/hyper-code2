@@ -11,6 +11,7 @@ private enum ChatItem: Identifiable {
 struct NativeChatView: View {
     let agent: AgentSummary
     let baseURL: URL
+    let onRead: () -> Void
     @StateObject private var store = ChatStore()
     @State private var draft = ""
     @State private var selectedTool: MobileEvent?
@@ -64,7 +65,7 @@ struct NativeChatView: View {
         .navigationTitle(agent.title).navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .principal) { VStack(spacing: 1) { Text(agent.title).font(.headline).lineLimit(1); Text(store.isRunning ? "Working…" : agent.model).font(.caption2).foregroundStyle(store.isRunning ? .green : .secondary) } } }
         .task { await store.start(baseURL: baseURL, agentID: agent.id) }
-        .onDisappear { store.stopPolling() }
+        .onDisappear { store.stopPolling(); onRead() }
         .sheet(item: $selectedTool) { event in ToolDetailSheet(baseURL: baseURL, agentID: agent.id, event: event) }
     }
 

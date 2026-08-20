@@ -37,6 +37,7 @@ final class ChatStore: ObservableObject {
         isLoading = true
         do {
             let page = try await APIClient(baseURL: baseURL).events(agentID: agentID, limit: 100)
+            _ = try? await APIClient(baseURL: baseURL).markRead(agentID: agentID)
             events = page.events
             nextAfter = page.nextAfter
             isRunning = page.isRunning
