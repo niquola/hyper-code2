@@ -48,7 +48,13 @@ struct NativeChatView: View {
                     }.padding(.horizontal, 12).padding(.vertical, 14)
                 }
                 .defaultScrollAnchor(.bottom)
-                .onChange(of: store.events.count) { _, _ in if let last = items.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
+                .onChange(of: store.events.count) { _, _ in
+                    if let last = items.last {
+                        var transaction = Transaction()
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) { proxy.scrollTo(last.id, anchor: .bottom) }
+                    }
+                }
                 .onChange(of: store.partial?.revision) { _, revision in if revision != nil { proxy.scrollTo("live-assistant", anchor: .bottom) } }
             }
                 Composer(text: $draft, focused: $focused, sending: store.isSending, running: store.isRunning, send: send, stop: stop)
