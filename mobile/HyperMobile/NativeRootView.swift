@@ -13,11 +13,16 @@ struct NativeRootView: View {
     @State private var loginPassword = ""
     @State private var loginError: String?
     @State private var isLoggingIn = false
+    @State private var selectedFolder: String?
     private var baseURL: URL? { URL(string: serverURL) }
 
     private var filtered: [AgentSummary] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return store.agents.filter { q.isEmpty || $0.title.lowercased().contains(q) || $0.id.lowercased().contains(q) || $0.workspaceDir.lowercased().contains(q) }
+        return store.agents.filter {
+            let matchesQuery = q.isEmpty || $0.title.lowercased().contains(q) || $0.id.lowercased().contains(q) || $0.workspaceDir.lowercased().contains(q)
+            let matchesFolder = selectedFolder == nil || folderName($0.workspaceDir) == selectedFolder
+            return matchesQuery && matchesFolder
+        }
             .sorted { lhs, rhs in
                 if lhs.pinned != rhs.pinned { return lhs.pinned }
                 if (lhs.unread > 0) != (rhs.unread > 0) { return lhs.unread > 0 }
@@ -38,7 +43,7 @@ struct NativeRootView: View {
             .overlay { if sidebarOpen { Color.black.opacity(0.16).ignoresSafeArea().onTapGesture { withAnimation(.snappy(duration: 0.28)) { sidebarOpen = false } } } }
 
             if sidebarOpen {
-                AgentSidebar(agents: filtered, selectedID: selected?.id, query: $query, loading: store.isLoading, error: store.error, select: select, pin: pin, refresh: reload, settings: { showingSettings = true }, web: { showingWeb = true })
+                AgentSidebar(agents: filtered, allAgents: store.agents, selectedID: selected?.id, selectedFolder: $selectedFolder, query: $query, loading: store.isLoading, error: store.error, select: select, pin: pin, refresh: reload, settings: { showingSettings = true }, web: { showingWeb = true })
                     .frame(width: min(350, UIScreen.main.bounds.width * 0.92))
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     .zIndex(2)
@@ -56,11 +61,14 @@ struct NativeRootView: View {
     private func login() { guard let baseURL, !loginPassword.isEmpty else { return }; isLoggingIn = true; loginError = nil; Task { do { try await APIClient(baseURL: baseURL).login(password: loginPassword); loginPassword = ""; needsLogin = false; await reload() } catch { loginError = error.localizedDescription }; isLoggingIn = false } }
     private func pin(_ agent: AgentSummary, _ pinned: Bool) { guard let baseURL else { return }; Task { await store.setPinned(agent, pinned: pinned, baseURL: baseURL) } }
     private func glassButton(_ icon: String, _ label: String, action: @escaping () -> Void) -> some View { Button(action: action) { Image(systemName: icon).frame(width: 38, height: 38).hyperGlass(Circle(), interactive: true) }.accessibilityLabel(label) }
+    private func folderName(_ path: String) -> String { URL(fileURLWithPath: path).lastPathComponent.isEmpty ? "No workspace" : URL(fileURLWithPath: path).lastPathComponent }
 }
 
 private struct AgentSidebar: View {
     let agents: [AgentSummary]
+    let allAgents: [AgentSummary]
     let selectedID: String?
+    @Binding var selectedFolder: String?
     @Binding var query: String
     let loading: Bool
     let error: String?
@@ -73,7 +81,8 @@ private struct AgentSidebar: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack { Button(action: web) { Image(systemName: "square.and.pencil").frame(width: 40, height: 40).background(Color(uiColor: .secondarySystemBackground), in: Circle()) }.accessibilityLabel("New agent in web interface"); Spacer(); Button(action: web) { Image(systemName: "safari").frame(width: 40, height: 40).background(Color(uiColor: .secondarySystemBackground), in: Circle()) }; Button(action: settings) { Image(systemName: "gearshape").frame(width: 40, height: 40).background(Color(uiColor: .secondarySystemBackground), in: Circle()) } }.padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)
-            HStack(spacing: 9) { Image(systemName: "magnifyingglass").foregroundStyle(.secondary); TextField("Search chats", text: $query).textInputAutocapitalization(.never); if !query.isEmpty { Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) } } }.padding(.horizontal, 13).frame(height: 44).background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.10), lineWidth: 0.5)).padding(.horizontal, 12).padding(.bottom, 8)
+            HStack(spacing: 9) { Image(systemName: "magnifyingglass").foregroundStyle(.secondary); TextField("Search chats", text: $query).textInputAutocapitalization(.never); if !query.isEmpty { Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) } } }.padding(.horizontal, 13).frame(height: 44).background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.10), lineWidth: 0.5)).padding(.horizontal, 12).padding(.bottom, 6)
+            folderStrip
             if loading && agents.isEmpty { Spacer(); ProgressView(); Spacer() }
             else if let error, agents.isEmpty { Spacer(); ContentUnavailableView("Can’t connect", systemImage: "wifi.exclamationmark", description: Text(error)); Spacer() }
             else {
@@ -91,6 +100,19 @@ private struct AgentSidebar: View {
         .overlay(alignment: .trailing) { Rectangle().fill(Color.primary.opacity(0.13)).frame(width: 0.5) }
         .shadow(color: .black.opacity(0.22), radius: 20, x: 6)
         .ignoresSafeArea(edges: .bottom)
+    }
+
+    @ViewBuilder private var folderStrip: some View {
+        let folders = Array(Set(allAgents.map { URL(fileURLWithPath: $0.workspaceDir).lastPathComponent.isEmpty ? "No workspace" : URL(fileURLWithPath: $0.workspaceDir).lastPathComponent })).sorted()
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 7) {
+                folderChip("All", selected: selectedFolder == nil) { selectedFolder = nil }
+                ForEach(folders, id: \.self) { folder in folderChip(folder, selected: selectedFolder == folder) { selectedFolder = folder } }
+            }.padding(.horizontal, 12)
+        }.frame(height: 38).padding(.bottom, 4)
+    }
+    private func folderChip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Label(title, systemImage: title == "All" ? "tray.full" : "folder").font(.caption.weight(.medium)).lineLimit(1).padding(.horizontal, 11).frame(height: 30).background(selected ? Color.accentColor : Color(uiColor: .secondarySystemBackground), in: Capsule()).foregroundStyle(selected ? Color.white : Color.primary) }.buttonStyle(.plain)
     }
 
     @ViewBuilder private func agentSection(_ title: String, _ items: [AgentSummary]) -> some View {
