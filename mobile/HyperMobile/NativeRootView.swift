@@ -119,15 +119,15 @@ private struct FolderStrip: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 7) {
-                chip("All", icon: "tray.full", selected: selection == nil) { selection = nil }
-                ForEach(folders, id: \.self) { folder in chip(folder, icon: "folder", selected: selection == folder) { selection = folder } }
+                chip("All", selected: selection == nil) { selection = nil }
+                ForEach(folders, id: \.self) { folder in chip(folder, selected: selection == folder) { selection = folder } }
             }.padding(.horizontal, 16).padding(.vertical, 8)
         }
         .background(Color(.systemBackground))
     }
-    private func chip(_ title: String, icon: String, selected: Bool, action: @escaping () -> Void) -> some View {
+    private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: icon).font(.caption.weight(.medium)).lineLimit(1)
+            Text(title).font(.caption.weight(.medium)).lineLimit(1)
                 .padding(.horizontal, 11).frame(height: 32)
                 .background(selected ? Color.accentColor : Color(.secondarySystemBackground), in: Capsule())
                 .foregroundStyle(selected ? .white : .primary)
@@ -138,23 +138,34 @@ private struct FolderStrip: View {
 private struct AgentRow: View {
     let agent: AgentSummary
     private var folder: String { URL(fileURLWithPath: agent.workspaceDir).lastPathComponent.isEmpty ? "No workspace" : URL(fileURLWithPath: agent.workspaceDir).lastPathComponent }
+    private var projectColor: Color { ProjectColor.color(for: agent.workspaceDir) }
+    private var initial: String { String((folder == "No workspace" ? agent.title : folder).prefix(1)).uppercased() }
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(agent.isRunning ? Color.green.opacity(0.15) : Color.secondary.opacity(0.10)).frame(width: 42, height: 42)
-                Image(systemName: agent.isRunning ? "sparkles" : "bubble.left").foregroundStyle(agent.isRunning ? .green : .secondary)
+                Circle().fill(projectColor.gradient).frame(width: 48, height: 48)
+                Text(initial).font(.headline.weight(.semibold)).foregroundStyle(.white)
+                if agent.isRunning { Circle().fill(Color(.systemBackground)).frame(width: 14, height: 14).overlay(Circle().fill(.green).frame(width: 9, height: 9)).offset(x: 18, y: 18) }
             }
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    if agent.pinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.orange) }
-                    Text(agent.title).font(.body.weight(.medium)).lineLimit(1)
-                    if agent.unread > 0 { Circle().fill(.blue).frame(width: 9, height: 9) }
+                    Text(agent.title).font(.body.weight(.semibold)).lineLimit(1)
+                    if agent.unread > 0 { Text("\(agent.unread)").font(.caption2.bold()).foregroundStyle(.white).padding(.horizontal, 6).frame(minHeight: 19).background(.blue, in: Capsule()) }
+                    Spacer(minLength: 4)
+                    if agent.pinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.secondary) }
                 }
-                Label(folder, systemImage: "folder").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(folder).font(.callout).foregroundStyle(.secondary).lineLimit(1)
             }
-            Spacer()
-            if agent.isRunning { ProgressView().controlSize(.small) }
         }.padding(.vertical, 5)
+    }
+}
+
+private enum ProjectColor {
+    static let palette: [Color] = [.blue, .indigo, .purple, .pink, .orange, .teal, .cyan, .mint, .brown]
+    static func color(for workspace: String) -> Color {
+        var hash: UInt64 = 1469598103934665603
+        for byte in workspace.utf8 { hash = (hash ^ UInt64(byte)) &* 1099511628211 }
+        return palette[Int(hash % UInt64(palette.count))]
     }
 }
 

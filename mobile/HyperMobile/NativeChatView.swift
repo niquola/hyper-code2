@@ -46,7 +46,7 @@ struct NativeChatView: View {
                         if store.isLoading { ProgressView().padding() }
                         ForEach(items) { item in
                             switch item {
-                            case .event(let event): EventBubble(event: event)
+                            case .event(let event): EventBubble(event: event, agentID: agent.id, baseURL: baseURL)
                             case .tools(let tools): ToolTray(events: tools) { selectedTool = $0 }
                             }
                         }
@@ -255,8 +255,79 @@ private struct LiveAssistantBubble: View {
 
 private struct EventBubble: View {
     let event: MobileEvent
+    let agentID: String
+    let baseURL: URL
+    @State private var preview: ImagePreview?
     private var isUser: Bool { event.type == "user" }
-    var body: some View { HStack(alignment: .bottom) { if isUser { Spacer(minLength: 54) }; VStack(alignment: .leading, spacing: 6) { if let text = event.text, !text.isEmpty { NativeMessageText(text: text) }; ForEach(Array(event.attachments.enumerated()), id: \.offset) { _, attachment in Label(attachment.name ?? "Attachment", systemImage: "paperclip").font(.caption) } }.padding(.horizontal, 12).padding(.vertical, 9).background(isUser ? Color.accentColor : (event.type == "error" ? Color.red.opacity(0.13) : Color(.secondarySystemGroupedBackground)), in: RoundedRectangle(cornerRadius: 17, style: .continuous)).foregroundStyle(isUser ? Color.white : Color.primary).textSelection(.enabled); if !isUser { Spacer(minLength: 32) } } }
+    private var imageAttachments: [EventAttachment] { event.attachments.filter { $0.contentType?.hasPrefix("image/") == true && $0.id != nil } }
+    private var otherAttachments: [EventAttachment] { event.attachments.filter { $0.contentType?.hasPrefix("image/") != true } }
+
+    var body: some View {
+        HStack(alignment: .bottom) {
+            if isUser { Spacer(minLength: 54) }
+            VStack(alignment: .leading, spacing: 7) {
+                if let text = event.text, !text.isEmpty { NativeMessageText(text: text) }
+                if !imageAttachments.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 7) {
+                            ForEach(Array(imageAttachments.enumerated()), id: \.offset) { _, attachment in
+                                if let url = attachmentURL(attachment) {
+                                    Button { preview = ImagePreview(url: url, name: attachment.name ?? "Photo") } label: {
+                                        AsyncImage(url: url) { phase in
+                                            switch phase {
+                                            case .success(let image): image.resizable().scaledToFill()
+                                            case .failure: Image(systemName: "photo.badge.exclamationmark").foregroundStyle(.secondary)
+                                            default: ProgressView()
+                                            }
+                                        }
+                                        .frame(width: 112, height: 84).background(Color.primary.opacity(0.06)).clipShape(RoundedRectangle(cornerRadius: 11))
+                                    }.buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                }
+                ForEach(Array(otherAttachments.enumerated()), id: \.offset) { _, attachment in Label(attachment.name ?? "Attachment", systemImage: "paperclip").font(.caption) }
+            }
+            .padding(.horizontal, 12).padding(.vertical, 9)
+            .background(isUser ? Color.accentColor : (event.type == "error" ? Color.red.opacity(0.13) : Color(.secondarySystemGroupedBackground)), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+            .foregroundStyle(isUser ? Color.white : Color.primary).textSelection(.enabled)
+            if !isUser { Spacer(minLength: 32) }
+        }
+        .sheet(item: $preview) { item in ImagePreviewSheet(item: item) }
+    }
+
+    private func attachmentURL(_ attachment: EventAttachment) -> URL? {
+        guard let id = attachment.id else { return nil }
+        return baseURL.appending(path: "attachments/\(agentID)/\(id)")
+    }
 }
+private struct ImagePreview: Identifiable { let id = UUID(); let url: URL; let name: String }
+private struct ImagePreviewSheet: View {
+    let item: ImagePreview
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            ZoomableRemoteImage(url: item.url).background(.black).ignoresSafeArea(edges: .bottom)
+                .navigationTitle(item.name).navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+    }
+}
+private struct ZoomableRemoteImage: View {
+    let url: URL
+    @State private var scale: CGFloat = 1
+    var body: some View {
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case .success(let image): image.resizable().scaledToFit().scaleEffect(scale).gesture(MagnifyGesture().onChanged { scale = max(1, min(5, $0.magnification)) })
+            case .failure: ContentUnavailableView("Couldn’t load image", systemImage: "photo.badge.exclamationmark")
+            default: ProgressView().tint(.white)
+            }
+        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+
 private struct NativeMessageText: View { let text: String; var body: some View { if let attributed = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) { Text(attributed).font(.callout).fixedSize(horizontal: false, vertical: true) } else { Text(text).font(.callout) } } }
 private struct ErrorBanner: View { let message: String; var body: some View { Label(message, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.white).frame(maxWidth: .infinity).padding(8).background(.red) } }
