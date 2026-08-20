@@ -57,14 +57,15 @@ final class ChatStore: ObservableObject {
 
     func stopPolling() { pollTask?.cancel(); pollTask = nil }
 
-    func send(_ text: String, baseURL: URL, agentID: String) async -> Bool {
+    func send(_ text: String, attachments: [PendingAttachment] = [], baseURL: URL, agentID: String) async -> Bool {
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty, !isSending else { return false }
+        guard (!value.isEmpty || !attachments.isEmpty), !isSending else { return false }
         isSending = true
         defer { isSending = false }
         do {
-            let response = try await APIClient(baseURL: baseURL).send(agentID: agentID, text: value)
-            let optimistic = MobileEvent(idx: response.eventIdx, ts: Date().timeIntervalSince1970 * 1000, type: "user", text: value, name: nil, preview: value, isError: false, attachments: [])
+            let response = try await APIClient(baseURL: baseURL).send(agentID: agentID, text: value, attachments: attachments)
+            let optimisticAttachments = attachments.map { EventAttachment(id: $0.id.uuidString, name: $0.name, contentType: $0.contentType, size: $0.data.count) }
+            let optimistic = MobileEvent(idx: response.eventIdx, ts: Date().timeIntervalSince1970 * 1000, type: "user", text: value, name: nil, preview: value, isError: false, attachments: optimisticAttachments)
             merge([optimistic])
             nextAfter = max(nextAfter, response.eventIdx + 1)
             isRunning = true

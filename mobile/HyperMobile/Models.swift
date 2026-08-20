@@ -64,7 +64,14 @@ struct PartialAssistant: Codable, Equatable {
     let startedAt: Double
 }
 
-struct SendResponse: Codable { let version: Int; let ok: Bool; let messageIdx: Int; let eventIdx: Int; let sendAt: Double }
+struct SendResponse: Codable { let version: Int; let ok: Bool; let messageIdx: Int; let eventIdx: Int; let sendAt: Double; let attachments: [EventAttachment]? }
+struct PendingAttachment: Identifiable, Hashable {
+    let id: UUID
+    let name: String
+    let contentType: String
+    let data: Data
+    var isImage: Bool { contentType.hasPrefix("image/") }
+}
 struct CompactResponse: Codable { let version: Int; let ok: Bool; let status: String }
 struct DeleteAgentResponse: Codable { let version: Int; let ok: Bool; let agentId: String }
 

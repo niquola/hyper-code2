@@ -50,8 +50,26 @@ struct APIClient {
         return try await request(url: components.url!)
     }
 
-    func send(agentID: String, text: String) async throws -> SendResponse {
-        try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/messages", method: "POST", body: SendBody(text: text, debounceMs: 100))
+    func send(agentID: String, text: String, attachments: [PendingAttachment] = []) async throws -> SendResponse {
+        if attachments.isEmpty {
+            return try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/messages", method: "POST", body: SendBody(text: text, debounceMs: 100))
+        }
+        let boundary = "HyperBoundary-\(UUID().uuidString)"
+        var body = Data()
+        func append(_ string: String) { body.append(Data(string.utf8)) }
+        append("--\(boundary)\r\nContent-Disposition: form-data; name=\"text\"\r\n\r\n\(text)\r\n")
+        append("--\(boundary)\r\nContent-Disposition: form-data; name=\"debounceMs\"\r\n\r\n100\r\n")
+        for attachment in attachments {
+            append("--\(boundary)\r\nContent-Disposition: form-data; name=\"files\"; filename=\"\(attachment.name.replacingOccurrences(of: "\"", with: ""))\"\r\nContent-Type: \(attachment.contentType)\r\n\r\n")
+            body.append(attachment.data); append("\r\n")
+        }
+        append("--\(boundary)--\r\n")
+        var req = URLRequest(url: url("api/mobile/v1/agents/\(escaped(agentID))/messages"))
+        req.httpMethod = "POST"; req.timeoutInterval = 120
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+        return try await decode(req)
     }
 
     func compact(agentID: String) async throws -> CompactResponse {
@@ -97,6 +115,15 @@ struct APIClient {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
         let (data, response) = try await session.data(for: request)
+        return try decode(data: data, response: response)
+    }
+
+    private func decode<T: Decodable>(_ request: URLRequest) async throws -> T {
+        let (data, response) = try await session.data(for: request)
+        return try decode(data: data, response: response)
+    }
+
+    private func decode<T: Decodable>(data: Data, response: URLResponse) throws -> T {
         guard let http = response as? HTTPURLResponse else { throw APIClientError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
             let api = try? JSONDecoder().decode(APIErrorBody.self, from: data)
