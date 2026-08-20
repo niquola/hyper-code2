@@ -8,6 +8,7 @@ struct APIClient {
     private struct LoginResponse: Decodable { let ok: Bool }
     private struct AuthSessionResponse: Decodable { let authenticated: Bool }
     private let session: URLSession
+    private struct CreateAgentBody: Encodable { let title: String; let workspaceDir: String; let model: String; let systemPrompt: String; let createWorkspaceDir: Bool }
 
     init(baseURL: URL, session: URLSession = .shared) {
         self.baseURL = baseURL
@@ -22,6 +23,16 @@ struct APIClient {
     func sessionIsAuthenticated() async -> Bool {
         do { let response: AuthSessionResponse = try await request(path: "auth/session"); return response.authenticated }
         catch { return false }
+    }
+
+
+    func newAgentOptions() async throws -> NewAgentOptions {
+        try await request(path: "api/mobile/v1/new-agent-options")
+    }
+
+    func createAgent(title: String, workspaceDir: String, model: String, systemPrompt: String, createWorkspaceDir: Bool = false) async throws -> CreatedAgent {
+        let response: CreatedAgentResponse = try await request(path: "api/mobile/v1/agents", method: "POST", body: CreateAgentBody(title: title, workspaceDir: workspaceDir, model: model, systemPrompt: systemPrompt, createWorkspaceDir: createWorkspaceDir))
+        return response.agent
     }
 
 

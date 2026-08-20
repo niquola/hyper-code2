@@ -6,6 +6,7 @@ struct NativeRootView: View {
     @StateObject private var store = AgentListStore()
     @State private var showingSettings = false
     @State private var showingWeb = false
+    @State private var showingNewAgent = false
     @State private var query = ""
     @State private var selectedFolder: String?
     @State private var needsLogin = false
@@ -56,8 +57,8 @@ struct NativeRootView: View {
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search chats")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { showingWeb = true } label: { Image(systemName: "square.and.pencil") }
-                        .accessibilityLabel("New agent in web interface")
+                    Button { showingNewAgent = true } label: { Image(systemName: "square.and.pencil") }
+                        .accessibilityLabel("New agent")
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { showingWeb = true } label: { Image(systemName: "safari") }
@@ -75,6 +76,7 @@ struct NativeRootView: View {
             if !tunnelDefaultApplied { serverURL = "https://hyper.tunnel.apki.dev"; tunnelDefaultApplied = true }
             await reload()
         }
+        .sheet(isPresented: $showingNewAgent) { if let baseURL { NewAgentView(baseURL: baseURL) { _ in showingNewAgent = false; Task { await reload() } } } }
         .sheet(isPresented: $showingSettings) { NativeSettingsView(serverURL: $serverURL) { Task { await reload() } } }
         .sheet(isPresented: $showingWeb) { NavigationStack { HyperWebViewScreen(urlString: serverURL) } }
         .sheet(isPresented: $needsLogin) { NativeLoginView(password: $loginPassword, error: loginError, isLoading: isLoggingIn) { login() } }

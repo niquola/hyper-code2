@@ -17,6 +17,7 @@
 		100000000000000000000008 /* NativeChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000A /* NativeChatView.swift */; };
 		100000000000000000000009 /* WebFallbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000B /* WebFallbackView.swift */; };
 		10000000000000000000000A /* GlassStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000C /* GlassStyle.swift */; };
+		10000000000000000000000B /* NewAgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000D /* NewAgentView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,7 @@
 		20000000000000000000000A /* NativeChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeChatView.swift; sourceTree = "<group>"; };
 		20000000000000000000000B /* WebFallbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebFallbackView.swift; sourceTree = "<group>"; };
 		20000000000000000000000C /* GlassStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassStyle.swift; sourceTree = "<group>"; };
+		20000000000000000000000D /* NewAgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewAgentView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +68,7 @@
 				20000000000000000000000A /* NativeChatView.swift */,
 				20000000000000000000000B /* WebFallbackView.swift */,
 				20000000000000000000000C /* GlassStyle.swift */,
+				20000000000000000000000D /* NewAgentView.swift */,
 				200000000000000000000004 /* Info.plist */,
 			);
 			path = HyperMobile;
@@ -157,6 +160,7 @@
 				100000000000000000000008 /* NativeChatView.swift in Sources */,
 				100000000000000000000009 /* WebFallbackView.swift in Sources */,
 				10000000000000000000000A /* GlassStyle.swift in Sources */,
+				10000000000000000000000B /* NewAgentView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -15,6 +15,17 @@ struct AgentSummary: Codable, Identifiable, Hashable {
     var isRunning: Bool { runState == "running" || runState == "claimed" }
 }
 
+struct NewAgentOptions: Codable {
+    let version: Int
+    let defaultModel: String
+    let models: [MobileModel]
+    let workspaces: [String]
+}
+struct MobileModel: Codable, Hashable, Identifiable { let provider: String; let model: String; var id: String { model } }
+struct CreatedAgentResponse: Codable { let version: Int; let agent: CreatedAgent }
+struct CreatedAgent: Codable { let id: String; let title: String; let model: String; let workspaceDir: String }
+
+
 struct AgentsResponse: Codable { let version: Int; let agents: [AgentSummary] }
 
 struct MobileEvent: Codable, Identifiable, Hashable {
