@@ -109,7 +109,9 @@ struct NativeRootView: View {
                         AgentRow(agent: agent)
                         NavigationLink(value: agent) { EmptyView() }.opacity(0)
                     }
-                        .listRowSeparator(.hidden)
+                        .listRowSeparator(.visible)
+                        .listRowSeparatorTint(Color.primary.opacity(0.12))
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 50 }
                         .listRowInsets(EdgeInsets(top: 1, leading: 16, bottom: 1, trailing: 16))
                         .listRowSpacing(0)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -158,12 +160,12 @@ private struct AgentRow: View {
             }
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
-                    Text(agent.title).font(.body.weight(.semibold)).lineLimit(1)
+                    Text(agent.title).font(.callout.weight(.semibold)).lineLimit(1)
                     if agent.unread > 0 { Text("\(agent.unread)").font(.caption2.bold()).foregroundStyle(.white).padding(.horizontal, 6).frame(minHeight: 19).background(.blue, in: Capsule()) }
                     Spacer(minLength: 4)
                     if agent.pinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.secondary) }
                 }
-                Text(folder).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                Text(folder).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
         }.environment(\.defaultMinListRowHeight, 48)
     }
