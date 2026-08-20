@@ -27,7 +27,9 @@ struct NativeChatView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack {
+            DotGridBackground()
+            VStack(spacing: 0) {
             if let error = store.error { ErrorBanner(message: error) }
             ScrollViewReader { proxy in
                 ScrollView {
@@ -44,7 +46,8 @@ struct NativeChatView: View {
                 .defaultScrollAnchor(.bottom)
                 .onChange(of: store.events.count) { _, _ in if let last = items.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
             }
-            Composer(text: $draft, focused: $focused, sending: store.isSending, running: store.isRunning, send: send, stop: stop)
+                Composer(text: $draft, focused: $focused, sending: store.isSending, running: store.isRunning, send: send, stop: stop)
+            }
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle(agent.title).navigationBarTitleDisplayMode(.inline)
@@ -56,6 +59,30 @@ struct NativeChatView: View {
 
     private func send() { let value = draft; Task { if await store.send(value, baseURL: baseURL, agentID: agent.id) { draft = "" } } }
     private func stop() { Task { await store.stop(baseURL: baseURL, agentID: agent.id) } }
+}
+
+private struct DotGridBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var body: some View {
+        Canvas { context, size in
+            let color = colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.085)
+            var path = Path()
+            var y: CGFloat = 8
+            while y < size.height {
+                var x: CGFloat = 8
+                while x < size.width {
+                    path.addEllipse(in: CGRect(x: x - 1, y: y - 1, width: 2, height: 2))
+                    x += 16
+                }
+                y += 16
+            }
+            context.fill(path, with: .color(color))
+        }
+        .background(Color(.systemGroupedBackground))
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
 }
 
 private struct ToolTray: View {
