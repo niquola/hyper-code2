@@ -37,6 +37,12 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
             attachments: Array.isArray(event.attachments) ? event.attachments : [],
         }));
 
+    const liveAgent = (ctx.state as any).agent?.[id];
+    const stream = liveAgent?.scratchpad?.mobileStream;
+    const partial = isRunning && typeof stream?.text === "string" && stream.text.length > 0
+        ? { text: stream.text, revision: Number(stream.revision ?? 0), startedAt: Number(stream.startedAt ?? Date.now()) }
+        : null;
+
     return Response.json({
         version: 1,
         agentId: id,
@@ -46,5 +52,6 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         isRunning,
         runState: status?.run_state || "idle",
         lastError: status?.last_error || null,
+        partial,
     });
 }

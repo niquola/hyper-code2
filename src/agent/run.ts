@@ -81,7 +81,22 @@ export default async function (
         consumedUserIdx = Math.max(consumedUserIdx, Number(seen?.i ?? -1));
         await ctx.fns.session.syncAgentState({ agent });
 
-        const { text, usage, finishReason, toolCalls = [] } = await ctx.fns.llm.stream({ agent, signal: ac.signal });
+        // Keep the current prose in live memory for native clients. Persisting
+        // every token would hammer Postgres; the final assistant event remains
+        // the durable source of truth. A monotonically increasing revision lets
+        // pollers replace one transient bubble without creating duplicates.
+        const mobileStream = { text: "", revision: 0, startedAt: Date.now() };
+        agent.scratchpad.mobileStream = mobileStream;
+        const { text, usage, finishReason, toolCalls = [] } = await ctx.fns.llm.stream({
+            agent,
+            signal: ac.signal,
+            onEvent: (event: any) => {
+                if (event?.type !== "text_delta" || typeof event.delta !== "string") return;
+                mobileStream.text += event.delta;
+                mobileStream.revision++;
+            },
+        });
+        delete agent.scratchpad.mobileStream;
         const prose = String(text ?? '');
         delete agent.scratchpad.activeGoalFeedback;
 

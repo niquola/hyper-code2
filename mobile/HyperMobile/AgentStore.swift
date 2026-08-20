@@ -28,6 +28,7 @@ final class ChatStore: ObservableObject {
     @Published var isSending = false
     @Published var isRunning = false
     @Published var error: String?
+    @Published var partial: PartialAssistant?
     private var nextAfter = 0
     private var pollTask: Task<Void, Never>?
 
@@ -40,6 +41,7 @@ final class ChatStore: ObservableObject {
             nextAfter = page.nextAfter
             isRunning = page.isRunning
             error = nil
+            partial = page.partial
         } catch { self.error = error.localizedDescription }
         isLoading = false
         pollTask = Task { [weak self] in
@@ -82,6 +84,7 @@ final class ChatStore: ObservableObject {
             nextAfter = page.nextAfter
             isRunning = page.isRunning
             error = nil
+            partial = page.partial
         } catch { self.error = error.localizedDescription }
     }
 }

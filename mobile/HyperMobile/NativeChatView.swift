@@ -41,10 +41,15 @@ struct NativeChatView: View {
                             case .tools(let tools): ToolTray(events: tools) { selectedTool = $0 }
                             }
                         }
+                        if let partial = store.partial {
+                            LiveAssistantBubble(partial: partial)
+                                .id("live-assistant")
+                        }
                     }.padding(.horizontal, 12).padding(.vertical, 14)
                 }
                 .defaultScrollAnchor(.bottom)
                 .onChange(of: store.events.count) { _, _ in if let last = items.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
+                .onChange(of: store.partial?.revision) { _, revision in if revision != nil { proxy.scrollTo("live-assistant", anchor: .bottom) } }
             }
                 Composer(text: $draft, focused: $focused, sending: store.isSending, running: store.isRunning, send: send, stop: stop)
             }
@@ -130,6 +135,22 @@ private struct ToolDetailSheet: View {
     }
     private func section(_ title: String, _ text: String, _ truncated: Bool) -> some View {
         VStack(alignment: .leading, spacing: 7) { HStack { Text(title).font(.headline); if truncated { Text("truncated").font(.caption2).foregroundStyle(.orange) } }; ScrollView(.horizontal, showsIndicators: true) { Text(text.isEmpty ? "—" : text).font(.system(.caption, design: .monospaced)).textSelection(.enabled).fixedSize(horizontal: true, vertical: false).padding(12) }.frame(maxWidth: .infinity, alignment: .leading).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12)) }
+    }
+}
+
+private struct LiveAssistantBubble: View {
+    let partial: PartialAssistant
+    var body: some View {
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 8) {
+                NativeMessageText(text: partial.text)
+                HStack(spacing: 5) { ProgressView().controlSize(.mini); Text("Responding…").font(.caption2).foregroundStyle(.secondary) }
+            }
+            .padding(.horizontal, 13).padding(.vertical, 10)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+            .textSelection(.enabled)
+            Spacer(minLength: 32)
+        }
     }
 }
 

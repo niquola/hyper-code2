@@ -45,6 +45,12 @@ struct EventsResponse: Codable {
     let isRunning: Bool
     let runState: String
     let lastError: String?
+    let partial: PartialAssistant?
+}
+struct PartialAssistant: Codable, Equatable {
+    let text: String
+    let revision: Int
+    let startedAt: Double
 }
 
 struct SendResponse: Codable { let version: Int; let ok: Bool; let messageIdx: Int; let eventIdx: Int; let sendAt: Double }
