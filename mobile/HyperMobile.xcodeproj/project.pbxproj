@@ -20,6 +20,7 @@
 		10000000000000000000000B /* NewAgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000D /* NewAgentView.swift */; };
 		10000000000000000000000C /* AttachmentComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000E /* AttachmentComposer.swift */; };
 		10000000000000000000000D /* CameraPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000F /* CameraPicker.swift */; };
+		10000000000000000000000E /* AuthenticatedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000010 /* AuthenticatedImage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +39,7 @@
 		20000000000000000000000D /* NewAgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewAgentView.swift; sourceTree = "<group>"; };
 		20000000000000000000000E /* AttachmentComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentComposer.swift; sourceTree = "<group>"; };
 		20000000000000000000000F /* CameraPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPicker.swift; sourceTree = "<group>"; };
+		200000000000000000000010 /* AuthenticatedImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticatedImage.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +77,7 @@
 				20000000000000000000000D /* NewAgentView.swift */,
 				20000000000000000000000E /* AttachmentComposer.swift */,
 				20000000000000000000000F /* CameraPicker.swift */,
+				200000000000000000000010 /* AuthenticatedImage.swift */,
 				200000000000000000000004 /* Info.plist */,
 			);
 			path = HyperMobile;
@@ -169,6 +172,7 @@
 				10000000000000000000000B /* NewAgentView.swift in Sources */,
 				10000000000000000000000C /* AttachmentComposer.swift in Sources */,
 				10000000000000000000000D /* CameraPicker.swift in Sources */,
+				10000000000000000000000E /* AuthenticatedImage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -273,12 +273,10 @@ private struct EventBubble: View {
                             ForEach(Array(imageAttachments.enumerated()), id: \.offset) { _, attachment in
                                 if let url = attachmentURL(attachment) {
                                     Button { preview = ImagePreview(url: url, name: attachment.name ?? "Photo") } label: {
-                                        AsyncImage(url: url) { phase in
-                                            switch phase {
-                                            case .success(let image): image.resizable().scaledToFill()
-                                            case .failure: Image(systemName: "photo.badge.exclamationmark").foregroundStyle(.secondary)
-                                            default: ProgressView()
-                                            }
+                                        AuthenticatedRemoteImage(url: url) { image, failed in
+                                            if let image { Image(uiImage: image).resizable().scaledToFill() }
+                                            else if failed { Image(systemName: "photo.badge.exclamationmark").foregroundStyle(.secondary) }
+                                            else { ProgressView() }
                                         }
                                         .frame(width: 112, height: 84).background(Color.primary.opacity(0.06)).clipShape(RoundedRectangle(cornerRadius: 11))
                                     }.buttonStyle(.plain)
@@ -318,12 +316,10 @@ private struct ZoomableRemoteImage: View {
     let url: URL
     @State private var scale: CGFloat = 1
     var body: some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image): image.resizable().scaledToFit().scaleEffect(scale).gesture(MagnifyGesture().onChanged { scale = max(1, min(5, $0.magnification)) })
-            case .failure: ContentUnavailableView("Couldn’t load image", systemImage: "photo.badge.exclamationmark")
-            default: ProgressView().tint(.white)
-            }
+        AuthenticatedRemoteImage(url: url) { image, failed in
+            if let image { Image(uiImage: image).resizable().scaledToFit().scaleEffect(scale).gesture(MagnifyGesture().onChanged { scale = max(1, min(5, $0.magnification)) }) }
+            else if failed { ContentUnavailableView("Couldn’t load image", systemImage: "photo.badge.exclamationmark") }
+            else { ProgressView().tint(.white) }
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
