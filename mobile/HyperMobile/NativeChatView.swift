@@ -17,6 +17,8 @@ struct NativeChatView: View {
     @State private var selectedTool: MobileEvent?
     @FocusState private var focused: Bool
 
+    @Environment(\.dismiss) private var dismiss
+    @State private var swipeTranslation: CGFloat = 0
     private var items: [ChatItem] {
         var result: [ChatItem] = [], tools: [MobileEvent] = []
         func flush() { if !tools.isEmpty { result.append(.tools(tools)); tools.removeAll() } }
@@ -63,6 +65,19 @@ struct NativeChatView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle(agent.title).navigationBarTitleDisplayMode(.inline)
+        .offset(x: swipeTranslation)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 18)
+                .onChanged { value in
+                    guard value.startLocation.x < 32, value.translation.width > 0, abs(value.translation.height) < 80 else { return }
+                    swipeTranslation = min(90, value.translation.width * 0.35)
+                }
+                .onEnded { value in
+                    let shouldOpen = value.startLocation.x < 32 && (value.translation.width > 90 || value.predictedEndTranslation.width > 180)
+                    withAnimation(.snappy(duration: 0.2)) { swipeTranslation = 0 }
+                    if shouldOpen { dismiss() }
+                }
+        )
         .toolbar { ToolbarItem(placement: .principal) { VStack(spacing: 1) { Text(agent.title).font(.headline).lineLimit(1); Text(store.isRunning ? "Working…" : agent.model).font(.caption2).foregroundStyle(store.isRunning ? .green : .secondary) } } }
         .task { await store.start(baseURL: baseURL, agentID: agent.id) }
         .onDisappear { store.stopPolling(); onRead() }
