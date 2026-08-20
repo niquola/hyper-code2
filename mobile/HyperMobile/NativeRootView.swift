@@ -35,7 +35,7 @@ struct NativeRootView: View {
         ZStack(alignment: .leading) {
             Group {
                 if let selected, let baseURL {
-                    NavigationStack { NativeChatView(agent: selected, baseURL: baseURL) { Task { await reload() } }.toolbar { ToolbarItem(placement: .topBarLeading) { glassButton("line.3.horizontal", "Open chats") { withAnimation(.snappy(duration: 0.28)) { sidebarOpen = true } } } } }
+                    NavigationStack { NativeChatView(agent: selected, baseURL: baseURL) { Task { await reload() } }.id(selected.id).toolbar { ToolbarItem(placement: .topBarLeading) { glassButton("line.3.horizontal", "Open chats") { withAnimation(.snappy(duration: 0.28)) { sidebarOpen = true } } } } }
                 } else { EmptyHome { withAnimation(.snappy(duration: 0.28)) { sidebarOpen = true } } }
             }
             .scaleEffect(sidebarOpen ? 0.965 : 1, anchor: .trailing)
