@@ -19,6 +19,9 @@ struct NativeChatView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var swipeTranslation: CGFloat = 0
+    @State private var showingDeleteConfirmation = false
+    @State private var actionMessage: String?
+    @State private var actionInFlight = false
     private var items: [ChatItem] {
         var result: [ChatItem] = [], tools: [MobileEvent] = []
         func flush() { if !tools.isEmpty { result.append(.tools(tools)); tools.removeAll() } }
@@ -83,15 +86,78 @@ struct NativeChatView: View {
                     if shouldOpen { dismiss() }
                 }
         )
-        .toolbar { ToolbarItem(placement: .principal) { VStack(spacing: 1) { Text(agent.title).font(.headline).lineLimit(1); Text(store.isRunning ? "Working…" : agent.model).font(.caption2).foregroundStyle(store.isRunning ? .green : .secondary) } } }
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 2) {
+                    Text(agent.title).font(.headline).lineLimit(1)
+                    AgentActivityStatus(running: store.isRunning)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button { compact() } label: { Label("Compact context", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") }
+                        .disabled(store.isRunning || actionInFlight)
+                    Divider()
+                    Button(role: .destructive) { showingDeleteConfirmation = true } label: { Label("Delete chat", systemImage: "trash") }
+                        .disabled(actionInFlight)
+                } label: {
+                    Image(systemName: "ellipsis").font(.headline).frame(width: 38, height: 38)
+                        .background(Color(.secondarySystemBackground), in: Circle())
+                }
+                .accessibilityLabel("Chat actions")
+            }
+        }
         .task { await store.start(baseURL: baseURL, agentID: agent.id) }
         .onDisappear { store.stopPolling(); onRead() }
         .sheet(item: $selectedTool) { event in ToolDetailSheet(baseURL: baseURL, agentID: agent.id, event: event) }
+        .alert("Delete this chat?", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) { deleteChat() }
+        } message: { Text("The transcript and attachments will be permanently removed.") }
+        .alert("Chat", isPresented: Binding(get: { actionMessage != nil }, set: { if !$0 { actionMessage = nil } })) {
+            Button("OK") { actionMessage = nil }
+        } message: { Text(actionMessage ?? "") }
     }
 
     private func send() { let value = draft; Task { if await store.send(value, baseURL: baseURL, agentID: agent.id) { draft = "" } } }
     private func stop() { Task { await store.stop(baseURL: baseURL, agentID: agent.id) } }
+    private func compact() {
+        actionInFlight = true
+        Task {
+            do { let result = try await APIClient(baseURL: baseURL).compact(agentID: agent.id); actionMessage = result.status == "not_needed" ? "Context is already compact." : "Context compacted." }
+            catch { actionMessage = error.localizedDescription }
+            actionInFlight = false
+        }
+    }
+    private func deleteChat() {
+        actionInFlight = true
+        Task {
+            do { _ = try await APIClient(baseURL: baseURL).deleteAgent(agentID: agent.id); store.stopPolling(); onRead(); dismiss() }
+            catch { actionMessage = error.localizedDescription }
+            actionInFlight = false
+        }
+    }
 }
+
+private struct AgentActivityStatus: View {
+    let running: Bool
+    @State private var pulse = false
+    var body: some View {
+        HStack(spacing: 5) {
+            if running {
+                HStack(spacing: 2) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Circle().fill(Color.secondary).frame(width: 3.5, height: 3.5)
+                            .scaleEffect(pulse ? 1 : 0.55).opacity(pulse ? 0.9 : 0.35)
+                            .animation(.easeInOut(duration: 0.65).repeatForever().delay(Double(index) * 0.14), value: pulse)
+                    }
+                }
+                Text("Thinking").font(.caption2).foregroundStyle(.secondary)
+            }
+        }.frame(height: 12).onAppear { pulse = true }
+    }
+}
+
 
 private struct DotGridBackground: View {
     @Environment(\.colorScheme) private var colorScheme

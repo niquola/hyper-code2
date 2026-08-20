@@ -54,6 +54,15 @@ struct APIClient {
         try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/messages", method: "POST", body: SendBody(text: text, debounceMs: 100))
     }
 
+    func compact(agentID: String) async throws -> CompactResponse {
+        try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/compact", method: "POST", body: [String: String]())
+    }
+
+    func deleteAgent(agentID: String) async throws -> DeleteAgentResponse {
+        try await request(path: "api/mobile/v1/agents/\(escaped(agentID))", method: "DELETE", body: Optional<String>.none)
+    }
+
+
     func stop(agentID: String) async throws -> StopResponse {
         try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/stop", method: "POST", body: [String: String]())
     }

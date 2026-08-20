@@ -65,6 +65,9 @@ struct PartialAssistant: Codable, Equatable {
 }
 
 struct SendResponse: Codable { let version: Int; let ok: Bool; let messageIdx: Int; let eventIdx: Int; let sendAt: Double }
+struct CompactResponse: Codable { let version: Int; let ok: Bool; let status: String }
+struct DeleteAgentResponse: Codable { let version: Int; let ok: Bool; let agentId: String }
+
 struct StopResponse: Codable { let version: Int; let ok: Bool; let agentId: String }
 struct PinResponse: Codable { let version: Int; let agentId: String; let pinned: Bool }
 struct ReadResponse: Codable { let version: Int; let ok: Bool; let agentId: String; let seenAt: Double }
