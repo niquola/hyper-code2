@@ -2,6 +2,7 @@ import Foundation
 
 struct APIClient {
     private struct SendBody: Encodable { let text: String; let debounceMs: Int }
+    private struct PinBody: Encodable { let pinned: Bool }
     let baseURL: URL
     private let session: URLSession
 
@@ -30,6 +31,15 @@ struct APIClient {
 
     func stop(agentID: String) async throws -> StopResponse {
         try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/stop", method: "POST", body: [String: String]())
+    }
+
+    func toolDetail(agentID: String, eventIndex: Int) async throws -> ToolDetail {
+        let response: ToolDetailResponse = try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/events/\(eventIndex)")
+        return response.event
+    }
+
+    func setPinned(agentID: String, pinned: Bool) async throws -> PinResponse {
+        try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/pin", method: "POST", body: PinBody(pinned: pinned))
     }
 
     private func escaped(_ value: String) -> String { value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? value }

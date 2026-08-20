@@ -11,6 +11,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     const agents = await ctx.fns.session.list({}).catch(() => [] as any[]);
     const visibleAgents = agents.filter((agent: any) => !agent.parentId);
+    const pinnedIds = new Set(((await ctx.fns.procs.db.select({ sql: "SELECT substring(key FROM 18) AS id FROM kv WHERE key LIKE 'mobile-pin-agent:%'", params: [] })) as any[]).map(row => String(row.id)));
     const childrenByParent = new Map<string, any[]>();
     for (const candidate of agents as any[]) {
         if (!candidate.parentId || !candidate.delegated) continue;
@@ -40,7 +41,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
                 : "";
             return `<a href="${esc(item.href)}" class="nav-row flex min-h-7 items-center gap-1.5 rounded px-1.5 py-0.5 text-left outline-none hover:bg-base-200">
   ${ctx.fns.ui.modelLogo({ model: agent.model, active, bare: true, compact: true })}
-  <span class="min-w-0 flex-1 truncate text-xs text-base-content/80">${esc(agent.title || agent.id)} <span class="font-mono text-[10px] font-normal text-base-content/45">(${esc(agent.id)})</span></span>
+  <span class="min-w-0 flex-1 truncate text-xs text-base-content/80">${pinnedIds.has(String(agent.id)) ? '<i class="ph ph-push-pin-fill mr-1 text-amber-500" aria-label="Pinned"></i>' : ''}${esc(agent.title || agent.id)} <span class="font-mono text-[10px] font-normal text-base-content/45">(${esc(agent.id)})</span></span>
   ${badge}
 </a>`;
         }
@@ -68,12 +69,14 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
             : "";
         return `<a href="/agent/${encodeURIComponent(agent.id)}" class="nav-row flex min-h-7 items-center gap-1.5 rounded px-1.5 py-0.5 text-left outline-none hover:bg-base-200">${ctx.fns.ui.modelLogo({ model: agent.model, active, bare: true, compact: true })}<span class="min-w-0 flex-1 truncate text-xs text-base-content/80">${esc(agent.title || agent.id)} <span class="font-mono text-[10px] font-normal text-base-content/45">(${esc(agent.id)})</span></span>${badge}</a>`;
     };
-    const chats = () => [...agentGroups.entries()].map(([dir, list]) => `<section class="mb-2">
+    const pinnedAgents = visibleAgents.filter((agent: any) => pinnedIds.has(String(agent.id)));
+    const unreadAgents = visibleAgents.filter((agent: any) => !pinnedIds.has(String(agent.id)) && Number(agent.unread ?? 0) > 0);
+    const chats = () => `${pinnedAgents.length ? `<section class="mb-2"><h4 class="mb-0.5 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-600">Pinned</h4>${pinnedAgents.map(agent => agentRow(agent)).join("")}</section>` : ""}${unreadAgents.length ? `<section class="mb-2"><h4 class="mb-0.5 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-600">Unread</h4>${unreadAgents.map(agent => agentRow(agent)).join("")}</section>` : ""}${[...agentGroups.entries()].map(([dir, list]) => `<section class="mb-2">
   ${dir === "(no workdir)"
       ? `<h4 class="mb-0.5 px-1.5 text-[10px] font-semibold text-base-content/45">${dir}</h4>`
       : `<a href="/files?path=${encodeURIComponent(dir)}" class="nav-row mb-0.5 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-base-content/60 hover:bg-base-200"><i class="ph ph-folder-open"></i><span class="truncate">${esc(workspaceLabel(dir))}</span></a>`}
   ${list.map((parent: any) => `${agentRow(parent)}${(childrenByParent.get(String(parent.id)) ?? []).map((child: any) => `<div class="ml-5 border-l border-ui-border pl-1">${agentRow(child, true)}</div>`).join("")}`).join("")}
-</section>`).join("");
+</section>`).join("")}`;
     const projects = () => {
         const folders = [...agentGroups.entries()].filter(([dir]) => dir !== "(no workdir)");
         return folders.map(([dir, list]) => `<a href="/files?path=${encodeURIComponent(dir)}" class="nav-row flex min-h-8 items-center gap-2 rounded px-2 py-1 text-sm outline-none hover:bg-base-200/60">

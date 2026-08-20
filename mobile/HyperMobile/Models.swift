@@ -8,6 +8,8 @@ struct AgentSummary: Codable, Identifiable, Hashable {
     let unread: Int
     let turns: Int
     let updatedAt: Double
+    let workspaceDir: String
+    let pinned: Bool
     let delegated: Bool
 
     var isRunning: Bool { runState == "running" || runState == "claimed" }
@@ -21,6 +23,7 @@ struct MobileEvent: Codable, Identifiable, Hashable {
     let type: String
     let text: String?
     let name: String?
+    let preview: String?
     let isError: Bool
     let attachments: [EventAttachment]
     var id: Int { idx }
@@ -46,4 +49,18 @@ struct EventsResponse: Codable {
 
 struct SendResponse: Codable { let version: Int; let ok: Bool; let messageIdx: Int; let eventIdx: Int; let sendAt: Double }
 struct StopResponse: Codable { let version: Int; let ok: Bool; let agentId: String }
+struct PinResponse: Codable { let version: Int; let agentId: String; let pinned: Bool }
+struct ToolDetailResponse: Codable { let version: Int; let event: ToolDetail }
+struct ToolDetail: Codable, Identifiable {
+    let idx: Int
+    let ts: Double
+    let type: String
+    let name: String
+    let args: String
+    let argsTruncated: Bool
+    let result: String
+    let resultTruncated: Bool
+    let isError: Bool
+    var id: Int { idx }
+}
 struct APIErrorBody: Codable { let error: String?; let message: String? }

@@ -7,6 +7,12 @@ final class AgentListStore: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
+    func setPinned(_ agent: AgentSummary, pinned: Bool, baseURL: URL) async {
+        do { _ = try await APIClient(baseURL: baseURL).setPinned(agentID: agent.id, pinned: pinned); await load(baseURL: baseURL) }
+        catch { self.error = error.localizedDescription }
+    }
+
+
     func load(baseURL: URL) async {
         isLoading = true
         defer { isLoading = false }

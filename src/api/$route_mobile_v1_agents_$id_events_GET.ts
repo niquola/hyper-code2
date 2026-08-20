@@ -23,6 +23,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
             type: String(event.type),
             text: typeof event.text === "string" ? event.text : (typeof event.error === "string" ? event.error : null),
             name: typeof event.name === "string" ? event.name : null,
+            preview: event.type === "tool_call"
+                ? JSON.stringify(event.args ?? {}).slice(0, 180)
+                : (typeof event.text === "string" ? event.text.slice(0, 180) : null),
             isError: event.isError === true,
             attachments: Array.isArray(event.attachments) ? event.attachments : [],
         }));
