@@ -8,10 +8,17 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const afterRaw = url.searchParams.get("after");
     const beforeRaw = url.searchParams.get("before");
     const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") ?? 80) || 80));
+    const maxIdx = await ctx.fns.session.getMaxEventIdx({ id });
+    // Initial chat load is a backwards page ending at the current tail. Asking
+    // getEvents from index zero with a limit returns the *oldest* page, which
+    // made a newly opened native chat look reversed/stale and then advanced its
+    // polling cursor past the unseen middle. Explicit `after` remains the live
+    // incremental path; explicit `before` remains older-history pagination.
     const events = beforeRaw != null
         ? await ctx.fns.session.getEvents({ id, beforeIdx: Math.max(0, Number(beforeRaw) || 0), limit })
-        : await ctx.fns.session.getEvents({ id, fromIdx: Math.max(0, Number(afterRaw) || 0), limit });
-    const maxIdx = await ctx.fns.session.getMaxEventIdx({ id });
+        : afterRaw != null
+            ? await ctx.fns.session.getEvents({ id, fromIdx: Math.max(0, Number(afterRaw) || 0), limit })
+            : await ctx.fns.session.getEvents({ id, beforeIdx: maxIdx + 1, limit });
     const status = ((await ctx.fns.procs.db.select({ sql: "SELECT run_state, next_run_at, last_error FROM agents WHERE id = ?", params: [id] })) as any[])[0];
     const isRunning = status?.run_state === "running" || status?.run_state === "claimed" || status?.next_run_at != null;
 
