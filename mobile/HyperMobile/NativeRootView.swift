@@ -38,7 +38,7 @@ struct NativeRootView: View {
             .overlay { if sidebarOpen { Color.black.opacity(0.16).ignoresSafeArea().onTapGesture { withAnimation(.snappy(duration: 0.28)) { sidebarOpen = false } } } }
 
             if sidebarOpen {
-                AgentSidebar(agents: filtered, query: $query, loading: store.isLoading, error: store.error, select: select, pin: pin, refresh: reload, settings: { showingSettings = true }, web: { showingWeb = true })
+                AgentSidebar(agents: filtered, selectedID: selected?.id, query: $query, loading: store.isLoading, error: store.error, select: select, pin: pin, refresh: reload, settings: { showingSettings = true }, web: { showingWeb = true })
                     .frame(width: min(350, UIScreen.main.bounds.width * 0.92))
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     .zIndex(2)
@@ -60,6 +60,7 @@ struct NativeRootView: View {
 
 private struct AgentSidebar: View {
     let agents: [AgentSummary]
+    let selectedID: String?
     @Binding var query: String
     let loading: Bool
     let error: String?
@@ -71,22 +72,39 @@ private struct AgentSidebar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack { Button(action: {}) { Image(systemName: "square.and.pencil").frame(width: 40, height: 40).hyperGlass(Circle(), interactive: true) }.accessibilityLabel("New agent"); Spacer(); Button(action: web) { Image(systemName: "safari").frame(width: 40, height: 40).hyperGlass(Circle(), interactive: true) }; Button(action: settings) { Image(systemName: "gearshape").frame(width: 40, height: 40).hyperGlass(Circle(), interactive: true) } }.padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)
-            HStack(spacing: 9) { Image(systemName: "magnifyingglass").foregroundStyle(.secondary); TextField("Search chats", text: $query).textInputAutocapitalization(.never); if !query.isEmpty { Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) } } }.padding(.horizontal, 13).frame(height: 44).hyperGlass(RoundedRectangle(cornerRadius: 16), interactive: true).padding(.horizontal, 12).padding(.bottom, 8)
+            HStack { Button(action: web) { Image(systemName: "square.and.pencil").frame(width: 40, height: 40).background(Color(uiColor: .secondarySystemBackground), in: Circle()) }.accessibilityLabel("New agent in web interface"); Spacer(); Button(action: web) { Image(systemName: "safari").frame(width: 40, height: 40).background(Color(uiColor: .secondarySystemBackground), in: Circle()) }; Button(action: settings) { Image(systemName: "gearshape").frame(width: 40, height: 40).background(Color(uiColor: .secondarySystemBackground), in: Circle()) } }.padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)
+            HStack(spacing: 9) { Image(systemName: "magnifyingglass").foregroundStyle(.secondary); TextField("Search chats", text: $query).textInputAutocapitalization(.never); if !query.isEmpty { Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) } } }.padding(.horizontal, 13).frame(height: 44).background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.10), lineWidth: 0.5)).padding(.horizontal, 12).padding(.bottom, 8)
             if loading && agents.isEmpty { Spacer(); ProgressView(); Spacer() }
             else if let error, agents.isEmpty { Spacer(); ContentUnavailableView("Can’t connect", systemImage: "wifi.exclamationmark", description: Text(error)); Spacer() }
             else {
-                List(agents) { agent in
-                    Button { select(agent) } label: { SidebarAgentRow(agent: agent) }.buttonStyle(.plain)
-                        .listRowBackground(Color.clear).listRowSeparator(.hidden)
-                        .swipeActions(edge: .leading) { Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") }.tint(.orange) }
-                        .contextMenu { Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") } }
+                List {
+                    let pinned = agents.filter(\.pinned)
+                    let unread = agents.filter { !$0.pinned && $0.unread > 0 }
+                    let recent = agents.filter { !$0.pinned && $0.unread == 0 }
+                    if !pinned.isEmpty { agentSection("Pinned", pinned) }
+                    if !unread.isEmpty { agentSection("Unread", unread) }
+                    agentSection("Recent", recent)
                 }.listStyle(.plain).scrollContentBackground(.hidden).refreshable { await refresh() }
             }
         }
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .trailing) { Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 0.5) }
+        .background(Color(uiColor: .systemBackground))
+        .overlay(alignment: .trailing) { Rectangle().fill(Color.primary.opacity(0.13)).frame(width: 0.5) }
+        .shadow(color: .black.opacity(0.22), radius: 20, x: 6)
         .ignoresSafeArea(edges: .bottom)
+    }
+
+    @ViewBuilder private func agentSection(_ title: String, _ items: [AgentSummary]) -> some View {
+        if !items.isEmpty {
+            Section {
+                ForEach(items) { agent in
+                    Button { select(agent) } label: { SidebarAgentRow(agent: agent) }.buttonStyle(.plain)
+                        .listRowBackground(agent.id == selectedID ? Color.accentColor.opacity(0.12) : Color.clear)
+                        .listRowSeparator(.hidden)
+                        .swipeActions(edge: .leading) { Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") }.tint(.orange) }
+                        .contextMenu { Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") } }
+                }
+            } header: { Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary).textCase(nil) }
+        }
     }
 }
 
