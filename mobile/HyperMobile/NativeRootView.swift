@@ -50,16 +50,17 @@ struct NativeRootView: View {
                         .scrollContentBackground(.hidden)
                         .refreshable { await reload() }
                     }
-                    .safeAreaInset(edge: .bottom) {
-                        HStack {
-                            Spacer()
-                            Button { showingNewAgent = true } label: {
-                                Label("New chat", systemImage: "plus").font(.headline.weight(.semibold))
-                                    .padding(.horizontal, 22).frame(height: 52)
-                                    .background(Color.primary, in: Capsule()).foregroundStyle(Color(.systemBackground))
-                            }.buttonStyle(.plain).accessibilityLabel("New chat")
-                            Spacer()
-                        }.padding(.vertical, 9).background(.bar)
+                    .overlay(alignment: .bottom) {
+                        Button { showingNewAgent = true } label: {
+                            Label("New chat", systemImage: "plus").font(.headline.weight(.semibold))
+                                .padding(.horizontal, 22).frame(height: 52)
+                                .foregroundStyle(.primary)
+                                .hyperGlass(Capsule(), interactive: true)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("New chat")
+                        .padding(.bottom, 10)
+                        .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
                     }
                 }
             }
