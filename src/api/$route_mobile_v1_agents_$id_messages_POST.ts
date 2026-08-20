@@ -12,7 +12,10 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         const form = await opts.req.formData();
         text = String(form.get("text") ?? "").trim();
         debounceMs = Number(form.get("debounceMs") ?? 100) || 0;
-        files = form.getAll("files").filter((value): value is File => value instanceof File && value.size > 0);
+        files = form.getAll("files").flatMap(value => {
+            const file = value as File;
+            return typeof file?.arrayBuffer === "function" && Number(file.size) > 0 ? [file] : [];
+        });
     } else {
         let body: any;
         try { body = await opts.req.json(); } catch { return Response.json({ error: "invalid_json", message: "Expected JSON or multipart form data" }, { status: 400 }); }

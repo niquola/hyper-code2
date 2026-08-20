@@ -9,7 +9,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     try {
         const form = await opts.req.formData();
         const result = await ctx.fns.agent.compactContext({ agent, instructions: String(form.get("instructions") ?? "") || undefined });
-        if (result.status === "not_needed") await ctx.fns.ui.notify({ title: "Context already compact", message: "There is not enough removable history yet.", type: "info" }).catch(() => undefined);
+        if (result.status === "not_needed") await ctx.fns.ui.notify({ message: "Context already compact: there is not enough removable history yet.", level: "info" }).catch(() => undefined);
         return new Response(null, { status: 204, headers: { "HX-Refresh": "true", "X-Compaction-Status": result.status } });
     } catch (error: any) {
         return new Response(String(error?.message ?? error), { status: /running|already running/.test(String(error?.message)) ? 409 : 400 });

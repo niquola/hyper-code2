@@ -26,7 +26,7 @@ export default async function (
     } = {},
 ): Promise<any> {
     const thresholds = opts.thresholds ?? [0.20, 0.25, 0.28, 0.30, 0.32, 0.35, 0.38, 0.40, 0.45];
-    const evaluated = [];
+    const evaluated: Array<{ test: Case; hits: any[] }> = [];
     for (const test of CASES) {
         const hits = await ctx.fns.runtime.docs.search({ query: test.query, mode: "hybrid", limit: 20 });
         evaluated.push({ test, hits });

@@ -14,5 +14,6 @@ test("native multipart message commits attachments", async () => {
     const response = await route(ctx, null, { req: new Request("http://localhost/api/mobile/v1/agents/ab/messages", { method: "POST", body: form }), params: { id: "ab" } });
     expect(response.status).toBe(202);
     expect(calls[0][1]).toMatchObject({ agentId: "ab", messageIdx: 4 });
-    expect((await response.json()).attachments).toHaveLength(1);
+    const body: any = await response.json();
+    expect(body.attachments).toHaveLength(1);
 });
