@@ -22,6 +22,10 @@
 		10000000000000000000000D /* CameraPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000F /* CameraPicker.swift */; };
 		10000000000000000000000E /* AuthenticatedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000010 /* AuthenticatedImage.swift */; };
 		10000000000000000000000F /* ModelPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000011 /* ModelPickerSheet.swift */; };
+		100000000000000000000010 /* InjectEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* InjectEditorSheet.swift */; };
+		100000000000000000000012 /* NewsReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000013 /* NewsReaderView.swift */; };
+		100000000000000000000013 /* HyperMarkdownTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000014 /* HyperMarkdownTheme.swift */; };
+		100000000000000000000011 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000002 /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,6 +46,9 @@
 		20000000000000000000000F /* CameraPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPicker.swift; sourceTree = "<group>"; };
 		200000000000000000000010 /* AuthenticatedImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticatedImage.swift; sourceTree = "<group>"; };
 		200000000000000000000011 /* ModelPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPickerSheet.swift; sourceTree = "<group>"; };
+		200000000000000000000012 /* InjectEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectEditorSheet.swift; sourceTree = "<group>"; };
+		200000000000000000000013 /* NewsReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsReaderView.swift; sourceTree = "<group>"; };
+		200000000000000000000014 /* HyperMarkdownTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperMarkdownTheme.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				100000000000000000000011 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,6 +89,9 @@
 				20000000000000000000000F /* CameraPicker.swift */,
 				200000000000000000000010 /* AuthenticatedImage.swift */,
 				200000000000000000000011 /* ModelPickerSheet.swift */,
+				200000000000000000000012 /* InjectEditorSheet.swift */,
+				200000000000000000000013 /* NewsReaderView.swift */,
+				200000000000000000000014 /* HyperMarkdownTheme.swift */,
 				200000000000000000000004 /* Info.plist */,
 			);
 			path = HyperMobile;
@@ -110,6 +121,9 @@
 			dependencies = (
 			);
 			name = HyperMobile;
+			packageProductDependencies = (
+				A00000000000000000000002 /* MarkdownUI */,
+			);
 			productName = Hyper;
 			productReference = 200000000000000000000005 /* Hyper.app */;
 			productType = "com.apple.product-type.application";
@@ -138,6 +152,9 @@
 				Base,
 			);
 			mainGroup = 400000000000000000000001;
+			packageReferences = (
+				A00000000000000000000001 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+			);
 			productRefGroup = 400000000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -177,6 +194,9 @@
 				10000000000000000000000D /* CameraPicker.swift in Sources */,
 				10000000000000000000000E /* AuthenticatedImage.swift in Sources */,
 				10000000000000000000000F /* ModelPickerSheet.swift in Sources */,
+				100000000000000000000010 /* InjectEditorSheet.swift in Sources */,
+				100000000000000000000012 /* NewsReaderView.swift in Sources */,
+				100000000000000000000013 /* HyperMarkdownTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -294,6 +314,22 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A00000000000000000000001 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui.git";
+			requirement = { kind = exactVersion; version = 2.4.1; };
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A00000000000000000000002 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A00000000000000000000001 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 800000000000000000000001 /* Project object */;
 }

@@ -86,6 +86,7 @@ struct NativeRootView: View {
                 }
                 ToolbarItem(placement: .topBarLeading) { EmptyView() }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    NavigationLink { if let baseURL { NewsReaderView(baseURL: baseURL) } } label: { Image(systemName: "newspaper") }.accessibilityLabel("News")
                     Button { showingWeb = true } label: { Image(systemName: "safari") }
                     Button { showingSettings = true } label: { Image(systemName: "gearshape") }
                 }

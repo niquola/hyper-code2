@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
+import MarkdownUI
 
 private enum ChatItem: Identifiable {
     case event(MobileEvent)
@@ -27,6 +28,9 @@ struct NativeChatView: View {
     @State private var actionInFlight = false
     @State private var showingModelPicker = false
     @State private var currentModel: String
+    @State private var showingInjectEditor = false
+    @State private var injectText = ""
+    @State private var injectEvery = 1
 
     init(agent: AgentSummary, baseURL: URL, onRead: @escaping () -> Void) {
         self.agent = agent
@@ -82,7 +86,7 @@ struct NativeChatView: View {
                     withTransaction(transaction) { proxy.scrollTo("live-assistant", anchor: .bottom) }
                 }
             }
-                AttachmentComposer(text: $draft, attachments: $attachments, focused: $focused, sending: store.isSending, running: store.isRunning, send: sendAction, stop: stopAction)
+                AttachmentComposer(text: $draft, attachments: $attachments, focused: $focused, sending: store.isSending, running: store.isRunning, injectText: injectText, injectEvery: injectEvery, send: sendAction, stop: stopAction)
             }
         }
         .background(Color(.systemGroupedBackground))
@@ -105,6 +109,7 @@ struct NativeChatView: View {
         .onDisappear { store.stopPolling(); onRead() }
         .sheet(item: $selectedTool) { event in ToolDetailSheet(baseURL: baseURL, agentID: agent.id, event: event) }
         .sheet(isPresented: $showingModelPicker) { ModelPickerSheet(baseURL: baseURL, agentID: agent.id, selection: $currentModel) }
+        .sheet(isPresented: $showingInjectEditor) { InjectEditorSheet(baseURL: baseURL, agentID: agent.id, text: $injectText, every: $injectEvery) }
         .alert("Delete this chat?", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) { deleteChat() }
@@ -121,6 +126,7 @@ struct NativeChatView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button { showingModelPicker = true } label: { Label("Change model", systemImage: "cpu") }
+                Button { showingInjectEditor = true } label: { Label("Prompt inject", systemImage: "text.badge.plus") }
                 Button { compact() } label: { Label("Compact context", systemImage: "arrow.trianglehead.2.clockwise.rotate.90") }.disabled(store.isRunning || actionInFlight)
                 Divider()
                 Button(role: .destructive) { showingDeleteConfirmation = true } label: { Label("Delete chat", systemImage: "trash") }.disabled(actionInFlight)
@@ -213,8 +219,8 @@ private struct ToolTray: View {
                         }
                         .font(.system(size: 15, weight: .semibold)).foregroundStyle(event.isError ? .red : .primary)
                         .frame(width: 36, height: 36)
-                        .background(event.isError ? Color.red.opacity(0.10) : Color(.secondarySystemGroupedBackground), in: Circle())
-                        .overlay(Circle().stroke(event.isError ? Color.red.opacity(0.35) : Color.secondary.opacity(0.18)))
+                        .background(Color.clear, in: Circle())
+                        .overlay(Circle().stroke(event.isError ? Color.red.opacity(0.45) : Color.secondary.opacity(0.28), lineWidth: 0.75))
                     }.buttonStyle(.plain).accessibilityLabel(event.name ?? "Tool").accessibilityHint(event.preview ?? "Show tool details")
                 }
             }.padding(.horizontal, 1)
@@ -255,10 +261,10 @@ private struct LiveAssistantBubble: View {
                 NativeMessageText(text: partial.text)
                 HStack(spacing: 5) { ProgressView().controlSize(.mini); Text("Responding…").font(.caption2).foregroundStyle(.secondary) }
             }
-            .padding(.horizontal, 12).padding(.vertical, 9)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 7)
             .textSelection(.enabled)
-            Spacer(minLength: 32)
+            Spacer(minLength: 0)
         }
     }
 }
@@ -268,6 +274,7 @@ private struct EventBubble: View {
     let agentID: String
     let baseURL: URL
     @State private var preview: ImagePreview?
+    @Environment(\.colorScheme) private var colorScheme
     private var isUser: Bool { event.type == "user" }
     private var imageAttachments: [EventAttachment] { event.attachments.filter { $0.contentType?.hasPrefix("image/") == true && $0.id != nil } }
     private var otherAttachments: [EventAttachment] { event.attachments.filter { $0.contentType?.hasPrefix("image/") != true } }
@@ -297,12 +304,17 @@ private struct EventBubble: View {
                 }
                 ForEach(Array(otherAttachments.enumerated()), id: \.offset) { _, attachment in Label(attachment.name ?? "Attachment", systemImage: "paperclip").font(.caption) }
             }
-            .padding(.horizontal, 12).padding(.vertical, 9)
-            .background(isUser ? Color.accentColor : (event.type == "error" ? Color.red.opacity(0.13) : Color(.secondarySystemGroupedBackground)), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-            .foregroundStyle(isUser ? Color.white : Color.primary).textSelection(.enabled)
-            if !isUser { Spacer(minLength: 32) }
+            .frame(maxWidth: isUser ? nil : .infinity, alignment: .leading)
+            .padding(.horizontal, isUser ? 12 : 0).padding(.vertical, isUser ? 9 : 7)
+            .background(isUser ? userBubbleColor : Color.clear, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+            .foregroundStyle(isUser ? Color.white : (event.type == "error" ? Color.red : Color.primary)).textSelection(.enabled)
+            if !isUser { Spacer(minLength: 0) }
         }
         .sheet(item: $preview) { item in ImagePreviewSheet(item: item) }
+    }
+
+    private var userBubbleColor: Color {
+        colorScheme == .dark ? Color(red: 0.10, green: 0.22, blue: 0.38) : Color.accentColor
     }
 
     private func attachmentURL(_ attachment: EventAttachment) -> URL? {
@@ -335,5 +347,13 @@ private struct ZoomableRemoteImage: View {
 }
 
 
-private struct NativeMessageText: View { let text: String; var body: some View { if let attributed = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) { Text(attributed).font(.callout).fixedSize(horizontal: false, vertical: true) } else { Text(text).font(.callout) } } }
+private struct NativeMessageText: View {
+    let text: String
+    var body: some View {
+        Markdown(text)
+            .markdownTheme(.hyperChat)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
 private struct ErrorBanner: View { let message: String; var body: some View { Label(message, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.white).frame(maxWidth: .infinity).padding(8).background(.red) } }

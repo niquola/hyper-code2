@@ -7,6 +7,8 @@ struct AttachmentComposer: View {
     @Binding var attachments: [PendingAttachment]
     var focused: FocusState<Bool>.Binding
     let sending: Bool, running: Bool
+    let injectText: String
+    let injectEvery: Int
     let send: () -> Void, stop: () -> Void
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var showingFiles = false
@@ -42,9 +44,21 @@ struct AttachmentComposer: View {
                     Image(systemName: "plus").font(.headline).frame(width: 40, height: 40).background(Color(.secondarySystemGroupedBackground), in: Circle())
                 }.accessibilityLabel("Add attachment")
                 TextField("Message agent…", text: $text, axis: .vertical).lineLimit(1...6).focused(focused).padding(.horizontal, 13).padding(.vertical, 11).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
-                if running { Button(action: stop) { Circle().fill(.red).frame(width: 44, height: 44).overlay(Image(systemName: "stop.fill").foregroundStyle(.white)) } }
+                if running {
+                    Button(action: stop) {
+                        Circle().fill(Color(.secondarySystemBackground)).frame(width: 44, height: 44)
+                            .overlay(Image(systemName: "stop.fill").font(.callout.weight(.semibold)).foregroundStyle(.primary))
+                            .overlay(Circle().stroke(Color.primary.opacity(0.12), lineWidth: 0.5))
+                    }.accessibilityLabel("Stop agent")
+                }
                 Button(action: send) { Circle().fill(canSend ? Color.accentColor : Color.secondary.opacity(0.35)).frame(width: 44, height: 44).overlay { if sending { ProgressView().tint(.white) } else { Image(systemName: "arrow.up").font(.headline.bold()).foregroundStyle(.white) } } }.disabled(!canSend)
             }.padding(.horizontal, 10)
+            if !injectText.isEmpty {
+                Text("↳ \(injectText)\(injectEvery > 1 ? " · every \(injectEvery) turns" : "")")
+                    .font(.system(size: 9.5)).foregroundStyle(.secondary).lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 58)
+                    .accessibilityLabel("Prompt inject: \(injectText)")
+            }
             if let importError { Text(importError).font(.caption2).foregroundStyle(.red).padding(.horizontal) }
         }
         .padding(.vertical, 8).background(.bar)

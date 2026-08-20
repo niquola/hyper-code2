@@ -15,6 +15,14 @@ struct AgentSummary: Codable, Identifiable, Hashable {
     var isRunning: Bool { runState == "running" || runState == "claimed" }
 }
 
+struct NewsResponse: Codable { let version: Int; let items: [NewsItem] }
+struct NewsItem: Codable, Identifiable, Hashable {
+    let id: String; let title: String; let source: String; let url: String?; let author: String?; let summary: String; let topics: [String]; var liked: Bool; var read: Bool; let shownAt: String?
+}
+struct NewsLikeResponse: Codable { let version: Int; let id: String; let liked: Bool }
+
+struct ReadNewsResponse: Codable { let version: Int; let id: String; let read: Bool; let updated: Int }
+
 struct NewAgentOptions: Codable {
     let version: Int
     let defaultModel: String
@@ -79,6 +87,7 @@ struct ArchiveAgentResponse: Codable { let version: Int; let ok: Bool; let agent
 struct StopResponse: Codable { let version: Int; let ok: Bool; let agentId: String }
 struct ModelChangeResponse: Codable { let version: Int; let ok: Bool; let model: String; let from: String? }
 struct PinResponse: Codable { let version: Int; let agentId: String; let pinned: Bool }
+struct InjectResponse: Codable { let version: Int; let text: String; let every: Int }
 struct ReadResponse: Codable { let version: Int; let ok: Bool; let agentId: String; let seenAt: Double }
 struct ToolDetailResponse: Codable { let version: Int; let event: ToolDetail }
 struct ToolDetail: Codable, Identifiable {

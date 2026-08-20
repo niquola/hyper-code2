@@ -11,6 +11,7 @@ struct APIClient {
     private struct CreateAgentBody: Encodable { let title: String; let workspaceDir: String; let model: String; let systemPrompt: String; let createWorkspaceDir: Bool }
 
     private struct ModelBody: Encodable { let model: String }
+    private struct InjectBody: Encodable { let text: String; let every: Int }
     init(baseURL: URL, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.session = session
@@ -24,6 +25,22 @@ struct APIClient {
     func sessionIsAuthenticated() async -> Bool {
         do { let response: AuthSessionResponse = try await request(path: "auth/session"); return response.authenticated }
         catch { return false }
+    }
+
+
+    func news(limit: Int = 50) async throws -> [NewsItem] {
+        var components = URLComponents(url: url("api/mobile/v1/news"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+        let response: NewsResponse = try await request(url: components.url!)
+        return response.items
+    }
+
+    func setNewsLiked(id: String, liked: Bool) async throws -> NewsLikeResponse {
+        try await request(path: "api/mobile/v1/news/\(escaped(id))/like", method: "POST", body: ["liked": liked])
+    }
+
+    func markNewsRead(id: String) async throws {
+        let _: ReadNewsResponse = try await request(path: "api/mobile/v1/news/\(escaped(id))/read", method: "POST", body: [String: String]())
     }
 
 
@@ -72,6 +89,15 @@ struct APIClient {
         req.httpBody = body
         return try await decode(req)
     }
+
+    func inject(agentID: String) async throws -> InjectResponse {
+        try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/inject")
+    }
+
+    func setInject(agentID: String, text: String, every: Int) async throws -> InjectResponse {
+        try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/inject", method: "POST", body: InjectBody(text: text, every: every))
+    }
+
 
     func changeModel(agentID: String, model: String) async throws -> ModelChangeResponse {
         try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/model", method: "POST", body: ModelBody(model: model))
