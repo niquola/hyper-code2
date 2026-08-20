@@ -50,6 +50,17 @@ struct NativeRootView: View {
                         .scrollContentBackground(.hidden)
                         .refreshable { await reload() }
                     }
+                    .safeAreaInset(edge: .bottom) {
+                        HStack {
+                            Spacer()
+                            Button { showingNewAgent = true } label: {
+                                Label("New chat", systemImage: "plus").font(.headline.weight(.semibold))
+                                    .padding(.horizontal, 22).frame(height: 52)
+                                    .background(Color.primary, in: Capsule()).foregroundStyle(Color(.systemBackground))
+                            }.buttonStyle(.plain).accessibilityLabel("New chat")
+                            Spacer()
+                        }.padding(.vertical, 9).background(.bar)
+                    }
                 }
             }
             .navigationTitle("")
@@ -71,10 +82,7 @@ struct NativeRootView: View {
                     }
                     .accessibilityLabel("Filter chats by folder")
                 }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { showingNewAgent = true } label: { Image(systemName: "square.and.pencil") }
-                        .accessibilityLabel("New agent")
-                }
+                ToolbarItem(placement: .topBarLeading) { EmptyView() }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { showingWeb = true } label: { Image(systemName: "safari") }
                     Button { showingSettings = true } label: { Image(systemName: "gearshape") }
