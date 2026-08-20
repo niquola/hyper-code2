@@ -160,5 +160,41 @@ private struct EventBubble: View {
     var body: some View { HStack(alignment: .bottom) { if isUser { Spacer(minLength: 54) }; VStack(alignment: .leading, spacing: 6) { if let text = event.text, !text.isEmpty { NativeMessageText(text: text) }; ForEach(Array(event.attachments.enumerated()), id: \.offset) { _, attachment in Label(attachment.name ?? "Attachment", systemImage: "paperclip").font(.caption) } }.padding(.horizontal, 13).padding(.vertical, 10).background(isUser ? Color.accentColor : (event.type == "error" ? Color.red.opacity(0.13) : Color(.secondarySystemGroupedBackground)), in: RoundedRectangle(cornerRadius: 17, style: .continuous)).foregroundStyle(isUser ? Color.white : Color.primary).textSelection(.enabled); if !isUser { Spacer(minLength: 32) } } }
 }
 private struct NativeMessageText: View { let text: String; var body: some View { if let attributed = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) { Text(attributed).font(.body).fixedSize(horizontal: false, vertical: true) } else { Text(text).font(.body) } } }
-private struct Composer: View { @Binding var text: String; var focused: FocusState<Bool>.Binding; let sending: Bool, running: Bool; let send: () -> Void, stop: () -> Void; var body: some View { HStack(alignment: .bottom, spacing: 8) { TextField("Message agent…", text: $text, axis: .vertical).lineLimit(1...6).focused(focused).padding(.horizontal, 13).padding(.vertical, 11).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20)); Button(action: running ? stop : send) { ZStack { Circle().fill(running ? Color.red : Color.accentColor).frame(width: 44, height: 44); if sending { ProgressView().tint(.white) } else { Image(systemName: running ? "stop.fill" : "arrow.up").font(.headline.bold()).foregroundStyle(.white) } } }.disabled((text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !running) || sending) }.padding(.horizontal, 10).padding(.vertical, 8).background(.bar) } }
+private struct Composer: View {
+    @Binding var text: String
+    var focused: FocusState<Bool>.Binding
+    let sending: Bool, running: Bool
+    let send: () -> Void, stop: () -> Void
+    private var canSend: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !sending }
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            TextField("Message agent…", text: $text, axis: .vertical)
+                .lineLimit(1...6)
+                .focused(focused)
+                .padding(.horizontal, 13)
+                .padding(.vertical, 11)
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
+
+            if running {
+                Button(action: stop) {
+                    Circle().fill(.red).frame(width: 44, height: 44)
+                        .overlay(Image(systemName: "stop.fill").font(.headline.bold()).foregroundStyle(.white))
+                }
+                .accessibilityLabel("Stop agent")
+            }
+
+            Button(action: send) {
+                Circle().fill(canSend ? Color.accentColor : Color.secondary.opacity(0.35)).frame(width: 44, height: 44)
+                    .overlay {
+                        if sending { ProgressView().tint(.white) }
+                        else { Image(systemName: "arrow.up").font(.headline.bold()).foregroundStyle(.white) }
+                    }
+            }
+            .disabled(!canSend)
+            .accessibilityLabel(running ? "Send steering message" : "Send message")
+        }
+        .padding(.horizontal, 10).padding(.vertical, 8).background(.bar)
+    }
+}
 private struct ErrorBanner: View { let message: String; var body: some View { Label(message, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.white).frame(maxWidth: .infinity).padding(8).background(.red) } }
