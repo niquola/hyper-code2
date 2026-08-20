@@ -75,6 +75,7 @@ struct PendingAttachment: Identifiable, Hashable {
 struct CompactResponse: Codable { let version: Int; let ok: Bool; let status: String }
 struct DeleteAgentResponse: Codable { let version: Int; let ok: Bool; let agentId: String }
 
+struct ArchiveAgentResponse: Codable { let version: Int; let ok: Bool; let agentId: String; let archived: Bool }
 struct StopResponse: Codable { let version: Int; let ok: Bool; let agentId: String }
 struct PinResponse: Codable { let version: Int; let agentId: String; let pinned: Bool }
 struct ReadResponse: Codable { let version: Int; let ok: Bool; let agentId: String; let seenAt: Double }

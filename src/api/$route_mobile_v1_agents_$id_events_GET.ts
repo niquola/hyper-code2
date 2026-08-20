@@ -34,7 +34,12 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
                 ? JSON.stringify(event.args ?? {}).slice(0, 180)
                 : (typeof event.text === "string" ? event.text.slice(0, 180) : null),
             isError: event.isError === true,
-            attachments: Array.isArray(event.attachments) ? event.attachments : [],
+            attachments: Array.isArray(event.attachments) ? event.attachments.map((attachment: any) => ({
+                id: attachment.id == null ? null : String(attachment.id),
+                name: attachment.name ?? attachment.fileName ?? null,
+                contentType: attachment.contentType ?? attachment.mimeType ?? null,
+                size: attachment.size == null ? null : Number(attachment.size),
+            })) : [],
         }));
 
     const liveAgent = (ctx.state as any).agent?.[id];

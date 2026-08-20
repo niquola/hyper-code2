@@ -14,6 +14,7 @@ struct NativeRootView: View {
     @State private var loginError: String?
     @State private var isLoggingIn = false
 
+    @State private var pendingDelete: AgentSummary?
     private var baseURL: URL? { URL(string: serverURL) }
     private var folders: [String] { Array(Set(store.agents.map { folderName($0.workspaceDir) })).sorted() }
     private var filtered: [AgentSummary] {
@@ -80,6 +81,10 @@ struct NativeRootView: View {
         .sheet(isPresented: $showingSettings) { NativeSettingsView(serverURL: $serverURL) { Task { await reload() } } }
         .sheet(isPresented: $showingWeb) { NavigationStack { HyperWebViewScreen(urlString: serverURL) } }
         .sheet(isPresented: $needsLogin) { NativeLoginView(password: $loginPassword, error: loginError, isLoading: isLoggingIn) { login() } }
+        .alert("Delete this chat?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })) {
+            Button("Cancel", role: .cancel) { pendingDelete = nil }
+            Button("Delete", role: .destructive) { if let agent = pendingDelete { delete(agent) }; pendingDelete = nil }
+        } message: { Text("The transcript and attachments will be permanently removed.") }
     }
 
     @ViewBuilder private func agentSection(_ title: String, _ agents: [AgentSummary]) -> some View {
@@ -91,6 +96,10 @@ struct NativeRootView: View {
                         NavigationLink(value: agent) { EmptyView() }.opacity(0)
                     }
                         .listRowSeparator(.hidden)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) { pendingDelete = agent } label: { Label("Delete", systemImage: "trash") }
+                            Button { archive(agent) } label: { Label("Archive", systemImage: "archivebox") }.tint(.orange)
+                        }
                         .swipeActions(edge: .leading) {
                             Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") }.tint(.orange)
                         }
@@ -113,6 +122,8 @@ struct NativeRootView: View {
         Task { do { try await APIClient(baseURL: baseURL).login(password: loginPassword); loginPassword = ""; needsLogin = false; await reload() } catch { loginError = error.localizedDescription }; isLoggingIn = false }
     }
     private func pin(_ agent: AgentSummary, _ pinned: Bool) { guard let baseURL else { return }; Task { await store.setPinned(agent, pinned: pinned, baseURL: baseURL) } }
+    private func archive(_ agent: AgentSummary) { guard let baseURL else { return }; Task { do { _ = try await APIClient(baseURL: baseURL).archiveAgent(agentID: agent.id); await reload() } catch { store.error = error.localizedDescription } } }
+    private func delete(_ agent: AgentSummary) { guard let baseURL else { return }; Task { do { _ = try await APIClient(baseURL: baseURL).deleteAgent(agentID: agent.id); await reload() } catch { store.error = error.localizedDescription } } }
     private func folderName(_ path: String) -> String { URL(fileURLWithPath: path).lastPathComponent.isEmpty ? "No workspace" : URL(fileURLWithPath: path).lastPathComponent }
 }
 
@@ -146,7 +157,7 @@ private struct AgentRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(projectColor.gradient).frame(width: 48, height: 48)
+                Circle().fill(projectColor.gradient).frame(width: 44, height: 44)
                 Text(initial).font(.headline.weight(.semibold)).foregroundStyle(.white)
                 if agent.isRunning { Circle().fill(Color(.systemBackground)).frame(width: 14, height: 14).overlay(Circle().fill(.green).frame(width: 9, height: 9)).offset(x: 18, y: 18) }
             }
@@ -159,7 +170,7 @@ private struct AgentRow: View {
                 }
                 Text(folder).font(.callout).foregroundStyle(.secondary).lineLimit(1)
             }
-        }.padding(.vertical, 5)
+        }.padding(.vertical, 2)
     }
 }
 
