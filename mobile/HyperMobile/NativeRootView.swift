@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct NativeRootView: View {
-    @AppStorage("hyper.serverURL") private var serverURL = "http://localhost:3010"
+    @AppStorage("hyper.serverURL") private var serverURL = "https://hyper.tunnel.apki.dev"
+    @AppStorage("hyper.tunnelDefault.v1") private var tunnelDefaultApplied = false
     @StateObject private var store = AgentListStore()
     @State private var showingSettings = false
     @State private var showingWeb = false
@@ -41,7 +42,13 @@ struct NativeRootView: View {
             .navigationDestination(for: AgentSummary.self) { agent in if let baseURL { NativeChatView(agent: agent, baseURL: baseURL) } }
             .toolbar { ToolbarItemGroup(placement: .topBarTrailing) { Button { showingWeb = true } label: { Image(systemName: "safari") }.accessibilityLabel("Open web interface"); Button { showingSettings = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("Connection settings") } }
         }
-        .task { await reload() }
+        .task {
+            if !tunnelDefaultApplied {
+                serverURL = "https://hyper.tunnel.apki.dev"
+                tunnelDefaultApplied = true
+            }
+            await reload()
+        }
         .sheet(isPresented: $showingSettings) { NativeSettingsView(serverURL: $serverURL) { Task { await reload() } } }
         .sheet(isPresented: $showingWeb) { NavigationStack { HyperWebViewScreen(urlString: serverURL) } }
         .sheet(isPresented: $needsLogin) { NativeLoginView(password: $loginPassword, error: loginError, isLoading: isLoggingIn) { login() } }
