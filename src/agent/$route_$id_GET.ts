@@ -25,11 +25,13 @@ params: Record<string, string> }) {
         params: [`hot:${id}`, String(Date.now())],
     });
     const chat = await ctx.fns.ui.chatColumn({ agentId: id });
-    const [team, archivedTeam] = await Promise.all([
+    const [team, archivedTeam, metaState] = await Promise.all([
         ctx.fns.agent.team({ agent }),
         ctx.fns.agent.team({ agent, includeArchived: true }),
+        ctx.fns.procs.db.select({ sql: "SELECT value FROM kv WHERE key = ?", params: ["ui:rightPanelCollapsed"] }).catch(() => [] as any[]),
     ]);
-    const meta = ctx.fns.ui.agentMetaPanel({ agent, team, archivedTeam });
+    const metaCollapsed = String((metaState as any[])[0]?.value ?? "0") === "1";
+    const meta = ctx.fns.ui.agentMetaPanel({ agent, team, archivedTeam, collapsed: metaCollapsed });
     // id="chat-panel" is the chat client's mount point: /agent/chat.js loads
     // once for the whole app and (re)binds itself to this element after every
     // swap — Enter-to-send, stick-to-bottom, older-message paging and the tool

@@ -73,6 +73,13 @@ export default async function (ctx: Context, session: Session | null, opts: {
 .glass-panel {
   box-shadow: inherit;
 }
+.agent-meta-panel { transition: width .18s ease, border-radius .18s ease; }
+.agent-meta-panel.agent-meta-collapsed { width: 2.5rem !important; min-width: 2.5rem; }
+.agent-meta-panel.agent-meta-collapsed [data-agent-meta-content],
+.agent-meta-panel.agent-meta-collapsed [data-agent-meta-label] { display: none; }
+.agent-meta-panel.agent-meta-collapsed > header { height: 100%; align-items: flex-start; justify-content: center; border-bottom: 0; padding: .5rem 0; background: transparent !important; }
+.agent-meta-panel.agent-meta-collapsed .agent-meta-toggle { color: var(--theme-base-content); }
+
 .glass-bar {
   background-color: rgb(from var(--color-base-100) r g b / .68) !important;
   background-image: linear-gradient(110deg, rgb(255 255 255 / .12), transparent 45%, rgb(255 255 255 / .04));

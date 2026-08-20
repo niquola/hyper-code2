@@ -96,3 +96,11 @@ test("a section renders standalone and an unknown section throws", () => {
     expect(html).not.toContain("agent-meta-goal");
     expect(() => renderSection(ctx, null, { agent: { id: "eh" } as any, section: "nope" as any })).toThrow(/unknown section/);
 });
+
+
+test("meta panel exposes a persistent collapse control", () => {
+    const html = render(mkCtx(), null, { agent: { id: "eh", goal: null } as any });
+    expect(html).toContain("data-agent-meta-panel");
+    expect(html).toContain('data-action="toggle-agent-meta"');
+    expect(html).toContain("data-agent-meta-content");
+});

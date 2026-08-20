@@ -13,8 +13,42 @@
     if (window.__hyperMetaInstalled) return;
     window.__hyperMetaInstalled = true;
 
+
+    const applyPanelState = panel => {
+        const collapsed = panel.classList.contains('agent-meta-collapsed');
+        const button = panel.querySelector('[data-agent-meta-toggle]');
+        button?.setAttribute('aria-expanded', String(!collapsed));
+        if (button) {
+            button.title = collapsed ? 'Expand agent inspector' : 'Collapse agent inspector';
+            button.setAttribute('aria-label', button.title);
+        }
+    };
+    const applyAllPanelStates = root => {
+        if (root?.matches?.('[data-agent-meta-panel]')) applyPanelState(root);
+        root?.querySelectorAll?.('[data-agent-meta-panel]').forEach(applyPanelState);
+    };
+    applyAllPanelStates(document);
+    document.body.addEventListener('htmx:load', event => applyAllPanelStates(event.detail?.elt ?? event.target));
+
     document.addEventListener('click', event => {
         const button = event.target.closest?.('[data-plan-remove], [data-plan-move]');
+
+        const toggle = event.target.closest?.('[data-agent-meta-toggle]');
+        if (toggle) {
+            const panel = toggle.closest('[data-agent-meta-panel]');
+            if (!panel) return;
+            event.preventDefault();
+            const collapsed = !panel.classList.contains('agent-meta-collapsed');
+            panel.classList.toggle('agent-meta-collapsed', collapsed);
+            applyPanelState(panel);
+            fetch('/ui/right-panel', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ collapsed }),
+            }).catch(() => {});
+            return;
+        }
+
         if (!button) return;
         const form = button.closest('[data-plan-editor]');
         const tasks = form?.querySelector('[data-plan-tasks]');
