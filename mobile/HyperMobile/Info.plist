@@ -11,6 +11,8 @@
     <key>CFBundleShortVersionString</key><string>1.0</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>LSRequiresIPhoneOS</key><true/>
+    <key>NSCameraUsageDescription</key><string>Hyper uses the camera to attach a photo to an agent message.</string>
+    <key>NSPhotoLibraryUsageDescription</key><string>Hyper lets you choose photos to attach to an agent message.</string>
     <key>NSAppTransportSecurity</key>
     <dict><key>NSAllowsArbitraryLoads</key><true/><key>NSAllowsLocalNetworking</key><true/></dict>
     <key>UILaunchScreen</key><dict><key>UIColorName</key><string></string></dict>

@@ -10,6 +10,8 @@ struct AttachmentComposer: View {
     let send: () -> Void, stop: () -> Void
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var showingFiles = false
+    @State private var showingPhotos = false
+    @State private var showingCamera = false
     @State private var importError: String?
 
     private var canSend: Bool { (!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty) && !sending }
@@ -32,7 +34,9 @@ struct AttachmentComposer: View {
             }
             HStack(alignment: .bottom, spacing: 8) {
                 Menu {
-                    PhotosPicker(selection: $photoItems, maxSelectionCount: 10, matching: .images) { Label("Photo library", systemImage: "photo.on.rectangle") }
+                    Button { showingCamera = true } label: { Label("Take photo", systemImage: "camera") }
+                        .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
+                    Button { showingPhotos = true } label: { Label("Photo library", systemImage: "photo.on.rectangle") }
                     Button { showingFiles = true } label: { Label("Choose file", systemImage: "folder") }
                 } label: {
                     Image(systemName: "plus").font(.headline).frame(width: 40, height: 40).background(Color(.secondarySystemGroupedBackground), in: Circle())
@@ -45,6 +49,15 @@ struct AttachmentComposer: View {
         }
         .padding(.vertical, 8).background(.bar)
         .onChange(of: photoItems) { _, items in Task { await loadPhotos(items) } }
+        .photosPicker(isPresented: $showingPhotos, selection: $photoItems, maxSelectionCount: max(1, 10 - attachments.count), matching: .images)
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraPicker { result in
+                switch result {
+                case .success(let attachment): if attachment.data.count <= 25 * 1024 * 1024 { attachments.append(attachment) } else { importError = "Photo must be at most 25 MB" }
+                case .failure(let error): importError = error.localizedDescription
+                }
+            }.ignoresSafeArea()
+        }
         .fileImporter(isPresented: $showingFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in loadFiles(result) }
     }
 
