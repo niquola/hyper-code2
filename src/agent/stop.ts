@@ -37,6 +37,8 @@ clearQueue?: boolean }) {
         sql: `UPDATE agents
             SET run_state = 'idle',
                 run_started_at = NULL,
+                run_heartbeat_at = NULL,
+                run_token = NULL,
                 next_run_at = ${clearQueue ? 'NULL' : 'next_run_at'},
                 last_error = ?,
                 updated_at = ?

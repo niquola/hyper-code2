@@ -222,3 +222,56 @@ describe('agent.workerLoop', () => {
         expect(started.soon! - started.already!).toBeLessThan(300);
     }, 5_000);
 });
+
+
+
+describe('agent.workerLoop renewable lease', () => {
+    test('healthy runs longer than the old 10-minute wall clock are not reclaimed', async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.fns.agent.workerLoop = workerLoop;
+        ctx.fns.agent.wakeWorker = wakeWorker;
+        const now = Date.now();
+        await seedReadyAgent(ctx, 'lh', now - 11 * 60_000);
+        await ctx.fns.procs.db.run({
+            sql: `UPDATE agents SET run_state = 'running', next_run_at = NULL, run_started_at = ?, run_heartbeat_at = ?, run_token = ? WHERE id = ?`,
+            params: [now - 11 * 60_000, now, 'healthy-token', 'lh'],
+        });
+
+        const loop = workerLoop(ctx, null);
+        await Bun.sleep(30);
+        (ctx.state as any).workerLoopRunning = false;
+        wakeWorker(ctx, null);
+        await loop;
+
+        const [row] = await ctx.fns.procs.db.select({ sql: `SELECT run_state, run_token, last_error FROM agents WHERE id = ?`, params: ['lh'] });
+        expect(row.run_state).toBe('running');
+        expect(row.run_token).toBe('healthy-token');
+        expect(row.last_error).toBeNull();
+    });
+
+    test('expired heartbeat is fenced and scheduled with backoff', async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.fns.agent.workerLoop = workerLoop;
+        ctx.fns.agent.wakeWorker = wakeWorker;
+        const now = Date.now();
+        await seedReadyAgent(ctx, 'ls', now - 11 * 60_000);
+        await ctx.fns.procs.db.run({
+            sql: `UPDATE agents SET run_state = 'running', next_run_at = NULL, run_started_at = ?, run_heartbeat_at = ?, run_token = ? WHERE id = ?`,
+            params: [now - 11 * 60_000, now - 11 * 60_000, 'stale-token', 'ls'],
+        });
+
+        const loop = workerLoop(ctx, null);
+        await Bun.sleep(30);
+        (ctx.state as any).workerLoopRunning = false;
+        wakeWorker(ctx, null);
+        await loop;
+
+        const [row] = await ctx.fns.procs.db.select({ sql: `SELECT run_state, run_token, run_heartbeat_at, next_run_at, stale_recovery_count, last_error FROM agents WHERE id = ?`, params: ['ls'] });
+        expect(row.run_state).toBe('idle');
+        expect(row.run_token).toBeNull();
+        expect(row.run_heartbeat_at).toBeNull();
+        expect(Number(row.next_run_at)).toBeGreaterThan(now);
+        expect(Number(row.stale_recovery_count)).toBe(1);
+        expect(row.last_error).toContain('automatic retry scheduled');
+    });
+});

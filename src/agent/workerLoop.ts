@@ -47,29 +47,57 @@ function waitForWork(ctx: Context, timeoutMs: number): Promise<void> {
     });
 }
 
-// Free runs whose claim is older than the lease — a wedged stream / crashed
-// promise must not hold an agent hostage forever. Recovered agents surface as
-// an error (statusbar badge); the next message retries them.
+// A run owns a renewable lease. The timestamp is a heartbeat, not a total
+// wall-clock limit: healthy long LLM/tool loops may run indefinitely. If the
+// owning process disappears, recovery revokes its token and retries with a
+// bounded exponential backoff.
 const RUN_LEASE_MS = 10 * 60_000;
+const RUN_HEARTBEAT_MS = 30_000;
+const MAX_STALE_RETRIES = 3;
+
 async function recoverStaleRuns(ctx: Context, now: number): Promise<void> {
-    await ctx.fns.procs.db.run({
+    const recovered = await ctx.fns.procs.db.select({
         sql: `UPDATE agents
             SET run_state = 'idle', run_started_at = NULL,
-                last_error = 'stale run recovered (exceeded ' || ? || 's lease)', updated_at = ?
-          WHERE run_state = 'running' AND run_started_at IS NOT NULL AND run_started_at < ?`,
-        params: [Math.round(RUN_LEASE_MS / 1000), now, now - RUN_LEASE_MS],
-    });
+                run_heartbeat_at = NULL, run_token = NULL,
+                stale_recovery_count = stale_recovery_count + 1,
+                next_run_at = CASE WHEN stale_recovery_count < ?
+                    THEN ? + LEAST(120000, 5000 * CAST(power(2, stale_recovery_count) AS BIGINT))
+                    ELSE NULL END,
+                last_error = CASE WHEN stale_recovery_count < ?
+                    THEN 'stale run recovered; automatic retry scheduled'
+                    ELSE 'stale run recovered; automatic retry limit reached' END,
+                updated_at = ?
+          WHERE run_state = 'running'
+            AND COALESCE(run_heartbeat_at, run_started_at) IS NOT NULL
+            AND COALESCE(run_heartbeat_at, run_started_at) < ?
+          RETURNING id`,
+        params: [MAX_STALE_RETRIES, now, MAX_STALE_RETRIES, now, now - RUN_LEASE_MS],
+    }) as any[];
+
+    // In this process the revoked run may still be awaiting a tool. Cooperative
+    // cancellation prevents it from continuing into another model/tool cycle.
+    for (const row of recovered) {
+        const live = (ctx.state as any).agent?.[row.id];
+        if (live) live.currentJobId = null;
+        try { live?.abortController?.abort('stale_run_recovered'); } catch {}
+    }
+    if (recovered.length) { try { ctx.fns.agent.wakeWorker({}); } catch {} }
 }
 
-// Atomically claim ONE pending agent, returning its id (or null if none).
-async function claimOne(ctx: Context, now: number): Promise<string | null> {
+// Atomically claim ONE pending agent. The opaque token fences heartbeat and
+// finalize writes from an older owner after recovery/reclaim.
+async function claimOne(ctx: Context, now: number): Promise<{ id: string; token: string } | null> {
+    const token = crypto.randomUUID();
     const claimed = await ctx.fns.procs.db.select({
         sql: `UPDATE agents
-            SET run_state      = 'running',
-                run_started_at = ?,
-                next_run_at    = NULL,
-                last_error     = NULL,
-                updated_at     = ?
+            SET run_state       = 'running',
+                run_started_at  = ?,
+                run_heartbeat_at = ?,
+                run_token       = ?,
+                next_run_at     = NULL,
+                last_error      = NULL,
+                updated_at      = ?
           WHERE id IN (
               SELECT id FROM agents
                WHERE run_state = 'idle'
@@ -80,20 +108,20 @@ async function claimOne(ctx: Context, now: number): Promise<string | null> {
                LIMIT 1
           )
           RETURNING id`,
-        params: [now, now, now],
+        params: [now, now, token, now, now],
     }) as any[];
-    return claimed.length === 0 ? null : (claimed[0]!.id as string);
+    return claimed.length === 0 ? null : { id: claimed[0]!.id as string, token };
 }
 
 // Run one agent end-to-end. Mirrors what the old single-agent loop body did:
 // frontier snapshot → run() → finally: advance cursor / reschedule / mark idle.
-async function runOne(ctx: Context, agentId: string): Promise<void> {
+async function runOne(ctx: Context, agentId: string, runToken: string): Promise<void> {
     const agent = await loadAgent(ctx, agentId);
     if (!agent) {
         const ts = Date.now();
         await ctx.fns.procs.db.run({
-            sql: `UPDATE agents SET run_state = 'idle', last_error = ?, updated_at = ? WHERE id = ?`,
-            params: ['agent not found at run-time', ts, agentId],
+            sql: `UPDATE agents SET run_state = 'idle', run_started_at = NULL, run_heartbeat_at = NULL, run_token = NULL, last_error = ?, updated_at = ? WHERE id = ? AND run_token = ?`,
+            params: ['agent not found at run-time', ts, agentId, runToken],
         });
         return;
     }
@@ -109,6 +137,23 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
     const frontierIdx = Number(frontier?.max_idx ?? -1);
 
     agent.isStreaming = true;
+    agent.currentJobId = runToken;
+    let heartbeatBusy = false;
+    const heartbeat = async () => {
+        if (heartbeatBusy) return;
+        heartbeatBusy = true;
+        try {
+            const beat = Date.now();
+            const touched = await ctx.fns.procs.db.run({
+                sql: `UPDATE agents SET run_heartbeat_at = ? WHERE id = ? AND run_state = 'running' AND run_token = ?`,
+                params: [beat, agentId, runToken],
+            });
+            if (!touched.changes && agent.currentJobId === runToken) {
+                try { agent.abortController?.abort('run_lease_revoked'); } catch {}
+            }
+        } finally { heartbeatBusy = false; }
+    };
+    const heartbeatTimer = setInterval(() => { void heartbeat().catch(() => undefined); }, RUN_HEARTBEAT_MS);
     let errorText: string | null = null;
     let failure: types.llm.FailureInfo | null = null;
     let aborted = false;
@@ -121,7 +166,8 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
         const result = await ctx.fns.agent.run({ agent, userText: '', userMessageAlreadyAppended: true });
         consumedIdx = Math.max(frontierIdx, Number((result as any)?.consumedUserIdx ?? -1));
     } catch (e: any) {
-        if (isAbortError(e)) {
+        if (agent.currentJobId !== runToken) aborted = true;
+        else if (isAbortError(e)) {
             aborted = true;
         } else {
             // Stream implementations classify their own HTTP failures and carry
@@ -134,6 +180,7 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
             }
         }
     } finally {
+        clearInterval(heartbeatTimer);
         const ts = Date.now();
         const advanceCursor = !aborted && !errorText;
 
@@ -168,11 +215,27 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
                         ELSE next_run_at
                     END,
                     last_error = ?,
+                    stale_recovery_count = CASE WHEN ? = 1 THEN 0 ELSE stale_recovery_count END,
+                    run_heartbeat_at = NULL,
+                    run_token = NULL,
                     updated_at = ?
-              WHERE id = ?
+              WHERE id = ? AND run_token = ?
               RETURNING next_run_at`,
-            params: [advanceCursor ? 1 : 0, consumedIdx, advanceCursor ? 1 : 0, consumedIdx, ts + 100, errorText, ts, agentId],
+            params: [advanceCursor ? 1 : 0, consumedIdx, advanceCursor ? 1 : 0, consumedIdx, ts + 100, errorText, advanceCursor ? 1 : 0, ts, agentId, runToken],
         });
+
+        // Recovery or an explicit stop may already have revoked this token.
+        // In that case this owner is fenced: it must not schedule retries,
+        // clear another run's state, or trigger post-run work.
+        if (!finalized.changes) {
+            if (agent.currentJobId === runToken) {
+                agent.currentJobId = null;
+                agent.abortController = null;
+                agent.isStreaming = false;
+            }
+            try { await ctx.fns.session.syncAgentState({ agent }); } catch {}
+            return;
+        }
 
         // One automatic retry for TRANSIENT failures (stalled stream, 5xx,
         // dropped connection): reschedule once with a short backoff. Anything
@@ -205,8 +268,11 @@ async function runOne(ctx: Context, agentId: string): Promise<void> {
             }
         }
 
-        agent.abortController = null;
-        agent.isStreaming = false;
+        if (agent.currentJobId === runToken) {
+            agent.currentJobId = null;
+            agent.abortController = null;
+            agent.isStreaming = false;
+        }
         try { await ctx.fns.session.syncAgentState({ agent }); } catch {}
 
         // If the agent left finalize with a schedule (pending work or a
@@ -252,10 +318,10 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
             }
         }
         while (true) {
-            const id = await claimOne(ctx, Date.now());
-            if (!id) break;
+            const claim = await claimOne(ctx, Date.now());
+            if (!claim) break;
             drained++;
-            const p = runOne(ctx, id).finally(() => {
+            const p = runOne(ctx, claim.id, claim.token).finally(() => {
                 inflight.delete(p);
                 // A completion changes claimability (the agent becomes idle and
                 // may leave pending work). Wake the parked loop immediately;
