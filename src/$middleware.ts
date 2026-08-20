@@ -1,24 +1,30 @@
-// Where the person is — read off the traffic they already generate.
-//
-// Two beacons used to report this: the tab POSTed /screen/here after every
-// render and /ui/state alongside it. But a browser cannot look at a page
-// without asking this server for it, so the answer was already in every
-// request — the beacons were a second channel carrying a fact we had.
-//
-// One line here replaces them, and it cannot go stale differently from what
-// was served, because it IS what was served.
-export default function (ctx: Context, session: Session | null, opts: { req: Request }): void {
+// Global application middleware: optional password gate plus current-screen tracking.
+export default async function (ctx: Context, session: Session | null, opts: { req: Request }): Promise<Response | void> {
     const url = new URL(opts.req.url);
-    // Only page-ish GETs: a poll for a fragment says nothing new about where
-    // somebody is looking, and assets say less than that.
+    const password = await ctx.fns.auth.password({});
+    if (password) {
+        const publicPath = url.pathname === "/auth/login" || url.pathname === "/auth/logout" || url.pathname === "/favicon.ico";
+        const infrastructurePath = url.pathname === "/repl" || url.pathname.startsWith("/external/");
+        if (!publicPath && !infrastructurePath) {
+            const user = await ctx.fns.procs.auth.authenticate({ req: opts.req });
+            if (!user) {
+                const wantsHTML = (opts.req.headers.get("accept") ?? "").includes("text/html") && opts.req.method === "GET";
+                if (wantsHTML) return new Response(null, { status: 303, headers: { location: `/auth/login?next=${encodeURIComponent(url.pathname + url.search)}`, "cache-control": "no-store" } });
+                return Response.json({ error: "unauthorized", message: "Authentication required" }, { status: 401, headers: { "cache-control": "no-store" } });
+            }
+            if (!["GET", "HEAD", "OPTIONS"].includes(opts.req.method.toUpperCase())) {
+                const origin = opts.req.headers.get("origin");
+                const forwardedHost = opts.req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+                const expectedHost = forwardedHost || opts.req.headers.get("host") || url.host;
+                if (origin && new URL(origin).host !== expectedHost) return Response.json({ error: "cross_origin", message: "Cross-origin write rejected" }, { status: 403 });
+            }
+            if (session) (session as any).user = user;
+        }
+    }
+
     if (opts.req.method !== "GET") return;
     const agent = /^\/(?:a|agent)\/([A-Za-z0-9_-]+)/.exec(url.pathname)?.[1];
     if (!agent || agent === "new") return;
-
     const state = ((ctx.state as any).screen ??= { nextId: 1, pending: new Map() });
-    state.here = {
-        url: url.pathname + url.search,
-        agentId: agent,
-        at: new Date().toISOString(),
-    };
+    state.here = { url: url.pathname + url.search, agentId: agent, at: new Date().toISOString() };
 }

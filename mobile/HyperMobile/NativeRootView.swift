@@ -6,6 +6,10 @@ struct NativeRootView: View {
     @State private var showingSettings = false
     @State private var showingWeb = false
     @State private var query = ""
+    @State private var needsLogin = false
+    @State private var loginPassword = ""
+    @State private var loginError: String?
+    @State private var isLoggingIn = false
     private var baseURL: URL? { URL(string: serverURL) }
 
     private var filtered: [AgentSummary] {
@@ -40,10 +44,41 @@ struct NativeRootView: View {
         .task { await reload() }
         .sheet(isPresented: $showingSettings) { NativeSettingsView(serverURL: $serverURL) { Task { await reload() } } }
         .sheet(isPresented: $showingWeb) { NavigationStack { HyperWebViewScreen(urlString: serverURL) } }
+        .sheet(isPresented: $needsLogin) { NativeLoginView(password: $loginPassword, error: loginError, isLoading: isLoggingIn) { login() } }
     }
-    private func reload() async { guard let baseURL else { store.error = "Invalid server URL"; return }; await store.load(baseURL: baseURL) }
+    private func reload() async {
+        guard let baseURL else { store.error = "Invalid server URL"; return }
+        await store.load(baseURL: baseURL)
+        if store.error?.localizedCaseInsensitiveContains("authentication") == true || store.error?.localizedCaseInsensitiveContains("unauthorized") == true { needsLogin = true }
+    }
+    private func login() {
+        guard let baseURL, !loginPassword.isEmpty else { return }
+        isLoggingIn = true; loginError = nil
+        Task { do { try await APIClient(baseURL: baseURL).login(password: loginPassword); loginPassword = ""; needsLogin = false; await reload() } catch { loginError = error.localizedDescription }; isLoggingIn = false }
+    }
     private func pin(_ agent: AgentSummary, _ pinned: Bool) { guard let baseURL else { return }; Task { await store.setPinned(agent, pinned: pinned, baseURL: baseURL) } }
 }
+
+private struct NativeLoginView: View {
+    @Binding var password: String
+    let error: String?
+    let isLoading: Bool
+    let submit: () -> Void
+    @FocusState private var focused: Bool
+    var body: some View {
+        VStack(spacing: 18) {
+            Spacer()
+            Image(systemName: "lock.shield.fill").font(.system(size: 46)).foregroundStyle(.indigo)
+            VStack(spacing: 5) { Text("Sign in to Hyper").font(.title2.bold()); Text("Enter the tunnel access password.").foregroundStyle(.secondary) }
+            SecureField("Password", text: $password).textContentType(.password).submitLabel(.go).onSubmit(submit).focused($focused).padding(14).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            if let error { Text(error).font(.caption).foregroundStyle(.red) }
+            Button(action: submit) { HStack { if isLoading { ProgressView().tint(.white) }; Text("Sign in").fontWeight(.semibold) }.frame(maxWidth: .infinity).frame(height: 48).background(.indigo, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.white) }.disabled(password.isEmpty || isLoading)
+            Spacer()
+        }.padding(24).background(DotLoginBackground()).task { focused = true }
+    }
+}
+private struct DotLoginBackground: View { var body: some View { Color(.systemGroupedBackground).overlay(Canvas { context, size in var path = Path(); for y in stride(from: 8.0, to: size.height, by: 16) { for x in stride(from: 8.0, to: size.width, by: 16) { path.addEllipse(in: .init(x: x-1, y: y-1, width: 2, height: 2)) } }; context.fill(path, with: .color(.secondary.opacity(0.13))) }).ignoresSafeArea() } }
+
 
 private struct AgentRow: View {
     let agent: AgentSummary

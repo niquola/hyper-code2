@@ -4,12 +4,26 @@ struct APIClient {
     private struct SendBody: Encodable { let text: String; let debounceMs: Int }
     private struct PinBody: Encodable { let pinned: Bool }
     let baseURL: URL
+    private struct LoginBody: Encodable { let password: String }
+    private struct LoginResponse: Decodable { let ok: Bool }
+    private struct AuthSessionResponse: Decodable { let authenticated: Bool }
     private let session: URLSession
 
     init(baseURL: URL, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.session = session
     }
+
+    func login(password: String) async throws {
+        let response: LoginResponse = try await request(path: "auth/login", method: "POST", body: LoginBody(password: password))
+        guard response.ok else { throw APIClientError.server("Login failed") }
+    }
+
+    func sessionIsAuthenticated() async -> Bool {
+        do { let response: AuthSessionResponse = try await request(path: "auth/session"); return response.authenticated }
+        catch { return false }
+    }
+
 
     func agents() async throws -> [AgentSummary] {
         let response: AgentsResponse = try await request(path: "api/mobile/v1/agents")

@@ -101,6 +101,10 @@ declare global {
             response: Injected<typeof import("./attachments/response").default>;
             saveUploads: Injected<typeof import("./attachments/saveUploads").default>;
         };
+        auth: {
+            checkPassword: Injected<typeof import("./auth/checkPassword").default>;
+            password: Injected<typeof import("./auth/password").default>;
+        };
         browser: {
             act: Injected<typeof import("../plugins/browser/src/browser/act").default>;
             check: Injected<typeof import("../plugins/browser/src/browser/check").default>;
