@@ -40,7 +40,6 @@ struct NativeRootView: View {
                     ContentUnavailableView("Can’t connect", systemImage: "wifi.exclamationmark", description: Text(error))
                 } else {
                     VStack(spacing: 0) {
-                        FolderStrip(folders: folders, selection: $selectedFolder)
                         List {
                             agentSection("Pinned", filtered.filter(\.pinned))
                             agentSection("Unread", filtered.filter { !$0.pinned && $0.unread > 0 })
@@ -57,6 +56,21 @@ struct NativeRootView: View {
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search chats")
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Menu {
+                        Button { selectedFolder = nil } label: { if selectedFolder == nil { Label("All chats", systemImage: "checkmark") } else { Text("All chats") } }
+                        Divider()
+                        ForEach(folders, id: \.self) { folder in
+                            Button { selectedFolder = folder } label: { if selectedFolder == folder { Label(folder, systemImage: "checkmark") } else { Text(folder) } }
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(selectedFolder ?? "All chats").font(.headline).lineLimit(1)
+                            Image(systemName: "chevron.down").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityLabel("Filter chats by folder")
+                }
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showingNewAgent = true } label: { Image(systemName: "square.and.pencil") }
                         .accessibilityLabel("New agent")
@@ -96,6 +110,8 @@ struct NativeRootView: View {
                         NavigationLink(value: agent) { EmptyView() }.opacity(0)
                     }
                         .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 1, leading: 16, bottom: 1, trailing: 16))
+                        .listRowSpacing(0)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) { pendingDelete = agent } label: { Label("Delete", systemImage: "trash") }
                             Button { archive(agent) } label: { Label("Archive", systemImage: "archivebox") }.tint(.orange)
@@ -106,7 +122,8 @@ struct NativeRootView: View {
                         .contextMenu { Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") } }
                 }
             } header: {
-                Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary).textCase(nil)
+                Text(title).font(.caption2.weight(.semibold)).foregroundStyle(.secondary).textCase(nil)
+                    .padding(.top, 2).padding(.bottom, 0)
             }
         }
     }
@@ -127,28 +144,6 @@ struct NativeRootView: View {
     private func folderName(_ path: String) -> String { URL(fileURLWithPath: path).lastPathComponent.isEmpty ? "No workspace" : URL(fileURLWithPath: path).lastPathComponent }
 }
 
-private struct FolderStrip: View {
-    let folders: [String]
-    @Binding var selection: String?
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 7) {
-                chip("All", selected: selection == nil) { selection = nil }
-                ForEach(folders, id: \.self) { folder in chip(folder, selected: selection == folder) { selection = folder } }
-            }.padding(.horizontal, 16).padding(.vertical, 8)
-        }
-        .background(Color(.systemBackground))
-    }
-    private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).font(.caption.weight(.medium)).lineLimit(1)
-                .padding(.horizontal, 11).frame(height: 32)
-                .background(selected ? Color.accentColor : Color(.secondarySystemBackground), in: Capsule())
-                .foregroundStyle(selected ? .white : .primary)
-        }.buttonStyle(.plain)
-    }
-}
-
 private struct AgentRow: View {
     let agent: AgentSummary
     private var folder: String { URL(fileURLWithPath: agent.workspaceDir).lastPathComponent.isEmpty ? "No workspace" : URL(fileURLWithPath: agent.workspaceDir).lastPathComponent }
@@ -157,11 +152,11 @@ private struct AgentRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(projectColor.gradient).frame(width: 44, height: 44)
+                Circle().fill(projectColor.gradient).frame(width: 38, height: 38)
                 Text(initial).font(.headline.weight(.semibold)).foregroundStyle(.white)
-                if agent.isRunning { Circle().fill(Color(.systemBackground)).frame(width: 14, height: 14).overlay(Circle().fill(.green).frame(width: 9, height: 9)).offset(x: 18, y: 18) }
+                if agent.isRunning { Circle().fill(Color(.systemBackground)).frame(width: 12, height: 12).overlay(Circle().fill(.green).frame(width: 8, height: 8)).offset(x: 15, y: 15) }
             }
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(agent.title).font(.body.weight(.semibold)).lineLimit(1)
                     if agent.unread > 0 { Text("\(agent.unread)").font(.caption2.bold()).foregroundStyle(.white).padding(.horizontal, 6).frame(minHeight: 19).background(.blue, in: Capsule()) }
@@ -170,7 +165,7 @@ private struct AgentRow: View {
                 }
                 Text(folder).font(.callout).foregroundStyle(.secondary).lineLimit(1)
             }
-        }.padding(.vertical, 2)
+        }.environment(\.defaultMinListRowHeight, 48)
     }
 }
 
