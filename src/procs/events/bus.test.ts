@@ -56,3 +56,20 @@ describe("procs.events — addressing", () => {
         expect(seen).toHaveLength(1);
     });
 });
+
+
+
+describe("procs.events — stream cleanup", () => {
+    test("cancelling an SSE body removes subscription and presence", async () => {
+        const ctx: any = await mkTestCtx();
+        const route = ctx.state.procs.http.routes["/procs/events"].GET;
+        const beforeSubscribers = ctx.state.procs.events?.subs?.size ?? 0;
+        const res = await route(ctx, null, { req: new Request("http://localhost/procs/events?topics=agent:a"), params: {} });
+        const reader = res.body!.getReader();
+        await reader.read();
+        expect(ctx.fns.procs.events.presence({})[0]?.tabs).toBe(1);
+        await reader.cancel();
+        expect(ctx.fns.procs.events.presence({})).toEqual([]);
+        expect(ctx.state.procs.events?.subs?.size ?? 0).toBe(beforeSubscribers);
+    });
+});

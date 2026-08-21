@@ -3,6 +3,7 @@
   window.__hyperEventsInstalled = true;
 
   let es;
+  let reconnectTimer = null;
   let retryMs = 1000;
   let lastTopics = '';
   let greeted = false;
@@ -96,7 +97,27 @@
     serverStart = start;
   }
 
+  function disconnect() {
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    try { es?.close(); } catch {}
+    es = null;
+  }
+
+  function scheduleReconnect() {
+    if (document.visibilityState !== 'visible' || reconnectTimer) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connect();
+    }, retryMs);
+    retryMs = Math.min(retryMs * 2, 10000);
+  }
+
   function connect() {
+    // Hidden tabs must not retain permanent HTTP/1 connections. Chrome permits
+    // only a small number per origin; enough background SSE streams can consume
+    // the pool and make every ordinary HTMX/fetch request look frozen.
+    if (document.visibilityState !== 'visible') return;
+    disconnect();
     // Ask only for what this tab shows: server-side filtering beats waking up
     // and deciding the event was not ours.
     const want = topics();
@@ -105,23 +126,20 @@
       try { handle(JSON.parse(e.data)); retryMs = 1000; } catch {}
     };
     es.onerror = () => {
-      try { es.close(); } catch {}
-      setTimeout(connect, retryMs);
-      retryMs = Math.min(retryMs * 2, 10000);
+      disconnect();
+      scheduleReconnect();
     };
   }
 
-  // Coming back to the tab is a better moment to retry than any timer a hidden
-  // tab is allowed to run.
+  // Only the visible tab owns an SSE socket. A hidden tab catches up through
+  // the live-region refresh below when selected again.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
-    // Back in view: refresh everything on screen, then reconnect if the stream
-    // died while the tab was hidden.
+    if (document.visibilityState !== 'visible') { disconnect(); return; }
     for (const topic of topics()) refreshSoon(topic);
-    if (es && es.readyState !== 2 /* CLOSED */) return;
     retryMs = 1000;
     connect();
   });
+  window.addEventListener('pagehide', disconnect);
 
   // A region that arrives with a swap may follow a topic nobody was watching —
   // resubscribe so the server knows, and check whether it is already behind.
@@ -141,7 +159,7 @@
       if (want === lastTopics) return;
       lastTopics = want;
       planned = true;
-      try { es.close(); } catch {}
+      disconnect();
       connect();
     }, 500);
   });
