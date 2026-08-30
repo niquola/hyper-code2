@@ -190,13 +190,21 @@ export default async function (ctx: Context, session: Session | null, _opts?: {}
 
     // External: a repo modules.fetch cloned into WORKDIR/.claude/skills, or a
     // folder the project ships somewhere else.
+    // Naming a folder that the scan above already found is not a second module,
+    // it is the same one said twice — and saying it twice used to produce two
+    // records, which the boot-time collision guard then read as a plugin
+    // shadowing itself and refused to start the whole app. A path declaration
+    // is an instruction to MOUNT this folder, not a claim that it is new.
     for (const [namespace, config] of Object.entries(declared)) {
         if (config === false || config.npm) continue;
         const from = config.git ?? config.path;
         if (!from) continue;
         const dir = config.path ? resolve(workdir, config.path) : `${workdir}/.claude/skills/${namespace}`;
+        const real = await realpath(dir).catch(() => dir);
+        if (seen.has(real)) continue;
         const manifest = await readManifest(dir);
         if (!manifest) { console.warn(`[modules] ${namespace}: not fetched yet (${from}) — ctx.fns.procs.modules.fetch({})`); continue; }
+        seen.add(real);
         out.push({
             ...await describe(ctx, session, { dir, name: namespace, manifest }),
             name: namespace, dir: resolve(dir, manifest.src ?? "src"), folder: dir, source: "external", from, optional: true, plugin: true, config,

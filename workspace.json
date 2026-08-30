@@ -20,17 +20,17 @@
     "rss": {
       "path": "plugins/rss"
     },
-    "linkedin": {
-      "path": "/Users/niquola/.hyper/user/linkedin"
-    },
-    "crme": {
-      "path": "/Users/niquola/.hyper/user/crme"
-    },
     "hackernews": {
       "path": "plugins/hackernews"
     },
     "substack": {
       "path": "plugins/substack"
+    },
+    "linkedin": {
+      "path": "/Users/niquola/.hyper/user/linkedin"
+    },
+    "crme": {
+      "path": "/Users/niquola/.hyper/user/crme"
     }
   }
 }
