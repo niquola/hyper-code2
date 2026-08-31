@@ -3,7 +3,7 @@
  * store with 1Password only as first-use bootstrap.
  */
 async function resolveConfig(ctx: Context, requested?: string) {
-    const all = await ctx.fns.zulip.creds({ list: true });
+    const all = await ctx.fns.zulip.creds({});
     let instance = requested ?? ctx.env.ZULIP_INSTANCE;
     if (!instance) {
         if (all.length === 1) instance = all[0]!;

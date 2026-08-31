@@ -2,7 +2,8 @@ import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions";
 
 async function opSecret(ctx: Context, ref: string) {
-    const value = await ctx.fns.secrets.get({ ref });
+    const name = ref.includes("session.txt") ? "session" : ref.includes("config.json") ? "config" : new Bun.CryptoHasher("sha256").update(ref).digest("hex").slice(0, 32);
+    const value = await ctx.fns.secrets.get({ ref, namespace: "telegram", name });
     if (!value) throw new Error("Telegram credential is not configured");
     return value;
 }

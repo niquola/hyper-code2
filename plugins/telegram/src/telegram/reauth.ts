@@ -27,33 +27,40 @@ const reauthSingleton = (globalState[reauthKey] ??= { generation: 0 });
 const clientSingleton = (globalState[telegramClientKey] ??= {});
 
 async function opSecret(ctx: Context, ref: string) {
-    const value = await ctx.fns.secrets.get({ ref });
+    const name = ref.includes("session.txt") ? "session" : ref.includes("config.json") ? "config" : new Bun.CryptoHasher("sha256").update(ref).digest("hex").slice(0, 32);
+    const value = await ctx.fns.secrets.get({ ref, namespace: "telegram", name });
     if (!value) throw new Error("Telegram credential is not configured");
     return value;
 }
 
-async function saveSession(ctx: Context, session: string) {
-    const get = Bun.spawn(["op", "item", "get", "telegram session.txt", "--vault", "hyper", "--format=json", "--reveal"], { stdout: "pipe", stderr: "pipe" });
-    const [raw, getError, getCode] = await Promise.all([new Response(get.stdout).text(), new Response(get.stderr).text(), get.exited]);
-    if (getCode !== 0) throw new Error(`Could not read Telegram session item from 1Password: ${getError.trim()}`);
-    const item = JSON.parse(raw);
-    const field = item.fields?.find((x: any) => x.label === "value");
-    if (!field) throw new Error("Telegram session item has no concealed value field");
-    field.value = session;
+async function backupSessionToOnePassword(ctx: Context, session: string): Promise<boolean> {
+    try {
+        const get = Bun.spawn(["op", "item", "get", "telegram session.txt", "--vault", "hyper", "--format=json", "--reveal"], { stdout: "pipe", stderr: "pipe" });
+        const timer = setTimeout(() => { try { get.kill(9); } catch {} }, 15_000);
+        const [raw, getCode] = await Promise.all([new Response(get.stdout).text(), get.exited]).finally(() => clearTimeout(timer));
+        if (getCode !== 0) return false;
+        const item = JSON.parse(raw);
+        const field = item.fields?.find((x: any) => x.label === "value");
+        if (!field) return false;
+        field.value = session;
+        const edit = Bun.spawn(["op", "item", "edit", item.id, "--vault", "hyper"], { stdin: "pipe", stdout: "pipe", stderr: "pipe" });
+        edit.stdin.write(JSON.stringify(item));
+        edit.stdin.end();
+        const editTimer = setTimeout(() => { try { edit.kill(9); } catch {} }, 15_000);
+        const code = await edit.exited.finally(() => clearTimeout(editTimer));
+        return code === 0;
+    } catch { return false; }
+}
 
-    // Piped JSON is the supported 1Password template-edit mode. Do not pass a
-    // literal "-" item argument: that edits an item named "-" on some CLI
-    // versions and can report success without touching the intended item.
-    const edit = Bun.spawn(["op", "item", "edit", item.id, "--vault", "hyper"], { stdin: "pipe", stdout: "pipe", stderr: "pipe" });
-    edit.stdin.write(JSON.stringify(item));
-    edit.stdin.end();
-    const [editOutput, editError, editCode] = await Promise.all([new Response(edit.stdout).text(), new Response(edit.stderr).text(), edit.exited]);
-    if (editCode !== 0) throw new Error(`Could not save Telegram session to 1Password: ${editError.trim() || editOutput.trim()}`);
-
-    // Success is only real after a provider read-after-write comparison.
-    const persisted = await ctx.fns.secrets.get({ ref: "op://hyper/telegram session.txt/value", refresh: true });
-    if (!persisted || persisted.trim() !== session.trim()) throw new Error("Telegram session verification failed after writing to 1Password");
-    await ctx.fns.secrets.putLocal({ namespace: "bootstrap:op", name: new Bun.CryptoHasher("sha256").update("op://hyper/telegram session.txt/value").digest("hex").slice(0, 32), value: session, source: "telegram-reauth" });
+async function saveSession(ctx: Context, session: string): Promise<{ local: true; backedUp: boolean }> {
+    // Local encrypted storage is authoritative and committed before an optional
+    // 1Password backup. Reauth succeeds even when 1Password is locked/offline.
+    await ctx.fns.secrets.putLocal({ namespace: "telegram", name: "session", value: session, source: "telegram-reauth" });
+    const state = ((ctx.state as any).secrets ??= {});
+    const cache: Map<string,string> = (state.values ??= new Map());
+    cache.set("telegram/session", session);
+    const backedUp = await backupSessionToOnePassword(ctx, session);
+    return { local: true, backedUp };
 }
 
 async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: boolean }) {
@@ -151,12 +158,12 @@ async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: 
             me = auth.user;
         }
 
-        await saveSession(ctx, String(client.session.save()));
+        const saved = await saveSession(ctx, String(client.session.save()));
         clientSingleton.client = client;
         clientSingleton.connecting = null;
         const legacy = ((ctx.state as any).telegram ??= {});
         legacy.client = client;
-        return { authorized: true, alreadyAuthorized: false, id: me.id?.toString() ?? "", name: [me.firstName, me.lastName].filter(Boolean).join(" "), username: me.username ?? null, savedTo: "1Password" };
+        return { authorized: true, alreadyAuthorized: false, id: me.id?.toString() ?? "", name: [me.firstName, me.lastName].filter(Boolean).join(" "), username: me.username ?? null, savedTo: "encrypted-local-store", onePasswordBackup: saved.backedUp };
     } catch (error) {
         await client.disconnect().catch(() => {});
         throw error;
