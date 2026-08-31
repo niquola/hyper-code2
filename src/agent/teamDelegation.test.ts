@@ -156,7 +156,7 @@ describe("team delegation", () => {
     test("archives, filters, restores, and timeout-cleans ready members", async () => {
         const ctx = await setup();
         const parent = await ctx.fns.agent.start({ model: "m" });
-        const child = await ctx.fns.session.fork({ id: parent.id, offset: 0 });
+        const child = await ctx.fns.session.fork({ id: parent.id, offset: 0, visibility: "team" });
         child.scratchpad = { delegation: { parentId: parent.id, status: "ready", summary: "done" } };
         await ctx.fns.session.updateScratchpad({ id: child.id, scratchpad: child.scratchpad });
         expect((await team(ctx, null, { agent: parent })).map((m: any) => m.id)).toContain(child.id);

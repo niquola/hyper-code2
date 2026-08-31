@@ -498,6 +498,12 @@ declare global {
             mermaid: Injected<typeof import("./markdown/mermaid").default>;
             render: Injected<typeof import("./markdown/render").default>;
         };
+        mobiledev: {
+            build: Injected<typeof import("../../.hyper/user/mobiledev/src/mobiledev/build").default>;
+            config: Injected<typeof import("../../.hyper/user/mobiledev/src/mobiledev/config").default>;
+            install: Injected<typeof import("../../.hyper/user/mobiledev/src/mobiledev/install").default>;
+            testflight: Injected<typeof import("../../.hyper/user/mobiledev/src/mobiledev/testflight").default>;
+        };
         myhealth: {
             addCondition: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/addCondition").default>;
             addDocument: Injected<typeof import("../../.hyper/user/myhealth/src/myhealth/addDocument").default>;
@@ -562,6 +568,7 @@ declare global {
             };
             boot: {
                 load: Injected<typeof import("./procs/boot/load").default>;
+                requestCtx: Injected<typeof import("./procs/boot/requestCtx").default>;
             };
             cli: {
                 list: Injected<typeof import("./procs/cli/list").default>;
@@ -753,6 +760,7 @@ declare global {
         };
         ramp: {
             api: Injected<typeof import("../../.hyper/user/ramp/src/ramp/api").default>;
+            forwardReceipt: Injected<typeof import("../../.hyper/user/ramp/src/ramp/forwardReceipt").default>;
             memo: Injected<typeof import("../../.hyper/user/ramp/src/ramp/memo").default>;
             missing: Injected<typeof import("../../.hyper/user/ramp/src/ramp/missing").default>;
             pdf: Injected<typeof import("../../.hyper/user/ramp/src/ramp/pdf").default>;
@@ -811,7 +819,12 @@ declare global {
             where: Injected<typeof import("./screen/where").default>;
         };
         secrets: {
+            decryptLocal: Injected<typeof import("./secrets/decryptLocal").default>;
+            encryptLocal: Injected<typeof import("./secrets/encryptLocal").default>;
+            get: Injected<typeof import("./secrets/get").default>;
+            getLocal: Injected<typeof import("./secrets/getLocal").default>;
             prompt: Injected<typeof import("./secrets/prompt").default>;
+            putLocal: Injected<typeof import("./secrets/putLocal").default>;
             resolve: Injected<typeof import("./secrets/resolve").default>;
             resolveSetting: Injected<typeof import("./secrets/resolveSetting").default>;
         };
@@ -960,6 +973,18 @@ declare global {
         tts: {
             speak: Injected<typeof import("../plugins/tts/src/tts/speak").default>;
             voices: Injected<typeof import("../plugins/tts/src/tts/voices").default>;
+        };
+        tunnel: {
+            close: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/close").default>;
+            config: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/config").default>;
+            dir: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/dir").default>;
+            list: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/list").default>;
+            open: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/open").default>;
+            serve: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/serve").default>;
+            server: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/server").default>;
+            serverStatus: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/serverStatus").default>;
+            status: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/status").default>;
+            token: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/token").default>;
         };
         ui: {
             action: Injected<typeof import("./ui/action").default>;

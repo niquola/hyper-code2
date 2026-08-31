@@ -12,6 +12,7 @@ struct AgentSummary: Codable, Identifiable, Hashable {
     let pinned: Bool
     let delegated: Bool
 
+    let visibility: String
     var isRunning: Bool { runState == "running" || runState == "claimed" }
 }
 

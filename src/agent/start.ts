@@ -4,6 +4,7 @@
  * @param opts.systemPrompt Additional system instructions.
  * @param opts.parentId Optional parent agent identifier.
  * @param opts.forkOffset Optional inherited parent transcript offset.
+ * @param opts.visibility Listing policy: nav, team, or hidden. @default nav
 */
 export default async function (
     ctx: Context,
@@ -19,6 +20,8 @@ export default async function (
     systemPrompt?: string;
         /** Parent id used by the operation. */
     parentId?: string | null;
+        /** Listing policy; this does not grant or restrict access. @default nav */
+    visibility?: "nav" | "team" | "hidden";
         /** Fork offset used by the operation. */
     forkOffset?: number | null },
 ): Promise<types.agent.Agent> {
@@ -43,6 +46,7 @@ export default async function (
         scratchpad: {},
         parentId: opts.parentId ?? null,
         statusLine: "",
+        visibility: opts.visibility ?? "nav",
         statusLineEvery: 1,
         reflection: null,
         forkOffset: opts.forkOffset ?? null,

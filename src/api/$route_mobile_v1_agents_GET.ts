@@ -15,6 +15,7 @@ export default async function (ctx: Context, _session: Session | null, _opts: { 
             workspaceDir: agent.workspaceDir,
             pinned: pins.has(agent.id),
             delegated: agent.delegated,
+            visibility: agent.visibility,
         })),
     });
 }

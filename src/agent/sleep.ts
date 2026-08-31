@@ -53,7 +53,7 @@ export default async function (
     void (async () => {
         let child: types.agent.Agent | null = null;
         try {
-            child = await ctx.fns.session.fork({ id: parent.id, offset: sourceOffset, title: `${parent.title || parent.id} · sleep` });
+            child = await ctx.fns.session.fork({ id: parent.id, offset: sourceOffset, title: `${parent.title || parent.id} · sleep`, visibility: "hidden" });
             child.scratchpad ??= {};
             child.scratchpad.delegateTask = { taskKind: "sleep", parentId: parent.id };
             await ctx.fns.session.updateScratchpad({ id: child.id, scratchpad: child.scratchpad });

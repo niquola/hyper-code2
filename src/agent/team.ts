@@ -15,7 +15,7 @@ export default async function (
     },
 ): Promise<Array<{ id: string; title: string; runState: string; status: string; plan: any; summary: string | null; updatedAt: number; archivedAt: number | null }>> {
     const archivedClause = opts.includeArchived ? "archived_at IS NOT NULL" : "archived_at IS NULL";
-    const rows = (await ctx.fns.procs.db.select({ sql: `SELECT id, title, run_state, scratchpad, updated_at, archived_at FROM agents WHERE parent_id = ? AND ${archivedClause} AND ((scratchpad::jsonb #>> '{delegation,parentId}') IS NOT NULL OR (scratchpad::jsonb #>> '{delegateTask,parentId}') IS NOT NULL) ORDER BY created_at ASC`, params: [opts.agent.id] })) as any[];
+    const rows = (await ctx.fns.procs.db.select({ sql: `SELECT id, title, run_state, scratchpad, updated_at, archived_at FROM agents WHERE parent_id = ? AND visibility = 'team' AND ${archivedClause} ORDER BY created_at ASC`, params: [opts.agent.id] })) as any[];
     const members: Array<{ id: string; title: string; runState: string; status: string; plan: any; summary: string | null; updatedAt: number; archivedAt: number | null }> = [];
     for (const row of rows) {
       const scratchpad = typeof row.scratchpad === "string" ? JSON.parse(row.scratchpad) : (row.scratchpad ?? {});

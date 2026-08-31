@@ -10,15 +10,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const items = await ctx.fns.nav.items({ q, limit: q ? 40 : 500 });
     const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     const agents = await ctx.fns.session.list({}).catch(() => [] as any[]);
-    const visibleAgents = agents.filter((agent: any) => !agent.parentId);
+    const visibleAgents = agents;
     const pinnedIds = new Set(((await ctx.fns.procs.db.select({ sql: "SELECT substring(key FROM 18) AS id FROM kv WHERE key LIKE 'mobile-pin-agent:%'", params: [] })) as any[]).map(row => String(row.id)));
     const childrenByParent = new Map<string, any[]>();
-    for (const candidate of agents as any[]) {
-        if (!candidate.parentId || !candidate.delegated) continue;
-        const children = childrenByParent.get(String(candidate.parentId)) ?? [];
-        children.push(candidate);
-        childrenByParent.set(String(candidate.parentId), children);
-    }
     const agentByHref = new Map(agents.map((agent: any) => [`/agent/${encodeURIComponent(agent.id)}`, agent]));
     const hotAgents = (await ctx.fns.procs.db.select({
         sql: `SELECT a.id FROM kv h JOIN agents a ON a.id = substring(h.key FROM 5) WHERE h.key LIKE 'hot:%' AND a.archived_at IS NULL ORDER BY h.value::bigint DESC LIMIT 5`,

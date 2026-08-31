@@ -39,5 +39,19 @@ describe("session.list", () => {
         expect((await ctx.fns.session.list()).find((a: any) => a.id === agent.id)?.unread).toBe(2);
     });
 
+    test("defaults to nav and supports explicit visibility filters", async () => {
+        const ctx: any = await mkTestCtx();
+        const nav = await ctx.fns.agent.start({ model: "m", title: "Nav" });
+        const fork = await ctx.fns.session.fork({ id: nav.id, visibility: "nav" });
+        const team = await ctx.fns.session.fork({ id: nav.id, visibility: "team" });
+        const hidden = await ctx.fns.session.fork({ id: nav.id, visibility: "hidden" });
+
+        expect((await ctx.fns.session.list()).map((a: any) => a.id)).toEqual([fork.id, nav.id]);
+        expect((await ctx.fns.session.list({ visibility: ["team"] })).map((a: any) => a.id)).toEqual([team.id]);
+        expect((await ctx.fns.session.list({ visibility: ["hidden"] })).map((a: any) => a.id)).toEqual([hidden.id]);
+        expect((await ctx.fns.session.list({ visibility: ["nav", "team", "hidden"] })).map((a: any) => a.visibility).sort()).toEqual(["hidden", "nav", "nav", "team"]);
+    });
+
+
 
 });

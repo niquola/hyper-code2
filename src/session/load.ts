@@ -35,6 +35,7 @@ id: string }): Promise<types.agent.Agent | null> {
         abortController: null,
         parentId: row.parent_id ?? null,
         forkOffset: row.fork_offset ?? null,
+        visibility: row.visibility === "team" || row.visibility === "hidden" ? row.visibility : "nav",
     };
     return await ctx.fns.session.syncAgentState({ agent });
 }

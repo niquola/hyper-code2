@@ -48,10 +48,11 @@ export default async function (
     const autoArchive = opts.autoArchive !== false;
 
     const child = forkContext
-        ? await ctx.fns.session.fork({ id: parentAgent.id })
+        ? await ctx.fns.session.fork({ id: parentAgent.id, visibility: "team" })
         : await ctx.fns.agent.start({
             model: parentAgent.model,
             systemPrompt: parentAgent.systemPrompt,
+            visibility: "team",
         });
 
     child.scratchpad ??= {};

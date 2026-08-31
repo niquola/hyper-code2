@@ -24,7 +24,7 @@ export default async function (
     // A delegated child is a fork in lineage/workspace, not a full transcript copy.
     // The task packet below is its bounded projection; offset 0 keeps the noisy
     // parent history out of the child context.
-    const child = await ctx.fns.session.fork({ id: opts.agent.id, title, offset: 0 });
+    const child = await ctx.fns.session.fork({ id: opts.agent.id, title, offset: 0, visibility: "team" });
     child.scratchpad = {
         delegation: { parentId: opts.agent.id, status: "working", title, createdAt: Date.now() },
     };

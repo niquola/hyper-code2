@@ -53,7 +53,7 @@ export default async function (
         try {
             const messages = await ctx.fns.session.getFullMessages({ id: parent.id });
             const snapshotOffset = messages.length;
-            child = await ctx.fns.session.fork({ id: parent.id, offset: snapshotOffset, title: `${parent.title || parent.id} · reflection` });
+            child = await ctx.fns.session.fork({ id: parent.id, offset: snapshotOffset, title: `${parent.title || parent.id} · reflection`, visibility: "hidden" });
             child.scratchpad ??= {};
             child.scratchpad.delegateTask = { taskKind: "reflection", parentId: parent.id };
             await ctx.fns.session.updateScratchpad({ id: child.id, scratchpad: child.scratchpad });

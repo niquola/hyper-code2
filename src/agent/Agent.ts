@@ -20,6 +20,8 @@ export type Agent = {
     scratchpad: Record<string, any>;
     parentId?: string | null;
     statusLine?: string;
+    /** Controls where the agent is listed; it is not an access-control boundary. */
+    visibility?: "nav" | "team" | "hidden";
     statusLineEvery?: number;
     reflection?: Record<string, any> | null;
     forkOffset?: number | null;
