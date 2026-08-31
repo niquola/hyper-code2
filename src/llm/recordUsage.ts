@@ -68,6 +68,23 @@ export default async function (
         }
     }
 
+    // xAI exposes per-minute token/request capacity separately from the real
+    // SuperGrok weekly allowance. Keep parsing this as a fallback diagnostic,
+    // but refreshUsage replaces it with the authoritative billing snapshot.
+    const xaiTokenLimit = Number(header("x-ratelimit-limit-tokens"));
+    const xaiTokenRemaining = Number(header("x-ratelimit-remaining-tokens"));
+    const xaiRequestLimit = Number(header("x-ratelimit-limit-requests"));
+    const xaiRequestRemaining = Number(header("x-ratelimit-remaining-requests"));
+    const xaiTokenUsed = Number.isFinite(xaiTokenLimit) && xaiTokenLimit > 0 && Number.isFinite(xaiTokenRemaining)
+        ? (1 - xaiTokenRemaining / xaiTokenLimit) * 100 : NaN;
+    const xaiRequestUsed = Number.isFinite(xaiRequestLimit) && xaiRequestLimit > 0 && Number.isFinite(xaiRequestRemaining)
+        ? (1 - xaiRequestRemaining / xaiRequestLimit) * 100 : NaN;
+    const xaiUsed = Math.max(Number.isFinite(xaiTokenUsed) ? xaiTokenUsed : -1, Number.isFinite(xaiRequestUsed) ? xaiRequestUsed : -1);
+    if (provider === "xai" && xaiUsed >= 0) {
+        windows.primary = { usedPercent: clampPercent(xaiUsed), windowMinutes: 1, resetsAt: null };
+    }
+
+
     // Codex: a bare percent header, superseded by the richer stream payload.
     const rawCodex = header("x-codex-primary-used-percent");
     const codexPercent = rawCodex == null ? NaN : Number(rawCodex);

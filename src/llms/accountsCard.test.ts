@@ -21,10 +21,13 @@ test("accounts card groups consistently by provider and renders plan/storage met
     const html = accountsCard(ctx, null, { accounts: [
         { provider: "codex", account: "default", label: "codex", model: "codex:gpt", source: "file", available: true, usedPercent: 12, planType: "team", resetsAt: null, parkedAgents: 0 },
         { provider: "anthropic-oauth", account: "pro", label: "pro", model: "anthropic-oauth/pro:claude", source: "oauth", available: true, usedPercent: 22, planType: "max", resetsAt: null, parkedAgents: 0 },
+        { provider: "xai", account: "default", label: "Grok managed", model: "xai:grok", source: "oauth", available: true, usedPercent: null, planType: null, resetsAt: null, parkedAgents: 0 },
     ] });
     expect(html).toContain('data-provider="codex"');
     expect(html).toContain('data-provider="claude"');
     expect(html).toContain('"role":"plan","text":"Team"');
+    expect(html).toContain('data-provider="grok"');
+    expect(html).toContain('"id":"xai/default"');
     expect(html).toContain('"role":"plan","text":"Max"');
     expect(html).toContain('"role":"storage","text":"CLI storage"');
     expect(html).toContain('"role":"storage","text":"Encrypted by Hyper"');

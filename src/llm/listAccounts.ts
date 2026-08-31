@@ -70,6 +70,22 @@ export default async function (
         }
     }
 
+
+    // xAI managed device-OAuth credentials are exposed under the runtime model
+    // provider (`xai`) rather than their persistence adapter (`xai-oauth`).
+    if (!filter || filter === "xai" || filter === "xai-oauth") {
+        const rows = (await ctx.fns.procs.db.select({
+            sql: "SELECT account, label, expires_at FROM oauth_credentials WHERE provider = ? ORDER BY account",
+            params: ["xai-oauth"],
+        })) as any[];
+        for (const row of rows) {
+            const item = entry("xai", String(row.account ?? "default"), "oauth", byKey, reconnectKeys);
+            item.label = row.label ? String(row.label) : (item.account === "default" ? "Grok managed" : item.account);
+            if (Number(row.expires_at) <= now) { item.needsReconnect = true; item.available = false; }
+            out.push(item);
+        }
+    }
+
     // Claude Code accounts live in isolated CLAUDE_CONFIG_DIRs. On macOS the
     // actual tokens are in keychain services derived from those directories;
     // the directory itself is the durable account registry.

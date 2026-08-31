@@ -134,6 +134,15 @@ const PROVIDERS: Record<string, ProviderConfig> = {
         resolveBaseUrl: () => "https://api.anthropic.com",
         resolveApiKey: () => null,
     },
+    xai: {
+        // SuperGrok / X Premium subscription via xAI Device OAuth.
+        // The access token is decrypted/refreshed lazily by streamXai.
+        api: "responses",
+        kind: "subscription",
+        resolveBaseUrl: () => "https://api.x.ai/v1",
+        resolveApiKey: () => null,
+    },
+
     openai: {
         api: "openai",
         kind: "api",

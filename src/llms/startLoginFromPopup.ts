@@ -12,15 +12,16 @@
  * @param opts.account New account slot name.
  */
 export default async function (ctx: Context, _session: Session | null, opts: {
-    /** Provider to authenticate. */ provider: "claude-code" | "codex";
+    /** Provider to authenticate. */ provider: "claude-code" | "codex" | "xai";
     /** Account slot name. */ account: string;
 }): Promise<string> {
     const provider = opts.provider;
-    if (provider !== "claude-code" && provider !== "codex") throw new Error("unsupported provider");
-    await ctx.fns.llm.startAccountLogin({ provider, account: opts.account });
+    if (provider !== "claude-code" && provider !== "codex" && provider !== "xai") throw new Error("unsupported provider");
+    if (provider === "xai") await ctx.fns.llm.startXaiOAuth({ account: opts.account });
+    else await ctx.fns.llm.startAccountLogin({ provider, account: opts.account });
     const flow = [...ctx.fns.llm.accountLoginStatus({})].reverse().find((f: any) => f.provider === provider && f.account === opts.account) ?? null;
     return ctx.fns.ui.popupContent({
-        title: provider === "claude-code" ? "Claude Code login" : "Codex login",
+        title: provider === "claude-code" ? "Claude Code login" : provider === "xai" ? "Grok device login" : "Codex login",
         kind: "login-progress",
         html: ctx.fns.llms.loginPopup({ provider, flow }),
     });

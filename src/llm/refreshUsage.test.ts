@@ -50,6 +50,26 @@ describe("llm.refreshUsage", () => {
         expect(usage[0]).toMatchObject({ provider: "anthropic-oauth", account: "pro", usedPercent: 63.5, planType: "max" });
     });
 
+    test("fetches SuperGrok weekly usage from the CLI billing proxy", async () => {
+        const ctx: any = await mkTestCtx();
+        ctx.state.registry.llm.getXaiOAuthToken = async () => "xai-oauth-token";
+        ctx.state.registry.llm.connectFetch = async (_c: any, _s: any, opts: any) => {
+            expect(opts.url).toBe("https://cli-chat-proxy.grok.com/v1/billing?format=credits");
+            expect(opts.init.headers.authorization).toBe("Bearer xai-oauth-token");
+            expect(opts.init.headers["x-grok-client-mode"]).toBe("cli");
+            return Response.json({ config: {
+                currentPeriod: { type: "USAGE_PERIOD_TYPE_WEEKLY", end: new Date(NOW + 4 * 86_400_000).toISOString() },
+                creditUsagePercent: 37.5,
+                subscriptionTier: "SuperGrok",
+            } });
+        };
+        const result = await ctx.fns.llm.refreshUsage({ accounts: [{ provider: "xai", account: "default" }], maxAgeMs: 0, now: NOW });
+        expect(result).toEqual([{ provider: "xai", account: "default", status: "refreshed", error: null }]);
+        const usage = await ctx.fns.llm.usageOverview({ now: NOW });
+        expect(usage[0]).toMatchObject({ provider: "xai", usedPercent: 37.5, planType: "SuperGrok", resetsAt: NOW + 4 * 86_400_000 });
+    });
+
+
     test("caches successful refreshes and isolates provider failures", async () => {
         const ctx: any = await mkTestCtx();
         let calls = 0;

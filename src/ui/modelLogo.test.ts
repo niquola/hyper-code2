@@ -6,13 +6,21 @@ const render = (model: string, active = false, bare = false, compact = false) =>
 
 describe('ui.modelLogo', () => {
     test('maps the configured providers to local SVG marks', () => {
-        for (const model of ['codex:gpt-5.6-sol', 'claude-code:claude-haiku-4-5', 'kimi:kimi-k3']) {
+        for (const model of ['codex:gpt-5.6-sol', 'claude-code:claude-haiku-4-5', 'kimi:kimi-k3', 'xai:grok-4.6']) {
             const html = render(model);
             expect(html).toContain('<svg');
             expect(html).toContain(`title="${model}"`);
             expect(html).toContain(`aria-label="Model: ${model}"`);
         }
     });
+
+    test('uses the Grok mark instead of the generic CPU icon', () => {
+        const html = render('xai:grok-4.6');
+        expect(html).toContain('<svg');
+        expect(html).not.toContain('ph-cpu');
+        expect(html).toContain('M9.27 15.29');
+    });
+
 
     test('rotates the mark only while active', () => {
         expect(render('codex:gpt-5.6-sol', true)).toContain('animate-spin');

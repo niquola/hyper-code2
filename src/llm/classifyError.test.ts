@@ -65,6 +65,19 @@ describe("llm.classifyError", () => {
         expect(info.retryable).toBe(true);
     });
 
+    test("unlabelled xAI subscription 429 remains throttling", () => {
+        const info = call({ provider: "xai", kind: "subscription", status: 429, body: "{}" });
+        expect(info.kind).toBe("rate_limit");
+        expect(info.retryable).toBe(true);
+    });
+
+    test("explicit xAI quota exhaustion still parks", () => {
+        const info = call({ provider: "xai", kind: "subscription", status: 429, body: JSON.stringify({ error: { type: "quota_exceeded", message: "quota exceeded" } }) });
+        expect(info.kind).toBe("usage_limit");
+        expect(info.retryable).toBe(false);
+    });
+
+
     test("insufficient_quota is fatal — money, not a window", () => {
         const body = JSON.stringify({ error: { type: "insufficient_quota", message: "You exceeded your current quota" } });
         const info = call({ provider: "openai", kind: "api", status: 429, body });

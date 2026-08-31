@@ -10,7 +10,7 @@
  * @param opts.flow Optional safe progress state from llm.accountLoginStatus.
  */
 export default function (ctx: Context, _session: Session | null, opts: {
-    /** Provider login type. */ provider: "claude-code" | "codex";
+    /** Provider login type. */ provider: "claude-code" | "codex" | "xai";
     /** Safe login progress, never credentials. */ flow?: { account: string; status: "pending" | "connected" | "failed"; verificationUri: string | null; userCode: string | null; error: string | null } | null;
     /** Existing account slot to reconnect. */ account?: string;
 }): string {
@@ -19,9 +19,10 @@ export default function (ctx: Context, _session: Session | null, opts: {
         ? ctx.fns.llms.popupButton({ action, label, tone, class: cls })
         : ctx.fns.procs.ui.button({ action, label, type: "submit", tone, class: cls });
     const claude = opts.provider === "claude-code";
+    const xai = opts.provider === "xai";
     const accountValue = opts.account ? ` value="${esc(opts.account)}"` : '';
     const accountReadonly = opts.account ? ' readonly' : '';
-    const title = opts.account ? `Reconnect ${opts.account}` : claude ? "Add Claude Code account" : "Add Codex account";
+    const title = opts.account ? `Reconnect ${opts.account}` : claude ? "Add Claude Code account" : xai ? "Add Grok account" : "Add Codex account";
     const flow = opts.flow;
     if (flow) return `<div class="space-y-3">
       <div class="rounded-lg border ${flow.status === "failed" ? "border-error/30 bg-error/10" : "border-info/30 bg-info/10"} p-3 text-xs">
@@ -34,7 +35,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
       <p class="text-[11px] text-base-content/45">This popup may be closed; login continues in the background and the account list updates automatically.</p>
     </div>`;
     return `<div class="space-y-4">
-      <div><h3 class="text-sm font-semibold">${title}</h3><p class="mt-1 text-xs leading-5 text-base-content/50">${claude ? "Choose how to connect this Claude subscription account. Managed OAuth is recommended for multiple accounts; Claude Code CLI keeps the credential in its own Keychain service." : "Starts `codex login --device-auth` in an isolated CODEX_HOME. The next popup shows the device URL and code."}</p></div>
+      <div><h3 class="text-sm font-semibold">${title}</h3><p class="mt-1 text-xs leading-5 text-base-content/50">${claude ? "Choose how to connect this Claude subscription account. Managed OAuth is recommended for multiple accounts; Claude Code CLI keeps the credential in its own Keychain service." : xai ? "Starts xAI managed device OAuth. The next popup safely shows only the public authorization URL and one-time code." : "Starts `codex login --device-auth` in an isolated CODEX_HOME. The next popup shows the device URL and code."}</p></div>
       ${claude ? `<div class="grid gap-2 sm:grid-cols-2">
         <form hx-popup="llms.startClaudeManagedOAuth" class="rounded-lg border border-primary/35 bg-primary/5 p-3">
           <input name="account" required pattern="[\\w.-]{1,40}" placeholder="work or personal"${accountValue}${accountReadonly} class="input input-bordered input-sm w-full font-mono text-xs">
@@ -48,7 +49,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
         </form>
       </div>` : `<form hx-popup="llms.startLoginFromPopup" hx-popup-params="${esc(JSON.stringify({ provider: opts.provider }))}" class="space-y-3">
         <label class="block text-xs font-medium">Account name<input autofocus name="account" required pattern="[\\w.-]{1,40}" placeholder="work or personal"${accountValue}${accountReadonly} class="input input-bordered input-sm mt-1 w-full font-mono text-xs"></label>
-        ${button("start-codex-login", "Start Codex login", "primary", "w-full")}
+        ${button(xai ? "start-xai-login" : "start-codex-login", xai ? "Start Grok login" : "Start Codex login", "primary", "w-full")}
       </form>`}
       <div class="rounded-md bg-base-200 px-3 py-2 text-[10px] leading-4 text-base-content/40"><i class="ph ph-lock-key mr-1"></i>No access or refresh token is rendered in this popup or written to a transcript.</div>
     </div>`;

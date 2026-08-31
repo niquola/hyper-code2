@@ -38,4 +38,13 @@ describe("llm.listModels", () => {
         expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-opus-5");
         expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-fable-5");
     });
+    test("connected xAI subscription exposes Grok Responses models", async () => {
+        const ctx = { env: { LMSTUDIO_URL: "http://127.0.0.1:9" }, fns: { llm: {
+            xaiOAuthStatus: async () => ({ connected: true }),
+        } } } as unknown as Context;
+        const groups = await listModels(ctx, null);
+        expect(groups.xai).toEqual(["xai:grok-4.6", "xai:grok-4.5", "xai:grok-4.3"]);
+    });
+
+
 });

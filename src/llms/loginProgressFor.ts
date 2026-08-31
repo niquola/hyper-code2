@@ -11,13 +11,13 @@
  * @param opts.account Pending account slot.
  */
 export default function (ctx: Context, _session: Session | null, opts: {
-    /** Login provider. */ provider: "claude-code" | "codex";
+    /** Login provider. */ provider: "claude-code" | "codex" | "xai";
     /** Pending account slot. */ account: string;
 }): string {
     const flow = ctx.fns.llm.accountLoginStatus({}).find((f: any) => f.provider === opts.provider && f.account === opts.account);
     if (!flow) throw new Error("login flow not found or already completed");
     return ctx.fns.ui.popupContent({
-        title: opts.provider === "codex" ? "Codex device login" : "Claude Code login",
+        title: opts.provider === "codex" ? "Codex device login" : opts.provider === "xai" ? "Grok device login" : "Claude Code login",
         kind: "login-progress",
         html: ctx.fns.llms.loginPopup({ provider: opts.provider, flow }),
     });

@@ -17,8 +17,8 @@ import { rmSync } from "node:fs";
  * @param opts.account Credential slot to remove.
  */
 export default async function (ctx: Context, _session: Session | null, opts: {
-    /** Runtime provider: anthropic-oauth, claude-code, codex, or kimi-coding. */
-    provider: "anthropic-oauth" | "claude-code" | "codex" | "kimi-coding";
+    /** Runtime provider: anthropic-oauth, xai, claude-code, codex, or kimi-coding. */
+    provider: "anthropic-oauth" | "xai" | "claude-code" | "codex" | "kimi-coding";
     /** Credential slot. */
     account: string;
 }): Promise<{ removed: true; provider: string; account: string }> {
@@ -36,6 +36,9 @@ export default async function (ctx: Context, _session: Session | null, opts: {
 
     if (provider === "anthropic-oauth") {
         await ctx.fns.llm.logoutAnthropicOAuth({ account });
+    } else if (provider === "xai") {
+        await ctx.fns.llm.logoutXaiOAuth({ account });
+        await ctx.fns.llm.accountAuthHealth({ action: "clear", provider, account });
     } else {
         if (account === "default") throw new Error(`the default ${provider} credential belongs to its CLI; use the CLI logout command`);
         const kind = provider as "codex" | "claude-code" | "kimi-coding";

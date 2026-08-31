@@ -7,7 +7,7 @@
  * @param opts.account Credential slot.
  */
 export default function (ctx: Context, _session: Session | null, opts: {
-    /** Runtime provider. */ provider: "anthropic-oauth" | "claude-code" | "codex" | "kimi-coding";
+    /** Runtime provider. */ provider: "anthropic-oauth" | "xai" | "claude-code" | "codex" | "kimi-coding";
     /** Credential slot. */ account: string;
 }): string {
     const esc = (v: any) => ctx.fns.procs.ui.escape({ text: String(v ?? "") });

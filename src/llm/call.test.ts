@@ -61,5 +61,33 @@ describe("llm.call", () => {
     });
 
 
+    test("uses xAI OAuth and Responses fields for non-agent calls", async () => {
+        const previousFetch = globalThis.fetch;
+        let request: any; let headers: Headers; let recorded: any;
+        globalThis.fetch = (async (_url: any, init: any) => {
+            request = JSON.parse(init.body); headers = new Headers(init.headers);
+            return new Response('data: {"type":"response.completed","response":{"status":"completed","output_text":"ok"}}\n\ndata: [DONE]\n\n', { status: 200, headers: { "x-ratelimit-limit-tokens": "1000", "x-ratelimit-remaining-tokens": "900" } });
+        }) as any;
+        try {
+            const ctx: any = { fns: { settings: { modelDefault: async () => "xai:grok-4.6" }, llm: {
+                resolveEndpoint: async () => ({ api: "responses", provider: "xai", modelId: "grok-4.6", url: "https://api.x.ai/v1/responses", apiKey: null, account: "default" }),
+                getXaiOAuthToken: async () => "xai-token",
+                recordUsage: async () => null,
+                refreshUsage: async (opts: any) => { recorded = opts; },
+            } } };
+            const result = await call(ctx, null, { user: "hello", model: "xai:grok-4.6", sessionId: "s1" });
+            expect(result.text).toBe("ok");
+            expect(headers!.get("authorization")).toBe("Bearer xai-token");
+            expect(headers!.get("session_id")).toBe("s1");
+            expect(request).toMatchObject({ model: "grok-4.6", store: false, stream: true, include: ["reasoning.encrypted_content"] });
+            expect(request.text).toBeUndefined();
+            expect(recorded.provider).toBe("xai");
+            expect(recorded.account).toBe("default");
+            expect(recorded.maxAgeMs).toBe(60_000);
+        } finally { globalThis.fetch = previousFetch; }
+
+    });
+
+
 
 });

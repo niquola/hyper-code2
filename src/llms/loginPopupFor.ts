@@ -10,13 +10,13 @@
  * @param opts.provider Provider login type.
  */
 export default function (ctx: Context, _session: Session | null, opts: {
-    /** Provider to authenticate. */ provider: "claude-code" | "codex";
+    /** Provider to authenticate. */ provider: "claude-code" | "codex" | "xai";
     /** Existing account slot to reconnect. */ account?: string;
 }): string {
     const provider = opts.provider;
-    if (provider !== "claude-code" && provider !== "codex") throw new Error("unsupported provider");
+    if (provider !== "claude-code" && provider !== "codex" && provider !== "xai") throw new Error("unsupported provider");
     return ctx.fns.ui.popupContent({
-        title: opts.account ? `Reconnect ${opts.account}` : provider === "claude-code" ? "Add Claude Code account" : "Add Codex account",
+        title: opts.account ? `Reconnect ${opts.account}` : provider === "claude-code" ? "Add Claude Code account" : provider === "xai" ? "Add Grok account" : "Add Codex account",
         kind: "login",
         html: ctx.fns.llms.loginPopup({ provider, flow: null, account: opts.account }),
     });

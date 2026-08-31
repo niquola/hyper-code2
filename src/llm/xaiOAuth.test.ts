@@ -1,0 +1,11 @@
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkTestCtx } from "../_testCtx.entry";
+const originalFetch = globalThis.fetch;
+afterEach(() => { globalThis.fetch = originalFetch; });
+async function makeCtx() { return mkTestCtx({ env: { HYPER_OAUTH_ENCRYPTION_KEY: Buffer.alloc(32, 9).toString("base64") } }); }
+describe("managed xAI OAuth", () => {
+ test("requests device code using pi-mono fields and validates HTTPS", async () => { const c:any=await makeCtx(); let form:any; globalThis.fetch=(async (_u:any,i:any)=>{form=new URLSearchParams(i.body); return Response.json({device_code:"d",user_code:"U",verification_uri:"https://x.ai/device",expires_in:600,interval:2});}) as any; const d=await c.fns.llm.requestXaiDeviceCode({}); expect(form.get("referrer")).toBe("pi"); expect(form.get("scope")).toContain("grok-cli:access"); expect(d.userCode).toBe("U"); });
+ test("refresh preserves unrotated refresh token and applies skew", async () => { const c:any=await makeCtx(); globalThis.fetch=(async ()=>Response.json({access_token:"new",expires_in:3600})) as any; const t=await c.fns.llm.exchangeXaiOAuth({grant:"refresh_token",refreshToken:"keep"}); expect(t.refresh).toBe("keep"); expect(t.expiresAt).toBeGreaterThan(Date.now()+3_290_000); });
+ test("encrypted multi-account persistence and logout", async () => { const c:any=await makeCtx(); await c.fns.llm.saveXaiOAuth({access:"a",refresh:"r",expiresAt:Date.now()+10000,account:"work"}); const [row]=await c.fns.procs.db.select({sql:"SELECT * FROM oauth_credentials WHERE provider=? AND account=?",params:["xai-oauth","work"]}); expect(row.access_enc).not.toContain('"a"'); expect(await c.fns.llm.getXaiOAuthToken({account:"work"})).toBe("a"); await c.fns.llm.logoutXaiOAuth({account:"work"}); expect((await c.fns.llm.xaiOAuthStatus({})).connected).toBe(false); });
+ test("device authorization failure does not expose device or refresh secrets", async () => { const c:any=await makeCtx(); globalThis.fetch=(async ()=>Response.json({error:"access_denied",error_description:"denied"},{status:400})) as any; try { await c.fns.llm.exchangeXaiOAuth({grant:"device_code",deviceCode:"device-secret"}); throw new Error("expected rejection"); } catch (e:any) { expect(String(e.message)).not.toContain("device-secret"); } });
+});

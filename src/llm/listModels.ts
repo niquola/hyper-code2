@@ -70,6 +70,18 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         "openrouter:google/gemini-2.5-pro",
     ];
 
+    // xAI subscription catalogue. Device OAuth currently exposes the current
+    // Grok Responses models; actual availability remains account/plan-specific.
+    try {
+        const status = await ctx.fns.llm.xaiOAuthStatus?.({});
+        if (status?.connected) out.xai = [
+            "xai:grok-4.6",
+            "xai:grok-4.5",
+            "xai:grok-4.3",
+        ];
+    } catch { /* OAuth migration unavailable / not connected — omit */ }
+
+
     // Codex (ChatGPT subscription) — only if user has a valid JWT.
     // Models pulled live from /codex/models (subscription-gated whitelist).
     try {

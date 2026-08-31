@@ -20,6 +20,10 @@ export default async function (
         const xhigh = /gpt-5\.[2-9]|codex-max|5\.6/.test(modelId);
         return { supported: ["auto", "off", "minimal", "low", "medium", "high", ...(xhigh ? ["xhigh" as const] : [])], defaultEffort: "medium", mode: "openai-effort" };
     }
+    if (provider === "xai" && /^grok-4(?:\.|$)/.test(modelId)) {
+        return { supported: ["auto", "off", "minimal", "low", "medium", "high", "xhigh"], defaultEffort: "medium", mode: "openai-effort" };
+    }
+
     if ((provider === "claude-code" || provider === "anthropic-oauth" || provider === "anthropic") && /(opus|sonnet)-4-6/.test(modelId)) {
         const max = /opus-4-6/.test(modelId);
         return { supported: ["auto", "off", "low", "medium", "high", ...(max ? ["xhigh" as const] : [])], defaultEffort: "medium", mode: "anthropic-adaptive" };

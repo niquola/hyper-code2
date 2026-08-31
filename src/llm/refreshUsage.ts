@@ -1,7 +1,7 @@
 /**
  * Refreshes cached subscription quota for one or all configured LLM accounts
  *
- * Fetch live quota windows from the provider-specific usage endpoints for Codex and Claude subscription credentials, then persist them through llm.recordUsage. Use before rendering /llms; requests are cached briefly and individual account failures are returned without failing the whole refresh.
+ * Fetch live quota windows from provider-specific subscription usage endpoints for Codex, Claude and xAI/SuperGrok, then persist them through llm.recordUsage. Use before rendering /llms or the sidebar; requests are cached briefly and individual account failures are returned without failing the whole refresh.
  * @param opts.provider Only refresh this provider.
  * @param opts.account Only refresh this credential account.
  * @param opts.maxAgeMs Reuse a recent successful refresh for this many milliseconds. @default 60000 @minimum 0 @maximum 3600000
@@ -35,12 +35,13 @@ export default async function (
     const results = await Promise.all(accounts.map(async (item: any) => {
         const provider = String(item.provider);
         const account = String(item.account || "default");
-        if (!["codex", "claude-code", "anthropic-oauth"].includes(provider)) return { provider, account, status: "unsupported" as const, error: null };
+        if (!["codex", "claude-code", "anthropic-oauth", "xai"].includes(provider)) return { provider, account, status: "unsupported" as const, error: null };
         const cacheKey = `llm:usage-refresh:${provider}:${account}`;
         const cached = ((await ctx.fns.procs.db.select({ sql: "SELECT value FROM kv WHERE key = ?", params: [cacheKey] })) as any[])[0];
         if (cached && now - Number(cached.value ?? 0) < maxAgeMs) return { provider, account, status: "cached" as const, error: null };
         try {
             if (provider === "codex") await refreshCodex(ctx, account, timeoutMs, now);
+            else if (provider === "xai") await refreshXai(ctx, account, timeoutMs, now);
             else await refreshClaude(ctx, provider as "claude-code" | "anthropic-oauth", account, timeoutMs, now);
             await ctx.fns.llm.accountAuthHealth({ action: "clear", provider, account });
             await ctx.fns.procs.db.run({ sql: "INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", params: [cacheKey, String(now)] });
@@ -78,6 +79,45 @@ export default async function (
         await ctx.fns.llm.recordUsage({ provider: "codex", account, rateLimits: { primary, secondary }, planType: data?.plan_type ?? null, now });
     }
     
+    async function refreshXai(ctx: Context, account: string, timeoutMs: number, now: number): Promise<void> {
+        const token = await ctx.fns.llm.getXaiOAuthToken({ account });
+        if (!token) throw new Error("credential is unavailable");
+        const res = await ctx.fns.llm.connectFetch({
+            url: "https://cli-chat-proxy.grok.com/v1/billing?format=credits",
+            ms: timeoutMs,
+            init: { method: "GET", headers: {
+                authorization: `Bearer ${token}`,
+                accept: "application/json",
+                "x-grok-client-mode": "cli",
+                "x-grok-client-version": "1.0.4",
+            } },
+        });
+        if (!res.ok) {
+            if (res.status === 401 || res.status === 403) await ctx.fns.llm.accountAuthHealth({ action: "mark", provider: "xai", account });
+            throw new Error(`usage endpoint returned ${res.status}`);
+        }
+        const data: any = await res.json();
+        const config = data?.config;
+        const used = Number(config?.creditUsagePercent);
+        const cap = Number(config?.onDemandCap?.val);
+        const onDemandUsed = Number(config?.onDemandUsed?.val);
+        const usedPercent = Number.isFinite(used) ? used
+            : Number.isFinite(cap) && cap > 0 && Number.isFinite(onDemandUsed) ? onDemandUsed / cap * 100
+                : NaN;
+        if (!Number.isFinite(usedPercent)) throw new Error("usage endpoint returned no quota percentage");
+        const resetRaw = config?.currentPeriod?.end ?? config?.billingPeriodEnd;
+        const resetMs = Date.parse(String(resetRaw ?? ""));
+        const period = String(config?.currentPeriod?.type ?? "").toLowerCase();
+        const windowMinutes = period.includes("weekly") ? 10080 : period.includes("monthly") ? 43200 : null;
+        const planType = String(config?.subscriptionTier ?? data?.subscriptionTier ?? "").trim() || null;
+        await ctx.fns.llm.recordUsage({ provider: "xai", account, rateLimits: { primary: {
+            used_percent: usedPercent,
+            window_minutes: windowMinutes,
+            resets_at: Number.isFinite(resetMs) ? Math.floor(resetMs / 1000) : null,
+        } }, planType, now });
+    }
+
+
     async function refreshClaude(ctx: Context, provider: "claude-code" | "anthropic-oauth", account: string, timeoutMs: number, now: number): Promise<void> {
         const token = provider === "claude-code"
             ? await ctx.fns.llm.refreshClaudeCode({ account })

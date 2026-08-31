@@ -91,5 +91,16 @@ describe("ai.resolveEndpoint", () => {
         expect(r.apiKey).toBeNull();
     });
 
+    test("xai: prefix → managed subscription Responses endpoint", async () => {
+        const r = await resolve(mkCtx(), null, { model: "xai:grok-4.6" });
+        expect(r.provider).toBe("xai");
+        expect(r.kind).toBe("subscription");
+        expect(r.api).toBe("responses");
+        expect(r.modelId).toBe("grok-4.6");
+        expect(r.url).toBe("https://api.x.ai/v1/responses");
+        expect(r.apiKey).toBeNull();
+    });
+
+
 
 });

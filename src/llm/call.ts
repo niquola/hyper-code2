@@ -31,11 +31,43 @@ export default async function (
     const endpoint = await ctx.fns.llm.resolveEndpoint({ model });
 
     if (endpoint.api === "mock") return normalizeStructured({ text: user, finishReason: "stop", usage: null, raw: { mock: true } }, opts.response_format);
-    const result = endpoint.api === "responses" ? await responses(ctx, endpoint, { ...opts, user, system })
-        : endpoint.api === "anthropic" ? await anthropic(ctx, endpoint, { ...opts, user, system })
-            : await openAI(endpoint, { ...opts, user, system });
+    const result = endpoint.provider === "xai" ? await xaiResponses(ctx, endpoint, { ...opts, user, system })
+        : endpoint.api === "responses" ? await responses(ctx, endpoint, { ...opts, user, system })
+            : endpoint.api === "anthropic" ? await anthropic(ctx, endpoint, { ...opts, user, system })
+                : await openAI(endpoint, { ...opts, user, system });
     return normalizeStructured(result, opts.response_format);
 }
+
+async function xaiResponses(ctx: Context, endpoint: any, opts: any) {
+    const token = await ctx.fns.llm.getXaiOAuthToken({ account: endpoint.account });
+    const body: any = {
+        model: endpoint.modelId,
+        store: false,
+        stream: true,
+        instructions: opts.system || "You are a helpful assistant.",
+        input: [{ type: "message", role: "user", content: [{ type: "input_text", text: opts.user }] }],
+        include: ["reasoning.encrypted_content"],
+    };
+    const format = responsesFormat(opts.response_format);
+    if (format) body.text = { format };
+    if (opts.max_tokens != null) body.max_output_tokens = opts.max_tokens;
+    if (opts.temperature != null) body.temperature = opts.temperature;
+    const response = await fetch(endpoint.url, {
+        method: "POST",
+        headers: {
+            authorization: `Bearer ${token}`,
+            accept: "text/event-stream",
+            "content-type": "application/json",
+            session_id: opts.sessionId || Bun.randomUUIDv7(),
+        },
+        body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(`${endpoint.provider} ${response.status}: ${await response.text()}`);
+    const raw: any = await readResponsesSSE(response);
+    ctx.fns.llm.refreshUsage?.({ provider: endpoint.provider, account: endpoint.account, maxAgeMs: 60_000 })?.catch(() => undefined);
+    return { text: responseText(raw), finishReason: raw.status === "completed" ? "stop" : raw.status ?? null, usage: raw.usage, raw };
+}
+
 
 async function responses(ctx: Context, endpoint: any, opts: any) {
     const token = await ctx.fns.llm.refreshCodex({ account: endpoint.account }) ?? endpoint.apiKey;

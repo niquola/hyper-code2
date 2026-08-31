@@ -127,6 +127,8 @@ export default function (
 const SIBLINGS: Record<string, string[]> = {
     codex: ["openai"],
     "claude-code": ["anthropic", "anthropic-oauth"],
+    xai: [],
+
     "anthropic-oauth": ["anthropic", "claude-code"],
     "kimi-coding": ["kimi"],
 };

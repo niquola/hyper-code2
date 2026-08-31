@@ -40,6 +40,22 @@ describe("llm.recordUsage", () => {
         expect(snapshot.source).toBe("stream");
     });
 
+    test("reads xAI token/request capacity into a sidebar pressure ring", async () => {
+        const ctx: any = await mkTestCtx();
+        const snapshot = await ctx.fns.llm.recordUsage({
+            provider: "xai",
+            headers: {
+                "x-ratelimit-limit-tokens": "1000",
+                "x-ratelimit-remaining-tokens": "250",
+                "x-ratelimit-limit-requests": "100",
+                "x-ratelimit-remaining-requests": "90",
+            },
+            now: NOW,
+        });
+        expect(snapshot.windows.primary).toMatchObject({ usedPercent: 75, windowMinutes: 1 });
+    });
+
+
     test("a response carrying no quota information records nothing", async () => {
         const ctx: any = await mkTestCtx();
         expect(await ctx.fns.llm.recordUsage({ provider: "openai", headers: {}, now: NOW })).toBeNull();
@@ -123,6 +139,16 @@ describe("llm.usageOverview", () => {
         await ctx.fns.settings.set({ module: "llm", scopeType: "global", key: "usageWarnPercent", value: 80 });
         expect((await ctx.fns.llm.usageOverview({ now: NOW }))[0].tone).toBe("neutral");
     });
+
+    test("includes an active xAI agent in the sidebar before a snapshot exists", async () => {
+        const ctx: any = await mkTestCtx();
+        await ctx.fns.agent.start({ model: "xai:grok-4.6" });
+        const entry = (await ctx.fns.llm.usageOverview({ now: NOW })).find((e: any) => e.provider === "xai");
+        expect(entry).toBeDefined();
+        expect(entry.model).toBe("xai:grok-4.6");
+        expect(entry.usedPercent).toBeNull();
+    });
+
 
     test("counts the agents parked on each credential", async () => {
         const ctx: any = await mkTestCtx();

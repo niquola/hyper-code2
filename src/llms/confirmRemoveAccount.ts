@@ -5,7 +5,7 @@
  * @param opts.account Credential slot.
  */
 export default async function (ctx: Context, _session: Session | null, opts: {
-    /** Runtime provider. */ provider: "anthropic-oauth" | "claude-code" | "codex" | "kimi-coding";
+    /** Runtime provider. */ provider: "anthropic-oauth" | "xai" | "claude-code" | "codex" | "kimi-coding";
     /** Credential slot. */ account: string;
 }): Promise<string> {
     await ctx.fns.llm.removeAccount({ provider: opts.provider, account: opts.account });

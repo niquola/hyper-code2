@@ -29,4 +29,16 @@ describe("llms.loginPopup", () => {
         expect(html).toContain("One-time code from Claude");
         expect(html).toContain("never stored");
     });
+    test("Grok starts managed device OAuth and renders only safe public metadata", () => {
+        const start = popup(ctx, null, { provider: "xai" });
+        expect(start).toContain('hx-popup="llms.startLoginFromPopup"');
+        expect(start).toContain("Start Grok login");
+        const progress = popup(ctx, null, { provider: "xai", flow: { account: "work", status: "pending", verificationUri: "https://accounts.x.ai/activate", userCode: "ABCD-EFGH", error: null } });
+        expect(progress).toContain("Open authorization page");
+        expect(progress).toContain("ABCD-EFGH");
+        expect(progress).not.toContain("accessToken");
+        expect(progress).not.toContain("refreshToken");
+    });
+
+
 });

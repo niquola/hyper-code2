@@ -23,6 +23,8 @@ function mkCtx(provider: "anthropic-oauth" | "anthropic") {
         llm: {
             resolveEndpoint: () => ({ url: "http://mock/v1/messages", modelId: "claude-x", apiKey: provider === "anthropic" ? "api-key" : null, provider, api: "anthropic" }),
             getAnthropicOAuthToken: async () => "managed-access",
+            resolveReasoningEffort: async () => ({ requested: "off", applied: "off", mode: "none", downgraded: false, reason: null }),
+
             parseSSE: (opts: any) => parseSSE(ctx, null, opts),
             connectFetch: (o: any) => fetch(o.url, o.init),
             toAnthropicMessages: (opts: any) => toAnthropicMessages(ctx, null, opts),

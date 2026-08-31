@@ -62,7 +62,12 @@ export default function (
     // ---- quota exhausted on a subscription -------------------------------
     const quotaCode = /usage_limit_reached|usage_not_included|quota_exceeded|credits_depleted/i.test(code);
     const quotaText = /usage limit (?:has been )?reached|out of credits|quota exceeded/i.test(serverMessage || body);
-    if (kind === "subscription" && (quotaCode || quotaText || (status === 429 && !retryAfterMs))) {
+    // xAI subscription responses do not yet have a stable documented quota
+    // exhaustion fixture. Treat an unlabelled 429 as ordinary throttling until
+    // xAI explicitly reports a quota/credits condition; otherwise a transient
+    // rate spike would park Grok agents for an invented window.
+    const implicitSubscriptionQuota = provider !== "xai" && status === 429 && !retryAfterMs;
+    if (kind === "subscription" && (quotaCode || quotaText || implicitSubscriptionQuota)) {
         const resetsAt = subscriptionResetsAt(err, header, now);
         const planType = typeof err?.plan_type === "string" ? err.plan_type : undefined;
         return {
