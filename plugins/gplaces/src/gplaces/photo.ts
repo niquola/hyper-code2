@@ -13,7 +13,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
 }) {
     if (!opts?.name || !/^places\/[^/]+\/photos\/[^/]+$/.test(opts.name)) throw new Error("valid photo resource name is required");
     const cache = ((ctx.state as any).gplaces ??= {} as { apiKey?: string });
-    const apiKey = cache.apiKey ?? ctx.env.GOOGLE_PLACES_API_KEY ?? await ctx.fns.secrets.resolve({ ref: "op://hyper/gplaces api_key.txt/value" });
+    const apiKey = cache.apiKey ?? ctx.env.GOOGLE_PLACES_API_KEY ?? await ctx.fns.secrets.get({ ref: "op://hyper/gplaces api_key.txt/value" });
     if (!apiKey) throw new Error("Google Places API key is not configured");
     cache.apiKey = apiKey;
     const width = Math.max(1, Math.min(4800, opts.maxWidth ?? 800));

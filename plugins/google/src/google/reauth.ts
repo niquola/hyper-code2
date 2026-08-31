@@ -2,8 +2,9 @@ import { resolve } from "node:path";
 
 // google.reauth — ONE OAuth flow that grants every Google scope we use (gmail,
 // calendar, docs, sheets, tasks, drive) into a single token, driven through the
-// CDP Chrome (auto-consent via google.cdpOpen). Writes .secrets/google/token-
-// <account>.json only on success. This is the single authorization entry point
+// CDP Chrome (auto-consent via google.cdpOpen). Persists the resulting mutable
+// OAuth token in encrypted local storage; a plaintext compatibility export is
+// best-effort only. This is the single authorization entry point
 // for all google-* modules — no more per-service tokens.
 //
 // Fully automatic for the account the CDP Chrome is signed into; otherwise it
@@ -46,7 +47,9 @@ export default async function (
     const useCdp = opts.cdp !== false;
     const secretsDir = resolve(import.meta.dir, "../../.secrets/google");
 
-    const cs = await Bun.file(resolve(secretsDir, "client_secret.json")).json();
+    const clientRaw = await ctx.fns.secrets.get({ ref: "op://hyper/google/client", namespace: "google", name: "client" });
+    if (!clientRaw) throw new Error("Google OAuth client is not configured");
+    const cs = JSON.parse(clientRaw);
     const c = cs.installed ?? cs.web;
     if (!c?.client_id) throw new Error("client_secret.json missing installed/web client_id");
     const { client_id, client_secret } = c;
@@ -96,10 +99,12 @@ export default async function (
     if (!tok.refresh_token) throw new Error("no refresh_token returned (add prompt=consent / revoke prior grant)");
 
     const token = { access_token: tok.access_token, refresh_token: tok.refresh_token, expires_at: Date.now() + (tok.expires_in ?? 3600) * 1000 };
+    await ctx.fns.secrets.putLocal({ namespace: "google", name: `token:${account}`, value: JSON.stringify(token), source: "oauth-consent" });
     const tokenPath = resolve(secretsDir, `token-${account}.json`);
-    await Bun.write(tokenPath, JSON.stringify(token, null, 2));
+    // Best-effort compatibility export for older tools; encrypted Postgres is authoritative.
+    await Bun.write(tokenPath, JSON.stringify(token, null, 2)).catch(() => undefined);
     await Bun.$`chmod 600 ${tokenPath}`.quiet().nothrow();
     if ((ctx.state as any).google?.tokens) delete (ctx.state as any).google.tokens[account];
 
-    return { account, driver, saved: tokenPath, scope: tok.scope, expires_in: tok.expires_in };
+    return { account, driver, saved: "encrypted-local-store", scope: tok.scope, expires_in: tok.expires_in };
 }

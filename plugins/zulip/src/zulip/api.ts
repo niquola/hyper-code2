@@ -1,19 +1,7 @@
 /**
- * Generic Zulip REST call. Credentials are read privately from 1Password and
- * never cross the function boundary. GET uses query; POST/PATCH use form data.
+ * Generic Zulip REST call. Credentials use the transparent encrypted secret
+ * store with 1Password only as first-use bootstrap.
  */
-async function opRead(ref: string) {
-    const paths = [process.env.PATH, `${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin"].filter(Boolean).join(":");
-    const proc = Bun.spawn(["op", "read", ref, "--no-newline"], {
-        env: { ...process.env, PATH: paths }, stdout: "pipe", stderr: "pipe",
-    });
-    const [stdout, stderr, code] = await Promise.all([
-        new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited,
-    ]);
-    if (code !== 0) throw new Error(`Zulip credentials: 1Password CLI failed (${code}): ${stderr.trim().slice(0, 240)}`);
-    return stdout.trim();
-}
-
 async function resolveConfig(ctx: Context, requested?: string) {
     const all = await ctx.fns.zulip.creds({ list: true });
     let instance = requested ?? ctx.env.ZULIP_INSTANCE;
@@ -31,7 +19,7 @@ async function resolveConfig(ctx: Context, requested?: string) {
     const vault = ctx.env.ZULIP_OP_VAULT || "hyper";
     const prefix = ctx.env.ZULIP_OP_ITEM_PREFIX || "zulip ";
     let cfg: any;
-    try { cfg = JSON.parse(await opRead(`op://${vault}/${prefix}${selected}.json/value`)); }
+    try { cfg = JSON.parse(String(await ctx.fns.secrets.get({ ref: `op://${vault}/${prefix}${selected}.json/value`, namespace: "zulip", name: `instance:${selected}` }))); }
     catch (error: any) {
         throw new Error(`Could not resolve Zulip credentials for ${selected}: ${String(error?.message ?? error)}`);
     }

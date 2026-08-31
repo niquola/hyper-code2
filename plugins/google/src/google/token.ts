@@ -1,5 +1,5 @@
-// Google OAuth tokens and client credentials live in 1Password. Values are
-// resolved only at runtime and cached in memory until shortly before expiry.
+// Google OAuth tokens and client credentials are bootstrapped from 1Password
+// once, then served and rotated from encrypted local Postgres storage.
 /**
  * Resolve a valid Google OAuth access token.
  *
@@ -23,12 +23,13 @@ export default async function (ctx: Context, _session: Session | null, opts?: { 
     };
     const field = tokenField[account];
     if (!field) throw new Error(`No token binding for ${account}`);
-    const tokenRaw = await ctx.fns.secrets.resolve({ ref: `op://hyper/google/${field}` });
+    const tokenName = `token:${account}`;
+    const tokenRaw = await ctx.fns.secrets.get({ ref: `op://hyper/google/${field}`, namespace: "google", name: tokenName });
     if (!tokenRaw) throw new Error(`No token for ${account}. Run google.reauth({ account: "${account}" })`);
     let token = JSON.parse(tokenRaw);
 
     if (!token.expires_at || Date.now() > token.expires_at - 60_000) {
-        const secretRaw = await ctx.fns.secrets.resolve({ ref: "op://hyper/google/client" });
+        const secretRaw = await ctx.fns.secrets.get({ ref: "op://hyper/google/client", namespace: "google", name: "client" });
         if (!secretRaw) throw new Error("Google OAuth client is not configured");
         const secret = JSON.parse(secretRaw);
         const creds = secret.installed || secret.web;
@@ -44,9 +45,8 @@ export default async function (ctx: Context, _session: Session | null, opts?: { 
         });
         const json: any = await res.json();
         if (!res.ok || !json?.access_token) throw new Error(`Token refresh failed for ${account}: ${JSON.stringify(json)}`);
-        token = { access_token: json.access_token, refresh_token: token.refresh_token, expires_at: Date.now() + (json.expires_in ?? 3600) * 1000 };
-        // Access tokens are short-lived; keep the refreshed value in memory.
-        // The durable refresh token remains in 1Password.
+        token = { access_token: json.access_token, refresh_token: json.refresh_token ?? token.refresh_token, expires_at: Date.now() + (json.expires_in ?? 3600) * 1000 };
+        await ctx.fns.secrets.putLocal({ namespace: "google", name: tokenName, value: JSON.stringify(token), source: "oauth-refresh" });
     }
 
     cache.tokens[account] = { access_token: token.access_token, expires_at: token.expires_at };

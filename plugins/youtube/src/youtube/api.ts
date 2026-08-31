@@ -14,7 +14,7 @@ export default async function (
 ) {
     if (!opts?.endpoint || !/^[a-zA-Z0-9_-]+$/.test(opts.endpoint)) throw new Error("youtube.api: valid endpoint required");
     const cache = ((ctx.state as any).youtube ??= {} as { key?: string });
-    const key = cache.key ?? ctx.env.YOUTUBE_API_KEY ?? await ctx.fns.secrets.resolve({ ref: "op://hyper/youtube api_key.txt/value" });
+    const key = cache.key ?? ctx.env.YOUTUBE_API_KEY ?? await ctx.fns.secrets.get({ ref: "op://hyper/youtube api_key.txt/value" });
     if (!key) throw new Error("YouTube API key is not configured");
     cache.key = key;
 

@@ -30,11 +30,12 @@ export default async function (
             stderr: "pipe",
             env: { ...process.env, ...ctx.env, PATH: path },
         });
+        const timeout = setTimeout(() => { try { proc.kill(9); } catch {} }, 15_000);
         const [stdout, stderr, code] = await Promise.all([
             new Response(proc.stdout).text(),
             new Response(proc.stderr).text(),
             proc.exited,
-        ]);
+        ]).finally(() => clearTimeout(timeout));
         if (code !== 0) {
             // stderr may contain identifying metadata; expose only a generic error.
             void stderr;

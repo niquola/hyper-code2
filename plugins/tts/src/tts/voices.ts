@@ -9,8 +9,8 @@ async function accessToken(ctx: Context) {
     const cache = ((ctx.state as any).tts ??= {} as { token?: { access_token: string; expires_at: number } });
     if (cache.token && Date.now() < cache.token.expires_at - 60_000) return cache.token.access_token;
     const [tokenRaw, clientRaw] = await Promise.all([
-        ctx.fns.secrets.resolve({ ref: "op://hyper/tts token.json/value" }),
-        ctx.fns.secrets.resolve({ ref: "op://hyper/tts client_secret.json/value" }),
+        ctx.fns.secrets.get({ ref: "op://hyper/tts token.json/value", namespace: "tts", name: "token" }),
+        ctx.fns.secrets.get({ ref: "op://hyper/tts client_secret.json/value", namespace: "tts", name: "client" }),
     ]);
     if (!tokenRaw || !clientRaw) throw new Error("Google Cloud TTS credentials are not configured");
     const token = JSON.parse(tokenRaw), secret = JSON.parse(clientRaw), creds = secret.installed || secret.web;

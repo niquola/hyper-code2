@@ -20,5 +20,5 @@ export default async function (
     });
     if (value == null) return null;
     if (typeof value !== "string") throw new Error("secret setting must be a string reference");
-    return ctx.fns.secrets.resolve({ ref: value });
+    return ctx.fns.secrets.get({ ref: value });
 }

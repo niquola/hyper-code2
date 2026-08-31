@@ -25,7 +25,7 @@ export default async function (
         if (!ref.startsWith("op://") && !ref.startsWith("env://")) {
             throw new Error(`secret ${name} must be an op:// or env:// reference`);
         }
-        const value = await ctx.fns.secrets.resolve({ ref });
+        const value = await ctx.fns.secrets.get({ ref });
         if (!value) throw new Error(`secret ${name} could not be resolved`);
         secretEnv[name] = value;
         sensitive.push(value);

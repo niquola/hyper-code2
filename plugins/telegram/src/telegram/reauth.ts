@@ -26,15 +26,13 @@ const globalState = globalThis as typeof globalThis & {
 const reauthSingleton = (globalState[reauthKey] ??= { generation: 0 });
 const clientSingleton = (globalState[telegramClientKey] ??= {});
 
-async function opSecret(ref: string) {
-    const path = [`${process.env.HOME}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin", process.env.PATH ?? ""].join(":");
-    const proc = Bun.spawn(["op", "read", "--no-newline", ref], { stdout: "pipe", stderr: "pipe", env: { ...process.env, PATH: path } });
-    const [value, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-    if (code !== 0) throw new Error("Telegram credential could not be resolved from 1Password");
+async function opSecret(ctx: Context, ref: string) {
+    const value = await ctx.fns.secrets.get({ ref });
+    if (!value) throw new Error("Telegram credential is not configured");
     return value;
 }
 
-async function saveSession(session: string) {
+async function saveSession(ctx: Context, session: string) {
     const get = Bun.spawn(["op", "item", "get", "telegram session.txt", "--vault", "hyper", "--format=json", "--reveal"], { stdout: "pipe", stderr: "pipe" });
     const [raw, getError, getCode] = await Promise.all([new Response(get.stdout).text(), new Response(get.stderr).text(), get.exited]);
     if (getCode !== 0) throw new Error(`Could not read Telegram session item from 1Password: ${getError.trim()}`);
@@ -52,9 +50,10 @@ async function saveSession(session: string) {
     const [editOutput, editError, editCode] = await Promise.all([new Response(edit.stdout).text(), new Response(edit.stderr).text(), edit.exited]);
     if (editCode !== 0) throw new Error(`Could not save Telegram session to 1Password: ${editError.trim() || editOutput.trim()}`);
 
-    // Success is only real after a read-after-write comparison.
-    const persisted = (await opSecret("op://hyper/telegram session.txt/value")).trim();
-    if (persisted !== session.trim()) throw new Error("Telegram session verification failed after writing to 1Password");
+    // Success is only real after a provider read-after-write comparison.
+    const persisted = await ctx.fns.secrets.get({ ref: "op://hyper/telegram session.txt/value", refresh: true });
+    if (!persisted || persisted.trim() !== session.trim()) throw new Error("Telegram session verification failed after writing to 1Password");
+    await ctx.fns.secrets.putLocal({ namespace: "bootstrap:op", name: new Bun.CryptoHasher("sha256").update("op://hyper/telegram session.txt/value").digest("hex").slice(0, 32), value: session, source: "telegram-reauth" });
 }
 
 async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: boolean }) {
@@ -80,7 +79,7 @@ async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: 
     }
 
     const timeoutMs = Math.max(30_000, Math.min(opts?.timeoutMs ?? 300_000, 900_000));
-    const configRaw = await opSecret("op://hyper/telegram config.json/value");
+    const configRaw = await opSecret(ctx, "op://hyper/telegram config.json/value");
     if (!configRaw) throw new Error("Telegram MTProto config is not configured");
     const config = JSON.parse(configRaw);
     if (!Number.isInteger(config.apiId) || !config.apiHash || !config.phone) throw new Error("Telegram config requires apiId, apiHash and phone");
@@ -152,7 +151,7 @@ async function performReauth(ctx: Context, opts?: { timeoutMs?: number; force?: 
             me = auth.user;
         }
 
-        await saveSession(String(client.session.save()));
+        await saveSession(ctx, String(client.session.save()));
         clientSingleton.client = client;
         clientSingleton.connecting = null;
         const legacy = ((ctx.state as any).telegram ??= {});
