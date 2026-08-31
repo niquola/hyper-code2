@@ -19,6 +19,7 @@ struct NativeChatView: View {
     @State private var draft = ""
     @State private var attachments: [PendingAttachment] = []
     @State private var selectedTool: MobileEvent?
+    @State private var selectedToolGroup: ToolGroupSelection?
     @FocusState private var focused: Bool
 
     @Environment(\.dismiss) private var dismiss
@@ -61,14 +62,14 @@ struct NativeChatView: View {
                         ForEach(items) { item in
                             switch item {
                             case .event(let event): EventBubble(event: event, agentID: agent.id, baseURL: baseURL)
-                            case .tools(let tools): ToolTray(events: tools) { selectedTool = $0 }
+                            case .tools(let tools): ToolTray(events: tools) { selectedToolGroup = ToolGroupSelection(events: tools) }
                             }
                         }
                         if let partial = store.partial {
                             LiveAssistantBubble(partial: partial)
                                 .id("live-assistant")
                         }
-                    }.padding(.horizontal, 12).padding(.vertical, 12)
+                    }.frame(maxWidth: 860).padding(.horizontal, 20).padding(.vertical, 12)
                     .transaction { $0.animation = nil }
                 }
                 .scrollDismissesKeyboard(.interactively)
@@ -87,6 +88,8 @@ struct NativeChatView: View {
                 }
             }
                 AttachmentComposer(text: $draft, attachments: $attachments, focused: $focused, sending: store.isSending, running: store.isRunning, injectText: injectText, injectEvery: injectEvery, send: sendAction, stop: stopAction)
+                    .frame(maxWidth: 860)
+                    .frame(maxWidth: .infinity)
             }
         }
         .background(Color(.systemGroupedBackground))
@@ -107,6 +110,7 @@ struct NativeChatView: View {
         .toolbar { chatToolbar }
         .task { await store.start(baseURL: baseURL, agentID: agent.id) }
         .onDisappear { store.stopPolling(); onRead() }
+        .sheet(item: $selectedToolGroup) { group in ToolListSheet(events: group.events) { event in selectedToolGroup = nil; DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { selectedTool = event } } }
         .sheet(item: $selectedTool) { event in ToolDetailSheet(baseURL: baseURL, agentID: agent.id, event: event) }
         .sheet(isPresented: $showingModelPicker) { ModelPickerSheet(baseURL: baseURL, agentID: agent.id, selection: $currentModel) }
         .sheet(isPresented: $showingInjectEditor) { InjectEditorSheet(baseURL: baseURL, agentID: agent.id, text: $injectText, every: $injectEvery) }
@@ -181,7 +185,7 @@ private struct AgentActivityStatus: View {
 }
 
 
-private struct DotGridBackground: View {
+struct DotGridBackground: View {
     @Environment(\.colorScheme) private var colorScheme
     var body: some View {
         Canvas { context, size in
@@ -205,26 +209,66 @@ private struct DotGridBackground: View {
     }
 }
 
+private struct ToolGroupSelection: Identifiable {
+    let id = UUID()
+    let events: [MobileEvent]
+}
+
 private struct ToolTray: View {
     let events: [MobileEvent]
-    let select: (MobileEvent) -> Void
+    let open: () -> Void
+    private var calls: [MobileEvent] { events.filter { $0.type == "tool_call" } }
+    private var errors: Int { events.filter(\.isError).count }
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(events) { event in
-                    Button { select(event) } label: {
-                        ZStack {
-                            Image(systemName: icon(event.name))
-                            if event.isError { Circle().fill(.red).frame(width: 8, height: 8).offset(x: 12, y: -12) }
+        Button(action: open) {
+            HStack(spacing: 8) {
+                Image(systemName: "terminal").font(.caption.weight(.semibold))
+                Text("Ran \(calls.count) \(calls.count == 1 ? "command" : "commands")")
+                    .font(.subheadline.weight(.medium))
+                if errors > 0 { Text("\(errors)").font(.caption2.bold()).foregroundStyle(.white).padding(.horizontal, 6).background(.red, in: Capsule()) }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(.secondary)
+            .contentShape(Rectangle())
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Show command list")
+    }
+}
+
+private struct ToolListSheet: View {
+    let events: [MobileEvent]
+    let select: (MobileEvent) -> Void
+    @Environment(\.dismiss) private var dismiss
+    private var calls: [MobileEvent] { events.filter { $0.type == "tool_call" } }
+    var body: some View {
+        NavigationStack {
+            List(calls) { event in
+                Button { select(event) } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: icon(event.name)).font(.body.weight(.medium)).frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(event.preview ?? displayName(event.name))
+                                .font(.callout.weight(.medium)).foregroundStyle(.primary).lineLimit(1)
+                            Text(displayName(event.name))
+                                .font(.caption).foregroundStyle(.secondary)
                         }
-                        .font(.system(size: 15, weight: .semibold)).foregroundStyle(event.isError ? .red : .primary)
-                        .frame(width: 36, height: 36)
-                        .background(Color.clear, in: Circle())
-                        .overlay(Circle().stroke(event.isError ? Color.red.opacity(0.45) : Color.secondary.opacity(0.28), lineWidth: 0.75))
-                    }.buttonStyle(.plain).accessibilityLabel(event.name ?? "Tool").accessibilityHint(event.preview ?? "Show tool details")
-                }
-            }.padding(.horizontal, 1)
-        }.frame(maxWidth: .infinity, alignment: .leading)
+                        Spacer()
+                        if event.isError { Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red) }
+                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                    }.contentShape(Rectangle())
+                }.buttonStyle(.plain)
+            }
+            .navigationTitle("Ran \(calls.count) \(calls.count == 1 ? "command" : "commands")")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button { dismiss() } label: { Image(systemName: "xmark") } } }
+        }
+        .presentationDetents([.medium, .large])
+    }
+    private func displayName(_ name: String?) -> String {
+        switch name { case "read": "File read"; case "write": "File write"; case "edit": "File edit"; case "grep": "Text search"; case "find": "File search"; case "bash": "Shell command"; case "eval": "Code evaluation"; default: name ?? "Tool" }
     }
     private func icon(_ name: String?) -> String {
         switch name { case "read": "doc.text"; case "write", "edit": "square.and.pencil"; case "grep", "find": "magnifyingglass"; case "bash": "terminal"; case "eval": "chevron.left.forwardslash.chevron.right"; default: "wrench.and.screwdriver" }
@@ -283,7 +327,7 @@ private struct EventBubble: View {
         HStack(alignment: .bottom) {
             if isUser { Spacer(minLength: 54) }
             VStack(alignment: .leading, spacing: 7) {
-                if let text = event.text, !text.isEmpty { NativeMessageText(text: text) }
+                if let text = event.text, !text.isEmpty { NativeMessageText(text: text, foreground: isUser ? userTextColor : nil) }
                 if !imageAttachments.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 7) {
@@ -307,14 +351,20 @@ private struct EventBubble: View {
             .frame(maxWidth: isUser ? nil : .infinity, alignment: .leading)
             .padding(.horizontal, isUser ? 12 : 0).padding(.vertical, isUser ? 9 : 7)
             .background(isUser ? userBubbleColor : Color.clear, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-            .foregroundStyle(isUser ? Color.white : (event.type == "error" ? Color.red : Color.primary)).textSelection(.enabled)
+            .foregroundStyle(isUser ? userTextColor : (event.type == "error" ? Color.red : Color.primary)).textSelection(.enabled)
             if !isUser { Spacer(minLength: 0) }
         }
         .sheet(item: $preview) { item in ImagePreviewSheet(item: item) }
     }
 
     private var userBubbleColor: Color {
-        colorScheme == .dark ? Color(red: 0.10, green: 0.22, blue: 0.38) : Color.accentColor
+        colorScheme == .dark
+            ? Color(red: 0.10, green: 0.22, blue: 0.38)
+            : Color(red: 0.76, green: 0.87, blue: 1.0)
+    }
+
+    private var userTextColor: Color {
+        colorScheme == .dark ? .white : Color(red: 0.04, green: 0.08, blue: 0.14)
     }
 
     private func attachmentURL(_ attachment: EventAttachment) -> URL? {
@@ -349,9 +399,11 @@ private struct ZoomableRemoteImage: View {
 
 private struct NativeMessageText: View {
     let text: String
+    var foreground: Color? = nil
     var body: some View {
         Markdown(text)
             .markdownTheme(.hyperChat)
+            .markdownTextStyle { ForegroundColor(foreground ?? .primary) }
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

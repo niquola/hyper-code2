@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @AppStorage("hyper.serverURL") private var serverURL = "http://localhost:3010"
+    @AppStorage("hyper.serverURL") private var serverURL = "https://hyper.tunnel.apki.dev"
     @State private var showingSettings = false
     @State private var reloadID = UUID()
     @State private var isLoading = true
@@ -80,7 +80,7 @@ private struct ServerSettingsView: View {
         NavigationStack {
             Form {
                 Section("Hyper server") {
-                    TextField("http://localhost:3010", text: $draft)
+                    TextField("https://hyper.tunnel.apki.dev", text: $draft)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.URL)

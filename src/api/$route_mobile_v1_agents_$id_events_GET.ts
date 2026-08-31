@@ -22,6 +22,25 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const status = ((await ctx.fns.procs.db.select({ sql: "SELECT run_state, next_run_at, last_error FROM agents WHERE id = ?", params: [id] })) as any[])[0];
     const isRunning = status?.run_state === "running" || status?.run_state === "claimed" || status?.next_run_at != null;
 
+    const toolPreview = (name: string, args: any): string => {
+        const value = args && typeof args === "object" ? args : {};
+        const first = (...keys: string[]) => keys.map((key) => value[key]).find((item) => typeof item === "string" && item.length > 0);
+        const basename = (path: string) => path.replace(/\\/g, "/").split("/").filter(Boolean).pop() || path;
+        switch (name) {
+            case "read": return `Read ${basename(first("path", "file") || "file")}`;
+            case "write": return `Write ${basename(first("path", "file") || "file")}`;
+            case "edit": return `Edit ${basename(first("path", "file") || "file")}`;
+            case "grep": return `Search ${first("pattern", "query") || "files"}`;
+            case "find": return `Find ${first("pattern", "query") || "files"}`;
+            case "bash": return `Run ${first("command")?.split("\n")[0] || "command"}`;
+            case "eval": return `Evaluate ${first("code")?.split("\n")[0] || "code"}`;
+            default: {
+                const subject = first("path", "file", "query", "name", "id", "url");
+                return subject ? `${name} ${subject}` : name;
+            }
+        }
+    };
+
     const mobileEvents = events
         .filter((event: any) => ["user", "assistant", "error", "tool_call", "tool_result", "stop"].includes(String(event.type)))
         .map((event: any) => ({
@@ -31,7 +50,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
             text: typeof event.text === "string" ? event.text : (typeof event.error === "string" ? event.error : null),
             name: typeof event.name === "string" ? event.name : null,
             preview: event.type === "tool_call"
-                ? JSON.stringify(event.args ?? {}).slice(0, 180)
+                ? toolPreview(String(event.name || "Tool"), event.args)
                 : (typeof event.text === "string" ? event.text.slice(0, 180) : null),
             isError: event.isError === true,
             attachments: Array.isArray(event.attachments) ? event.attachments.map((attachment: any) => ({

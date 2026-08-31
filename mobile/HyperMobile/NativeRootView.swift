@@ -159,7 +159,7 @@ struct NativeRootView: View {
     private func folderName(_ path: String) -> String { URL(fileURLWithPath: path).lastPathComponent.isEmpty ? "No workspace" : URL(fileURLWithPath: path).lastPathComponent }
 }
 
-private struct AgentRow: View {
+struct AgentRow: View {
     let agent: AgentSummary
     private var folder: String { URL(fileURLWithPath: agent.workspaceDir).lastPathComponent.isEmpty ? "No workspace" : URL(fileURLWithPath: agent.workspaceDir).lastPathComponent }
     private var projectColor: Color { ProjectColor.color(for: agent.workspaceDir) }
@@ -198,7 +198,7 @@ private enum ProjectColor {
     }
 }
 
-private struct NativeLoginView: View {
+struct NativeLoginView: View {
     @Binding var password: String; let error: String?; let isLoading: Bool; let submit: () -> Void; @FocusState private var focused: Bool
     var body: some View { VStack(spacing: 18) { Spacer(); Image(systemName: "lock.shield.fill").font(.system(size: 46)).foregroundStyle(.indigo); Text("Sign in").font(.title2.bold()); SecureField("Password", text: $password).onSubmit(submit).focused($focused).padding(14).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14)); if let error { Text(error).font(.caption).foregroundStyle(.red) }; Button("Sign in", action: submit).buttonStyle(.borderedProminent).controlSize(.large).disabled(password.isEmpty || isLoading); Spacer() }.padding(24).background(DotLoginBackground()).task { focused = true } }
 }

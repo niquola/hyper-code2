@@ -3,6 +3,12 @@ import SwiftUI
 @main
 struct HyperMobileApp: App {
     var body: some Scene {
-        WindowGroup { NativeRootView() }
+        WindowGroup {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                NativePadRootView()
+            } else {
+                NativeRootView()
+            }
+        }
     }
 }
