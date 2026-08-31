@@ -5,7 +5,7 @@ description: "Evidence research over 220M+ peer-reviewed papers through Consensu
 
 # Research
 
-Research peer-reviewed literature through the user's logged-in Consensus web subscription. Authentication uses the attached Chrome session: log in once at `consensus.app`; credentials and cookies are never returned by plugin functions.
+Search uses the official Consensus REST API (`GET /v1/search`) with `research.apiKey`; create a key at `consensus.app/api-mcp`. Synthesized answers and contextual follow-ups still use the logged-in Consensus browser session because the public API currently exposes paper search, not synthesis. Credentials and cookies are never returned by plugin functions.
 
 ## Workflow
 
@@ -27,4 +27,4 @@ const followUp = await ctx.fns.research.ask({
 
 `filters` supports Consensus fields such as `study_types`, `year_min`, `year_max`, `sample_size_min`, `sjr_min`, `sjr_max`, `exclude_preprints`, `open_access`, `human`, `controlled`, `domain`, `clinical_guideline`, and `medical_mode`. Array values are converted to comma-separated API values.
 
-Each `ask` or `search` can consume a Consensus PRO search allowance. Prefer `search` when a synthesis is unnecessary and use a reasonable `limit`.
+Each synthesized `ask` can consume a Consensus PRO web-search allowance. Official `search` consumes API allowance visible in the Consensus API dashboard. Prefer `search` when synthesis is unnecessary and use a reasonable `limit`. `include_full_text_chunks` is currently Enterprise-only.

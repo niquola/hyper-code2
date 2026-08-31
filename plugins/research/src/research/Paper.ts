@@ -1,6 +1,7 @@
 export type Paper = {
     title?: string;
     authors?: string[] | string;
+    abstract?: string;
     primary_author?: string;
     year?: number;
     publish_date?: string;
@@ -23,4 +24,14 @@ export type Paper = {
     paper_id?: string;
     doc_id?: string;
     consensus_url?: string;
+    full_text_chunks?: string[];
+    semantic_score?: number;
+    sample_size?: number;
+    population_type?: string;
+    countries_of_study?: string[];
+    study_duration_days?: number;
+    influential_citation_count?: number;
+    institutions?: string[];
+    sjr_best_quartile?: number;
+    is_preprint?: boolean;
 };

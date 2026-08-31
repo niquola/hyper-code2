@@ -756,6 +756,7 @@ declare global {
             eval: Injected<typeof import("./repl/eval").default>;
         };
         research: {
+            api: Injected<typeof import("../plugins/research/src/research/api").default>;
             ask: Injected<typeof import("../plugins/research/src/research/ask").default>;
             call: Injected<typeof import("../plugins/research/src/research/call").default>;
             papers: Injected<typeof import("../plugins/research/src/research/papers").default>;
