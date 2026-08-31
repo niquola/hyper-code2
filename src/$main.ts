@@ -34,15 +34,7 @@ function wrapFns(ctx: any, node: any): any {
 // tests so request-scoped session construction lives in ONE place. Inherits the
 // registry/routes/env; everything the handler calls via rctx.fns.* sees this
 // session.
-export function makeRequestCtx(base: Context, session: Session): Context {
-    const c: any = Object.create(base);
-    // Every call that happens inside this one shares a trace: the session is
-    // already carried down every `ctx.fns.*` call, so a log line written five
-    // frames deep says which request it belongs to without anyone passing it.
-    session.trace ??= { id: crypto.randomUUID().slice(0, 8), started: Date.now(), route: (session as any).route };
-    c.session = session;
-    return c as Context;
-}
+export { makeRequestCtx } from "./procs/boot/requestCtx";
 
 import { resolve } from "node:path";
 

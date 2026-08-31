@@ -5,7 +5,7 @@
 //   expect(res.status).toBe(200); expect(await res.json()).toEqual([...]);
 //   await ctx.fns.procs.http.dispatch({ method: "POST", url: "/issues/add", body: { title: "x" } });
 // body: object → JSON; string / FormData / URLSearchParams → sent as-is.
-import { makeRequestCtx } from "../../$main";
+import { makeRequestCtx } from "../boot/requestCtx";
 
 /**
  * Perform dispatch for the http subsystem.
