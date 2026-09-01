@@ -39,12 +39,16 @@ struct NativePadRootView: View {
                     ForEach(folders, id: \.self) { value in Label(value, systemImage: "folder").tag(Optional(value)) }
                 }
                 Section("Explore") {
-                    Button { showingNews = true } label: { Label("News", systemImage: "newspaper") }
                     Button { showingWeb = true } label: { Label("Web Hyper", systemImage: "safari") }
                 }
             }
             .navigationTitle("Hyper Code")
-            .toolbar { ToolbarItem(placement: .bottomBar) { Button { showingSettings = true } label: { Label("Connection", systemImage: "gearshape") } } }
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { showingNews = true } label: { Image(systemName: "newspaper") }.accessibilityLabel("News")
+                    Button { showingSettings = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("Connection")
+                }
+            }
         } content: {
             List(filtered, selection: $selection) { agent in
                 AgentRow(agent: agent).tag(agent)

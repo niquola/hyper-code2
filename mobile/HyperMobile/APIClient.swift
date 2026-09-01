@@ -4,7 +4,9 @@ struct APIClient {
     private struct SendBody: Encodable { let text: String; let debounceMs: Int }
     private struct PinBody: Encodable { let pinned: Bool }
     let baseURL: URL
-    private struct NewsAgentBody: Encodable { let prompt: String }
+    private struct NewsAgentBody: Encodable { let id: String; let prompt: String }
+    private struct NewsReadBody: Encodable { let id: String }
+    private struct NewsLikeBody: Encodable { let id: String; let liked: Bool }
 
 
     private struct LoginBody: Encodable { let password: String }
@@ -41,15 +43,15 @@ struct APIClient {
     }
 
     func setNewsLiked(id: String, liked: Bool) async throws -> NewsLikeResponse {
-        try await request(path: "api/mobile/v1/news/\(escaped(id))/like", method: "POST", body: ["liked": liked])
+        try await request(path: "api/mobile/v1/news/like", method: "POST", body: NewsLikeBody(id: id, liked: liked))
     }
 
     func markNewsRead(id: String) async throws {
-        let _: ReadNewsResponse = try await request(path: "api/mobile/v1/news/\(escaped(id))/read", method: "POST", body: [String: String]())
+        let _: ReadNewsResponse = try await request(path: "api/mobile/v1/news/read", method: "POST", body: NewsReadBody(id: id))
     }
 
     func startNewsAgent(id: String, prompt: String) async throws -> NewsAgentResponse {
-        try await request(path: "api/mobile/v1/news/\(escaped(id))/agent", method: "POST", body: NewsAgentBody(prompt: prompt))
+        try await request(path: "api/mobile/v1/news/agent", method: "POST", body: NewsAgentBody(id: id, prompt: prompt))
     }
 
 
@@ -145,7 +147,11 @@ struct APIClient {
         try await request(path: "api/mobile/v1/agents/\(escaped(agentID))/read", method: "POST", body: [String: String]())
     }
 
-    private func escaped(_ value: String) -> String { value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? value }
+    private func escaped(_ value: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+    }
     private func url(_ path: String) -> URL { baseURL.appending(path: path) }
 
     private func request<T: Decodable, B: Encodable>(path: String, method: String = "GET", body: B? = Optional<String>.none) async throws -> T {

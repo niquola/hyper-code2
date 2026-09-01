@@ -256,7 +256,7 @@ struct NativePadNewsView: View {
             }
             .refreshable { await load() }
         }
-        .fullScreenCover(item: $selected) { item in
+        .fullScreenCover(item: $selected, onDismiss: { Task { await load() } }) { item in
             NavigationStack {
                 NewsDetailView(baseURL: baseURL, items: items, initialID: item.id) { id, liked in if let i = items.firstIndex(where: { $0.id == id }) { items[i].liked = liked } }
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { selected = nil } } }
