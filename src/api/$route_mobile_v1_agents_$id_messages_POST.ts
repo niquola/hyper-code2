@@ -41,6 +41,10 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
     const eventIdx = await ctx.fns.session.appendEvent({ id, event, ts });
     await ctx.fns.session.syncAgentState({ agent });
 
+
+    // Keep goal observation off the critical response path and separate from
+    // the main agent's execution state.
+    if (text && agent.scratchpad?.goalTrackingEnabled === true && ctx.fns.agent.updateGoalSidecar) void ctx.fns.agent.updateGoalSidecar({ agent, messageIdx: appended.idx, userMessage: text }).catch(() => undefined);
     const sendAt = Date.now() + Math.min(30_000, Math.max(0, debounceMs));
     await ctx.fns.procs.db.run({ sql: "UPDATE agents SET next_run_at=GREATEST(COALESCE(next_run_at,0),?), updated_at=? WHERE id=?", params: [sendAt, Date.now(), id] });
     ctx.fns.agent.wakeWorker({});

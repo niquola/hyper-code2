@@ -58,6 +58,7 @@ declare global {
             sanitizeHtmlBody: Injected<typeof import("./agent/sanitizeHtmlBody").default>;
             setAutomation: Injected<typeof import("./agent/setAutomation").default>;
             setGoal: Injected<typeof import("./agent/setGoal").default>;
+            setGoalTracking: Injected<typeof import("./agent/setGoalTracking").default>;
             setModel: Injected<typeof import("./agent/setModel").default>;
             setReasoningEffort: Injected<typeof import("./agent/setReasoningEffort").default>;
             setSleepActive: Injected<typeof import("./agent/setSleepActive").default>;
@@ -76,6 +77,7 @@ declare global {
             toolMeta: Injected<typeof import("./agent/toolMeta").default>;
             unarchiveMember: Injected<typeof import("./agent/unarchiveMember").default>;
             unpark: Injected<typeof import("./agent/unpark").default>;
+            updateGoalSidecar: Injected<typeof import("./agent/updateGoalSidecar").default>;
             waitForEvent: Injected<typeof import("./agent/waitForEvent").default>;
             wakeAt: Injected<typeof import("./agent/wakeAt").default>;
             wakeIn: Injected<typeof import("./agent/wakeIn").default>;

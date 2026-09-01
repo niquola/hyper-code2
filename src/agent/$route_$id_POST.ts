@@ -39,6 +39,10 @@ export default async function (ctx: Context, _session: Session | null, opts: { /
     await ctx.fns.session.appendEvent({ id, event, ts });
     await ctx.fns.session.syncAgentState({ agent });
 
+
+    // Display-only observer: it runs independently and never changes the
+    // execution goal, queue cursor, or transcript of this agent.
+    if (text && agent.scratchpad?.goalTrackingEnabled === true && ctx.fns.agent.updateGoalSidecar) void ctx.fns.agent.updateGoalSidecar({ agent, messageIdx: userAppend.idx, userMessage: text }).catch(() => undefined);
     const url = new URL(req.url);
     const explicitSeconds = url.searchParams.get("debounceSeconds");
     const perAgent = await ctx.fns.settings.getNumber({ module: "ui", scopeType: "agent", scopeId: id, key: "debounceMs" });

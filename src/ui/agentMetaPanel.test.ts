@@ -40,13 +40,16 @@ test("agent meta panel is a static shell with per-section slots", () => {
     expect(html).not.toContain("hx-get");
 });
 
-test("collapses an inactive goal and opens an enabled goal", () => {
+test("renders the display-only observed goals preview", () => {
     const ctx = mkCtx();
-    const inactive = render(ctx, null, { agent: { id: "eh", goal: { statement: "done", enabled: false, status: "achieved", checks: [] } } as any });
-    expect(inactive).toContain('<summary>Goal<span data-tone="success">achieved</span></summary>');
-    expect(inactive).not.toContain('<details open><summary>Goal');
-    const active = render(ctx, null, { agent: { id: "eh", goal: { statement: "work", enabled: true, status: "active", checks: [] } } as any });
-    expect(active).toContain('<details open><summary>Goal');
+    const empty = render(ctx, null, { agent: { id: "eh", scratchpad: {} } as any });
+    expect(empty).toContain('<summary>Observed goals<span data-tone="neutral">off</span></summary>');
+    expect(empty).toContain('name="enabled"');
+    expect(empty).not.toContain('<details open><summary>Observed goals');
+    const observed = render(ctx, null, { agent: { id: "eh", scratchpad: { goalTrackingEnabled: true, goalSidecar: { status: "ready", sourceMessageIdx: 4, sidecarId: "sc", goals: [{ id: "g1", statement: "Ship goal-aware agent", status: "active", sourceMessageIdx: 4 }] } } } as any });
+    expect(observed).toContain('<details open><summary>Observed goals');
+    expect(observed).toContain('Ship goal-aware agent');
+    expect(observed).toContain('sidecar sc');
 });
 
 test("renders plan tasks with ids and editor fields", () => {

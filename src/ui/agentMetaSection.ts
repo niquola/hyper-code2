@@ -43,13 +43,21 @@ export default function (ctx: Context, _session: Session | null, opts: {
     const id = encodeURIComponent(agent.id);
 
     if (opts.section === "goal") {
-        const goal = agent.goal ?? null;
-        const last = goal?.checks?.at(-1) ?? null;
-        const body = `<form hx-post="/agent/${id}/goal" hx-swap="none" hx-trigger="change delay:300ms" class="space-y-3">
-      <label class="block text-[11px] text-base-content/55">Goal<textarea name="statement" rows="5" maxlength="2000" placeholder="What must the agent achieve?" class="textarea textarea-bordered mt-1 w-full resize-y text-sm leading-5">${esc(goal?.statement ?? '')}</textarea></label>
-      <div class="flex items-end gap-3"><label class="min-w-0 flex-1 text-[11px] text-base-content/55">Continuation iterations<input name="iterations" type="number" min="1" max="10" value="${Math.max(1, Math.min(10, Number(goal?.maxIterations ?? 3)))}" class="input input-bordered input-sm mt-1 w-full"></label>${ctx.fns.ui.toggle({ name: 'enabled', enabled: !!goal?.enabled, label: goal?.enabled ? 'On' : 'Off', compact: true, title: goal?.enabled ? 'Disable goal loop' : 'Enable goal loop' })}</div>
-    </form>${last ? `<div class="mt-3 border-t border-ui-border pt-3 text-xs"><div class="font-medium text-base-content/70">Last check: ${esc(last.status)}</div><div class="mt-1 leading-5 text-base-content/55">${esc(last.reason)}</div>${last.nextStep ? `<div class="mt-1 text-base-content/40">Next: ${esc(last.nextStep)}</div>` : ''}</div>` : ''}<p class="mt-3 text-[10px] leading-4 text-base-content/40">The goal is checked whenever the agent tries to finish. Only “continue” wakes it again; blocked or needs-user stops the run.</p>`;
-        return inspectorSection({ title: 'Goal', icon: 'target', badge: goal ? statusBadge({ label: String(goal.status ?? 'active'), tone: goal.status === 'achieved' ? 'success' : goal.status === 'blocked' ? 'error' : 'info' }) : undefined, html: body, collapsible: true, open: !!goal?.enabled });
+        const enabled = agent.scratchpad?.goalTrackingEnabled === true;
+        const preview = agent.scratchpad?.goalSidecar ?? null;
+        const goals = Array.isArray(preview?.goals) ? preview.goals : [];
+        const toggle = `<form hx-post="/agent/${id}/goal-tracking" hx-swap="none" hx-trigger="change" class="mb-3">${ctx.fns.ui.toggle({ name: 'enabled', enabled, label: 'Track goals', hint: 'Run a display-only sidecar after new messages' })}</form>`;
+        const tone = (status: string) => status === 'completed' ? 'success' : status === 'abandoned' ? 'neutral' : status === 'active' ? 'info' : 'warning';
+        const rows = goals.length ? goals.map((item: any) => `<li class="rounded-lg border border-ui-border bg-base-100/35 px-2.5 py-2"><div class="flex items-start gap-2"><div class="min-w-0 flex-1 text-xs leading-5 text-base-content/75">${esc(item.statement)}</div>${statusBadge({ label: String(item.status ?? 'candidate'), tone: tone(String(item.status ?? 'candidate')) })}</div><div class="mt-1 font-mono text-[9px] text-base-content/35">${esc(item.id)} · message ${Number(item.sourceMessageIdx ?? 0)}</div></li>`).join('') : '<li class="rounded-lg border border-dashed border-ui-border px-2.5 py-3 text-xs leading-5 text-base-content/40">No goals observed yet. Send a message after enabling tracking.</li>';
+        const state = !enabled
+            ? '<p class="mt-2 text-[10px] text-base-content/35">Tracking is off for this agent.</p>'
+            : preview?.status === 'error'
+                ? `<p class="mt-2 text-[10px] leading-4 text-error">Sidecar failed: ${esc(preview.error ?? 'unknown error')}</p>`
+                : preview?.status === 'ready'
+                    ? `<p class="mt-2 text-[10px] text-base-content/35">Observed from message ${Number(preview.sourceMessageIdx ?? 0)}${preview.sidecarId ? ` · sidecar ${esc(preview.sidecarId)}` : ''}</p>`
+                    : '<p class="mt-2 text-[10px] text-base-content/35">Display-only preview; it does not affect agent execution.</p>';
+        const body = `${toggle}<ol class="space-y-2">${rows}</ol>${state}`;
+        return inspectorSection({ title: 'Observed goals', icon: 'target', badge: statusBadge({ label: enabled ? String(goals.length) : 'off', tone: enabled && goals.length ? 'info' : 'neutral' }), html: body, collapsible: true, open: enabled });
     }
 
     if (opts.section === "automation") {
