@@ -4,6 +4,9 @@ struct APIClient {
     private struct SendBody: Encodable { let text: String; let debounceMs: Int }
     private struct PinBody: Encodable { let pinned: Bool }
     let baseURL: URL
+    private struct NewsAgentBody: Encodable { let prompt: String }
+
+
     private struct LoginBody: Encodable { let password: String }
     private struct LoginResponse: Decodable { let ok: Bool }
     private struct AuthSessionResponse: Decodable { let authenticated: Bool }
@@ -28,11 +31,13 @@ struct APIClient {
     }
 
 
-    func news(limit: Int = 50) async throws -> [NewsItem] {
+    func news(view: String = "unread", source: String? = nil, query: String? = nil, limit: Int = 50) async throws -> NewsResponse {
         var components = URLComponents(url: url("api/mobile/v1/news"), resolvingAgainstBaseURL: false)!
-        components.queryItems = [URLQueryItem(name: "limit", value: String(limit))]
-        let response: NewsResponse = try await request(url: components.url!)
-        return response.items
+        var items = [URLQueryItem(name: "limit", value: String(limit)), URLQueryItem(name: "view", value: view)]
+        if let source, !source.isEmpty { items.append(URLQueryItem(name: "source", value: source)) }
+        if let query, !query.isEmpty { items.append(URLQueryItem(name: "q", value: query)) }
+        components.queryItems = items
+        return try await request(url: components.url!)
     }
 
     func setNewsLiked(id: String, liked: Bool) async throws -> NewsLikeResponse {
@@ -42,6 +47,11 @@ struct APIClient {
     func markNewsRead(id: String) async throws {
         let _: ReadNewsResponse = try await request(path: "api/mobile/v1/news/\(escaped(id))/read", method: "POST", body: [String: String]())
     }
+
+    func startNewsAgent(id: String, prompt: String) async throws -> NewsAgentResponse {
+        try await request(path: "api/mobile/v1/news/\(escaped(id))/agent", method: "POST", body: NewsAgentBody(prompt: prompt))
+    }
+
 
 
     func newAgentOptions() async throws -> NewAgentOptions {

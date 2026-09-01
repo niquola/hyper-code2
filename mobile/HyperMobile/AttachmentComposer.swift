@@ -6,6 +6,7 @@ struct AttachmentComposer: View {
     @Binding var text: String
     @Binding var attachments: [PendingAttachment]
     var focused: FocusState<Bool>.Binding
+    let resetID: UUID
     let sending: Bool, running: Bool
     let injectText: String
     let injectEvery: Int
@@ -43,7 +44,7 @@ struct AttachmentComposer: View {
                 } label: {
                     Image(systemName: "plus").font(.headline).frame(width: 40, height: 40).background(Color(.secondarySystemGroupedBackground), in: Circle())
                 }.accessibilityLabel("Add attachment")
-                TextField("Message agent…", text: $text, axis: .vertical).lineLimit(1...6).focused(focused).padding(.horizontal, 13).padding(.vertical, 11).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
+                TextField("Message agent…", text: $text, axis: .vertical).id(resetID).lineLimit(1...6).focused(focused).padding(.horizontal, 13).padding(.vertical, 11).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
                 if running {
                     Button(action: stop) {
                         Circle().fill(Color(.secondarySystemBackground)).frame(width: 44, height: 44)

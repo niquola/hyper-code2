@@ -17,6 +17,7 @@ struct NativeChatView: View {
     let onRead: () -> Void
     @StateObject private var store = ChatStore()
     @State private var draft = ""
+    @State private var composerResetID = UUID()
     @State private var attachments: [PendingAttachment] = []
     @State private var selectedTool: MobileEvent?
     @State private var selectedToolGroup: ToolGroupSelection?
@@ -87,7 +88,7 @@ struct NativeChatView: View {
                     withTransaction(transaction) { proxy.scrollTo("live-assistant", anchor: .bottom) }
                 }
             }
-                AttachmentComposer(text: $draft, attachments: $attachments, focused: $focused, sending: store.isSending, running: store.isRunning, injectText: injectText, injectEvery: injectEvery, send: sendAction, stop: stopAction)
+                AttachmentComposer(text: $draft, attachments: $attachments, focused: $focused, resetID: composerResetID, sending: store.isSending, running: store.isRunning, injectText: injectText, injectEvery: injectEvery, send: sendAction, stop: stopAction)
                     .frame(maxWidth: 860)
                     .frame(maxWidth: .infinity)
             }
@@ -144,7 +145,22 @@ struct NativeChatView: View {
     private var modelDisplayName: String { currentModel.split(separator: ":", maxSplits: 1).last.map(String.init) ?? currentModel }
     private func send() {
         let value = draft, selected = attachments
-        Task { if await store.send(value, attachments: selected, baseURL: baseURL, agentID: agent.id) { draft = ""; attachments = [] } }
+        guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !selected.isEmpty else { return }
+        // Clear and recreate the native text field before awaiting the network.
+        // This also cancels any pending keyboard-dictation composition that could
+        // otherwise write its final transcript back after Send was tapped.
+        focused = false
+        draft = ""
+        attachments = []
+        composerResetID = UUID()
+        Task {
+            let sent = await store.send(value, attachments: selected, baseURL: baseURL, agentID: agent.id)
+            if !sent {
+                draft = value
+                attachments = selected
+                composerResetID = UUID()
+            }
+        }
     }
     private func stop() { Task { await store.stop(baseURL: baseURL, agentID: agent.id) } }
     private func compact() {

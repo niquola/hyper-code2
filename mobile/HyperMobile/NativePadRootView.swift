@@ -14,6 +14,7 @@ struct NativePadRootView: View {
     @State private var loginPassword = ""
     @State private var loginError: String?
     @State private var loggingIn = false
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     private var baseURL: URL? { URL(string: serverURL) }
     private var folders: [String] { Array(Set(store.agents.map { folder($0.workspaceDir) })).sorted() }
@@ -31,7 +32,7 @@ struct NativePadRootView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             List(selection: $selectedFolder) {
                 Section("Workspace") {
                     Label("All chats", systemImage: "bubble.left.and.bubble.right").tag(String?.none)
@@ -61,19 +62,32 @@ struct NativePadRootView: View {
                 NativeChatView(agent: agent, baseURL: baseURL) { Task { await reload() } }
                     .id(agent.id)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .toolbar { panelToggle }
             } else {
                 ContentUnavailableView("Select a chat", systemImage: "bubble.left.and.bubble.right", description: Text("Choose a conversation from the middle column."))
                     .background(DotGridBackground())
+                    .toolbar { panelToggle }
             }
         }
         .navigationSplitViewStyle(.balanced)
         .task { await reload(); if let baseURL { store.startRefreshing(baseURL: baseURL) } }
         .onDisappear { store.stopRefreshing() }
         .sheet(isPresented: $showingSettings) { NativeSettingsView(serverURL: $serverURL) { Task { await reload() } } }
-        .sheet(isPresented: $showingNews) { if let baseURL { NavigationStack { NewsReaderView(baseURL: baseURL) } } }
+        .fullScreenCover(isPresented: $showingNews) { if let baseURL { NativePadNewsView(baseURL: baseURL) } }
         .sheet(isPresented: $showingWeb) { NavigationStack { HyperWebViewScreen(urlString: serverURL) } }
         .sheet(isPresented: $showingNewAgent) { if let baseURL { NewAgentView(baseURL: baseURL) { created in showingNewAgent = false; Task { await reload(); selection = store.agents.first { $0.id == created.id } } } } }
         .sheet(isPresented: $needsLogin) { NativeLoginView(password: $loginPassword, error: loginError, isLoading: loggingIn) { login() } }
+    }
+
+    @ToolbarContentBuilder private var panelToggle: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                withAnimation(.snappy) { columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly }
+            } label: {
+                Image(systemName: columnVisibility == .detailOnly ? "sidebar.left" : "sidebar.left")
+            }
+            .accessibilityLabel(columnVisibility == .detailOnly ? "Show chat panels" : "Hide chat panels")
+        }
     }
 
     private func reload() async {

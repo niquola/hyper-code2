@@ -16,14 +16,18 @@ struct AgentSummary: Codable, Identifiable, Hashable {
     var isRunning: Bool { runState == "running" || runState == "claimed" }
 }
 
-struct NewsResponse: Codable { let version: Int; let items: [NewsItem] }
+struct NewsResponse: Codable { let version: Int; let items: [NewsItem]; let stats: NewsStats; let sources: [NewsSource] }
+struct NewsStats: Codable { let total: Int; let unread: Int; let liked: Int; let sources: Int }
+struct NewsSource: Codable, Hashable, Identifiable { let source: String; let label: String; let total: Int; let unread: Int; let latest: String?; var id: String { source } }
 struct NewsItem: Codable, Identifiable, Hashable {
-    let id: String; let title: String; let source: String; let url: String?; let author: String?; let summary: String; let topics: [String]; var liked: Bool; var read: Bool; let shownAt: String?
+    let id: String; let title: String; let source: String; let sourceLabel: String; let url: String?; let imageURL: String?; let author: String?; let points: Int?; let comments: Int?; let summary: String; let summaryLong: String; let topics: [String]; var liked: Bool; var read: Bool; let shownAt: String?
 }
 struct NewsLikeResponse: Codable { let version: Int; let id: String; let liked: Bool }
 
 struct ReadNewsResponse: Codable { let version: Int; let id: String; let read: Bool; let updated: Int }
 
+
+struct NewsAgentResponse: Codable { let version: Int; let id: String; let workspaceDir: String; let started: Bool }
 struct NewAgentOptions: Codable {
     let version: Int
     let defaultModel: String
