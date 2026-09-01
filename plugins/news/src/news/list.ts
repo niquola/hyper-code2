@@ -15,5 +15,5 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     if(opts.query?.trim()){where.push("search_vector @@ websearch_to_tsquery('simple',?)");params.push(opts.query.trim())}
     const limit=Math.max(1,Math.min(100,Math.floor(opts.limit??30))),offset=Math.max(0,Math.floor(opts.offset??0));
     params.push(limit,offset);
-    return ctx.fns.procs.db.select({sql:`SELECT id,title,url,author,points,comments,topics,summary,summary_long,source,fetched_at,shown_at,liked_at,read_at,reposts FROM news.items ${where.length?`WHERE ${where.join(" AND ")}`:""} ORDER BY coalesce(shown_at,fetched_at) DESC LIMIT ? OFFSET ?`,params});
+    return ctx.fns.procs.db.select({sql:`SELECT id,title,url,image_url,author,points,comments,topics,summary,summary_long,source,source_label,fetched_at,shown_at,liked_at,read_at,reposts FROM news.items ${where.length?`WHERE ${where.join(" AND ")}`:""} ORDER BY coalesce(shown_at,fetched_at) DESC LIMIT ? OFFSET ?`,params});
 }

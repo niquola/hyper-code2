@@ -1,6 +1,6 @@
 ---
 name: rss
-description: "Durable RSS/Atom feed library — subscriptions, feed metadata, parsed entry state and explicit loading into the independent News core through news.put. Use to add/list/manage feeds, preview XML, load one feed, or inspect sync status."
+description: "Durable RSS/Atom feed library — subscriptions, incremental deduplicated loading three times daily, feed state and publication into News with shared one-paragraph summarization."
 ---
 
 # RSS library
@@ -14,4 +14,4 @@ await ctx.fns.rss.load({ key: "example", limit: 30 });
 await ctx.fns.rss.loadAll({ limit: 20 });
 ```
 
-Loading is explicit. This plugin ships no cron declaration and does not summarize or fetch article pages; it stores the feed-provided title, URL, author, publication date and description, then calls `news.put`.
+Every enabled feed is loaded every eight hours by the declared `rss-sync` cron. Entries are deduplicated by `(feed_key, external_id)` and a content hash: unchanged entries are neither republished nor summarized. New or changed entries are written through `news.put`, then summarized by `news.summarize`; summarization failures do not roll back ingestion. The plugin stores feed-provided title, URL, author, publication date, description and content, but does not fetch article pages.
