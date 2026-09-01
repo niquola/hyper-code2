@@ -34,7 +34,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         if (url.searchParams.get("embed") === "1") target.searchParams.set("embed", "1");
         if (url.searchParams.get("wide") === "1") target.searchParams.set("wide", "1");
         const headers: Record<string, string> = {};
-        for (const name of ["accept", "hx-request", "x-hyper-fragment"]) {
+        // Internal dispatch re-enters global auth middleware; preserve the
+        // browser session and forwarded origin/host, not only render headers.
+        for (const name of ["accept", "hx-request", "x-hyper-fragment", "cookie", "host", "origin", "x-forwarded-host", "x-forwarded-proto"]) {
             const value = opts.req.headers.get(name);
             if (value) headers[name] = value;
         }

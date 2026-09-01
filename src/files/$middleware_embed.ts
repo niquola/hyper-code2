@@ -30,7 +30,9 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
         const tab = url.searchParams.get("tab");
         if (tab) target.searchParams.set("tab", tab);
         const headers: Record<string, string> = {};
-        for (const name of ["accept", "hx-request", "x-hyper-fragment"]) {
+        // Internal dispatch re-enters global auth middleware; preserve the
+        // browser session and forwarded origin/host, not only render headers.
+        for (const name of ["accept", "hx-request", "x-hyper-fragment", "cookie", "host", "origin", "x-forwarded-host", "x-forwarded-proto"]) {
             const value = opts.req.headers.get(name);
             if (value) headers[name] = value;
         }

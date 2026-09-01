@@ -87,4 +87,17 @@ describe("markdown.render", () => {
         expect(html).toContain("flowchart LR");
         expect(html).toContain("A --&gt; B");
     });
+
+    test("rewrites file links relative to the agent workspace", async () => {
+        const ctx = mkCtx();
+        const html = await render(ctx, null, {
+            source: "[relative](docs/read%20me.md) [absolute](/Users/me/project/a.md#part) [web](https://example.com) [anchor](#x)",
+            fileBaseDir: "/Users/me/project",
+        });
+        expect(html).toContain('href="/files/absolute/Users/me/project/docs/read%20me.md"');
+        expect(html).toContain('href="/files/absolute/Users/me/project/a.md#part"');
+        expect(html).toContain('href="https://example.com"');
+        expect(html).toContain('href="#x"');
+    });
+
 });

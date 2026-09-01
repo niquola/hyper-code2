@@ -131,7 +131,7 @@ export default async function (
         await ctx.fns.session.syncAgentState({ agent });
 
         if (prose.trim()) {
-            const html = await ctx.fns.markdown.render({ source: prose });
+            const html = await ctx.fns.markdown.render({ source: prose, fileBaseDir: agent.workspaceDir || process.cwd() });
             const activeStatus = String(agent.scratchpad?.activeStatusLine ?? "");
             const instructionIndicators = {
                 statusLine: activeStatus.split("\n").find((line: string) => line.startsWith("User status line: "))?.slice("User status line: ".length) || null,

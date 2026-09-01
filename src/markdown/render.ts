@@ -1,3 +1,5 @@
+import { resolve } from "node:path";
+
 const ENTITIES: Record<string, string> = {
     "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"", "&#39;": "'", "&#x27;": "'",
 };
@@ -44,11 +46,27 @@ async function preprocessMermaid(ctx: Context, text: string): Promise<string> {
     return out;
 }
 
+function rewriteFileLinks(html: string, baseDir: string): string {
+    return html.replace(/<a\b([^>]*?)\bhref="([^"]*)"([^>]*)>/gi, (full, before, href, after) => {
+        const decoded = decode(String(href));
+        let decodedUrl: string;
+        try { decodedUrl = decodeURI(decoded); } catch { decodedUrl = decoded; }
+        if (!decodedUrl || /^[a-z][a-z0-9+.-]*:/i.test(decodedUrl) || decodedUrl.startsWith("//") || decodedUrl.startsWith("#") || decodedUrl.startsWith("?") || decodedUrl.startsWith("/files/")) return full;
+        const match = /^([^?#]*)([?#].*)?$/.exec(decodedUrl);
+        const pathPart = match?.[1] ?? decodedUrl;
+        const suffix = match?.[2] ?? "";
+        const absolute = pathPart.startsWith("/") ? pathPart : resolve(baseDir, pathPart);
+        const encoded = absolute.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+        return `<a${before}href="/files/absolute/${encoded}${escapeHtml(suffix)}"${after}>`;
+    });
+}
+
+
 /**
  * Renders Markdown to sanitized, highlighted HTML.
  * @param opts.source Markdown or Mermaid source.
  */
-export default async function (ctx: Context, _session: Session | null, opts: { source: string }): Promise<string> {
+export default async function (ctx: Context, _session: Session | null, opts: { source: string; /** Resolve ordinary Markdown links as local files relative to this directory. */ fileBaseDir?: string }): Promise<string> {
     let source = opts.source;
     const frontmatter = frontmatterTable(source);
     if (frontmatter) source = frontmatter.source;
@@ -62,5 +80,6 @@ export default async function (ctx: Context, _session: Session | null, opts: { s
         replacements.push({ full: full!, pretty });
     }
     for (const { full, pretty } of replacements) html = html.replace(full, pretty);
+    if (opts.fileBaseDir) html = rewriteFileLinks(html, opts.fileBaseDir);
     return (frontmatter?.html ?? "") + html;
 }
