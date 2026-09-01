@@ -8,13 +8,13 @@ describe("agent.updateGoalSidecar", () => {
         const appended = await ctx.fns.session.appendUserMessage({ id: parent.id, text: "Хочу сделать goal-aware agent" });
         await ctx.fns.session.syncAgentState({ agent: parent });
         ctx.state.registry.llm.call = async () => ({
-            text: JSON.stringify({ goals: [{ id: "goal-aware", statement: "Сделать агента goal-aware", status: "active", sourceMessageIdx: appended.idx }] }),
+            text: JSON.stringify({ goals: [{ id: "goal-aware", statement: "Сделать агента goal-aware", verification: "После нового сообщения агент сохраняет цель и показывает проверяемый критерий в Observed goals", status: "active", sourceMessageIdx: appended.idx }] }),
             finishReason: "stop", usage: null, raw: null,
         });
 
         const result = await ctx.fns.agent.updateGoalSidecar({ agent: parent, messageIdx: appended.idx, userMessage: "Хочу сделать goal-aware agent" });
 
-        expect(result.goals).toEqual([{ id: "goal-aware", statement: "Сделать агента goal-aware", status: "active", sourceMessageIdx: appended.idx }]);
+        expect(result.goals).toEqual([{ id: "goal-aware", statement: "Сделать агента goal-aware", verification: "После нового сообщения агент сохраняет цель и показывает проверяемый критерий в Observed goals", status: "active", sourceMessageIdx: appended.idx }]);
         expect(parent.scratchpad.goalSidecar.goals).toEqual(result.goals);
         expect(parent.goal).toBeNull();
         const row = ((await ctx.fns.procs.db.select({ sql: "SELECT parent_id, visibility, archived_at FROM agents WHERE id = ?", params: [result.sidecarId] })) as any[])[0];

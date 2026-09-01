@@ -17,7 +17,7 @@ export default async function (
         /** Plain text of the triggering user message. */
         userMessage: string;
     },
-): Promise<{ goals: Array<{ id: string; statement: string; status: "candidate" | "active" | "completed" | "abandoned"; sourceMessageIdx: number }>; sidecarId: string }> {
+): Promise<{ goals: Array<{ id: string; statement: string; verification: string; status: "candidate" | "active" | "completed" | "abandoned"; sourceMessageIdx: number }>; sidecarId: string }> {
     const { agent } = opts;
     const userMessage = String(opts.userMessage ?? "").trim().slice(0, 20000);
     if (!userMessage) return { goals: Array.isArray(agent.scratchpad?.goalSidecar?.goals) ? agent.scratchpad.goalSidecar.goals : [], sidecarId: "" };
@@ -28,11 +28,12 @@ export default async function (
     await ctx.fns.session.save({ agent: sidecar });
     const full = await ctx.fns.session.getFullMessages({ id: agent.id });
     const recent = full.slice(-24).map((message: any) => ({ role: message.role, content: typeof message.content === "string" ? message.content.slice(0, 4000) : message.content }));
-    const schema = { type: "json_schema", json_schema: { name: "goal_sidecar", strict: true, schema: { type: "object", additionalProperties: false, properties: { goals: { type: "array", maxItems: 20, items: { type: "object", additionalProperties: false, properties: { id: { type: "string" }, statement: { type: "string" }, status: { type: "string", enum: ["candidate", "active", "completed", "abandoned"] }, sourceMessageIdx: { type: "integer" } }, required: ["id", "statement", "status", "sourceMessageIdx"] } } }, required: ["goals"] } } };
+    const schema = { type: "json_schema", json_schema: { name: "goal_sidecar", strict: true, schema: { type: "object", additionalProperties: false, properties: { goals: { type: "array", maxItems: 20, items: { type: "object", additionalProperties: false, properties: { id: { type: "string" }, statement: { type: "string" }, verification: { type: "string" }, status: { type: "string", enum: ["candidate", "active", "completed", "abandoned"] }, sourceMessageIdx: { type: "integer" } }, required: ["id", "statement", "verification", "status", "sourceMessageIdx"] } } }, required: ["goals"] } } };
     const prompt = [
       "Reconcile the old observed goal list with the latest user message and recent dialogue.",
       "A goal is a desired outcome, not a question, topic, conversational instruction, plan step, or implementation detail.",
       "Keep stable ids for unchanged goals. Refine wording when the user clarifies it. Mark replaced/rejected goals abandoned; explicit achieved goals completed. Add a candidate only when intent is uncertain.",
+      "For every goal, formulate verification as one concise observable check answering: how will we know this goal is achieved? Prefer concrete evidence or an acceptance scenario; do not merely repeat the statement.",
       "Do not infer goals from assistant claims alone. Return only the schema JSON.",
       JSON.stringify({ oldGoals: previous, latest: { messageIdx: opts.messageIdx, text: userMessage }, recentDialogue: recent }),
     ].join("\n\n");
@@ -44,6 +45,7 @@ export default async function (
       const goals = (Array.isArray(parsed?.goals) ? parsed.goals : previous).slice(0, 20).map((goal: any, index: number) => ({
         id: String(goal?.id || previous[index]?.id || `g${index + 1}`).slice(0, 80),
         statement: String(goal?.statement ?? "").trim().slice(0, 1000),
+        verification: String(goal?.verification ?? previous[index]?.verification ?? "").trim().slice(0, 1000),
         status: (allowed.has(String(goal?.status)) ? String(goal.status) : "candidate") as "candidate" | "active" | "completed" | "abandoned",
         sourceMessageIdx: Math.max(0, Math.floor(Number(goal?.sourceMessageIdx ?? opts.messageIdx) || opts.messageIdx)),
       })).filter((goal: any) => goal.statement);

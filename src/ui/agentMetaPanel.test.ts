@@ -46,10 +46,26 @@ test("renders the display-only observed goals preview", () => {
     expect(empty).toContain('<summary>Observed goals<span data-tone="neutral">off</span></summary>');
     expect(empty).toContain('name="enabled"');
     expect(empty).not.toContain('<details open><summary>Observed goals');
-    const observed = render(ctx, null, { agent: { id: "eh", scratchpad: { goalTrackingEnabled: true, goalSidecar: { status: "ready", sourceMessageIdx: 4, sidecarId: "sc", goals: [{ id: "g1", statement: "Ship goal-aware agent", status: "active", sourceMessageIdx: 4 }] } } } as any });
+    const observed = render(ctx, null, { agent: { id: "eh", scratchpad: { goalTrackingEnabled: true, goalSidecar: { status: "ready", sourceMessageIdx: 4, sidecarId: "sc", goals: [{ id: "g1", statement: "Ship goal-aware agent", verification: "A new message updates the displayed goal without changing execution", status: "active", sourceMessageIdx: 4 }] } } } as any });
     expect(observed).toContain('<details open><summary>Observed goals');
     expect(observed).toContain('Ship goal-aware agent');
+    expect(observed).toContain('Check:');
+    expect(observed).toContain('A new message updates the displayed goal without changing execution');
     expect(observed).toContain('sidecar sc');
+});
+
+
+test("orders fresh goals first and collapses completed goals", () => {
+    const ctx = mkCtx();
+    const html = render(ctx, null, { agent: { id: "eh", scratchpad: { goalTrackingEnabled: true, goalSidecar: { status: "ready", goals: [
+        { id: "old", statement: "Old active", verification: "old check", status: "active", sourceMessageIdx: 2 },
+        { id: "done", statement: "Completed goal", verification: "done check", status: "completed", sourceMessageIdx: 9 },
+        { id: "fresh", statement: "Fresh active", verification: "fresh check", status: "active", sourceMessageIdx: 12 },
+    ] } } } as any });
+    expect(html.indexOf("Fresh active")).toBeLessThan(html.indexOf("Old active"));
+    expect(html).toContain("Completed (1)");
+    expect(html.indexOf("Completed goal")).toBeGreaterThan(html.indexOf("Completed (1)"));
+    expect(html).not.toContain('<details open class="mt-2 rounded-lg');
 });
 
 test("renders plan tasks with ids and editor fields", () => {

@@ -48,7 +48,12 @@ export default function (ctx: Context, _session: Session | null, opts: {
         const goals = Array.isArray(preview?.goals) ? preview.goals : [];
         const toggle = `<form hx-post="/agent/${id}/goal-tracking" hx-swap="none" hx-trigger="change" class="mb-3">${ctx.fns.ui.toggle({ name: 'enabled', enabled, label: 'Track goals', hint: 'Run a display-only sidecar after new messages' })}</form>`;
         const tone = (status: string) => status === 'completed' ? 'success' : status === 'abandoned' ? 'neutral' : status === 'active' ? 'info' : 'warning';
-        const rows = goals.length ? goals.map((item: any) => `<li class="rounded-lg border border-ui-border bg-base-100/35 px-2.5 py-2"><div class="flex items-start gap-2"><div class="min-w-0 flex-1 text-xs leading-5 text-base-content/75">${esc(item.statement)}</div>${statusBadge({ label: String(item.status ?? 'candidate'), tone: tone(String(item.status ?? 'candidate')) })}</div><div class="mt-1 font-mono text-[9px] text-base-content/35">${esc(item.id)} · message ${Number(item.sourceMessageIdx ?? 0)}</div></li>`).join('') : '<li class="rounded-lg border border-dashed border-ui-border px-2.5 py-3 text-xs leading-5 text-base-content/40">No goals observed yet. Send a message after enabling tracking.</li>';
+        const sortedGoals = [...goals].sort((a: any, b: any) => Number(b?.sourceMessageIdx ?? 0) - Number(a?.sourceMessageIdx ?? 0));
+        const currentGoals = sortedGoals.filter((item: any) => String(item?.status) !== 'completed');
+        const completedGoals = sortedGoals.filter((item: any) => String(item?.status) === 'completed');
+        const renderGoal = (item: any) => `<li class="rounded-lg border border-ui-border bg-base-100/35 px-2.5 py-2"><div class="flex items-start gap-2"><div class="min-w-0 flex-1 text-xs leading-5 text-base-content/75">${esc(item.statement)}</div>${statusBadge({ label: String(item.status ?? 'candidate'), tone: tone(String(item.status ?? 'candidate')) })}</div>${item.verification ? `<div class="mt-2 border-l-2 border-info/35 pl-2 text-[10px] leading-4 text-base-content/55"><span class="font-medium text-base-content/65">Check:</span> ${esc(item.verification)}</div>` : ''}<div class="mt-1 font-mono text-[9px] text-base-content/35">${esc(item.id)} · message ${Number(item.sourceMessageIdx ?? 0)}</div></li>`;
+        const currentRows = currentGoals.length ? currentGoals.map(renderGoal).join('') : (!completedGoals.length ? '<li class="rounded-lg border border-dashed border-ui-border px-2.5 py-3 text-xs leading-5 text-base-content/40">No goals observed yet. Send a message after enabling tracking.</li>' : '');
+        const completedRows = completedGoals.length ? `<details class="mt-2 rounded-lg border border-ui-border bg-base-100/20"><summary class="cursor-pointer px-2.5 py-2 text-[10px] font-medium text-base-content/55">Completed (${completedGoals.length})</summary><ol class="space-y-2 border-t border-ui-border p-2">${completedGoals.map(renderGoal).join('')}</ol></details>` : '';
         const state = !enabled
             ? '<p class="mt-2 text-[10px] text-base-content/35">Tracking is off for this agent.</p>'
             : preview?.status === 'error'
@@ -56,7 +61,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
                 : preview?.status === 'ready'
                     ? `<p class="mt-2 text-[10px] text-base-content/35">Observed from message ${Number(preview.sourceMessageIdx ?? 0)}${preview.sidecarId ? ` · sidecar ${esc(preview.sidecarId)}` : ''}</p>`
                     : '<p class="mt-2 text-[10px] text-base-content/35">Display-only preview; it does not affect agent execution.</p>';
-        const body = `${toggle}<ol class="space-y-2">${rows}</ol>${state}`;
+        const body = `${toggle}<ol class="space-y-2">${currentRows}</ol>${completedRows}${state}`;
         return inspectorSection({ title: 'Observed goals', icon: 'target', badge: statusBadge({ label: enabled ? String(goals.length) : 'off', tone: enabled && goals.length ? 'info' : 'neutral' }), html: body, collapsible: true, open: enabled });
     }
 
