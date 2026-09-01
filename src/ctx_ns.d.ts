@@ -546,6 +546,16 @@ declare global {
             sources: Injected<typeof import("../plugins/news/src/news/sources").default>;
             stats: Injected<typeof import("../plugins/news/src/news/stats").default>;
         };
+        pipedrive: {
+            api: Injected<typeof import("../plugins/pipedrive/src/pipedrive/api").default>;
+            deals: Injected<typeof import("../plugins/pipedrive/src/pipedrive/deals").default>;
+            emails: Injected<typeof import("../plugins/pipedrive/src/pipedrive/emails").default>;
+            mail: Injected<typeof import("../plugins/pipedrive/src/pipedrive/mail").default>;
+            orgs: Injected<typeof import("../plugins/pipedrive/src/pipedrive/orgs").default>;
+            persons: Injected<typeof import("../plugins/pipedrive/src/pipedrive/persons").default>;
+            pipelines: Injected<typeof import("../plugins/pipedrive/src/pipedrive/pipelines").default>;
+            search: Injected<typeof import("../plugins/pipedrive/src/pipedrive/search").default>;
+        };
         plugins: {
             add: Injected<typeof import("./plugins/add").default>;
             docs: Injected<typeof import("./plugins/docs").default>;
