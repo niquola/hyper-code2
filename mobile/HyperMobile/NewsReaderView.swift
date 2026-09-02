@@ -18,6 +18,7 @@ struct NewsReaderView: View {
     @State private var query = ""
     @State private var loading = true
     @State private var error: String?
+    @State private var selectedItem: NewsItem?
 
     var body: some View {
         Group {
@@ -48,7 +49,8 @@ struct NewsReaderView: View {
                                 .frame(maxWidth: .infinity).listRowSeparator(.hidden)
                         } else {
                             ForEach(items) { item in
-                                NavigationLink { NewsDetailView(baseURL: baseURL, items: items, initialID: item.id) { id, liked in update(id, liked: liked) } } label: { NewsCard(item: item) }
+                                Button { selectedItem = item } label: { NewsCard(item: item).contentShape(Rectangle()) }
+                                    .buttonStyle(.plain)
                                     .swipeActions(edge: .trailing) { Button { toggleLike(item) } label: { Label(item.liked ? "Unlike" : "Like", systemImage: item.liked ? "heart.slash" : "heart") }.tint(.pink) }
                             }
                         }
@@ -65,6 +67,10 @@ struct NewsReaderView: View {
         .onChange(of: mode) { _, _ in Task { await load() } }
         .onChange(of: source) { _, _ in Task { await load() } }
         .task { await load() }
+        .onAppear { if !loading { Task { await load() } } }
+        .navigationDestination(item: $selectedItem) { item in
+            NewsDetailView(baseURL: baseURL, items: items, initialID: item.id, likedChanged: { id, liked in update(id, liked: liked) }, readChanged: { id in markLocalRead(id) })
+        }
     }
 
     private func sourceChip(_ value: String?, label: String, count: Int) -> some View {
@@ -83,6 +89,11 @@ struct NewsReaderView: View {
     }
     private func toggleLike(_ item: NewsItem) { let desired = !item.liked; update(item.id, liked: desired); Task { _ = try? await APIClient(baseURL: baseURL).setNewsLiked(id: item.id, liked: desired) } }
     private func update(_ id: String, liked: Bool) { if let i = items.firstIndex(where: { $0.id == id }) { items[i].liked = liked } }
+    private func markLocalRead(_ id: String) {
+        guard let i = items.firstIndex(where: { $0.id == id }), !items[i].read else { return }
+        items[i].read = true
+        stats = NewsStats(total: stats.total, unread: max(0, stats.unread - 1), liked: stats.liked, sources: stats.sources)
+    }
 }
 
 private struct NewsCard: View {
@@ -109,15 +120,18 @@ private struct NewsDetailView: View {
     @State private var items: [NewsItem]
     @State private var index: Int
     let likedChanged: (String, Bool) -> Void
+    let readChanged: (String) -> Void
     @State private var horizontalDrag: CGFloat = 0
     @State private var showingAgent = false
+    @State private var openedAgent: AgentSummary?
     private var item: NewsItem { items[index] }
 
-    init(baseURL: URL, items: [NewsItem], initialID: String, likedChanged: @escaping (String, Bool) -> Void) {
+    init(baseURL: URL, items: [NewsItem], initialID: String, likedChanged: @escaping (String, Bool) -> Void, readChanged: @escaping (String) -> Void = { _ in }) {
         self.baseURL = baseURL
         _items = State(initialValue: items)
         _index = State(initialValue: items.firstIndex(where: { $0.id == initialID }) ?? 0)
         self.likedChanged = likedChanged
+        self.readChanged = readChanged
     }
 
     var body: some View {
@@ -140,7 +154,13 @@ private struct NewsDetailView: View {
             .navigationTitle("\(index + 1) of \(items.count)")
             .navigationBarTitleDisplayMode(.inline)
             .task(id: item.id) { await markCurrentRead() }
-            .sheet(isPresented: $showingAgent) { NewsAgentSheet(baseURL: baseURL, item: item) }
+            .sheet(isPresented: $showingAgent) { NewsAgentSheet(baseURL: baseURL, item: item) { id in openAgent(id) } }
+            .fullScreenCover(item: $openedAgent) { agent in
+                NavigationStack {
+                    NativeChatView(agent: agent, baseURL: baseURL) { }
+                        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { openedAgent = nil } } }
+                }
+            }
     }
 
     private func article(_ item: NewsItem) -> some View {
@@ -150,10 +170,13 @@ private struct NewsDetailView: View {
                     Text(item.sourceLabel).font(.caption.weight(.semibold)).foregroundStyle(.tint)
                     if let date = item.shownAt { Text("· \(String(date.prefix(10)))").font(.caption).foregroundStyle(.secondary) }
                     Spacer()
-                    ShareLink(item: URL(string: item.url ?? "") ?? baseURL, subject: Text(item.title), message: Text(item.summary)) {
+                    ShareLink(item: shareText, subject: Text(item.title)) {
                         Label("Share", systemImage: "square.and.arrow.up")
                     }
-                    Button { showingAgent = true } label: { Image(systemName: "sparkles") }.accessibilityLabel("Start agent")
+                    Button { showingAgent = true } label: { Label("Start agent", systemImage: "sparkles") }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .accessibilityLabel("Start agent for \(item.title)")
                     Button { toggleLike() } label: { Image(systemName: item.liked ? "heart.fill" : "heart").foregroundStyle(item.liked ? .pink : .primary) }
                 }
                 Text(item.title).font(.largeTitle.bold()).fixedSize(horizontal: false, vertical: true)
@@ -168,6 +191,20 @@ private struct NewsDetailView: View {
         }
     }
 
+    private var shareText: String {
+        [item.title, item.summary, item.url].compactMap { value in
+            guard let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            return value
+        }.joined(separator: "\n\n")
+    }
+
+    private func openAgent(_ id: String) {
+        showingAgent = false
+        Task {
+            if let agent = try? await APIClient(baseURL: baseURL).agents().first(where: { $0.id == id }) { openedAgent = agent }
+        }
+    }
+
     private func turn(next: Bool) {
         guard next ? index + 1 < items.count : index > 0 else { withAnimation(.snappy) { horizontalDrag = 0 }; UINotificationFeedbackGenerator().notificationOccurred(.warning); return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -178,7 +215,11 @@ private struct NewsDetailView: View {
             withAnimation(.snappy(duration: 0.24)) { horizontalDrag = 0 }
         }
     }
-    private func markCurrentRead() async { guard !items[index].read else { return }; try? await APIClient(baseURL: baseURL).markNewsRead(id: item.id); items[index].read = true }
+    private func markCurrentRead() async {
+        guard !items[index].read else { return }
+        let id = item.id
+        do { try await APIClient(baseURL: baseURL).markNewsRead(id: id); items[index].read = true; readChanged(id) } catch { }
+    }
     private func section(_ title: String, _ text: String) -> some View { VStack(alignment: .leading, spacing: 9) { Divider(); Text(title.uppercased()).font(.caption2.bold()).tracking(1.4).foregroundStyle(.secondary); Markdown(text).markdownTheme(.hyperChat).textSelection(.enabled) } }
     private func toggleLike() { items[index].liked.toggle(); let value = items[index]; likedChanged(value.id, value.liked); Task { _ = try? await APIClient(baseURL: baseURL).setNewsLiked(id: value.id, liked: value.liked) } }
 }
@@ -187,6 +228,7 @@ private struct NewsDetailView: View {
 private struct NewsAgentSheet: View {
     let baseURL: URL
     let item: NewsItem
+    let started: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var prompt = "Краткий пересказ"
     @State private var starting = false
@@ -202,7 +244,7 @@ private struct NewsAgentSheet: View {
                     TextField("What should the agent do?", text: $prompt, axis: .vertical).lineLimit(2...6).focused($focused)
                     Button { start() } label: { HStack { if starting { ProgressView().controlSize(.small) }; Label("Start agent", systemImage: "sparkles") } }.disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || starting || createdID != nil)
                 }
-                if let createdID { Section { Label("Agent \(createdID) started", systemImage: "checkmark.circle.fill").foregroundStyle(.green); Text("It will appear in the chat list and begin working immediately.").font(.caption).foregroundStyle(.secondary) } }
+                if let createdID { Section { Label("Agent \(createdID) started", systemImage: "checkmark.circle.fill").foregroundStyle(.green); Text("It will appear in the chat list with the news headline and begin working immediately.").font(.caption).foregroundStyle(.secondary); Button("Done") { dismiss() } } }
                 if let error { Section { Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.red) } }
             }
             .navigationTitle("Start news agent")
@@ -215,7 +257,7 @@ private struct NewsAgentSheet: View {
 
     private func start() {
         starting = true; error = nil
-        Task { do { let response = try await APIClient(baseURL: baseURL).startNewsAgent(id: item.id, prompt: prompt); createdID = response.id; focused = false } catch { self.error = error.localizedDescription }; starting = false }
+        Task { do { let response = try await APIClient(baseURL: baseURL).startNewsAgent(id: item.id, prompt: prompt); createdID = response.id; focused = false; started(response.id) } catch { self.error = error.localizedDescription }; starting = false }
     }
 }
 
