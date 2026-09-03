@@ -43,6 +43,7 @@ final class ChatStore: ObservableObject {
     @Published var isRunning = false
     @Published var error: String?
     @Published var partial: PartialAssistant?
+    @Published var pendingUserEvent: MobileEvent?
     private var nextAfter = 0
     private var pollTask: Task<Void, Never>?
     private var pollInFlight = false
@@ -75,18 +76,25 @@ final class ChatStore: ObservableObject {
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (!value.isEmpty || !attachments.isEmpty), !isSending else { return false }
         isSending = true
+        isRunning = true
+        let optimisticAttachments = attachments.map { EventAttachment(id: $0.id.uuidString, name: $0.name, contentType: $0.contentType, size: $0.data.count) }
+        pendingUserEvent = MobileEvent(idx: Int.min, ts: Date().timeIntervalSince1970 * 1000, type: "user", text: value, name: nil, preview: value, isError: false, attachments: optimisticAttachments)
         defer { isSending = false }
         do {
             let response = try await APIClient(baseURL: baseURL).send(agentID: agentID, text: value, attachments: attachments)
-            let optimisticAttachments = attachments.map { EventAttachment(id: $0.id.uuidString, name: $0.name, contentType: $0.contentType, size: $0.data.count) }
-            let optimistic = MobileEvent(idx: response.eventIdx, ts: Date().timeIntervalSince1970 * 1000, type: "user", text: value, name: nil, preview: value, isError: false, attachments: optimisticAttachments)
-            merge([optimistic])
+            let canonical = MobileEvent(idx: response.eventIdx, ts: pendingUserEvent?.ts ?? Date().timeIntervalSince1970 * 1000, type: "user", text: value, name: nil, preview: value, isError: false, attachments: optimisticAttachments)
+            pendingUserEvent = nil
+            merge([canonical])
             nextAfter = max(nextAfter, response.eventIdx + 1)
-            isRunning = true
             partial = nil
             error = nil
             return true
-        } catch { self.error = error.localizedDescription; return false }
+        } catch {
+            pendingUserEvent = nil
+            isRunning = false
+            self.error = error.localizedDescription
+            return false
+        }
     }
 
     func stop(baseURL: URL, agentID: String) async {

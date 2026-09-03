@@ -12,6 +12,7 @@ struct NewAgentView: View {
     @State private var provider = ""
     @State private var loading = false
     @State private var error: String?
+    @State private var showingWorkspacePicker = false
 
     var body: some View {
         NavigationStack {
@@ -27,9 +28,15 @@ struct NewAgentView: View {
                     .disabled(provider.isEmpty)
                 }
                 Section("Workspace") {
-                    Picker("Recent folder", selection: $workspace) {
-                        Text("Default workspace").tag("")
-                        ForEach(options?.workspaces ?? [], id: \.self) { Text(URL(fileURLWithPath: $0).lastPathComponent).tag($0) }
+                    Button { showingWorkspacePicker = true } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Folder").font(.caption).foregroundStyle(.secondary)
+                                Text(workspaceLabel).foregroundStyle(.primary).lineLimit(1)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                        }.contentShape(Rectangle())
                     }
                     TextField("Or enter full path", text: $workspace).textInputAutocapitalization(.never).autocorrectionDisabled()
                 }
@@ -48,13 +55,21 @@ struct NewAgentView: View {
             }
             .overlay { if loading { ProgressView().padding(18).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14)) } }
         }
-        .presentationDetents([.large])
+        .fullScreenCover(isPresented: $showingWorkspacePicker) {
+            WorkspacePickerView(workspaces: options?.workspaces ?? [], selection: $workspace)
+        }
         .task { await loadOptions() }
         .onChange(of: provider) { _, newProvider in
             if !modelsForProvider.contains(where: { $0.model == model }) {
                 model = (options?.models.first { $0.provider == newProvider })?.model ?? ""
             }
         }
+    }
+
+    private var workspaceLabel: String {
+        guard !workspace.isEmpty else { return "Default workspace" }
+        let label = URL(fileURLWithPath: workspace).lastPathComponent
+        return label.isEmpty ? workspace : label
     }
 
     private var providers: [String] {
@@ -90,5 +105,46 @@ struct NewAgentView: View {
             } catch { self.error = error.localizedDescription }
             loading = false
         }
+    }
+}
+
+private struct WorkspacePickerView: View {
+    let workspaces: [String]
+    @Binding var selection: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+
+    private var filtered: [String] {
+        let value = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return value.isEmpty ? workspaces : workspaces.filter { $0.lowercased().contains(value) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Button { choose("") } label: { row(title: "Default workspace", path: nil, selected: selection.isEmpty) }
+                ForEach(filtered, id: \.self) { path in
+                    Button { choose(path) } label: { row(title: URL(fileURLWithPath: path).lastPathComponent, path: path, selected: selection == path) }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("Choose folder")
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(text: $query, prompt: "Search folders")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+    }
+
+    private func choose(_ value: String) { selection = value; dismiss() }
+    private func row(title: String, path: String?, selected: Bool) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: path == nil ? "house" : "folder").foregroundStyle(.tint).frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title.isEmpty ? "Folder" : title).foregroundStyle(.primary)
+                if let path { Text(path).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+            }
+            Spacer()
+            if selected { Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.tint) }
+        }.contentShape(Rectangle()).padding(.vertical, 3)
     }
 }

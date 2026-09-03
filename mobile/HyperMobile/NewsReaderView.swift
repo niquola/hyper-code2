@@ -171,11 +171,12 @@ private struct NewsDetailView: View {
                     if let date = item.shownAt { Text("· \(String(date.prefix(10)))").font(.caption).foregroundStyle(.secondary) }
                     Spacer()
                     ShareLink(item: shareText, subject: Text(item.title)) {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                        Image(systemName: "square.and.arrow.up")
                     }
-                    Button { showingAgent = true } label: { Label("Start agent", systemImage: "sparkles") }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
+                    .labelStyle(.iconOnly)
+                    .accessibilityLabel("Share")
+                    Button { showingAgent = true } label: { Image(systemName: "sparkles") }
+                        .buttonStyle(.plain)
                         .accessibilityLabel("Start agent for \(item.title)")
                     Button { toggleLike() } label: { Image(systemName: item.liked ? "heart.fill" : "heart").foregroundStyle(item.liked ? .pink : .primary) }
                 }

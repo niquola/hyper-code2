@@ -66,6 +66,10 @@ struct NativeChatView: View {
                             case .tools(let tools): ToolTray(events: tools) { selectedToolGroup = ToolGroupSelection(events: tools) }
                             }
                         }
+                        if let pending = store.pendingUserEvent {
+                            EventBubble(event: pending, agentID: agent.id, baseURL: baseURL)
+                                .id("pending-user")
+                        }
                         if let partial = store.partial {
                             LiveAssistantBubble(partial: partial)
                                 .id("live-assistant")
@@ -73,7 +77,9 @@ struct NativeChatView: View {
                     }.frame(maxWidth: 860).padding(.horizontal, 20).padding(.vertical, 12)
                     .transaction { $0.animation = nil }
                 }
-                .scrollDismissesKeyboard(.interactively)
+                .scrollDismissesKeyboard(.immediately)
+                .contentShape(Rectangle())
+                .simultaneousGesture(TapGesture().onEnded { focused = false })
                 .defaultScrollAnchor(.bottom)
                 .onChange(of: store.events.last?.idx) { _, _ in
                     if let last = items.last {
@@ -81,6 +87,11 @@ struct NativeChatView: View {
                         transaction.disablesAnimations = true
                         withTransaction(transaction) { proxy.scrollTo(last.id, anchor: .bottom) }
                     }
+                }
+                .onChange(of: store.pendingUserEvent?.ts) { _, value in
+                    guard value != nil else { return }
+                    var transaction = Transaction(); transaction.disablesAnimations = true
+                    withTransaction(transaction) { proxy.scrollTo("pending-user", anchor: .bottom) }
                 }
                 .onChange(of: store.partial?.revision) { _, revision in
                     guard revision != nil else { return }

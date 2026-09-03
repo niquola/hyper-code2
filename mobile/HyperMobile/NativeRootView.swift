@@ -7,6 +7,7 @@ struct NativeRootView: View {
     @State private var showingSettings = false
     @State private var showingWeb = false
     @State private var showingNewAgent = false
+    @State private var createdAgentToOpen: AgentSummary?
     @State private var query = ""
     @State private var selectedFolder: String?
     @State private var needsLogin = false
@@ -104,7 +105,10 @@ struct NativeRootView: View {
             if let baseURL { store.startRefreshing(baseURL: baseURL) }
         }
         .onDisappear { store.stopRefreshing() }
-        .sheet(isPresented: $showingNewAgent) { if let baseURL { NewAgentView(baseURL: baseURL) { _ in showingNewAgent = false; Task { await reload() } } } }
+        .navigationDestination(item: $createdAgentToOpen) { agent in
+            if let baseURL { NativeChatView(agent: agent, baseURL: baseURL) { Task { await reload() } }.id(agent.id) }
+        }
+        .sheet(isPresented: $showingNewAgent) { if let baseURL { NewAgentView(baseURL: baseURL) { created in showingNewAgent = false; openCreatedAgent(created) } } }
         .sheet(isPresented: $showingSettings) { NativeSettingsView(serverURL: $serverURL) { Task { await reload() } } }
         .sheet(isPresented: $showingWeb) { NavigationStack { HyperWebViewScreen(urlString: serverURL) } }
         .sheet(isPresented: $needsLogin) { NativeLoginView(password: $loginPassword, error: loginError, isLoading: isLoggingIn) { login() } }
@@ -140,6 +144,13 @@ struct NativeRootView: View {
                         }
                     .contextMenu { Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") } }
             }
+        }
+    }
+
+    private func openCreatedAgent(_ created: CreatedAgent) {
+        Task {
+            await reload()
+            if let agent = store.agents.first(where: { $0.id == created.id }) { createdAgentToOpen = agent }
         }
     }
 
