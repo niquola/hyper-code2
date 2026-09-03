@@ -1,0 +1,12 @@
+{
+  "name": "brave",
+  "private": true,
+  "type": "module",
+  "procs": {
+    "src": "src",
+    "label": "Brave Search",
+    "icon": "ph-magnifying-glass",
+    "optional": true,
+    "description": "Low-level direct access to Brave Search API provider-specific filters and raw responses; prefer websearch.search for ordinary web discovery."
+  }
+}

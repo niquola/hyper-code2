@@ -1,7 +1,10 @@
 /**
  * Executes one non-tool LLM request through any configured provider. Supports
  * Codex subscription Responses API, OpenAI-compatible APIs, Anthropic, and mock.
- * Use for runtime synthesis that is not an agent turn.
+ * Use for runtime synthesis that is not an agent turn. Transient failures are
+ * retried on the selected route first; Claude subscription calls then try the
+ * same model through the alternate managed OAuth route before models from the
+ * `llm.fallbackModels` setting are tried in order.
  */
 export default async function (
     ctx: Context,
@@ -19,14 +22,56 @@ export default async function (
         max_tokens?: number;
         /** OpenAI-style response format, including `json_schema`. */
         response_format?: any;
+        /** Disable the configured fallback model chain for this request. @default false */
+        noFallback?: boolean;
         /** Stable request/session identifier for subscription providers. */
         sessionId?: string;
     },
-): Promise<{ text: string; finishReason: string | null; usage: any; raw: any }> {
+): Promise<{ text: string; finishReason: string | null; usage: any; raw: any; model?: string; fallback?: { primary: string; attempted: string[]; attempts: Array<{ model: string; count: number }> } }> {
     const user = String(opts.user ?? "").trim();
     if (!user) throw new Error("llm.call: user is required");
-    const model = String(opts.model ?? await ctx.fns.settings.modelDefault({})).trim();
-    if (!model) throw new Error("llm.call: model is required");
+    const primary = String(opts.model ?? await ctx.fns.settings.modelDefault({})).trim();
+    if (!primary) throw new Error("llm.call: model is required");
+    const configuredFallbacks = opts.noFallback ? "" : await (ctx.fns.settings.getString?.({
+        module: "llm", scopeType: "global", key: "fallbackModels",
+        fallback: "codex:gpt-5.4-mini,kimi-coding:kimi-for-coding",
+    }) ?? Promise.resolve(""));
+    const alternate = alternateAnthropicModel(primary);
+    const models = [primary, ...(alternate ? [alternate] : []), ...String(configuredFallbacks ?? "").split(",").map(x => x.trim()).filter(Boolean)]
+        .filter((model, index, all) => all.indexOf(model) === index);
+    const attempted: string[] = [];
+    const attempts: Array<{ model: string; count: number }> = [];
+    let lastError: unknown;
+    for (const model of models) {
+        attempted.push(model);
+        let count = 0;
+        try {
+            while (true) {
+                count++;
+                try {
+                    const result = await callModel(ctx, { ...opts, model, user });
+                    attempts.push({ model, count });
+                    return attempted.length === 1 && count === 1
+                        ? { ...result, model }
+                        : { ...result, model, fallback: { primary, attempted, attempts } };
+                } catch (error) {
+                    lastError = error;
+                    if (count >= 3 || !shouldRetrySameModel(error)) throw error;
+                    await Bun.sleep(count === 1 ? 500 : 1_500);
+                }
+            }
+        } catch (error) {
+            lastError = error;
+            attempts.push({ model, count });
+            if (opts.noFallback || !shouldFallback(error) || model === models.at(-1)) throw error;
+        }
+    }
+    throw lastError;
+}
+
+async function callModel(ctx: Context, opts: any): Promise<{ text: string; finishReason: string | null; usage: any; raw: any }> {
+    const model = String(opts.model).trim();
+    const user = String(opts.user).trim();
     const system = String(opts.system ?? "").trim();
     const endpoint = await ctx.fns.llm.resolveEndpoint({ model });
 
@@ -36,6 +81,30 @@ export default async function (
             : endpoint.api === "anthropic" ? await anthropic(ctx, endpoint, { ...opts, user, system })
                 : await openAI(endpoint, { ...opts, user, system });
     return normalizeStructured(result, opts.response_format);
+}
+
+function alternateAnthropicModel(model: string): string | null {
+    const match = /^(claude-code|anthropic-oauth)(?:\/([^:]+))?:(.+)$/.exec(model);
+    if (!match) return null;
+    const provider = match[1]!;
+    const account = match[2] ?? "default";
+    const modelId = match[3]!;
+    if (provider === "claude-code") return `anthropic-oauth:${modelId}`;
+    if (account !== "default") return `anthropic-oauth:${modelId}`;
+    return `claude-code:${modelId}`;
+}
+
+function shouldRetrySameModel(error: unknown): boolean {
+    const message = String((error as any)?.message ?? error);
+    if (/usage_limit_reached|usage limit (?:has been )?reached|quota_exceeded|credits_depleted|out of credits/i.test(message)) return false;
+    return /\b429\b|rate.?limit|\b5\d\d\b|timeout|timed out|ETIMEDOUT|ECONNRESET|network|connection (?:reset|refused|closed)|overloaded|service unavailable/i.test(message);
+}
+
+function shouldFallback(error: unknown): boolean {
+    const message = String((error as any)?.message ?? error);
+    if (/\b(?:400|401|403|404|409|413|422)\b/.test(message)) return false;
+    if (/context_length_exceeded|request_too_large|prompt is too long|exceeds the context|invalid|unsupported|authentication|unauthorized/i.test(message)) return false;
+    return /\b429\b|rate.?limit|usage_limit|quota|credits_depleted|\b5\d\d\b|timeout|timed out|ETIMEDOUT|ECONNRESET|network|connection (?:reset|refused|closed)|overloaded|service unavailable|no credentials|unknown provider/i.test(message);
 }
 
 async function xaiResponses(ctx: Context, endpoint: any, opts: any) {

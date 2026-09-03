@@ -46,6 +46,17 @@ describe("llm.classifyError", () => {
         expect(info.resetsAt).toBe(1787000000000);
     });
 
+    test("generic subscription rate_limit_error remains throttling when quota is not identified", () => {
+        const info = call({
+            provider: "claude-code",
+            kind: "subscription",
+            status: 429,
+            body: JSON.stringify({ error: { type: "rate_limit_error", message: "Error" } }),
+        });
+        expect(info.kind).toBe("rate_limit");
+        expect(info.retryable).toBe(true);
+    });
+
     test("subscription 429 with Retry-After is throttling, not an exhausted plan", () => {
         const info = call({
             provider: "claude-code",

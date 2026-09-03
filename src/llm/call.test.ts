@@ -88,6 +88,48 @@ describe("llm.call", () => {
 
     });
 
+    test("retries the same model before falling back", async () => {
+        const previousFetch = globalThis.fetch;
+        let calls = 0;
+        globalThis.fetch = (async () => {
+            calls++;
+            if (calls < 3) return new Response('{"error":{"type":"overloaded_error","message":"Overloaded"}}', { status: 529 });
+            return Response.json({ choices: [{ message: { content: "ok" }, finish_reason: "stop" }] });
+        }) as any;
+        try {
+            const ctx: any = { fns: {
+                settings: { modelDefault: async () => "openai:primary", getString: async () => "openai:fallback" },
+                llm: { resolveEndpoint: async ({ model }: any) => ({ api: "openai", provider: "openai", modelId: model, url: "https://example.test", apiKey: "key", kind: "api" }) },
+            } };
+            const result = await call(ctx, null, { user: "hello" });
+            expect(result.text).toBe("ok");
+            expect(result.model).toBe("openai:primary");
+            expect(result.fallback?.attempts).toEqual([{ model: "openai:primary", count: 3 }]);
+        } finally { globalThis.fetch = previousFetch; }
+    });
 
+    test("Claude route falls back to the same model on managed OAuth before another model", async () => {
+        const previousFetch = globalThis.fetch;
+        const resolved: string[] = [];
+        globalThis.fetch = (async (_url: any, init: any) => {
+            const auth = String(init.headers.authorization ?? "");
+            if (auth.includes("cli")) return new Response('{"error":{"type":"overloaded_error","message":"Overloaded"}}', { status: 529 });
+            return Response.json({ content: [{ type: "text", text: "oauth ok" }], stop_reason: "end_turn" });
+        }) as any;
+        try {
+            const ctx: any = { env: {}, fns: {
+                settings: { modelDefault: async () => "claude-code:test", getString: async () => "codex:fallback" },
+                llm: {
+                    resolveEndpoint: async ({ model }: any) => { resolved.push(model); return { api: "anthropic", provider: model.startsWith("claude-code") ? "claude-code" : "anthropic-oauth", modelId: "test", url: "https://example.test", apiKey: null, account: "default", kind: "subscription" }; },
+                    refreshClaudeCode: async () => "cli-token",
+                    getAnthropicOAuthToken: async () => "oauth-token",
+                },
+            } };
+            const result = await call(ctx, null, { user: "hello" });
+            expect(result.text).toBe("oauth ok");
+            expect(result.model).toBe("anthropic-oauth:test");
+            expect(resolved).toEqual(["claude-code:test", "claude-code:test", "claude-code:test", "anthropic-oauth:test"]);
+        } finally { globalThis.fetch = previousFetch; }
+    });
 
 });
