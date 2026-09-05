@@ -7,20 +7,26 @@
 // $tool_ declarations, exactly like a call made by hand from the REPL.
 //
 // The loop ends on a reply with no tool calls — pure prose back to the user.
-/** Run for the runtime.  * @param opts.agent Agent whose state is read or updated.
- * @param opts.userText User text that starts the turn.
- * @param opts.userMessageAlreadyAppended Whether the user message is already persisted.
-*/
+/**
+ * Execute one agent turn through native tool cycles and persist its final response.
+ * Use for direct turns or worker-claimed input. Successful prose and terminal HTML
+ * responses asynchronously launch optional Knowledge extraction through the final
+ * durable assistant index; failed, aborted and observer turns do not launch it.
+ * @param opts.agent Live agent whose transcript and turn state are updated.
+ * @param opts.userText User input to append unless already persisted by ingestion.
+ * @param opts.userMessageAlreadyAppended Skip appending input for worker-claimed messages. @default false
+ */
 export default async function (
     ctx: Context,
     _session: Session | null,
     opts: {
-        /** Live agent instance to operate on. */
-    agent: types.agent.Agent;
-        /** User text used by the operation. */
-    userText: string;
-        /** User message already appended used by the operation. */
-    userMessageAlreadyAppended?: boolean },
+        /** Live agent whose transcript and turn state are updated. */
+        agent: types.agent.Agent;
+        /** User input to append unless already persisted by ingestion. */
+        userText: string;
+        /** Skip appending input for worker-claimed messages. @default false */
+        userMessageAlreadyAppended?: boolean;
+    },
 ) {
     const { agent, userText } = opts;
     const agentCtx: any = Object.create(ctx);
@@ -28,6 +34,18 @@ export default async function (
     ctx = agentCtx;
     const ac = new AbortController();
     agent.abortController = ac;
+    // One successful-turn hook shared by direct and worker runs. The cutoff is
+    // the final durable assistant row, never the triggering user frontier or a
+    // later MAX(idx) that could capture a concurrently arriving user message.
+    const observeCompletedTurn = (messageIdx: number) => {
+        if (ac.signal.aborted || agent.scratchpad?.knowledgeTrackingEnabled !== true
+            || agent.scratchpad?.knowledgeSidecarFor || agent.scratchpad?.goalSidecarFor) return;
+        const knowledge = (ctx.fns as any).knowledge;
+        if (typeof knowledge?.updateSidecar !== 'function') return;
+        // Do not hold the response/worker cursor open for extraction; absorb both
+        // synchronous throws and rejected promises from the optional plugin.
+        void Promise.resolve().then(() => knowledge.updateSidecar({ agent, messageIdx })).catch(() => undefined);
+    };
 
     if (!opts.userMessageAlreadyAppended) {
         await ctx.fns.session.appendUserMessage({ id: agent.id, text: userText });
@@ -238,6 +256,7 @@ export default async function (
 
 
             delete agent.scratchpad.activeStatusLine;
+            observeCompletedTurn(append.idx);
             return { text: prose, usage, consumedUserIdx };
         }
 
@@ -304,6 +323,7 @@ export default async function (
             } });
             await ctx.fns.session.syncAgentState({ agent });
             delete agent.scratchpad.activeStatusLine;
+            observeCompletedTurn(final.idx);
             return { text, html, usage, consumedUserIdx, terminal: true };
         }
     }

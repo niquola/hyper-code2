@@ -30,7 +30,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
     /** Render the inspector as its collapsed rail. */ collapsed?: boolean }): string {
     const esc = (s: any) => ctx.fns.procs.ui.escape({ text: s });
     const agent = opts.agent;
-    const slot = (section: "goal" | "automation" | "wake" | "team" | "plan") =>
+    const slot = (section: "goal" | "knowledge" | "automation" | "wake" | "team" | "plan") =>
         `<div id="agent-meta-${section}-${esc(agent.id)}" data-meta-section="${section}">`
         + ctx.fns.ui.agentMetaSection({ agent, section, team: opts.team, archivedTeam: opts.archivedTeam, models: opts.models, accounts: opts.accounts })
         + `</div>`;
@@ -41,6 +41,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
       </header>
       <div data-agent-meta-content class="flex-1 overflow-y-auto bg-transparent">
         ${slot("goal")}
+        ${slot("knowledge")}
         ${slot("automation")}
         ${slot("wake")}
         ${slot("team")}

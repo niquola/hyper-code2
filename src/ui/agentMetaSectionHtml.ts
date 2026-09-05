@@ -12,13 +12,13 @@
  * on the page (e.g. the plan was just deleted).
  *
  * @param opts.agentId Agent whose section is rendered.
- * @param opts.section Section to render: goal, automation, wake, team or plan.
+ * @param opts.section Section to render: goal, knowledge, automation, wake, team or plan.
  */
 export default async function (ctx: Context, _session: Session | null, opts: {
     /** Agent whose section is rendered. */
     agentId: string;
     /** Section to render. */
-    section: "goal" | "automation" | "wake" | "team" | "plan";
+    section: "goal" | "knowledge" | "automation" | "wake" | "team" | "plan";
 }): Promise<string> {
     const agentId = String(opts.agentId ?? "");
     const section = String(opts.section ?? "");

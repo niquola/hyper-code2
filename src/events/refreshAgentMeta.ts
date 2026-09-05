@@ -12,7 +12,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
     /** Target agent identifier. */
     agentId: string;
     /** Which panel section changed. @default "all" */
-    section?: "goal" | "automation" | "wake" | "team" | "plan" | "all";
+    section?: "goal" | "knowledge" | "automation" | "wake" | "team" | "plan" | "all";
     /** Human-readable refresh reason, for tracing. */
     reason?: string;
 }): void {

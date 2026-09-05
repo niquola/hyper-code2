@@ -68,6 +68,7 @@ declare global {
             setStatusLine: Injected<typeof import("./agent/setStatusLine").default>;
             sleep: Injected<typeof import("./agent/sleep").default>;
             sleepIdle: Injected<typeof import("./agent/sleepIdle").default>;
+            sourceMessagePage: Injected<typeof import("./agent/sourceMessagePage").default>;
             start: Injected<typeof import("./agent/start").default>;
             stashResult: Injected<typeof import("./agent/stashResult").default>;
             statusLineForTurn: Injected<typeof import("./agent/statusLineForTurn").default>;
@@ -433,6 +434,7 @@ declare global {
             validateForm: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/validateForm").default>;
         };
         knowledge: {
+            agentMetaSection: Injected<typeof import("../plugins/knowledge/src/knowledge/agentMetaSection").default>;
             ensure: Injected<typeof import("../plugins/knowledge/src/knowledge/ensure").default>;
             find: Injected<typeof import("../plugins/knowledge/src/knowledge/find").default>;
             get: Injected<typeof import("../plugins/knowledge/src/knowledge/get").default>;
@@ -441,9 +443,15 @@ declare global {
             matchPerson: Injected<typeof import("../plugins/knowledge/src/knowledge/matchPerson").default>;
             observe: Injected<typeof import("../plugins/knowledge/src/knowledge/observe").default>;
             rebuildSearch: Injected<typeof import("../plugins/knowledge/src/knowledge/rebuildSearch").default>;
+            renderBacklinks: Injected<typeof import("../plugins/knowledge/src/knowledge/renderBacklinks").default>;
+            renderHistory: Injected<typeof import("../plugins/knowledge/src/knowledge/renderHistory").default>;
             resolve: Injected<typeof import("../plugins/knowledge/src/knowledge/resolve").default>;
+            resolveMentions: Injected<typeof import("../plugins/knowledge/src/knowledge/resolveMentions").default>;
+            setObservedMentions: Injected<typeof import("../plugins/knowledge/src/knowledge/setObservedMentions").default>;
+            setTracking: Injected<typeof import("../plugins/knowledge/src/knowledge/setTracking").default>;
             stats: Injected<typeof import("../plugins/knowledge/src/knowledge/stats").default>;
             types: Injected<typeof import("../plugins/knowledge/src/knowledge/types").default>;
+            updateSidecar: Injected<typeof import("../plugins/knowledge/src/knowledge/updateSidecar").default>;
             upsert: Injected<typeof import("../plugins/knowledge/src/knowledge/upsert").default>;
             validate: Injected<typeof import("../plugins/knowledge/src/knowledge/validate").default>;
         };
@@ -1180,6 +1188,10 @@ declare global {
         }
         namespace git {
             type Result = import("./git/Result").Result;
+        }
+        namespace knowledge {
+            type Mention = import("../plugins/knowledge/src/knowledge/Mention").Mention;
+            type MentionResolution = import("../plugins/knowledge/src/knowledge/MentionResolution").MentionResolution;
         }
         namespace llm {
             type FailureInfo = import("./llm/FailureInfo").FailureInfo;

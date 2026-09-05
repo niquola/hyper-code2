@@ -62,7 +62,7 @@
         if (button.matches('[data-plan-move="down"]') && index >= 0 && index < rows.length - 1) tasks.insertBefore(rows[index + 1], row);
     });
 
-    const SECTIONS = ['goal', 'automation', 'wake', 'team', 'plan'];
+    const SECTIONS = ['goal', 'knowledge', 'automation', 'wake', 'team', 'plan'];
     const pending = new Map(); // element -> timer
 
     function redraw(slot) {

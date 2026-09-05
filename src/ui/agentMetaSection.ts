@@ -25,7 +25,7 @@ export default function (ctx: Context, _session: Session | null, opts: {
     /** Agent whose panel is rendered. */
     agent: types.agent.Agent;
     /** Section to render. */
-    section: "goal" | "automation" | "wake" | "team" | "plan";
+    section: "goal" | "knowledge" | "automation" | "wake" | "team" | "plan";
     /** Direct delegated children with their existing plans. */
     team?: Array<{ id: string; title: string; runState: string; status: string; plan: any; summary: string | null; updatedAt: number; archivedAt?: number | null }>;
     /** Archived delegated children displayed by the Team filter. */
@@ -65,6 +65,12 @@ export default function (ctx: Context, _session: Session | null, opts: {
         return inspectorSection({ title: 'Observed goals', icon: 'target', badge: statusBadge({ label: enabled ? String(goals.length) : 'off', tone: enabled && goals.length ? 'info' : 'neutral' }), html: body, collapsible: true, open: enabled });
     }
 
+
+    if (opts.section === "knowledge") {
+        // Rendered by the knowledge plugin when it is mounted; an empty slot otherwise.
+        const render = (ctx.fns as any).knowledge?.agentMetaSection;
+        return typeof render === "function" ? String(render({ agent }) ?? "") : "";
+    }
     if (opts.section === "automation") {
         const body = `<form hx-post="/agent/${id}/automation" hx-swap="none" hx-trigger="change delay:200ms" class="space-y-1">${ctx.fns.ui.toggle({ label: 'Reflection', name: 'reflectionEnabled', enabled: agent.reflectionEnabled === true, hint: 'Periodic conversation analysis and nudges' })}${ctx.fns.ui.toggle({ label: 'Sleep', name: 'sleepEnabled', enabled: agent.sleepEnabled === true, hint: 'Idle context consolidation after 15 minutes' })}${ctx.fns.ui.toggle({ label: 'Function RAG', name: 'functionRagEnabled', enabled: agent.functionRagEnabled === true, hint: 'Retrieve relevant runtime functions for each user prompt' })}</form>`;
         return inspectorSection({ title: 'Automation', icon: 'sliders-horizontal', html: body, collapsible: true });
