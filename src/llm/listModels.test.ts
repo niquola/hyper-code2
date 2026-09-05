@@ -21,7 +21,7 @@ describe("llm.listModels", () => {
     test("connected Claude sources expose current Haiku, Sonnet, and Opus aliases", async () => {
         const ctx = { env: { LMSTUDIO_URL: "http://127.0.0.1:9" }, fns: { llm: {
             refreshClaudeCode: async () => "token",
-            anthropicOAuthStatus: async () => ({ connected: true }),
+            anthropicOAuthStatus: async () => ({ connected: true, accounts: [{ account: "personal", needsReconnect: false }] }),
         } } } as unknown as Context;
         const groups = await listModels(ctx, null);
         expect(groups["claude-code"]).toEqual([
@@ -36,13 +36,14 @@ describe("llm.listModels", () => {
             "claude-code:claude-fable-5",
             "claude-code:claude-fable-5-1",
         ]);
-        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-sonnet-4-6");
-        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-opus-4-6");
-        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-opus-4-8");
-        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-sonnet-5");
-        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-opus-5");
-        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-fable-5");
-        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-fable-5-1");
+        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth/personal:claude-sonnet-4-6");
+        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth/personal:claude-opus-4-6");
+        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth/personal:claude-opus-4-8");
+        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth/personal:claude-sonnet-5");
+        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth/personal:claude-opus-5");
+        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth/personal:claude-fable-5");
+        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth/personal:claude-fable-5-1");
+        expect(groups["anthropic-oauth"]!.some(model => model.startsWith("anthropic-oauth:"))).toBe(false);
     });
     test("connected xAI subscription exposes Grok Responses models", async () => {
         const ctx = { env: { LMSTUDIO_URL: "http://127.0.0.1:9" }, fns: { llm: {
