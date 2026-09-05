@@ -28,15 +28,21 @@ describe("llm.listModels", () => {
             "claude-code:claude-haiku-4-5",
             "claude-code:claude-sonnet-4-5",
             "claude-code:claude-sonnet-4-6",
+            "claude-code:claude-sonnet-5",
             "claude-code:claude-opus-4-5",
             "claude-code:claude-opus-4-6",
+            "claude-code:claude-opus-4-8",
             "claude-code:claude-opus-5",
             "claude-code:claude-fable-5",
+            "claude-code:claude-fable-5-1",
         ]);
         expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-sonnet-4-6");
         expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-opus-4-6");
+        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-opus-4-8");
+        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-sonnet-5");
         expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-opus-5");
         expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-fable-5");
+        expect(groups["anthropic-oauth"]).toContain("anthropic-oauth:claude-fable-5-1");
     });
     test("connected xAI subscription exposes Grok Responses models", async () => {
         const ctx = { env: { LMSTUDIO_URL: "http://127.0.0.1:9" }, fns: { llm: {

@@ -110,12 +110,15 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
         "claude-haiku-4-5",
         "claude-sonnet-4-5",
         "claude-sonnet-4-6",
+        "claude-sonnet-5",
         "claude-opus-4-5",
         "claude-opus-4-6",
-        // Confirmed against the installed Claude Code 2.1.232 CLI: both full
-        // IDs complete requests and are reported verbatim in stream-json.
+        "claude-opus-4-8",
+        // Current Claude Platform aliases verified against Anthropic's live
+        // Models overview. Availability remains account/plan-specific.
         "claude-opus-5",
         "claude-fable-5",
+        "claude-fable-5-1",
     ];
     try {
         const tok = await ctx.fns.llm.refreshClaudeCode?.({});

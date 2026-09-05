@@ -200,7 +200,7 @@ async function anthropic(ctx: Context, endpoint: any, opts: any) {
         else headers["x-api-key"] = apiKey;
     }
     if (subscription) {
-        const version = ctx.env.CLAUDE_CODE_CLI_VERSION ?? "2.1.126";
+        const version = await ctx.fns.llm.claudeCodeCliVersion({});
         headers["anthropic-beta"] = ctx.env.CLAUDE_CODE_ANTHROPIC_BETA ?? ["claude-code-20250219", "oauth-2025-04-20", "fine-grained-tool-streaming-2025-05-14", "interleaved-thinking-2025-05-14"].join(",");
         headers["user-agent"] = ctx.env.CLAUDE_CODE_USER_AGENT ?? `claude-cli/${version} (external, sdk-cli)`;
         headers["x-app"] = "cli";

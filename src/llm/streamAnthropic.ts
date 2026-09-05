@@ -79,7 +79,7 @@ export default async function (
     // shared block so managed OAuth and official-CLI credential reuse cannot
     // drift. Environment names remain backwards-compatible.
     if (claudeSubscription) {
-        const cliVersion = ctx.env.CLAUDE_CODE_CLI_VERSION ?? "2.1.126";
+        const cliVersion = await ctx.fns.llm.claudeCodeCliVersion({});
         const baseBeta = ["claude-code-20250219", "oauth-2025-04-20", "fine-grained-tool-streaming-2025-05-14", "interleaved-thinking-2025-05-14"];
         headers["anthropic-beta"] = ctx.env.CLAUDE_CODE_ANTHROPIC_BETA ?? baseBeta.join(",");
         headers["user-agent"] = ctx.env.CLAUDE_CODE_USER_AGENT ?? `claude-cli/${cliVersion} (external, sdk-cli)`;

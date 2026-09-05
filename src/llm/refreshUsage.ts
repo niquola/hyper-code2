@@ -130,7 +130,7 @@ export default async function (
             init: { method: "GET", headers: {
                 authorization: `Bearer ${token}`,
                 "content-type": "application/json",
-                "user-agent": ctx.env.CLAUDE_CODE_USER_AGENT ?? "claude-cli/2.1.126 (external, sdk-cli)",
+                "user-agent": ctx.env.CLAUDE_CODE_USER_AGENT ?? `claude-cli/${await ctx.fns.llm.claudeCodeCliVersion({})} (external, sdk-cli)`,
             } },
         });
         if (!res.ok) throw new Error(`usage endpoint returned ${res.status}`);
