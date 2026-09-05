@@ -62,6 +62,7 @@ declare global {
             setGoal: Injected<typeof import("./agent/setGoal").default>;
             setGoalTracking: Injected<typeof import("./agent/setGoalTracking").default>;
             setModel: Injected<typeof import("./agent/setModel").default>;
+            setObservedGoals: Injected<typeof import("./agent/setObservedGoals").default>;
             setReasoningEffort: Injected<typeof import("./agent/setReasoningEffort").default>;
             setSleepActive: Injected<typeof import("./agent/setSleepActive").default>;
             setStatusLine: Injected<typeof import("./agent/setStatusLine").default>;
