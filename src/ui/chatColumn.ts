@@ -142,7 +142,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
   </span>
    ${agent.parentId ? `<a href="/agent/${encodeURIComponent(String(agent.parentId))}" class="rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-amber-700 hover:bg-amber-100 hover:text-amber-900" title="forked from ${esc(parent?.title || agent.parentId)} · inherited ${inheritedCount} msgs" aria-label="Back to parent agent ${esc(parent?.title || agent.parentId)}"><i class="ph ph-arrow-bend-up-left mr-0.5"></i>${esc(String(parent?.title || agent.parentId).slice(0, 24))}</a>` : ""}
   ${statusBarHtml}
-  <span class="ml-auto flex items-center gap-1">
+  <span class="ml-auto flex items-center gap-1 [&_[title]]:relative [&_[title]]:after:pointer-events-none [&_[title]]:after:absolute [&_[title]]:after:right-0 [&_[title]]:after:top-full [&_[title]]:after:z-[70] [&_[title]]:after:mt-1 [&_[title]]:after:hidden [&_[title]]:after:whitespace-nowrap [&_[title]]:after:rounded [&_[title]]:after:bg-base-content [&_[title]]:after:px-2 [&_[title]]:after:py-1 [&_[title]]:after:text-[10px] [&_[title]]:after:text-base-100 [&_[title]]:after:content-[attr(title)] [&_[title]]:hover:after:block [&_[title]]:focus-visible:after:block">
     ${effortControl}
     ${reflectionHtml}
     ${compactPopup}
@@ -156,12 +156,15 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     </form>
 
     <a href="/agent/${encodeURIComponent(id)}" hx-boost="false" title="agent page" class="px-1 text-base-content/45 hover:text-base-content/70">ⓘ</a>
+    <span class="mx-1 h-5 w-px bg-ui-border" aria-hidden="true"></span>
+    <span class="flex items-center gap-1 rounded-md border border-red-200/70 bg-red-50/60 px-0.5">
     <form method="POST" action="/agent/${encodeURIComponent(id)}/archive" hx-boost="false" class="inline">
       ${ctx.fns.procs.ui.button({ action: 'archive', entity: 'agent', id, html: '<i class="ph ph-archive"></i>', type: 'submit', appearance: 'plain', title: 'archive — hides from the rail, keeps the transcript', class: 'px-1 text-base-content/45 hover:text-base-content/70' })}
     </form>
     <form method="POST" action="/agent/${encodeURIComponent(id)}/delete" hx-boost="false" class="inline" onsubmit="return confirm('delete ${esc(id)}? The transcript goes with it.')">
       ${ctx.fns.procs.ui.button({ action: 'delete', entity: 'agent', id, html: '<i class="ph ph-trash"></i>', type: 'submit', appearance: 'plain', title: 'delete', class: 'px-1 text-base-content/45 hover:text-red-600' })}
     </form>
+    </span>
   </span>
 </header>
 <div id="messages" data-agent-id="${esc(id)}" data-inherited-count="${inheritedCount}" style="overflow-anchor:none" class="dot-grid-surface chat-dot-grid flex-1 overflow-y-auto px-3 py-3 space-y-2">${historyHead}${eventsHtml}
