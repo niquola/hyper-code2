@@ -123,6 +123,7 @@ describe("llm.call", () => {
                     resolveEndpoint: async ({ model }: any) => { resolved.push(model); return { api: "anthropic", provider: model.startsWith("claude-code") ? "claude-code" : "anthropic-oauth", modelId: "test", url: "https://example.test", apiKey: null, account: "default", kind: "subscription" }; },
                     refreshClaudeCode: async () => "cli-token",
                     getAnthropicOAuthToken: async () => "oauth-token",
+                    claudeCodeCliVersion: async () => "2.1.260",
                 },
             } };
             const result = await call(ctx, null, { user: "hello" });

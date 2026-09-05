@@ -48,6 +48,24 @@ export default async function (
         ctx.fns.events.refreshAgentMeta({ agentId: agent.id, section: 'plan', reason: 'plan-resumed' });
     }
     agent.scratchpad.activeStatusLine = await ctx.fns.agent.statusLineForTurn({ agent });
+    // The status line is persisted as a small cursor-excluded user row right
+    // behind the message that started this run: the transcript then shows
+    // exactly what the model saw, forks inherit it, and the provider prompt
+    // cache keeps growing from the tail instead of being invalidated up front.
+    // A retried run (provider error, cursor left in place) finds its own row
+    // already at the tail and must not append a second copy.
+    if (agent.scratchpad.activeStatusLine) {
+        const tail = (agent.messages ?? [])[(agent.messages ?? []).length - 1];
+        if (tail?.message_type !== 'status_line') {
+            await ctx.fns.session.appendMessage({ id: agent.id, message: {
+                role: 'user',
+                content: `## Current status line\n\n${agent.scratchpad.activeStatusLine}`,
+                excluded_from_cursor: true,
+                message_type: 'status_line',
+            } });
+            await ctx.fns.session.syncAgentState({ agent });
+        }
+    }
     let consumedUserIdx = -1;
     const MAX_TURNS = 300;
     let turns = 0;

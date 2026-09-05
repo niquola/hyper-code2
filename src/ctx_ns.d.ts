@@ -12,6 +12,7 @@ declare global {
             ask: Injected<typeof import("./agent/ask").default>;
             buildDelegatedTaskPrompt: Injected<typeof import("./agent/buildDelegatedTaskPrompt").default>;
             buildLlmRequest: Injected<typeof import("./agent/buildLlmRequest").default>;
+            cacheRoot: Injected<typeof import("./agent/cacheRoot").default>;
             cancelWake: Injected<typeof import("./agent/cancelWake").default>;
             cancelWatch: Injected<typeof import("./agent/cancelWatch").default>;
             checkGoal: Injected<typeof import("./agent/checkGoal").default>;
@@ -21,6 +22,7 @@ declare global {
             compactContext: Injected<typeof import("./agent/compactContext").default>;
             createFromPopup: Injected<typeof import("./agent/createFromPopup").default>;
             createFromValues: Injected<typeof import("./agent/createFromValues").default>;
+            current: Injected<typeof import("./agent/current").default>;
             delegate: Injected<typeof import("./agent/delegate").default>;
             delegateTask: Injected<typeof import("./agent/delegateTask").default>;
             deliverWakes: Injected<typeof import("./agent/deliverWakes").default>;
@@ -107,6 +109,9 @@ declare global {
             checkPassword: Injected<typeof import("./auth/checkPassword").default>;
             password: Injected<typeof import("./auth/password").default>;
         };
+        brave: {
+            search: Injected<typeof import("../plugins/brave/src/brave/search").default>;
+        };
         browser: {
             act: Injected<typeof import("../plugins/browser/src/browser/act").default>;
             check: Injected<typeof import("../plugins/browser/src/browser/check").default>;
@@ -169,6 +174,14 @@ declare global {
             wakeWorker: Injected<typeof import("./cron/wakeWorker").default>;
             workerLoop: Injected<typeof import("./cron/workerLoop").default>;
         };
+        cuf: {
+            agenda: Injected<typeof import("../../.hyper/user/cuf/src/cuf/agenda").default>;
+            apiSearch: Injected<typeof import("../../.hyper/user/cuf/src/cuf/apiSearch").default>;
+            catalog: Injected<typeof import("../../.hyper/user/cuf/src/cuf/catalog").default>;
+            ensureLogin: Injected<typeof import("../../.hyper/user/cuf/src/cuf/ensureLogin").default>;
+            searchAppointments: Injected<typeof import("../../.hyper/user/cuf/src/cuf/searchAppointments").default>;
+            searchDoctors: Injected<typeof import("../../.hyper/user/cuf/src/cuf/searchDoctors").default>;
+        };
         dev: {
             ping: Injected<typeof import("./dev/ping").default>;
             readLog: Injected<typeof import("./dev/readLog").default>;
@@ -209,6 +222,16 @@ declare global {
             mountSkills: Injected<typeof import("./external/mountSkills").default>;
             replToken: Injected<typeof import("./external/replToken").default>;
             token: Injected<typeof import("./external/token").default>;
+        };
+        fhir: {
+            buildLink: Injected<typeof import("../../.hyper/user/fhir/src/fhir/buildLink").default>;
+            buildTopics: Injected<typeof import("../../.hyper/user/fhir/src/fhir/buildTopics").default>;
+            digest: Injected<typeof import("../../.hyper/user/fhir/src/fhir/digest").default>;
+            hot: Injected<typeof import("../../.hyper/user/fhir/src/fhir/hot").default>;
+            refresh: Injected<typeof import("../../.hyper/user/fhir/src/fhir/refresh").default>;
+            stats: Injected<typeof import("../../.hyper/user/fhir/src/fhir/stats").default>;
+            sync: Injected<typeof import("../../.hyper/user/fhir/src/fhir/sync").default>;
+            thread: Injected<typeof import("../../.hyper/user/fhir/src/fhir/thread").default>;
         };
         files: {
             applyEdits: Injected<typeof import("./files/applyEdits").default>;
@@ -396,8 +419,15 @@ declare global {
             importMedicationIntakes: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/importMedicationIntakes").default>;
             importMedications: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/importMedications").default>;
             importNotes: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/importNotes").default>;
+            ingestDocument: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/ingestDocument").default>;
+            medications: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/medications").default>;
+            pane: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/pane").default>;
             parseForm: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/parseForm").default>;
+            parseResource: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/parseResource").default>;
             populateMedication: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/populateMedication").default>;
+            queryTimeline: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/queryTimeline").default>;
+            reindex: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/reindex").default>;
+            resolveDocument: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/resolveDocument").default>;
             sleep: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/sleep").default>;
             validateForm: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/validateForm").default>;
         };
@@ -421,11 +451,13 @@ declare global {
             feed: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/feed").default>;
             hash: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/hash").default>;
             importNewsState: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/importNewsState").default>;
+            postsByPerson: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/postsByPerson").default>;
             profile: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/profile").default>;
             search: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/search").default>;
             seedTrackedPeople: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/seedTrackedPeople").default>;
             stats: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/stats").default>;
             syncFeed: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/syncFeed").default>;
+            syncTrackedPeople: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/syncTrackedPeople").default>;
             trackedPeople: Injected<typeof import("../../.hyper/user/linkedin/src/linkedin/trackedPeople").default>;
         };
         llm: {
@@ -497,10 +529,34 @@ declare global {
             startLoginFromPopup: Injected<typeof import("./llms/startLoginFromPopup").default>;
             submitLoginCode: Injected<typeof import("./llms/submitLoginCode").default>;
         };
+        lusiadas: {
+            catalog: Injected<typeof import("../../.hyper/user/lusiadas/src/lusiadas/catalog").default>;
+            configureCredentials: Injected<typeof import("../../.hyper/user/lusiadas/src/lusiadas/configureCredentials").default>;
+            ensureLogin: Injected<typeof import("../../.hyper/user/lusiadas/src/lusiadas/ensureLogin").default>;
+            graphql: Injected<typeof import("../../.hyper/user/lusiadas/src/lusiadas/graphql").default>;
+            guestToken: Injected<typeof import("../../.hyper/user/lusiadas/src/lusiadas/guestToken").default>;
+            login: Injected<typeof import("../../.hyper/user/lusiadas/src/lusiadas/login").default>;
+            medicalActs: Injected<typeof import("../../.hyper/user/lusiadas/src/lusiadas/medicalActs").default>;
+            portalToken: Injected<typeof import("../../.hyper/user/lusiadas/src/lusiadas/portalToken").default>;
+            searchAppointments: Injected<typeof import("../../.hyper/user/lusiadas/src/lusiadas/searchAppointments").default>;
+            searchDoctors: Injected<typeof import("../../.hyper/user/lusiadas/src/lusiadas/searchDoctors").default>;
+        };
         markdown: {
             highlight: Injected<typeof import("./markdown/highlight").default>;
             mermaid: Injected<typeof import("./markdown/mermaid").default>;
             render: Injected<typeof import("./markdown/render").default>;
+        };
+        marker: {
+            analyze: Injected<typeof import("../../.hyper/user/marker/src/marker/analyze").default>;
+            batch: Injected<typeof import("../../.hyper/user/marker/src/marker/batch").default>;
+            convert: Injected<typeof import("../../.hyper/user/marker/src/marker/convert").default>;
+            probe: Injected<typeof import("../../.hyper/user/marker/src/marker/probe").default>;
+            status: Injected<typeof import("../../.hyper/user/marker/src/marker/status").default>;
+        };
+        mineru: {
+            compare: Injected<typeof import("../../.hyper/user/mineru/src/mineru/compare").default>;
+            convert: Injected<typeof import("../../.hyper/user/mineru/src/mineru/convert").default>;
+            status: Injected<typeof import("../../.hyper/user/mineru/src/mineru/status").default>;
         };
         mobiledev: {
             build: Injected<typeof import("../../.hyper/user/mobiledev/src/mobiledev/build").default>;
@@ -545,8 +601,20 @@ declare global {
             search: Injected<typeof import("../plugins/news/src/news/search").default>;
             setLiked: Injected<typeof import("../plugins/news/src/news/setLiked").default>;
             setRead: Injected<typeof import("../plugins/news/src/news/setRead").default>;
+            share: Injected<typeof import("../plugins/news/src/news/share").default>;
+            shareDestinations: Injected<typeof import("../plugins/news/src/news/shareDestinations").default>;
+            shareTargets: Injected<typeof import("../plugins/news/src/news/shareTargets").default>;
             sources: Injected<typeof import("../plugins/news/src/news/sources").default>;
+            startAgent: Injected<typeof import("../plugins/news/src/news/startAgent").default>;
             stats: Injected<typeof import("../plugins/news/src/news/stats").default>;
+            summarize: Injected<typeof import("../plugins/news/src/news/summarize").default>;
+            summarizePending: Injected<typeof import("../plugins/news/src/news/summarizePending").default>;
+        };
+        pdf: {
+            compare: Injected<typeof import("../../.hyper/user/pdf/src/pdf/compare").default>;
+            convert: Injected<typeof import("../../.hyper/user/pdf/src/pdf/convert").default>;
+            inspect: Injected<typeof import("../../.hyper/user/pdf/src/pdf/inspect").default>;
+            status: Injected<typeof import("../../.hyper/user/pdf/src/pdf/status").default>;
         };
         pipedrive: {
             api: Injected<typeof import("../plugins/pipedrive/src/pipedrive/api").default>;
@@ -949,15 +1017,18 @@ declare global {
             newsChannels: Injected<typeof import("../plugins/telegram/src/telegram/newsChannels").default>;
             newsDiscover: Injected<typeof import("../plugins/telegram/src/telegram/newsDiscover").default>;
             newsHash: Injected<typeof import("../plugins/telegram/src/telegram/newsHash").default>;
+            newsShareDestinations: Injected<typeof import("../plugins/telegram/src/telegram/newsShareDestinations").default>;
             newsSync: Injected<typeof import("../plugins/telegram/src/telegram/newsSync").default>;
             newsSyncChannel: Injected<typeof import("../plugins/telegram/src/telegram/newsSyncChannel").default>;
             participants: Injected<typeof import("../plugins/telegram/src/telegram/participants").default>;
             photo: Injected<typeof import("../plugins/telegram/src/telegram/photo").default>;
+            photoPublic: Injected<typeof import("../plugins/telegram/src/telegram/photoPublic").default>;
             reauth: Injected<typeof import("../plugins/telegram/src/telegram/reauth").default>;
             search: Injected<typeof import("../plugins/telegram/src/telegram/search").default>;
             searchChat: Injected<typeof import("../plugins/telegram/src/telegram/searchChat").default>;
             send: Injected<typeof import("../plugins/telegram/src/telegram/send").default>;
             sendFile: Injected<typeof import("../plugins/telegram/src/telegram/sendFile").default>;
+            shareNews: Injected<typeof import("../plugins/telegram/src/telegram/shareNews").default>;
         };
         tmp: {
             waitForEmail: Injected<typeof import("../.hyper/tmp/waitForEmail").default>;
@@ -992,6 +1063,7 @@ declare global {
             close: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/close").default>;
             config: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/config").default>;
             dir: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/dir").default>;
+            ensure: Injected<typeof import("../.hyper/tunnel/ensure").default>;
             list: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/list").default>;
             open: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/open").default>;
             serve: Injected<typeof import("../../.hyper/user/tunnel/src/tunnel/serve").default>;
@@ -1050,6 +1122,10 @@ declare global {
             suggest: Injected<typeof import("../../.hyper/user/uptodate/src/uptodate/suggest").default>;
             topic: Injected<typeof import("../../.hyper/user/uptodate/src/uptodate/topic").default>;
         };
+        websearch: {
+            fetch: Injected<typeof import("../plugins/websearch/src/websearch/fetch").default>;
+            search: Injected<typeof import("../plugins/websearch/src/websearch/search").default>;
+        };
         workspace: {
             get: Injected<typeof import("./workspace/get").default>;
             normalize: Injected<typeof import("./workspace/normalize").default>;
@@ -1073,7 +1149,9 @@ declare global {
             edit: Injected<typeof import("../plugins/zulip/src/zulip/edit").default>;
             markRead: Injected<typeof import("../plugins/zulip/src/zulip/markRead").default>;
             messages: Injected<typeof import("../plugins/zulip/src/zulip/messages").default>;
+            newsShareDestinations: Injected<typeof import("../plugins/zulip/src/zulip/newsShareDestinations").default>;
             send: Injected<typeof import("../plugins/zulip/src/zulip/send").default>;
+            shareNews: Injected<typeof import("../plugins/zulip/src/zulip/shareNews").default>;
             topics: Injected<typeof import("../plugins/zulip/src/zulip/topics").default>;
             users: Injected<typeof import("../plugins/zulip/src/zulip/users").default>;
         };

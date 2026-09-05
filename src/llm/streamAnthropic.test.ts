@@ -18,6 +18,7 @@ function mkCtx(): Context {
     const ctx: any = { state: {}, env: {} };
     ctx.fns = {
         agent: {
+            cacheRoot: async (o: any) => o.agent.id,
             buildLlmRequest: async () => ({ system: "sys", messages: [{ role: "user", content: "hi" }] }),
             wireTools: () => [],
         },
@@ -72,3 +73,30 @@ describe("streamAnthropic — offline (mocked fetch + shared parseSSE)", () => {
         expect(res.thinking).toBe("hmm");
     });
 });
+
+    test("marks cache breakpoints on the bootstrap turn and the conversation tail", async () => {
+        let request: any;
+        globalThis.fetch = (async (_url: any, init: any) => { request = JSON.parse(init.body); return sseResponse(); }) as any;
+        const ctx: any = mkCtx();
+        ctx.fns.agent.buildLlmRequest = async () => ({ system: "sys", messages: [
+            { role: "user", content: "core prompt" },
+            { role: "assistant", content: "Understood. Ready to act." },
+            { role: "user", content: "hi" },
+        ] });
+        await stream(ctx, null, { agent: agent() });
+        const m = request.messages;
+        expect(m.length).toBe(3);
+        expect(m[1].content[m[1].content.length - 1].cache_control).toEqual({ type: "ephemeral" });
+        expect(m[2].content[0]).toEqual({ type: "text", text: "hi", cache_control: { type: "ephemeral" } });
+        expect(m[0].content[0].cache_control).toBeUndefined();
+    });
+
+    test("reports cached prompt tokens in usage", async () => {
+        globalThis.fetch = (async () => sseResponse(
+            'event: message_start\ndata: {"message":{"usage":{"input_tokens":5,"cache_read_input_tokens":90,"cache_creation_input_tokens":5}}}\n\n',
+        )) as any;
+        const res = await stream(mkCtx(), null, { agent: agent() });
+        expect(res.usage.prompt_tokens).toBe(100);
+        expect(res.usage.cache_read_tokens).toBe(90);
+        expect(res.usage.cache_write_tokens).toBe(5);
+    });

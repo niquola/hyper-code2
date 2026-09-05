@@ -60,7 +60,7 @@ agent: types.agent.Agent }): Promise<void> {
     for (let idx = 0; idx < messages.length; idx++) {
         const message: any = messages[idx];
         await ctx.fns.procs.db.run({
-            sql: 'INSERT INTO messages (agent_id, idx, role, content, tool_calls, tool_call_id, message_type, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            sql: 'INSERT INTO messages (agent_id, idx, role, content, tool_calls, tool_call_id, message_type, ts, excluded_from_llm, excluded_from_cursor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             params: [
                 agent.id,
                 idx,
@@ -70,6 +70,8 @@ agent: types.agent.Agent }): Promise<void> {
                 message.tool_call_id ?? null,
                 message.message_type ?? 'message',
                 now + idx,
+                message.excluded_from_llm ? 1 : 0,
+                message.excluded_from_cursor ? 1 : 0,
             ],
         });
     }

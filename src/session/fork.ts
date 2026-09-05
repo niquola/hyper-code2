@@ -15,6 +15,7 @@ visibility?: "nav" | "team" | "hidden" }): Promise<types.agent.Agent> {
     const agent = await ctx.fns.agent.start({
         model: parent.model,
         systemPrompt: parent.systemPrompt,
+        tools: parent.tools,
         title: opts.title ?? (parent.title ? `${parent.title} (fork)` : ""),
         workspaceDir: parent.workspaceDir,
         parentId: parent.id,

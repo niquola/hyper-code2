@@ -41,7 +41,7 @@ export default async function (
         instructions,
         input,
         text: { verbosity: "medium" },
-        prompt_cache_key: agent.id,
+        prompt_cache_key: await ctx.fns.agent.cacheRoot({ agent }),
     };
 
     body.reasoning = { effort: reasoning.applied === "off" ? "none" : reasoning.applied, summary: "auto" };
@@ -136,6 +136,7 @@ export default async function (
             if (u) {
                 usage.prompt_tokens = u.input_tokens ?? 0;
                 usage.completion_tokens = u.output_tokens ?? 0;
+                (usage as any).cache_read_tokens = u.input_tokens_details?.cached_tokens ?? 0;
             }
             finishReason = mapStop(ev.response?.status);
             const stop = ev.response?.incomplete_details?.reason;

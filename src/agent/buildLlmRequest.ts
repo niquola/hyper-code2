@@ -26,8 +26,6 @@ export default async function (
 ): Promise<{ system: string; messages: any[] }> {
     const { agent } = opts;
     const fullPrompt = await ctx.fns.agent.fullSystemPrompt({ agent });
-    const statusLine = String(agent.scratchpad?.activeStatusLine ?? "").trim();
-    const statusBlock = statusLine ? `\n\n## Current status line\n\n${statusLine}` : "";
     const fullHistory = agent.parentId
         ? await ctx.fns.session.getFullMessages({ id: agent.id })
         : (agent.messages ?? []);
@@ -75,8 +73,11 @@ export default async function (
     const ep = await ctx.fns.llm.resolveEndpoint({ model: agent.model });
     const claudeCodeHeader = "You are Claude Code, Anthropic's official CLI for Claude.";
 
+    // Nothing per-turn lives in the bootstrap: every byte there is the cached
+    // prefix shared by all later requests and by transcript-sharing forks.
+    // The status line is a persisted transcript row (see agent.run).
     let system = '';
-    let bodyText = fullPrompt + statusBlock;
+    let bodyText = fullPrompt;
     if (ep.provider === 'claude-code' || ep.provider === 'anthropic-oauth') {
         system = claudeCodeHeader;
         if (bodyText.startsWith(claudeCodeHeader)) {
@@ -139,6 +140,7 @@ export default async function (
             content: 'Continue from where you stopped: if the previous answer already settled the user\'s request, say so briefly; otherwise take the next step.',
         });
     }
+
 
     return {
         system,

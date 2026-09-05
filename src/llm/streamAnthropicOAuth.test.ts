@@ -14,6 +14,7 @@ function mkCtx(provider: "anthropic-oauth" | "anthropic") {
     const ctx: any = { state: {}, env: {} };
     ctx.fns = {
         agent: {
+            cacheRoot: async (o: any) => o.agent.id,
             buildLlmRequest: async () => ({
                 system: provider === "anthropic-oauth" ? "You are Claude Code, Anthropic's official CLI for Claude." : "",
                 messages: [{ role: "user", content: "hi" }],
@@ -23,6 +24,7 @@ function mkCtx(provider: "anthropic-oauth" | "anthropic") {
         llm: {
             resolveEndpoint: () => ({ url: "http://mock/v1/messages", modelId: "claude-x", apiKey: provider === "anthropic" ? "api-key" : null, provider, api: "anthropic" }),
             getAnthropicOAuthToken: async () => "managed-access",
+            claudeCodeCliVersion: async () => "2.1.260",
             resolveReasoningEffort: async () => ({ requested: "off", applied: "off", mode: "none", downgraded: false, reason: null }),
 
             parseSSE: (opts: any) => parseSSE(ctx, null, opts),

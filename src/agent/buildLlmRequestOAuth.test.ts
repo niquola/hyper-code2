@@ -14,6 +14,7 @@ function ctx(provider: string): any {
             getMessages: async () => [], getFullMessages: async () => [],
         },
         llm: { resolveEndpoint: async () => ({ provider }) },
+        attachments: { resolveContent: async ({ messages }: any) => messages },
         procs: { log: { warn: () => {} } },
     } };
 }
@@ -55,3 +56,4 @@ describe("buildLlmRequest trailing turn", () => {
         expect(result.messages.length).toBe(3);
     });
 });
+

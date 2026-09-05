@@ -18,7 +18,9 @@ export default async function (
     workspaceDir?: string;
         /** Additional system instructions. */
     systemPrompt?: string;
-        /** Parent id used by the operation. */
+            /** Narrow the agent to these tool wire names; unset means every declared tool. */
+    tools?: string[];
+    /** Parent id used by the operation. */
     parentId?: string | null;
         /** Listing policy; this does not grant or restrict access. @default nav */
     visibility?: "nav" | "team" | "hidden";
@@ -36,6 +38,7 @@ export default async function (
         reasoningEffort: "auto",
         workspaceDir,
         systemPrompt: opts.systemPrompt ?? "",
+        tools: opts.tools,
         messages: [],
         events: [],
         cursors: {},

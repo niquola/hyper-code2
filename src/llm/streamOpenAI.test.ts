@@ -22,6 +22,7 @@ const mkCtx = () => {
         },
         agent: {
             fullSystemPrompt: (opts: any) => fullSystemPrompt(ctx, null, opts),
+            cacheRoot: async (o: any) => o.agent.id,
             buildLlmRequest: (opts: any) => buildLlmRequest(ctx, null, opts),
         },
     };

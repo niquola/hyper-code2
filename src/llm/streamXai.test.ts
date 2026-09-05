@@ -14,6 +14,7 @@ function mkCtx(tools: any[] = [], onUsage?: (opts: any) => void): Context {
     const ctx: any = { state: {}, env: {} };
     ctx.fns = {
         agent: {
+            cacheRoot: async (o: any) => o.agent.id,
             buildLlmRequest: async () => ({ system: "sys", messages: [{ role: "user", content: "hi" }] }),
             wireTools: () => tools,
         },

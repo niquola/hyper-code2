@@ -27,11 +27,22 @@ export default async function (
     // buildLlmRequest keeps the required Claude Code identity in the top-level
     // system field for both externally managed and hyper-code2-managed OAuth.
     const { system, messages: convo } = await ctx.fns.agent.buildLlmRequest({ agent });
+    // Prompt caching. Two breakpoints: the bootstrap turn (tools + system +
+    // core prompt — identical for every turn and for every transcript-sharing
+    // fork) and the tail of the conversation, so each request re-reads the
+    // previous one's prefix instead of paying for the whole transcript.
+    const messages = ctx.fns.llm.toAnthropicMessages({ messages: convo });
+    const mark = (message: any) => {
+        const block = message?.content?.[message.content.length - 1];
+        if (block && typeof block === "object") block.cache_control = { type: "ephemeral" };
+    };
+    if (messages.length > 2 && messages[1]?.role === "assistant") mark(messages[1]);
+    mark(messages[messages.length - 1]);
 
     const body: any = {
         model: ep.modelId,
         system,
-        messages: ctx.fns.llm.toAnthropicMessages({ messages: convo }),
+        messages,
         stream: true,
         max_tokens: 16384,
     };
@@ -122,7 +133,11 @@ export default async function (
         const type = event ?? "message";
         if (type === "message_start") {
             const u = msg.message?.usage;
-            if (u) usage.prompt_tokens = u.input_tokens ?? 0;
+            if (u) {
+                usage.prompt_tokens = (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0);
+                usage.cache_read_tokens = u.cache_read_input_tokens ?? 0;
+                usage.cache_write_tokens = u.cache_creation_input_tokens ?? 0;
+            }
         } else if (type === "content_block_start") {
             const block = msg.content_block ?? {};
             if (block.type === "tool_use") {

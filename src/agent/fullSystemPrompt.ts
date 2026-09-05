@@ -47,7 +47,9 @@ agent: types.agent.Agent }): Promise<string> {
         "  not the workspace — inside eval use ctx.fns.files.* or ctx.fns.workspace.resolve({ path })",
         "- inspect/change: ctx.fns.workspace.get({}) / await ctx.fns.workspace.set({ dir })",
         "- workspace is a base directory, not a sandbox",
-        `- your agent id: ${agent.id}`,
+        // Deliberately no literal id: a transcript-sharing fork must send the
+        // byte-identical prefix as its parent, or the provider prompt cache misses.
+        "- your agent id: `agent.id` inside eval, or `await ctx.fns.agent.current({})` from any runtime function (never hard-code it)",
         "- storage: Postgres — ctx.fns.procs.db.* (never bare Bun.sql)",
         "",
         "- durable wake-ups: await ctx.fns.agent.wakeIn({ id: agent.id, delayMs, reason }) or wakeAt({ id: agent.id, at, reason }); cancelWake({ id: agent.id })",
