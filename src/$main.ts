@@ -66,6 +66,22 @@ export async function boot(opts?: { root?: string }): Promise<Context> {
     };
     process.on("SIGINT", () => shutdown("SIGINT"));
     process.on("SIGTERM", () => shutdown("SIGTERM"));
+    // A server does not die because somebody else's API said no. Background work
+    // — a sleep pass, a reflection sidecar, a wake delivery — runs detached, so a
+    // provider rejection there had nothing above it to catch: xAI answered 402
+    // ("out of credits"), the rejection reached the top, and the whole runtime
+    // exited with code 1, taking every agent and the tunnel with it.
+    //
+    // These handlers log loudly and keep serving. They are deliberately NOT a
+    // way to ignore bugs: the message carries the full error so the cause stays
+    // visible, and anything that must fail a request still fails it.
+    process.on("unhandledRejection", (reason: any) => {
+        const detail = reason?.stack ?? reason?.message ?? String(reason);
+        console.error(`[unhandledRejection] ${detail}`);
+    });
+    process.on("uncaughtException", (error: any) => {
+        console.error(`[uncaughtException] ${error?.stack ?? error?.message ?? String(error)}`);
+    });
     // Watch in dev by default; WATCH=0 opts out, prod never watches.
     if (ctx.fns.procs.env.mode({}) === "dev" && ctx.env.WATCH !== "0") await ctx.fns.procs.dev.watch({});
     return ctx;
