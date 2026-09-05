@@ -1,5 +1,7 @@
 # pi-mono Anthropic subscription flow — implementation notes
 
+
+> Historical upstream-research snapshot. Client-version literals reflect the reviewed revision; current Hyper detects the installed Claude Code CLI through `llm.claudeCodeCliVersion`.
 Source reviewed: `~/pi-mono/packages/ai/src/utils/oauth/anthropic.ts`, `pkce.ts`, `providers/anthropic.ts`, and `packages/coding-agent/src/core/auth-storage.ts`.
 
 ## OAuth constants and PKCE

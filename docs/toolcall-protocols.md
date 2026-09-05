@@ -1,8 +1,8 @@
 # Tool-call протоколы: OpenAI, Anthropic, Kimi
 
-Исследование нативных tool-call протоколов трёх провайдеров: wire-форматы, streaming, strict-режимы, параллельные вызовы, кэширование и грабли. Источники: официальные доки, адаптеры pi-agent (`~/tmp/pi-agent/packages/ai/src/api/*` — боевой код, который гоняет все три протокола), наш собственный опыт (`src/llm/stream*.ts`, бенчи в `scratchpad/ab/`).
+Исследование нативных tool-call протоколов провайдеров: wire-форматы, streaming, strict-режимы, параллельные вызовы, кэширование и грабли. Источники: официальные документы, локальные reference implementations (`~/codex`, `~/claude-code`, `~/pi-mono`) и текущие Hyper adapters (`src/llm/stream*.ts`).
 
-Компаньон: `~/docs/research/toolcall-formats.md` (академическая часть — Bitter Lesson, NLT, Format Tax) и результаты нашего A/B-бенча (markers vs JSON, gpt-5.4 / gpt-5.6-sol).
+Результаты ранних A/B-исследований markers vs native JSON не являются runtime dependency; актуальный wire contract определяется source adapters и их tests.
 
 ---
 
@@ -46,7 +46,7 @@
 
 **Состояние:** либо stateful через `previous_response_id`, либо stateless с полным реплеем items. При реплее **reasoning items надо возвращать как есть** — иначе ломается кэш и качество (Codex так и делает). Грабля из pi (`openai-responses-shared.ts:255`): id у custom-вызовов — `ctc_*`, а `function_call` item принимает только `fc_*` — при конвертации id надо выбрасывать.
 
-**Наш опыт (streamCodex):** ChatGPT-подписочный endpoint (`chatgpt.com/backend-api/codex`) — это Responses API + обязательные заголовки `originator: codex_cli_rs`, `version: 0.146.0`; без них закрыты топ-модели (gpt-5.6-sol). Инструменты — `strict: true`, батч независимых вызовов в одном ответе — да (несколько `function_call` items), зависимая цепочка за один ответ — нет.
+**Наш опыт (`streamCodex`):** ChatGPT-подписочный endpoint (`chatgpt.com/backend-api/codex`) использует Responses API и обязательную identity-пару `originator: codex_cli_rs` + актуальную версию установленного Codex CLI. Версия определяется `llm.codexCliVersion`; hard-code быстро закрывает новые gated-модели. Инструменты поддерживают батч независимых `function_call` items; зависимая цепочка требует следующего model turn.
 
 ## 2. Anthropic
 

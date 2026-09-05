@@ -22,14 +22,14 @@ A module that owns a user-facing page can publish it to global navigation with a
 Core static pages use the same declarations as module pages; `nav.items` contains no hard-coded page catalogue. Dynamic plugin pages and agent chats continue to come from their own registries.
 
 
-**Simplicity first. DB-first. htmx long-poll. One in-process worker, runs in parallel.**
+**Simplicity first. DB-first. Server-rendered HTMX fragments plus topic-filtered SSE invalidation. One in-process worker, runs agents in parallel.**
 
-Everything durable lives in Postgres (paradedb). Everything visible to the user comes from a normal HTTP fetch. There is no queue table — debounce and run-state are columns on `agents`. Realtime is one in-process condvar; it carries no data, only "go look in the DB".
+Everything durable lives in Postgres (paradedb). Everything visible to the user comes from a normal HTTP fetch. There is no queue table — debounce, renewable run lease and run state are columns on `agents`. Realtime uses one shared SSE connection in each visible browser tab; events carry topic invalidations only, and live regions refetch current HTML. Hidden tabs close SSE to avoid exhausting browser per-origin connections.
 
 ```mermaid
 graph TB
     subgraph Truth[Postgres — source of truth]
-        AGENTS[(agents<br/>id · run_state · next_run_at<br/>last_processed_msg_idx · run_started_at)]
+        AGENTS[(agents<br/>id · run_state · next_run_at<br/>last_processed_msg_idx · run_started_at<br/>run_token · run_heartbeat_at)]
         MSGS[(messages<br/>append-only · per-agent idx)]
         EVENTS[(events<br/>append-only · per-agent idx)]
         KV[(kv<br/>agent:idCounter for nextId)]
@@ -37,13 +37,13 @@ graph TB
 
     subgraph DataPlane[Data plane — HTTP]
         POST["POST /agent/:id"]
-        LP["GET /agent/:id/events.html<br/>(long-poll · 25s)"]
-        SB["GET /agent/:id/statusbar<br/>(every 1s)"]
-        SF["GET / with x-hyper-fragment: sidebar<br/>(every 10s)"]
+        LP["GET /agent/:id/events.html<br/>(short delta fetch · SSE-triggered)"]
+        SB["GET /agent/:id/statusbar<br/>(SSE + 5s watchdog)"]
+        SF["live regions<br/>(topic SSE + watchdog)"]
     end
-
-    subgraph SignalPlane[Signal plane — in-process condvar]
-        WW[wakeWaiters · per-agent]
+    subgraph SignalPlane[Signal plane — invalidation and worker wake]
+        SSE["GET /procs/events<br/>(one visible-tab stream)"]
+        TOPICS["topic invalidation<br/>agent:id · agents · plugin topics"]
         WS[wakeWorker · process-wide]
     end
 
@@ -51,13 +51,12 @@ graph TB
     POST  --> AGENTS
     POST  --> WS
     LP    --> EVENTS
-    LP    -.waits on.- WW
-    SB    --> AGENTS
-    SF    --> AGENTS
-    SF    --> MSGS
-
-    EVENTS -.appendEvent fires.- WW
-    AGENTS -.next_run_at fires.- WS
+    SSE   -.subscribes.-> TOPICS
+    EVENTS -.appendEvent refresh.-> TOPICS
+    TOPICS -.trigger refetch.-> LP
+    TOPICS -.trigger refetch.-> SB
+    TOPICS -.trigger refetch.-> SF
+    AGENTS -.next_run_at.-> WS
 ```
 
 ---
@@ -65,10 +64,10 @@ graph TB
 ## Principles
 
 1. **The DB is the source of truth.** Messages, events, run-state, scheduling — all in Postgres. Memory is only an execution cache.
-2. **HTTP is the data plane.** Browser fetches all visible state through normal HTTP requests. Long-polling is just `GET` that holds the connection.
-3. **Wakeups are signals, not data.** `wakeWaiters` carries no payload — handlers re-read the DB after they wake. A lost or duplicate wake at worst delays a long-poll until its 25 s timeout, after which it re-fetches anyway.
+2. **HTTP is the data plane.** Browser fetches visible state through normal short HTTP requests. SSE carries only coalesced invalidation signals; watchdog timers repair missed signals.
+3. **Signals are not data.** SSE topics and `wakeWorker` carry no domain payload; consumers re-read Postgres or refetch canonical HTML. A lost invalidation is repaired by the live-region watchdog.
 4. **One worker. No queue table. Parallel drain.** Run scheduling is two columns on `agents`: `next_run_at` (when to fire) and `run_state` (`'idle' | 'running'`). One in-process `workerLoop` claims every currently-eligible agent in a tight `claimOne()` loop and spawns each as its own promise — different agents run concurrently. Per-agent serialisation is enforced by Postgres row locking on `UPDATE … RETURNING` (two concurrent claims can't both win the same `idle` row), not by an in-memory lock.
-5. **Minimal client JS.** ~30 lines: Enter-key handler + scroll-on-swap. Everything else is htmx attributes.
+5. **Small shared client controllers.** HTMX owns server fragments; shared scripts own SSE visibility, hotkeys, popup RPC and one disposable controller per chat panel.
 
 ---
 
@@ -77,13 +76,13 @@ graph TB
 | Concern              | Channel                                           | Driven by                             |
 |----------------------|---------------------------------------------------|---------------------------------------|
 | Initial render       | SSR HTML from `GET /agent/:id`                    | server-rendered                       |
-| New events appear    | `GET /agent/:id/events.html?offset=N` (long poll) | htmx `#msg-tail` `hx-trigger="load"`  |
-| Status & exec time   | `GET /agent/:id/statusbar`                        | htmx `every 1s`                       |
-| Sidebar refresh      | `GET <self URL>` with `x-hyper-fragment: sidebar` | htmx `every 10s`                      |
-| User submits message | `POST /agent/:id?debounceSeconds=5`               | htmx `hx-post` on the form            |
-| Delete a message     | `POST /agent/:id/messages/delete`                 | htmx `hx-confirm` + `hx-post`         |
-| Stop / fork / archive| HTML form POST                                    | classic browser submit                |
-| REPL UI control      | SSE on `/events`                                  | `events/client.js` (dev convenience)  |
+| New events appear    | short `GET /agent/:id/events.html?offset=N`       | `agent:<id>` SSE invalidation + 30s watchdog |
+| Status & exec time   | `GET /agent/:id/statusbar`                        | `agent:<id>` SSE invalidation + 5s watchdog |
+| Navigation refresh   | server fragment/live region                       | `agents` invalidation + watchdog      |
+| User submits message | `POST /agent/:id?debounceSeconds=0.1`             | HTMX form submit                      |
+| Delete a message     | `POST /agent/:id/messages/delete`                 | HTMX confirmation + POST              |
+| Stop / fork / archive| route-backed controls                             | forms/HTMX                            |
+| Global notifications | `GET /procs/events`                               | shared topic-filtered SSE client      |
 
 ---
 
@@ -109,12 +108,12 @@ sequenceDiagram
     W->>L: stream(transcript)
     L-->>W: tokens / tool_calls
     W->>DB: appendAssistantMessage / appendEvent / …
-    DB-->>+S: wakeWaiters(agentId)  (events appended)
-    Note over S: any pending #msg-tail<br/>long-poll resolves and<br/>re-reads getEvents(fromIdx=N)
-
-    W->>DB: UPDATE agents SET run_state='idle',<br/>last_processed_msg_idx=userFrontier (success only),<br/>next_run_at = (new user msgs? now+5s : NULL)
-    Note over W,DB: aborted/failed → cursor unchanged,<br/>next_run_at = NULL (no auto-retry)
-```
+    DB-->>S: appendEvent publishes topic agent:id
+    S-->>B: SSE invalidation
+    B->>S: short GET events.html?offset=N
+    S-->>B: rendered delta + replacement tail
+    W->>DB: fenced finalize WHERE run_token matches;<br/>set idle, clear lease, advance cursor on success,<br/>preserve/reschedule pending user work
+    Note over W,DB: transient provider errors retry once;<br/>stale leases use bounded recovery backoff
 
 POST is **one message INSERT + one agent UPDATE**. No queue row. No payload duplicate of the message text — the message itself is the input.
 
@@ -122,31 +121,34 @@ If two POSTs land within the debounce window, both rows are appended to `message
 
 ## Receive flow
 
-The browser opens `GET /agent/:id/events.html?offset=N` (htmx `hx-trigger="load"` on the tail div). The server checks `getMaxEventIdx`. If new events exist → render them + a fresh `<div id="msg-tail">` and return. If not → `await waitForEvent(ctx, id, 25_000, req.signal)`. While waiting, any `appendEvent` for this agent fires `wakeWaiters(agentId)` and the handler resumes, re-reads the DB, and returns the delta.
+The browser keeps one topic-filtered `GET /procs/events` stream only while the tab is visible. An `agent:<id>` invalidation triggers a short HTMX request to `/agent/:id/events.html?offset=N`; the route renders any delta and returns a replacement live tail. A 30-second watchdog catches missed signals after disconnects. Hidden tabs close SSE and catch up when visible again.
 
-After the swap, htmx auto-fires the next poll because the new `<div id="msg-tail">` again has `hx-trigger="load"`.
 
 ---
 
 ## Recovery
 
-| Event                       | What happens                                                                  |
-|-----------------------------|-------------------------------------------------------------------------------|
-| Browser refresh             | SSR renders all messages; long-poll opens at the new `last idx + 1`.          |
-| Lost network                | Long-poll reconnects; comes in with the last cursor; gets the delta.          |
-| Server restart              | `loadAll` rehydrates agents; pending `run_state='running'` rows reset on next worker pass (see Remaining work). |
-| Wake signal lost            | Long-poll's 25 s timeout falls back to a fresh `getEvents` re-read. Harmless. |
+| Event | What happens |
+|---|---|
+| Browser refresh | SSR renders the latest event page and installs a live tail at the next offset. |
+| Lost network | EventSource reconnects; visible regions refresh from their durable offsets. |
+| Hidden tab | It closes SSE, then refreshes all visible topics and reconnects when foregrounded. |
+| Server restart | `loadAll` rehydrates agents; renewable leases reclaim owners whose heartbeat expires. |
+| Invalidation lost | 5s/30s watchdog requests canonical fragments again. |
 
 ---
 
 ## Run-state on the agents row
 
 ```sql
-agents.next_run_at            INTEGER       -- ms epoch when next run should fire (NULL = nothing scheduled)
-agents.last_processed_msg_idx INTEGER       -- cursor over USER messages; advances only on successful run
-agents.run_state              TEXT          -- 'idle' | 'running'
-agents.run_started_at         INTEGER       -- for status-bar elapsed counter
-agents.last_error             TEXT          -- last error text (audit-lite)
+agents.next_run_at             BIGINT  -- ms epoch when work may be claimed
+agents.last_processed_msg_idx  INTEGER -- cursor over real user messages
+agents.run_state               TEXT    -- idle | running
+agents.run_started_at          BIGINT  -- total elapsed display/audit
+agents.run_token               TEXT    -- opaque fencing identity for current owner
+agents.run_heartbeat_at        BIGINT  -- renewable liveness timestamp
+agents.stale_recovery_count    INTEGER -- bounded stale retry counter
+agents.last_error              TEXT
 ```
 
 Rules:
@@ -181,70 +183,35 @@ No artificial concurrency cap — backpressure comes from the LLM provider (429s
 
 ---
 
-## Long-poll wake mechanism
+## SSE invalidation and worker wake
 
-It's an in-process condition variable: `Map<agentId, Set<resolver>>` on `ctx.state.eventWaiters`. Not SSE, not a socket — just promises in heap.
+UI and execution use separate signal planes:
 
-```mermaid
-sequenceDiagram
-    participant H as Long-poll handler
-    participant M as ctx.state.eventWaiters
-    participant W as session.appendEvent
+- `procs.events`: one topic-filtered SSE stream per visible tab; `appendEvent` publishes `agent:<id>`, and clients coalesce matching live-region refreshes. Hidden tabs close the stream and catch up on return.
+- `wakeWorker` + `workerLoop.waitForWork`: one process-wide condition variable that wakes the DB queue scanner after schedules/finalization change.
 
-    H->>M: register resolver (timeout 25s)
-    Note over H: handler awaits Promise
+Both carry zero domain data. UI refetches canonical HTML/JSON; worker claims canonical DB rows.
 
-    W->>W: INSERT INTO events
-    W->>M: wakeWaiters(agentId)
-    M-->>H: resolve()
-    Note over H: re-read DB,<br/>render delta + new tail
-    H->>H: return Response
-```
-
-### Properties
-
-| Property              | How                                                                                      |
-|-----------------------|------------------------------------------------------------------------------------------|
-| Per-agent isolation   | `Map` key is `agentId`. Waking one agent doesn't touch others.                           |
-| Multiple subscribers  | `Set<resolver>` — many tabs / devices on the same agent wake together.                   |
-| Idempotent wakes      | `wakeWaiters` on empty set is no-op. Duplicate wakes are harmless.                       |
-| Auto-cleanup          | Resolver is removed in all three terminal paths (wake, timeout, abort).                  |
-| Disconnected client   | `req.signal` aborts → `onAbort` removes the resolver. Bun drops the response silently.   |
-| Liveness              | `appendEvent` is on the critical path of every event write — no "forgot to notify" bug.  |
-
-The wake carries **zero payload**. It's a hint: "something changed, re-read the DB if you care." Correctness lives in the post-wake DB read, not the signal.
-
-### Worker uses the same pattern
-
-`wakeWorker` + `workerLoop`'s `waitForWork` use a process-wide `Set<() => void>` at `ctx.state.workerWakeWaiters`. POST calls `wakeWorker` after bumping `next_run_at`. `runOne`'s `finally` also calls `wakeWorker` — so when one of the parallel runs finishes, the loop notices straight away and tries another claim. The waiter is process-wide because there's only one driver promise; the parallelism happens inside it via `inflight` Set.
-
-So the system has exactly **two condvars**:
-- `eventWaiters` (per-agent) — wakes long-poll handlers.
-- `workerWakeWaiters` (process-wide) — wakes the worker driver loop, which then drains every claimable agent in parallel.
-
-### Bun.serve idleTimeout caveat
-
-`Bun.serve` defaults to 10 s `idleTimeout`. A long-poll handler that's awaiting and writing nothing **is** "idle" by Bun's definition — at 10 s the socket is silently closed mid-response (server-side log records 200, curl gets exit 52 "got nothing").
-
-Per-request fix: `server.timeout(req, 30)` from inside the handler. `src/agent/$route_$id_events.html_GET.ts` calls `ctx.state.server.server.timeout(req, ~30)` once it accepts the request, leaving the global default at 10 s for normal endpoints. Reference: [Bun docs — Server.timeout](https://bun.com/reference/bun/Server/timeout) and [oven-sh/bun#13712](https://github.com/oven-sh/bun/issues/13712).
+The worker condvar is process-wide because there is one driver promise. Parallelism happens inside it through the `inflight` set; per-agent serialization and ownership remain in Postgres.
 
 ---
 
 ## Offsets and cursors
 
-`events.idx` and `messages.idx` are per-agent monotonic integers, assigned by `appendEvent` / `appendMessage` as `MAX(idx) + 1`. The browser tracks one cursor per page, derived from the URL of the most recent `#msg-tail`:
+`events.idx` and `messages.idx` are per-agent monotonic integers. A live transcript tail carries its durable offset in `hx-get`; SSE only triggers a refresh and never owns cursor state:
 
 ```html
 <div id="msg-tail"
      hx-get="/agent/:id/events.html?offset=N"
-     hx-trigger="load"
+     data-live-topic="agent:id"
+     hx-trigger="hyper-live from:body, every 30s"
      hx-swap="outerHTML">
 </div>
 ```
 
-The server response contains the new events HTML followed by a fresh `#msg-tail` with `offset = nextIdx`. After the swap, htmx auto-fires the next request because the new tail also has `hx-trigger="load"`.
+The response contains new event HTML followed by a replacement tail whose offset is `max_event_idx + 1`. It waits for the next SSE invalidation or watchdog interval; it does not immediately long-poll again.
 
-`session.getMaxEventIdx(ctx, agentId)` returns the cursor head; `session.getEvents(ctx, agentId, { fromIdx, limit })` returns the slice.
+`session.getMaxEventIdx({ id })` returns the cursor head; `session.getEvents({ id, fromIdx, limit })` returns the slice.
 
 ---
 
@@ -319,22 +286,19 @@ The shared test fixture is `src/_testCtx.entry.ts` — `mkTestCtx()` returns a f
 
 ---
 
-## Sidebar scoping
+## Navigation refresh
 
-The sidebar polls itself every 10 seconds: `<aside hx-get="${selfUrl}" hx-headers='{"x-hyper-fragment":"sidebar"}'>`. The server's `$layout.ts` returns just the `<aside>` fragment when that header is present. `selfUrl` is threaded from the dispatcher (`http/$start.ts` → `toResponse(ctx, raw, req)` → `layout(ctx, opts, req)`).
+Navigation/menu fragments are server-rendered and refreshed from durable state. Writes publish the `agents` topic; watchdogs repair missed invalidations. Project links are derived from agent `workspace_dir`, and the Quick section uses durable `hot:<id>` timestamps.
 
 ---
 
 ## Remaining work (intentional gaps)
 
-These are deliberate non-goals for the current refactor:
-
-1. **`ctx.state.agent[*]` purge.** Routes still go through a write-through cache. After a server restart `session.loadAll` rehydrates it, so behaviour is correct, but the cache could diverge in long-running multi-tab scenarios. Fix: replace every `(ctx.state as any).agent?.[id]` with a fresh `session.load(ctx, id)`.
-2. **Per-mutation scratchpad persist.** Currently `session.save` writes the whole agent (incl. scratchpad). Mid-run scratchpad mutations are lost on crash. Fix: call `session.updateScratchpad` on each change.
-3. **`run_state='running'` on restart.** `loadAll` doesn't reset rows that were in-flight when the previous process died. They sit forever. Fix: a startup sweep that flips orphans to `idle` (or `failed` based on `run_started_at` age).
-4. **Multiuser / authz.** No request authorization. Endpoints are open. Long polls are not scoped to a user.
-5. **Live thinking-overlay.** Removed in this refactor — only the final assistant message appears (after the LLM finishes). Status bar shows `running · 12.3s` so users see something is happening. To reintroduce: persist `thinking` events at low cadence and let long-poll deliver them.
-6. **Per-run audit ledger.** With `agent_jobs` removed, only `last_error` survives across runs. To analyse "how long did the last 50 runs take, how many aborted, how many tool calls per run", we'd reintroduce a thin `runs(id, agent_id, started_at, finished_at, status, …)` table — written **only at run boundaries**, not per message.
+1. **Per-run audit/checkpoint ledger.** Inline lease state protects ownership but does not retain attempt-by-attempt timing, checkpoints and recovery history.
+2. **Durable side-effect protocol.** External writes still need common idempotency keys, effect reconciliation and explicit unknown outcomes after crashes.
+3. **Live thinking persistence.** Web chat persists final assistant output; mobile has transient in-memory prose, but durable low-cadence thinking/progress events are not a general contract.
+4. **Context-tree memory.** Manual/sleep compaction exists; track/task/episode capsules and retrieval remain design work.
+5. **Authorization scope.** Password/session authentication exists, but fine-grained per-agent/plugin authorization is not implemented.
 
 ---
 
@@ -344,9 +308,9 @@ These are deliberate non-goals for the current refactor:
 
 A chat agent has exactly one input — the user's messages. A separate `agent_jobs` table was duplicating the input log and adding bookkeeping (`payload_json` carrying the same text already in `messages`, `debounce_until` per row when it logically belongs to the agent). One row in `messages` + two columns on `agents` carry the same information with less ceremony. When we later need genuine background workloads (`compact`, `delegate`, `cron`), we can introduce a typed `runs` or `jobs` table — for **runs**, not per-message scheduling.
 
-### Why long poll over WebSocket
+### Why SSE invalidation instead of a stateful application WebSocket
 
-Every fetch is an authorized HTTP request. Reconnect is just another `fetch`, not a stateful WS handshake. Replay is `?offset=N`. A timeout falls back to another request — no special handling. WebSocket buys lower latency at the cost of every above invariant.
+The UI needs low-latency change notification, not a second copy of domain state. A shared topic-filtered EventSource carries invalidations; ordinary authorized HTTP requests fetch/replay canonical fragments by URL and offset. This keeps reconnect and correctness DB/HTTP-based while avoiding long-held HTMX requests.
 
 ### Why a single driver loop with parallel runs, not multiple worker loops
 
@@ -361,6 +325,6 @@ If writes ever become the bottleneck, we'd partition the agent space across mult
 
 The DOM is already the right kind of stateful machine: append-only event log + tiny ephemeral form. htmx's `outerHTML` swap of `#msg-tail` is a one-line description of "infinite scroll backwards in time". Adding a frontend framework here is pure cost.
 
-### Why no `agent.thinking.delta` SSE channel
+### Why no durable `agent.thinking.delta` channel
 
-The earlier doc noted the tension: live tokens are *data*, but the rule said SSE is *signal-only*. We chose the simpler invariant — every byte the user sees came from a long-poll fetch from the DB — and dropped the live overlay. The status bar's `running · Xs` counter (1 s htmx poll) gives the "something's happening" signal without violating the data-plane rule.
+Live token deltas are transient data, while the shared SSE bus intentionally carries signal-only invalidations. The web transcript therefore persists/render final assistant output and uses an SSE-invalidated status fragment with a 5-second watchdog for liveness. A future thinking overlay should use bounded durable progress events rather than turning the invalidation bus into an alternate transcript.

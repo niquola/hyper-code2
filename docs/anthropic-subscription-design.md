@@ -1,20 +1,20 @@
 # Managed Anthropic subscription design
 
-Status: implementation design for hyper-code2, based on `docs/anthropic-subscription-pi-mono.md`.
+Status: implemented architecture and rationale for hyper-code2, based on `docs/anthropic-subscription-pi-mono.md`.
 
 ## Goals
 
-Add a managed Claude Pro/Max OAuth connection without changing either existing authentication path:
+The implementation provides a managed Claude Pro/Max OAuth connection without changing either existing authentication path:
 
 - `anthropic:<model>` remains Anthropic API-key billing.
 - `claude-code:<model>` remains reuse of the official Claude CLI's macOS Keychain credential.
-- New `anthropic-oauth:<model>` uses credentials obtained and stored by hyper-code2.
+- `anthropic-oauth:<model>` uses credentials obtained, encrypted and stored by hyper-code2.
 
 All three use the existing Anthropic Messages streamer and canonical transcript/tool loop. Authentication source and OAuth request identity are explicit provider properties, not inferred solely from token text.
 
 ## Provider and model naming
 
-Add provider prefix:
+Provider prefix:
 
 ```text
 anthropic-oauth:claude-sonnet-4-6
@@ -232,16 +232,16 @@ No implicit cross-provider fallback. Existing agents retain their current model 
 
 The connection UI should show API-key Anthropic, Claude CLI reuse, and managed Claude Pro/Max as separate sources, even if they ultimately reach the same Messages API.
 
-## Planned implementation units
+## Implemented units
 
 One function per file, with names adjusted during implementation if existing conventions require:
 
 - `src/llm/$migration_*_oauth_credentials.ts`
 - `src/llm/oauthEncryptionKey.ts`
-- `src/llm/encryptCredential.ts` / `decryptCredential.ts`
+- `src/llm/encryptOAuthSecret.ts` / `decryptOAuthSecret.ts`
 - `src/llm/startAnthropicOAuth.ts`
 - `src/llm/completeAnthropicOAuth.ts`
-- `src/llm/refreshAnthropicOAuth.ts`
+- `src/llm/exchangeAnthropicOAuth.ts`
 - `src/llm/getAnthropicOAuthToken.ts`
 - `src/llm/anthropicOAuthStatus.ts`
 - `src/llm/logoutAnthropicOAuth.ts`

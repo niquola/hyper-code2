@@ -1,12 +1,10 @@
 # Reflection loop
 
-**Status**: design — not yet implemented.
+**Status**: a simpler reflection sidecar is implemented; the rule-mining/promotion architecture below remains a future design.
 
-**Working name**: `reflect`. Sibling namespace to `agent`, `session`, `db`, etc.
+**Implemented path:** `agent.reflect` runs periodically after successful agent turns when `reflection_enabled` is true. A temporary hidden child analyzes recent conversation and atomically updates structured activity, tasks, satisfaction, mistakes and an actionable nudge in `agents.reflection`; the UI exposes the toggle/state and `statusLineForTurn` injects the nudge. The implementation does not yet create a durable cross-session rule catalogue.
 
-## Direction
-
-**Detect dissatisfaction → reflect into a rule → inject into the next system prompt.** Three small stages, each with a clear contract. Heuristic detector (no LLM). Conditional reflection (LLM, but only when detector trips). Plain-text rule store, scrutable and editable.
+**Proposed extension below:** detect dissatisfaction → reflect into a rule → inject/promote it with explicit evidence and scope.
 
 The rules are not feelings ("user is frustrated"). They are imperatives ("don't propose architectural refactors without a concrete pain signal"). What gets injected is *how to behave*, not *what the user feels*. This is the single design choice that distinguishes the loop from sycophancy automation.
 

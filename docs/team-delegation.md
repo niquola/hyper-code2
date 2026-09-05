@@ -61,7 +61,7 @@ Team updates are stored as internal user-role messages with:
 }
 ```
 
-They are normal cursor-visible internal user messages, not fake native tool results: this lets the existing worker frontier guarantee delivery even when an update lands during the parent's final model call. The UI renders them as compact team/tool-style cards.
+They are internal user-role messages excluded from the ordinary user cursor, not fake native tool results. `agent.steer` explicitly schedules the parent, so an update landing during a run is delivered in a subsequent pass without advancing or duplicating real user work. The UI renders them as compact team/tool-style cards.
 
 If the parent is running, steering preserves `next_run_at` so the worker performs another pass after the current run. If the parent is idle, the same durable schedule wakes it immediately. Follow-up `agent.ask` atomically claims an idle child and rejects a concurrent request while the child is busy.
 

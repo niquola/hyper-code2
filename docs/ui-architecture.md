@@ -57,7 +57,7 @@ Every durable UI surface is a page with its own URL. This includes core screens 
 
 The URL identifies the page and its meaningful state; the page is rendered on the server as full HTML or an HTML fragment. Temporary presentation details such as focus, hover, and panel size do not need to be encoded in the URL.
 
-One core page type is **agent chat**, addressed as `/agents/:id`. It represents the durable conversation and current state of one agent. The global menu can search and open these pages directly.
+One core page type is **agent chat**, addressed as `/agent/:id`. It represents the durable conversation and current state of one agent. The global menu can search and open these pages directly.
 
 
 ## Global menu
@@ -67,11 +67,11 @@ The global menu is the primary navigation and command interface. It searches two
 1. **Resources** — agents/chats, files, tasks, tool results, settings, and plugin-defined URLs. Selecting one opens its URL.
 2. **Commands** — named functions available in the current context. Selecting one calls the function.
 
-Chats in the menu are grouped by project/workspace folder and expose running and unread state. `Cmd+/` opens the menu, while a later mnemonic/leader interface may browse the same registry hierarchically.
+Chats in the menu are grouped by project/workspace folder and expose running, pinned and unread state. `Cmd+/` opens the menu. When it is closed, `Ctrl+J` opens the next unread chat and `Ctrl+K` returns through this tab's chat jump history; `Cmd+J/K` retain chat scrolling.
 
 ## Navigation shell
 
-The shell contains the current URL-addressed page, the global menu, and a thin icon-only **quick bar** on the left. Its first icon opens the global menu; the remaining slots are user- or plugin-pinned page shortcuts. The quick bar is not a resource tree and holds no separate navigation state.
+The shell contains the current URL-addressed page and the full-screen global menu. The menu's Quick section shows New agent plus the ten most recently opened chats; pinned and unread chats are rendered separately, followed by workspace-grouped chats and project/plugin/system columns.
 
 ## Plugins
 

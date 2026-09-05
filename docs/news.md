@@ -1,6 +1,6 @@
 # News core plugin
 
-The `news` core plugin is a durable archive and reader for already prepared news items. It owns the isolated Postgres schema `news` and intentionally does not fetch sources or schedule ingestion.
+The `news` core plugin is a durable archive and reader for news items in its isolated Postgres schema. Producer plugins own source ingestion. News may enrich stored items with its summarizer and exposes sharing routes, but it is not itself a general feed crawler.
 
 ## Scope
 
@@ -16,11 +16,15 @@ Included:
 
 Excluded:
 
-- RSS and feed polling;
-- cron or background jobs;
-- Hacker News, Telegram, LinkedIn or other source clients;
-- article fetching and summarization;
-- reposting or publishing integrations.
+- direct RSS/feed polling and source-specific crawling;
+- ownership of Hacker News, Telegram, LinkedIn or other source clients;
+- generic reposting pipelines.
+
+Included operational enrichment:
+
+- `news.summarize` / `news.summarizePending` for stored articles;
+- hourly retry of pending summaries through `$cron_news-summarize-pending.ts`;
+- reader/mobile share-target routes.
 
 Independent producer plugins may call `news.put` with an already prepared item.
 

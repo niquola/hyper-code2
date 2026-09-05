@@ -84,7 +84,7 @@ src/files/$script_editor.js         CodeMirror mount and autosave
 src/files/list.ts                    directory enumeration
 src/files/open.ts                    server-side open-file state and event
 src/ui/openFile.ts                   browser-facing programmatic navigation
-src/ui/agentsRail.ts                 project links into Files UI
+src/nav/$route_items_GET.ts              project/chat navigation links into Files UI
 src/files/routeBreadcrumbs.test.ts   path, fragment, and editor bootstrap tests
 src/files/routeMediaPreview.test.ts  media preview and raw response tests
 ```

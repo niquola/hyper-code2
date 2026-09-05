@@ -192,7 +192,7 @@ structurally cannot.
 
 ### 10. Generated catalogs
 
-**Them.** `docs/config-catalog.md`, `tool-catalog.md`, `persistence-catalog.md` and
+**Them.** Their `docs/config-catalog.md`, `tool-catalog.md`, `persistence-catalog.md` and
 `module-graph.md` are generated from source by `pnpm run gen-doc-graphs`, so documentation
 cannot drift from the code.
 
@@ -211,6 +211,8 @@ Then the loop breaker (#4) and the smoke lane (#9), both small. The rest is wort
 for the discipline more than for the code.
 
 ## Reading list in their repo
+
+The following paths refer to the reviewed DeepSeek harness repository, not this Hyper checkout:
 
 - `docs/architecture.md` — the plugin tree, seams, and where new behavior goes
 - `docs/defensive-patterns.md` — one page, every rule earned by a shipped bug

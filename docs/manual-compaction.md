@@ -1,10 +1,10 @@
-# Manual context compaction
+# Context compaction
 
 ## Goal
 
-Add a **Compact context** button to the chat top bar. Compaction creates a hidden fork containing a Codex-style handoff summary and atomically switches the logical agent's model projection to `summary + recent verbatim tail`. The durable root transcript, URL, queue, Team identity, settings and wake-ups do not move.
+The implemented manual **Compact context** action creates a hidden fork containing a Codex-style handoff summary and atomically switches the logical agent's model projection to `summary + recent verbatim tail`. The durable root transcript, URL, queue, Team identity, settings and wake-ups do not move.
 
-This first version is manual only. Auto-compaction, tool-result microcompaction and rollback are explicitly deferred.
+Manual compaction is implemented. Idle agents may also start background sleep compaction through `agent.sleepIdle` when `sleep_enabled` is true (default scan policy: 15 minutes idle, at least 20 messages). Model-window-aware active-turn compaction, automatic tool-result microcompaction and user-facing rollback remain future work; see `continuous-context-compaction.md`.
 
 ## Minimal storage model
 
@@ -158,11 +158,11 @@ V1 may use an HTMX form and synchronous POST if it remains safe; do not inject a
 7. Button and POST route smoke tests.
 8. Restart/load preserves the active compact projection.
 
-## Out of scope
+## Still out of scope
 
-- automatic token threshold;
-- Claude-style tool-result clearing;
-- semantic retrieval/artifacts;
-- rollback after new messages;
+- model-window-aware compaction during an active run;
+- automatic Claude-style tool-result clearing;
+- semantic retrieval and context-tree capsules;
+- user-facing rollback/version selection;
 - migration of ordinary user forks;
 - destructive changes to the durable transcript.

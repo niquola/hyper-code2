@@ -1,13 +1,7 @@
 # Схема базы: что есть и к чему идём
 
-Продумано целиком, а не по кусочкам, потому что почти все наши недавние поломки —
-это следствия схемы: состояние без истории, ссылки без идентичности, правки без версии.
-Ничего из «к чему идём» ещё не сделано; документ для спора.
+Документ разделяет **текущую live-схему** и целевой дизайн. Некоторые ранние элементы уже реализованы — visibility, renewable run lease/fencing, watches, cron, attachments, OAuth/local secrets и provider state — но UUID event log, полноценный run journal, durable effect ledger и context tree остаются проектом.
 
-Соседние документы: [durable-runs.md](durable-runs.md) — что происходит с прогонами при
-падении, [deepseek-harness-review.md](deepseek-harness-review.md) — откуда взяты некоторые
-идеи, [../todo/migrate-events-to-uuidv7.md](../todo/migrate-events-to-uuidv7.md) — вопрос
-идентификаторов.
 
 ## Что есть сегодня
 
@@ -15,8 +9,8 @@
 <thead><tr style="text-align:left;border-bottom:2px solid #e5e7eb">
 <th style="padding:6px 8px">таблица</th><th style="padding:6px 8px">кол.</th>
 <th style="padding:6px 8px">колонки</th><th style="padding:6px 8px">роль</th></tr></thead><tbody>
-<tr style="border-bottom:1px solid #f3f4f6;vertical-align:top"><td style="padding:6px 8px"><code style="background:#f3f4f6;padding:1px 5px;border-radius:4px">agents</code></td><td style="padding:6px 8px;color:#6b7280">28</td><td style="padding:6px 8px;color:#374151">id, model, system_prompt, tools, scratchpad, parent_id, fork_offset, run_state, next_run_at, run_started_at, last_processed_msg_idx, reflection, goal, sleep_context, wake_at, …</td><td style="padding:6px 8px;color:#6b7280">агент: личность, конфиг, состояние очереди, фичи</td></tr>
-<tr style="border-bottom:1px solid #f3f4f6;vertical-align:top"><td style="padding:6px 8px"><code style="background:#f3f4f6;padding:1px 5px;border-radius:4px">messages</code></td><td style="padding:6px 8px;color:#6b7280">11</td><td style="padding:6px 8px;color:#374151">agent_id, <b>idx</b>, role, content, ts, tool_calls, tool_call_id, message_type, <b>id</b> bigint identity, excluded_from_llm, excluded_from_cursor</td><td style="padding:6px 8px;color:#6b7280">история, которую видит модель</td></tr>
+<tr style="border-bottom:1px solid #f3f4f6;vertical-align:top"><td style="padding:6px 8px"><code style="background:#f3f4f6;padding:1px 5px;border-radius:4px">agents</code></td><td style="padding:6px 8px;color:#6b7280">33</td><td style="padding:6px 8px;color:#374151">id, model, system_prompt, tools, scratchpad, parent_id, fork_offset, visibility, run_state, next_run_at, run_started_at, run_token, run_heartbeat_at, stale_recovery_count, last_processed_msg_idx, reflection, goal, sleep_context, wake_at, …</td><td style="padding:6px 8px;color:#6b7280">агент: личность, конфиг, очередь, renewable lease и фичи</td></tr>
+<tr style="border-bottom:1px solid #f3f4f6;vertical-align:top"><td style="padding:6px 8px"><code style="background:#f3f4f6;padding:1px 5px;border-radius:4px">messages</code></td><td style="padding:6px 8px;color:#6b7280">12</td><td style="padding:6px 8px;color:#374151">agent_id, <b>idx</b>, role, content, ts, tool_calls, tool_call_id, message_type, <b>id</b> bigint identity, excluded_from_llm, excluded_from_cursor, provider_state</td><td style="padding:6px 8px;color:#6b7280">история модели и replayable provider state</td></tr>
 <tr style="border-bottom:1px solid #f3f4f6;vertical-align:top"><td style="padding:6px 8px"><code style="background:#f3f4f6;padding:1px 5px;border-radius:4px">events</code></td><td style="padding:6px 8px;color:#6b7280">5</td><td style="padding:6px 8px;color:#374151">agent_id, <b>idx</b>, type, payload <i>text</i>, ts</td><td style="padding:6px 8px;color:#6b7280">лента, которую видит человек</td></tr>
 <tr style="border-bottom:1px solid #f3f4f6;vertical-align:top"><td style="padding:6px 8px"><code style="background:#f3f4f6;padding:1px 5px;border-radius:4px">agent_watches</code></td><td style="padding:6px 8px;color:#6b7280">13</td><td style="padding:6px 8px;color:#374151">id, agent_id, predicate, opts, interval_ms, next_check_at, timeout_at, status, attempts, …</td><td style="padding:6px 8px;color:#6b7280">условные пробуждения</td></tr>
 <tr style="border-bottom:1px solid #f3f4f6;vertical-align:top"><td style="padding:6px 8px"><code style="background:#f3f4f6;padding:1px 5px;border-radius:4px">settings</code></td><td style="padding:6px 8px;color:#6b7280">7</td><td style="padding:6px 8px;color:#374151">module, scope_type, scope_id, key, value, is_secret, updated_at</td><td style="padding:6px 8px;color:#6b7280">объявленные настройки</td></tr>

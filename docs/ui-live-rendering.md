@@ -19,7 +19,7 @@ The implementation follows three rules:
 - `hx-trigger`: `hyper-live from:body` plus a watchdog interval;
 - configurable element tag and HTMX swap mode.
 
-The browser opens one topic-filtered SSE connection in `procs/events/client.js`. Signals carry invalidation, not HTML. Signals within 100 ms are coalesced. Matching visible regions receive `hyper-live`; HTMX asks the server for current markup.
+The browser keeps one topic-filtered SSE connection only while the tab is visible; hidden tabs close it to avoid exhausting Chrome's per-origin connection pool and reconnect/catch up on visibility. Signals carry invalidation, not HTML. Signals within 100 ms are coalesced. Matching visible regions receive `hyper-live`; HTMX asks the server for current markup.
 
 Current topics:
 
@@ -32,7 +32,7 @@ Reads never publish invalidations, so refreshing a region cannot create a refres
 
 Initial chat HTML contains the latest 100 events. `#msg-head` pages older events upward and preserves the viewport. `#msg-tail` is a live region on `agent:<id>` and requests only events after its offset. The offset is transcript state in the URL, not state in the SSE protocol.
 
-Tool-call events render as compact buttons with `(agent_id, event_idx)` detail URLs. `GET /agent/:id/tool/:idx` performs syntax highlighting and edit diff rendering on first open. The panel controller caches successful fragments for its lifetime.
+Tool-call events render as compact buttons keyed by `(agent_id, event_idx)`. Opening one calls popup RPC `agent.toolDetails`, which performs syntax highlighting and edit diff rendering on demand. The chat controller caches successful detail fragments for its lifetime.
 
 ## Chat controller lifecycle
 
@@ -44,7 +44,7 @@ Tool-call events render as compact buttons with `(agent_id, event_idx)` detail U
 - panel configuration is read from `data-*` attributes.
 - stale async work checks controller identity before changing the dialog.
 
-The controller owns scroll anchoring, upward paging, Enter-to-submit, inherited-context notice, tool trays, detail cache, and tool dialog focus restoration.
+The controller owns scroll anchoring, upward paging, Enter-to-submit, inherited-context notice, tool trays, detail cache, and tool dialog focus restoration. Global `ui/hotkeys.js` owns `Cmd+J/K` scrolling plus `Ctrl+J` next-unread and `Ctrl+K` per-tab back history; navigation shortcuts intentionally work with composer focus.
 
 ## Watchdogs
 
@@ -64,4 +64,4 @@ Minimum checks for changes to this path:
 - event paging route tests;
 - lazy tool-detail route and summary-renderer tests;
 - chat controller syntax/browser smoke test;
-- manual browser check: switch agents repeatedly, send with Enter, receive a live reply, page upward without jumping, and open the same tool twice without a second request.
+- manual browser check: switch agents repeatedly, test `Cmd+J/K` and `Ctrl+J/K` with composer focus, send with Enter, receive a live reply, page upward without jumping, hide/show multiple tabs without connection starvation, and open the same tool twice without a second request.
