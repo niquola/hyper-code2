@@ -33,13 +33,11 @@ export default async function (ctx: Context, _session: Session | null, opts: { r
             const badge = Number(agent.unread ?? 0) > 0
                 ? `<span class="min-w-[1.1rem] shrink-0 rounded-full bg-emerald-500 px-1 text-center text-[10px] font-semibold leading-4 text-white">${agent.unread > 99 ? "99+" : agent.unread}</span>`
                 : "";
-            const pinned = pinnedIds.has(String(agent.id));
-            const pinControl = `<form hx-post="/nav/agent/${encodeURIComponent(agent.id)}/pin" hx-swap="none" class="shrink-0"><input type="hidden" name="pinned" value="${pinned ? "0" : "1"}"><button type="submit" title="${pinned ? "Unpin" : "Pin"} agent" aria-label="${pinned ? "Unpin" : "Pin"} ${esc(agent.title || agent.id)}" class="flex size-6 items-center justify-center rounded text-base-content/35 hover:bg-base-200 hover:text-amber-600"><i class="ph ${pinned ? "ph-push-pin-slash text-red-500" : "ph-push-pin"}"></i></button></form>`;
-            return `<div class="group flex items-center gap-0.5"><a href="${esc(item.href)}" class="nav-row flex min-h-7 min-w-0 flex-1 items-center gap-1.5 rounded px-1.5 py-0.5 text-left outline-none hover:bg-base-200">
+            return `<a href="${esc(item.href)}" class="nav-row flex min-h-7 items-center gap-1.5 rounded px-1.5 py-0.5 text-left outline-none hover:bg-base-200">
   ${ctx.fns.ui.modelLogo({ model: agent.model, active, bare: true, compact: true })}
-  <span class="min-w-0 flex-1 truncate text-xs text-base-content/80">${pinned ? '<i class="ph ph-push-pin-fill mr-1 text-amber-500" aria-label="Pinned"></i>' : ''}${esc(agent.title || agent.id)} <span class="font-mono text-[10px] font-normal text-base-content/45">(${esc(agent.id)})</span></span>
+  <span class="min-w-0 flex-1 truncate text-xs text-base-content/80">${pinnedIds.has(String(agent.id)) ? '<i class="ph ph-push-pin-fill mr-1 text-amber-500" aria-label="Pinned"></i>' : ''}${esc(agent.title || agent.id)} <span class="font-mono text-[10px] font-normal text-base-content/45">(${esc(agent.id)})</span></span>
   ${badge}
-</a>${pinControl}</div>`;
+</a>`;
         }
         return `<a href="${esc(item.href)}" class="nav-row flex min-h-8 items-center gap-2 rounded px-2 py-1 text-sm outline-none hover:bg-base-200/60">
   <i class="ph ${esc(item.icon || (group(item) === "Projects & files" ? "ph-folder" : group(item) === "Plugins" ? "ph-plugs" : "ph-gear"))} shrink-0 text-base-content/45"></i>
