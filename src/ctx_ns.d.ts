@@ -6,6 +6,9 @@ declare global {
     type Context = import("./Context").Context;
 
     interface FnsRegistry {
+        ".": {
+            home: Injected<typeof import("./home").default>;
+        };
         agent: {
             archiveCompleted: Injected<typeof import("./agent/archiveCompleted").default>;
             archiveMember: Injected<typeof import("./agent/archiveMember").default>;
