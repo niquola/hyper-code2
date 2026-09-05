@@ -58,7 +58,7 @@ export default async function (
         "authorization": `Bearer ${apiKey}`,
         "chatgpt-account-id": accountId,
         "originator": "codex_cli_rs",
-        "version": "0.146.0",
+        "version": await ctx.fns.llm.codexCliVersion({}),
         "OpenAI-Beta": "responses=experimental",
         "accept": "text/event-stream",
         "content-type": "application/json",

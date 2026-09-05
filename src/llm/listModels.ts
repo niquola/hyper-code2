@@ -87,7 +87,8 @@ export default async function (ctx: Context, _session: Session | null, _opts?: {
     try {
         const tok = await ctx.fns.llm.refreshCodex?.({});
         if (tok) {
-            const url = "https://chatgpt.com/backend-api/codex/models?client_version=0.146.0";
+            const version = await ctx.fns.llm.codexCliVersion({});
+            const url = `https://chatgpt.com/backend-api/codex/models?client_version=${encodeURIComponent(version)}`;
             const r = await fetch(url, {
                 headers: { "authorization": `Bearer ${tok}`, "originator": "codex_cli_rs" },
                 signal: AbortSignal.timeout(3000),
