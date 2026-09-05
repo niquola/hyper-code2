@@ -33,6 +33,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     }
     if (!agent) return `<div class="p-4 text-sm text-base-content/45">agent ${esc(id)} not found</div>`;
 
+    const parent = agent.parentId ? await ctx.fns.session.load({ id: String(agent.parentId) }) : null;
     const maxIdx = await ctx.fns.session.getMaxEventIdx({ id });
     const events = await ctx.fns.session.getEvents({ id, beforeIdx: maxIdx + 1, limit: 100 });
     const inheritedCount = agent.parentId
@@ -139,7 +140,7 @@ export default async function (ctx: Context, _session: Session | null, opts: {
     <span class="truncate font-mono font-medium leading-4 text-base-content/80">${esc(String(agent.title ?? id).slice(0, 40) || id)} <span class="text-base-content/45">(${esc(id)})</span></span>
     ${workspaceControl}
   </span>
-  ${agent.parentId ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5" title="fork · inherited ${inheritedCount} msgs">fork</span>` : ""}
+   ${agent.parentId ? `<a href="/agent/${encodeURIComponent(String(agent.parentId))}" class="rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-amber-700 hover:bg-amber-100 hover:text-amber-900" title="forked from ${esc(parent?.title || agent.parentId)} · inherited ${inheritedCount} msgs" aria-label="Back to parent agent ${esc(parent?.title || agent.parentId)}"><i class="ph ph-arrow-bend-up-left mr-0.5"></i>${esc(String(parent?.title || agent.parentId).slice(0, 24))}</a>` : ""}
   ${statusBarHtml}
   <span class="ml-auto flex items-center gap-1">
     ${effortControl}
