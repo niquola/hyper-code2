@@ -15,6 +15,7 @@ struct NativeChatView: View {
     let agent: AgentSummary
     let baseURL: URL
     let onRead: () -> Void
+    let onNextUnread: (() -> Void)?
     @StateObject private var store = ChatStore()
     @State private var draft = ""
     @State private var composerResetID = UUID()
@@ -34,10 +35,11 @@ struct NativeChatView: View {
     @State private var injectText = ""
     @State private var injectEvery = 1
 
-    init(agent: AgentSummary, baseURL: URL, onRead: @escaping () -> Void) {
+    init(agent: AgentSummary, baseURL: URL, onRead: @escaping () -> Void, onNextUnread: (() -> Void)? = nil) {
         self.agent = agent
         self.baseURL = baseURL
         self.onRead = onRead
+        self.onNextUnread = onNextUnread
         _currentModel = State(initialValue: agent.model)
     }
 
@@ -107,16 +109,28 @@ struct NativeChatView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(agent.title).navigationBarTitleDisplayMode(.inline)
         .offset(x: swipeTranslation)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 18)
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 14)
                 .onChanged { value in
-                    guard value.startLocation.x < 32, value.translation.width > 0, abs(value.translation.height) < 80 else { return }
-                    swipeTranslation = min(90, value.translation.width * 0.35)
+                    let horizontal = abs(value.translation.width) > abs(value.translation.height) * 1.05
+                    guard horizontal else { return }
+                    if value.startLocation.x < 32, value.translation.width > 0 {
+                        swipeTranslation = min(90, value.translation.width * 0.35)
+                    } else if value.translation.width < 0, onNextUnread != nil {
+                        swipeTranslation = max(-110, value.translation.width * 0.35)
+                    }
                 }
                 .onEnded { value in
-                    let shouldOpen = value.startLocation.x < 32 && (value.translation.width > 90 || value.predictedEndTranslation.width > 180)
-                    withAnimation(.snappy(duration: 0.2)) { swipeTranslation = 0 }
-                    if shouldOpen { dismiss() }
+                    let goBack = value.startLocation.x < 32 && (value.translation.width > 90 || value.predictedEndTranslation.width > 180)
+                    let goNext = onNextUnread != nil && (value.translation.width < -55 || value.predictedEndTranslation.width < -110) && abs(value.translation.width) > abs(value.translation.height)
+                    if goNext {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.easeOut(duration: 0.12)) { swipeTranslation = -UIScreen.main.bounds.width * 0.28 }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { swipeTranslation = 0; onNextUnread?() }
+                    } else {
+                        withAnimation(.snappy(duration: 0.2)) { swipeTranslation = 0 }
+                        if goBack { dismiss() }
+                    }
                 }
         )
         .toolbar { chatToolbar }

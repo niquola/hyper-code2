@@ -94,7 +94,7 @@ struct NativeRootView: View {
             }
             .navigationDestination(for: AgentSummary.self) { agent in
                 if let baseURL {
-                    NativeChatView(agent: agent, baseURL: baseURL) { Task { await reload() } }
+                    NativeChatView(agent: agent, baseURL: baseURL, onRead: { Task { await reload() } }, onNextUnread: { openNextUnread(after: agent.id) })
                         .id(agent.id)
                 }
             }
@@ -106,7 +106,7 @@ struct NativeRootView: View {
         }
         .onDisappear { store.stopRefreshing() }
         .navigationDestination(item: $createdAgentToOpen) { agent in
-            if let baseURL { NativeChatView(agent: agent, baseURL: baseURL) { Task { await reload() } }.id(agent.id) }
+            if let baseURL { NativeChatView(agent: agent, baseURL: baseURL, onRead: { Task { await reload() } }, onNextUnread: { openNextUnread(after: agent.id) }).id(agent.id) }
         }
         .sheet(isPresented: $showingNewAgent) { if let baseURL { NewAgentView(baseURL: baseURL) { created in showingNewAgent = false; openCreatedAgent(created) } } }
         .sheet(isPresented: $showingSettings) { NativeSettingsView(serverURL: $serverURL) { Task { await reload() } } }
@@ -144,6 +144,15 @@ struct NativeRootView: View {
                         }
                     .contextMenu { Button { pin(agent, !agent.pinned) } label: { Label(agent.pinned ? "Unpin" : "Pin", systemImage: agent.pinned ? "pin.slash" : "pin") } }
             }
+        }
+    }
+
+    private func openNextUnread(after currentID: String) {
+        Task {
+            await reload()
+            let unread = filtered.filter { $0.unread > 0 && $0.id != currentID }
+            guard let next = unread.first else { UINotificationFeedbackGenerator().notificationOccurred(.warning); return }
+            createdAgentToOpen = next
         }
     }
 
