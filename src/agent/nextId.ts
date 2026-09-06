@@ -15,11 +15,15 @@ function encode(n: number): string {
 
 /** Next id for the runtime. */
 export default async function (ctx: Context, _session: Session | null, _opts?: {}): Promise<string> {
-    const row = ((await ctx.fns.procs.db.select({ sql: 'SELECT value FROM kv WHERE key = ?', params: ['agent:idCounter'] })) as any[])[0];
-    const next = Number(row?.value ?? 0) + 1;
-    await ctx.fns.procs.db.run({
-        sql: 'INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-        params: ['agent:idCounter', String(next)],
-    });
-    return encode(next);
+    // One atomic statement: two concurrent starts (e.g. the goal and knowledge
+    // sidecars forked from the same POST) must never observe the same counter
+    // value — a separate SELECT then UPDATE handed both the same id and let one
+    // fork's save overwrite the other's row.
+    const rows = await ctx.fns.procs.db.select({
+        sql: `INSERT INTO kv (key, value) VALUES (?, '1')
+              ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(kv.value AS INTEGER) + 1 AS TEXT)
+              RETURNING value`,
+        params: ['agent:idCounter'],
+    }) as any[];
+    return encode(Number(rows[0]?.value ?? 1));
 }

@@ -1,13 +1,13 @@
 import { dirname, join } from "node:path";
-import { mkdir, rename, rm } from "node:fs/promises";
+import { mkdir, rename, rm, realpath } from "node:fs/promises";
 
 /** Creates a documented runtime function through a validated, type-checked pipeline. */
 export default async function (
     ctx: Context,
     _session: Session | null,
     opts: {
-        /** Runtime root. @default src */
-        root?: "src" | ".hyper";
+        /** Source root: src, .hyper, plugin:<mounted-name> (official/user), or plugins/<name>/src (official). @default src */
+        root?: string;
         /** Slash-separated module path, such as `gmail` or `runtime/docs`. */
         module: string;
         /** Function file and runtime name in lower camelCase. */
@@ -35,18 +35,32 @@ export default async function (
     const name = String(opts.name ?? "").trim();
     assertInput(module, name, opts);
     const project = ctx.fns.procs.project.projectRoot({});
+    let rootDir = join(project, root);
+    if (root !== "src" && root !== ".hyper") {
+        if (!/^(plugin:[a-z][a-z0-9-]*|plugins\/[a-z][a-z0-9-]*\/src)$/.test(root)) throw new TypeError("createFunction: invalid runtime root");
+        const roots = await ctx.fns.procs.modules.discover({});
+        const selected = roots.find(r => !r.prefix && (r.source === "official" || r.source === "user") && (root.startsWith("plugin:") ? r.name === root.slice(7) : r.source === "official" && r.dir === rootDir));
+        if (!selected) throw new TypeError("createFunction: root must be a mounted official/user plugin source");
+        rootDir = await realpath(selected.dir);
+    }
+    // Reject symlinked module directories: authoring must remain inside its selected source root.
+    const canonicalRoot = await realpath(rootDir).catch(() => rootDir);
+    for (let dir = join(rootDir, module); dir !== rootDir; dir = dirname(dir)) {
+        const actual = await realpath(dir).catch(() => null);
+        if (actual && actual !== join(canonicalRoot, dir.slice(rootDir.length + 1))) throw new TypeError("createFunction: module escapes source root through symlink");
+    }
     const rel = `${root}/${module}/${name}.ts`;
-    const path = join(project, rel);
+    const path = join(rootDir, module, `${name}.ts`);
     const source = render(opts);
     const syntax = new Bun.Transpiler({ loader: "ts" }).scan(source);
     void syntax;
     if (opts.dryRun) return { ok: true, name: `${module.replaceAll("/", ".")}.${name}`, path: rel, source, written: false };
     if (await Bun.file(path).exists() && !opts.overwrite) throw new Error(`createFunction: ${rel} already exists; use edit for updates or pass overwrite explicitly`);
     const previous = await Bun.file(path).exists() ? await Bun.file(path).text() : null;
-    const temp = join(project, root, ".authoring", module, `${name}.${crypto.randomUUID()}.ts`);
+    const temp = join(rootDir, ".authoring", module, `${name}.${crypto.randomUUID()}.ts`);
     await mkdir(dirname(temp), { recursive: true });
     await Bun.write(temp, source);
-    const filter = temp.slice(project.length + 1);
+    const filter = temp.startsWith(project + "/") ? temp.slice(project.length + 1) : temp;
     const preflight = await ctx.fns.procs.dev.typecheck({ filter });
     if (!preflight.ok) { await rm(temp, { force: true }); throw new Error(`createFunction typecheck failed:\n${preflight.errors.join("\n")}`); }
     await mkdir(dirname(path), { recursive: true });

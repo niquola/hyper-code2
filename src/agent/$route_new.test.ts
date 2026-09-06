@@ -70,6 +70,50 @@ describe("agent new routes", () => {
     expect(html).not.toContain("undefined");
   });
 
+  test("GET renders HTMX workspace fuzzy suggestions below the input", async () => {
+    const { ctx } = await mkCtx();
+    const res = await ctx.fns.procs.http.dispatch({ url: "/agent/new" });
+    const html = await res.text();
+    expect(html).toContain('id="workspace-dir-input"');
+    expect(html).toContain('hx-get="/agent/dirs"');
+    expect(html).toContain('hx-target="#workspace-dir-suggestions"');
+    expect(html).toContain('hx-trigger="load"');
+  });
+
+  test("empty directory query returns at most five recent unique workspaces", async () => {
+    const { ctx } = await mkCtx();
+    const now = Date.now();
+    for (let i = 0; i < 7; i++) {
+      await ctx.fns.procs.db.run({
+        sql: `INSERT INTO agents (id, model, workspace_dir, created_at, updated_at)
+              VALUES (?, 'mock:echo', ?, ?, ?)`,
+        params: [`r${i}`, `/tmp/recent-${i}`, now + i, now + i],
+      });
+    }
+    const res = await ctx.fns.procs.http.dispatch({ url: "/agent/dirs" });
+    const html = await res.text();
+    expect((html.match(/role="option"/g) ?? []).length).toBe(5);
+    expect(html).toContain("/tmp/recent-6");
+    expect(html).not.toContain("/tmp/recent-0");
+  });
+
+  test("relative directory query is rooted at HOME and capped at ten", async () => {
+    const { mkdtemp, mkdir, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const home = await mkdtemp(`${tmpdir()}/hyper-dir-search-`);
+    try {
+      await Promise.all(Array.from({ length: 12 }, (_, i) => mkdir(`${home}/project-${i}`)));
+      const ctx = await mkTestCtx({ env: { HOME: home } });
+      const res = await ctx.fns.procs.http.dispatch({ url: "/agent/dirs?workspaceDir=prj" });
+      const html = await res.text();
+      expect((html.match(/role="option"/g) ?? []).length).toBe(10);
+      expect(html).toContain("project-");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+
   test("POST creates agent with selected preset text prepended to custom instructions", async () => {
     const { ctx, started } = await mkCtx();
     const body = new URLSearchParams();

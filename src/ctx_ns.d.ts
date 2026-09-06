@@ -270,6 +270,12 @@ declare global {
             stat: Injected<typeof import("./files/stat").default>;
             write: Injected<typeof import("./files/write").default>;
         };
+        flow: {
+            discover: Injected<typeof import("../plugins/flow/src/flow/discover").default>;
+            list: Injected<typeof import("../plugins/flow/src/flow/list").default>;
+            page: Injected<typeof import("../plugins/flow/src/flow/page").default>;
+            reconcile: Injected<typeof import("../plugins/flow/src/flow/reconcile").default>;
+        };
         focus: {
             add: Injected<typeof import("../../.hyper/user/focus/src/focus/add").default>;
             archive: Injected<typeof import("../../.hyper/user/focus/src/focus/archive").default>;
@@ -1216,6 +1222,13 @@ declare global {
             type ReadAnchorLine = import("./files/ReadAnchorLine").ReadAnchorLine;
             type ReadHashlineResult = import("./files/ReadHashlineResult").ReadHashlineResult;
         }
+        namespace flow {
+            type FlowOutput = import("../plugins/flow/src/flow/FlowOutput").FlowOutput;
+            type FlowRequest = import("../plugins/flow/src/flow/FlowRequest").FlowRequest;
+            type Gap = import("../plugins/flow/src/flow/Gap").Gap;
+            type ReconcileResult = import("../plugins/flow/src/flow/ReconcileResult").ReconcileResult;
+            type State = import("../plugins/flow/src/flow/State").State;
+        }
         namespace git {
             type Result = import("./git/Result").Result;
         }
@@ -1324,6 +1337,7 @@ declare global {
     }
 
     interface CtxState {
+        flow: import("../plugins/flow/src/flow/State").State;
         procs: {
             auth: import("./procs/auth/State").State;
             boot: import("./procs/boot/State").State;
