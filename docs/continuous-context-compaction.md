@@ -2,6 +2,21 @@
 
 **Status:** conceptual design; not implemented.
 
+**Related documents**
+
+- [`manual-compaction.md`](manual-compaction.md) — the implemented `agent.compactContext` checkpoint (hidden summary fork + verbatim tail).
+- [`agent-memory-recall.md`](agent-memory-recall.md) — cross-session recall over `messages`; the retrieval half of the same problem.
+- [`team-delegation.md`](team-delegation.md) — delegated children as physically isolated subtrees.
+- [`architecture.md`](architecture.md) — durable transcript, queue and fork semantics this design projects over.
+
+**Implementation touchpoints**
+
+- [`src/agent/compact.ts`](../src/agent/compact.ts) — destructive in-transcript compaction.
+- [`src/agent/compactContext.ts`](../src/agent/compactContext.ts) — whole-projection checkpoint with CAS activation.
+- [`src/agent/stashResult.ts`](../src/agent/stashResult.ts) — large tool results kept out of the transcript.
+- [`src/agent/buildLlmRequest.ts`](../src/agent/buildLlmRequest.ts) — where the projection is assembled today.
+- [`src/agent/sleepIdle.ts`](../src/agent/sleepIdle.ts) — background compaction scan for idle agents.
+
 ## 1. Goal
 
 Replace periodic whole-conversation summarization with a **context tree** that grows with the work and folds completed branches into nested capsules.
@@ -654,11 +669,13 @@ An alternative v1 may store the same shape in one JSONB document on the root age
 
 ### Manual `compactContext`
 
-Keep as an emergency/manual whole-projection checkpoint. Continuous compaction should eventually make it uncommon.
+Implemented in [`src/agent/compactContext.ts`](../src/agent/compactContext.ts) and specified in [`manual-compaction.md`](manual-compaction.md). Keep as an emergency/manual whole-projection checkpoint. Continuous compaction should eventually make it uncommon.
+
+Background activation for idle agents already exists in [`src/agent/sleepIdle.ts`](../src/agent/sleepIdle.ts) and [`src/agent/sleep.ts`](../src/agent/sleep.ts): the scheduling half of continuous compaction is in place, the semantic half is not.
 
 ### `agent.compact`
 
-Retain as explicit destructive transcript maintenance, not as the primary memory mechanism.
+Implemented in [`src/agent/compact.ts`](../src/agent/compact.ts). Retain as explicit destructive transcript maintenance, not as the primary memory mechanism.
 
 ### `session.plan`
 
@@ -666,11 +683,15 @@ Use as authoritative explicit task structure. The memory compiler may infer task
 
 ### Team delegation
 
-Treat completed child tasks as first-class subtask capsules. Do not duplicate child transcripts into parent context.
+See [`team-delegation.md`](team-delegation.md). Treat completed child tasks as first-class subtask capsules. Do not duplicate child transcripts into parent context.
 
 ### Tool result stashing
 
-Large results should remain durable and addressable while active context receives a compact result descriptor and retrieval handle.
+Implemented in [`src/agent/stashResult.ts`](../src/agent/stashResult.ts). Large results should remain durable and addressable while active context receives a compact result descriptor and retrieval handle.
+
+### Cross-session recall
+
+See [`agent-memory-recall.md`](agent-memory-recall.md). Folding decides what stays resident; recall decides what can be brought back from other sessions. Capsule `refs` are the natural join between them.
 
 ## 13. Failure modes and safeguards
 
@@ -863,7 +884,51 @@ These approaches aggregate child chunks into parent summaries and retrieve at mu
 - **ReAcTree** — goal/subgoal execution trees and control flow, but not recursive persistent folding; DOI `10.65109/ucgt7089`.
 - **MemoryOS** — promotion across short-, mid- and long-term layers: <https://arxiv.org/abs/2506.06326>. Relevant to lifecycle tiers, less to task topology.
 
-### 14.5 What appears distinctive here
+### 14.5 Shipped systems: Codex experimental context management
+
+Prior art is not only papers. In 2026-09 OpenAI shipped a narrow but working version of one of our ideas, which makes it the closest production baseline available.
+
+**Feature:** `features.context_management.experimental_mode`, disabled by default, `Stage::UnderDevelopment`.
+
+- Activation commit: [`cff76fa96f` — “Add experimental context management activation (#42385)”](https://github.com/openai/codex/commit/cff76fa96f70f9f3b63d221446fd02cfd87e6d2e)
+- Docs paragraph: <https://learn.chatgpt.com/docs/models?surface=cli#experimental-context-management>
+- Changelog entry: <https://learn.chatgpt.com/docs/changelog#github-release-381669913>
+- User reports: <https://www.reddit.com/r/codex/comments/1w771mv/experimental_context_setting_in_codex/>
+
+The flag implements nothing by itself. It gates three existing mechanisms:
+
+1. **Token budget in model-visible context.** A developer fragment carries agent name and `first / current / previous context window id` ([`token_budget_context.rs`](https://github.com/openai/codex/blob/main/codex-rs/core/src/context/token_budget_context.rs)), plus a one-per-window reminder when remaining tokens cross a threshold ([`session/token_budget.rs`](https://github.com/openai/codex/blob/main/codex-rs/core/src/session/token_budget.rs), remaining-token math in [`session/context_window.rs`](https://github.com/openai/codex/blob/main/codex-rs/core/src/session/context_window.rs)). A `get_context_remaining` tool lets the model ask directly.
+2. **Native history/notes.** A separate crate ([`ext/history-notes`](https://github.com/openai/codex/tree/main/codex-rs/ext/history-notes)) exposes nine actions over server endpoints `alpha/history/v2/*` and `alpha/notes/v2/*`: list/read/search prior windows, and list/read/search/append/write private notes under virtual `<agent_name>/notes` paths.
+3. **`new_context` tool.** No arguments, described as “Start a new context window. Does not clear, reset, or otherwise affect environment state.” ([`new_context_window_spec.rs`](https://github.com/openai/codex/blob/main/codex-rs/core/src/tools/handlers/new_context_window_spec.rs)). The handler only sets a flag; the rollover happens at a turn boundary and installs a fresh window **without summarization** ([`compact_token_budget.rs`](https://github.com/openai/codex/blob/main/codex-rs/core/src/compact_token_budget.rs)): base instructions, environment/world state and retained client developer messages are re-injected, window number increments, `previous_window_id` is preserved.
+
+Eligibility is deliberately narrow: ChatGPT OAuth with Plus/Pro/Pro Lite on the Codex backend. API-key sessions, Free/Enterprise, custom providers, provider credentials, AWS configuration and temporary structured TUI threads are excluded, because history and notes live on OpenAI's backend rather than on the user's machine.
+
+#### Convergence with this design
+
+| Principle here | Codex mechanism |
+|---|---|
+| §3.1 raw transcript is immutable truth | prior windows remain readable through the `history` namespace |
+| §3.2 summary is a projection, not memory truth | rollover performs no summarization at all |
+| §3.5 critical state is pinned or structured | base instructions and world state are re-injected from authoritative state |
+| §13 broken causal chains | rollover only at a turn boundary with follow-up pending |
+| capsule lineage and revisions | `first / previous / current context window id` |
+| tool result stashing | notes as durable model-owned side storage |
+
+#### Differences
+
+- **Linear, not a tree.** Codex has a chain of windows with one active frontier. There is no `track → goal → task → episode` topology, no bottom-up folding of completed branches and no progressive unfolding: the previous window is either read explicitly through `history` or not at all.
+- **No capsules, no provenance contract.** Notes are free-form model-authored text. Nothing forces a claim to carry source references, so §13 “recursive summary drift” is mitigated only by the model's own discipline.
+- **Memory is remote and hidden.** Notes and history live on OpenAI's backend, and the tool descriptions instruct the model never to disclose their existence, paths or contents to the user. This design assumes the opposite: memory is in the user's Postgres, inspectable, and provenance is mandatory.
+- **Model-triggered rather than operator-triggered.** The rollover decision belongs to the model. Our implemented `compactContext` is triggered by a human or by an idle scan.
+
+#### Design changes suggested by Codex
+
+1. **Give the model its remaining budget.** `buildLlmRequest` currently exposes no context-window telemetry, so the §7.1 trigger “context usage crosses a model-specific threshold” is unusable by the agent itself. Add a pinned remaining-tokens fragment and a cheap `contextRemaining` tool.
+2. **A summary-free rollover path.** Codex demonstrates that a new window can be assembled from authoritative state alone. We already hold more structure than Codex does — `session.plan`, `scratchpad`, delegated `finishTask({ summary, result })` — so a rollover of `system + plan + stash handles + child results + short tail` needs no LLM call, costs nothing and cannot drift. This strengthens Phase 2 below and should precede any tree work.
+3. **Window identity in context.** Cheap, and it lets the model recognize that a reset happened instead of pretending continuity.
+4. **Let the agent request folding.** A model-callable request to fold the current branch is a better completion signal than a token threshold, matching §3.3 and the MAGE note about agent-declared completion.
+
+### 14.6 What appears distinctive here
 
 No reviewed system was found that combines all of the following in one runtime:
 
@@ -878,17 +943,19 @@ No reviewed system was found that combines all of the following in one runtime:
 
 The novelty claim should therefore be narrow: not “hierarchical agent memory”, but the integration of execution-tree folding, durable event sourcing, subagent lineage and reversible evidence-backed capsules.
 
-### 14.6 Evaluation baselines implied by prior art
+### 14.7 Evaluation baselines implied by prior art
 
 The design should be compared against:
 
 - full transcript;
 - recency-only truncation;
-- current whole-session summary + tail;
+- current whole-session summary + tail (our implemented `compactContext`);
+- summary-free window rollover from authoritative state (Codex-style `new_context`);
 - recursive summary memory;
 - HiAgent-style completed-subgoal summaries;
 - MAGE-style active-path execution state;
 - semantic hierarchical retrieval without task structure;
+- cross-session recall without folding, per [`agent-memory-recall.md`](agent-memory-recall.md);
 - the full proposed tree with capsules and raw unfolding.
 
 Primary metrics:
@@ -904,6 +971,16 @@ Primary metrics:
 
 
 ## 15. Initial implementation phases
+
+### Phase 0 — budget telemetry and summary-free rollover
+
+Independent of the tree, cheap, and a prerequisite for every later trigger. See §14.5.
+
+- expose remaining context tokens to the model from [`src/agent/buildLlmRequest.ts`](../src/agent/buildLlmRequest.ts);
+- add a `contextRemaining` tool and a one-per-window threshold reminder;
+- carry a window identity (`first / previous / current`) in the projection;
+- add a rollover that rebuilds context from `system + session.plan + scratchpad stash handles + delegated results + short verbatim tail`, with no summarizer call;
+- reuse the existing `sleep_context` generation and CAS activation from [`src/agent/compactContext.ts`](../src/agent/compactContext.ts).
 
 ### Phase 1 — observe only
 
@@ -946,6 +1023,8 @@ Primary metrics:
 6. When should a paused track remain partially resident because it has unresolved side effects?
 7. Should the analyzer be the same model as the active agent or a cheaper specialized model?
 8. How do we evaluate whether a proposed track boundary improves future decisions rather than merely looking coherent?
+9. Should a summary-free rollover (§14.5, Phase 0) fully replace the summarizing checkpoint, or do both remain, chosen by whether authoritative structured state covers the work?
+10. Should memory ever be model-private, as in Codex notes, or is inspectable-by-default a hard invariant of this runtime?
 
 ## 17. Core hypothesis
 
