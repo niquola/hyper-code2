@@ -1,7 +1,9 @@
 /**
  * Executes one non-tool LLM request through any configured provider. Supports
  * Codex subscription Responses API, OpenAI-compatible APIs, Anthropic, and mock.
- * Use for runtime synthesis that is not an agent turn. Transient failures are
+ * Claude subscription requests include the required Claude Code system identity
+ * without enabling tools or loading an agent transcript. Caller instructions
+ * remain a separate system block. Use for runtime synthesis that is not an agent turn. Transient failures are
  * retried on the selected route first; Claude subscription calls then try the
  * same model through the alternate managed OAuth route before models from the
  * `llm.fallbackModels` setting are tried in order.
@@ -208,7 +210,12 @@ async function anthropic(ctx: Context, endpoint: any, opts: any) {
     }
     if (!apiKey) throw new Error(`${endpoint.provider}: no credentials`);
     const body: any = { model: endpoint.modelId, max_tokens: opts.max_tokens ?? 2048, messages: [{ role: "user", content: opts.user }] };
-    if (opts.system) body.system = opts.system;
+    if (subscription) {
+        // Match the identity required by the working agent transport. Omitting
+        // it can produce a misleading 429 even when the subscription has quota.
+        body.system = [{ type: "text", text: "You are Claude Code, Anthropic's official CLI for Claude." }];
+        if (opts.system) body.system.push({ type: "text", text: opts.system });
+    } else if (opts.system) body.system = opts.system;
     if (opts.temperature != null) body.temperature = opts.temperature;
     let response = await fetch(endpoint.url, { method: "POST", headers, body: JSON.stringify(body) });
     response = await retryWithoutUnsupportedTemperature(response, body, () => fetch(endpoint.url, { method: "POST", headers, body: JSON.stringify(body) }));

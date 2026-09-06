@@ -108,6 +108,68 @@ describe("llm.call", () => {
         } finally { globalThis.fetch = previousFetch; }
     });
 
+    for (const provider of ["claude-code", "anthropic-oauth", "anthropic"]) {
+        for (const system of [undefined, "Return only the requested word."]) {
+            test(`${provider} preserves non-tool options and usage (system=${!!system})`, async () => {
+                const previousFetch = globalThis.fetch;
+                const requests: any[] = [];
+                const resolved: string[] = [];
+                const raw = { content: [{ type: "text", text: "OK" }], stop_reason: "max_tokens", usage: { input_tokens: 12, output_tokens: 2, cache_read_input_tokens: 5 } };
+                globalThis.fetch = (async (_url: any, init: any) => {
+                    requests.push({ body: JSON.parse(init.body), headers: init.headers });
+                    return Response.json(raw);
+                }) as any;
+                try {
+                    const ctx: any = { env: {}, fns: { llm: {
+                        resolveEndpoint: async ({ model }: any) => {
+                            resolved.push(model);
+                            return { api: "anthropic", provider, modelId: "claude-opus-4-6", url: "https://example.test", apiKey: "api-key", account: "work" };
+                        },
+                        refreshClaudeCode: async ({ account }: any) => { expect(account).toBe("work"); return "cli-token"; },
+                        getAnthropicOAuthToken: async ({ account }: any) => { expect(account).toBe("work"); return "oauth-token"; },
+                        claudeCodeCliVersion: async () => "2.1.260",
+                    } } };
+                    const model = `${provider}/work:claude-opus-4-6`;
+                    const result = await call(ctx, null, { user: "Reply OK", system, model, noFallback: true, max_tokens: 23, temperature: 0.2 });
+                    expect(resolved).toEqual([model]);
+                    expect(result).toEqual({ text: "OK", finishReason: "max_tokens", usage: raw.usage, raw, model });
+                    const { body, headers } = requests[0];
+                    expect(requests).toHaveLength(1);
+                    expect(body.messages).toEqual([{ role: "user", content: "Reply OK" }]);
+                    expect(body).toMatchObject({ model: "claude-opus-4-6", max_tokens: 23, temperature: 0.2 });
+                    expect(body.tools).toBeUndefined();
+                    expect(body.stream).toBeUndefined();
+                    if (provider === "anthropic") {
+                        expect(body.system).toBe(system);
+                        expect(headers["x-api-key"]).toBe("api-key");
+                    } else {
+                        expect(body.system).toEqual([
+                            { type: "text", text: "You are Claude Code, Anthropic's official CLI for Claude." },
+                            ...(system ? [{ type: "text", text: system }] : []),
+                        ]);
+                        expect(headers.authorization).toBe(`Bearer ${provider === "claude-code" ? "cli-token" : "oauth-token"}`);
+                    }
+                } finally { globalThis.fetch = previousFetch; }
+            });
+        }
+    }
+
+    test("Claude noFallback retains provider errors and never switches route or model", async () => {
+        const previousFetch = globalThis.fetch;
+        const resolved: string[] = [];
+        globalThis.fetch = (async () => new Response('{"error":{"message":"limited"}}', { status: 429 })) as any;
+        try {
+            const ctx: any = { env: {}, fns: { llm: {
+                resolveEndpoint: async ({ model }: any) => { resolved.push(model); return { api: "anthropic", provider: "claude-code", modelId: "claude-fable-5-1", url: "https://example.test", account: "default" }; },
+                refreshClaudeCode: async () => "cli-token",
+                claudeCodeCliVersion: async () => "2.1.260",
+            } } };
+            await expect(call(ctx, null, { user: "hello", model: "claude-code:claude-fable-5-1", noFallback: true })).rejects.toThrow('claude-code 429: {"error":{"message":"limited"}}');
+            expect(resolved.length).toBeGreaterThan(0);
+            expect(resolved.every(model => model === "claude-code:claude-fable-5-1")).toBe(true);
+        } finally { globalThis.fetch = previousFetch; }
+    });
+
     test("Claude route falls back to the same model on managed OAuth before another model", async () => {
         const previousFetch = globalThis.fetch;
         const resolved: string[] = [];
