@@ -35,7 +35,8 @@ export default async function (
         timeoutMs?: number;
     },
 ): Promise<{ typed: number; value: string }> {
-    const session = String(opts.session || "main");
+    const scope = await ctx.fns.cdp.scope({ session: opts.session });
+    const session = String(scope.session || "main");
     const delayMs = Math.max(0, Math.min(Number(opts.delayMs ?? 0), 1_000));
     if (opts.clear) {
         await ctx.fns.browser.press({ session, target: opts.target, key: process.platform === "darwin" ? "Meta+a" : "Control+a", timeoutMs: opts.timeoutMs });

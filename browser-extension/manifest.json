@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Hyper Sidebar (local prototype)",
+  "version": "0.1.0",
+  "minimum_chrome_version": "142",
+  "description": "One Hyper agent per Chrome tab, using the existing local Hyper UI.",
+  "permissions": ["sidePanel", "tabs", "storage", "debugger"],
+  "host_permissions": ["http://localhost/*", "http://127.0.0.1/*"],
+  "background": {"service_worker": "worker.js", "type": "module"},
+  "action": {"default_title": "Open Hyper sidebar"},
+  "side_panel": {"default_path": "panel.html"},
+  "options_ui": {"page": "options.html", "open_in_tab": true},
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src http://localhost:* http://127.0.0.1:*; frame-src http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'"
+  }
+}

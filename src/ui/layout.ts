@@ -1,12 +1,13 @@
-// The app shell owns one ordinary URL-addressed page. Global navigation lives
-// in ui.navMenu; there is no persistent sidebar or hidden page state.
-/** Performs the ui.layout runtime operation. */
 /**
- * The app shell owns one ordinary URL-addressed page. Global navigation lives.
- * @param opts.currentId Identifier of the currently selected agent.
- * @param opts.title Displayed title.
- * @param opts.main Main panel HTML.
- * @param opts.headExtra Additional markup for the document head.
+ * Render the shared HTML page shell, assets, popup and secure-input host.
+ * Use `?presentation=sidebar` for the same chat surface without global navigation
+ * or agent Meta at any viewport width. `?embed=1` keeps iframe-preview behavior
+ * and takes precedence over sidebar presentation; ordinary pages are unchanged.
+ * @param opts Shell content and optional active-agent and document metadata.
+ * @param opts.currentId Active agent ID; defaults to the x-hyper-agent request header.
+ * @param opts.title Page title prefix; omitted titles use hyper-code2.
+ * @param opts.main Trusted rendered HTML for the main page surface.
+ * @param opts.headExtra Trusted additional document-head markup; omitted by default.
  */
 export default async function (ctx: Context, session: Session | null, opts: {
         /** Identifier of the currently selected agent. */ currentId?: string;
@@ -20,6 +21,8 @@ export default async function (ctx: Context, session: Session | null, opts: {
     const pageTitle = opts.title ? `${opts.title} · hyper-code2` : "hyper-code2";
     const embedded = session?.url?.searchParams.get("embed") === "1";
     // A tiny terminal prompt: dark enough to survive light browser chrome,
+    const sidebar = !embedded && session?.url?.searchParams.get("presentation") === "sidebar";
+    const hideNavigation = embedded || sidebar;
     // with a mint chevron and violet cursor that remain legible at 16×16.
     const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#252a34"/><path d="m8 9 7 7-7 7" fill="none" stroke="#6ee7b7" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 23H25" stroke="#a78bfa" stroke-width="3.2" stroke-linecap="round"/><circle cx="25" cy="7" r="2.3" fill="#fb7185"/></svg>`;
     const favicon = `data:image/svg+xml,${encodeURIComponent(faviconSvg)}`;
@@ -206,6 +209,13 @@ export default async function (ctx: Context, session: Session | null, opts: {
   #app-popup > div { max-height: calc(100dvh - 1rem) !important; }
 }
 
+
+/* Sidebar presentation reuses the page and live chat, independent of viewport. */
+body[data-presentation="sidebar"] #quick-bar,
+body[data-presentation="sidebar"] #mobile-nav-button,
+body[data-presentation="sidebar"] #nav-overlay,
+body[data-presentation="sidebar"] [data-page="agent"] > aside[id^="agent-meta-"] { display: none !important; }
+body[data-presentation="sidebar"] #chat-panel > header { padding-left: .55rem !important; }
 </style>
 
 <style>
@@ -234,10 +244,10 @@ ${opts.headExtra ?? ""}
 <script src="/screen/client.js" defer></script>
 <script src="/ui/wake-timer.js" defer></script>
 </head>
-<body hx-ext="popup-rpc" class="bg-base-200 text-base-content text-sm h-screen${embedded ? " overflow-hidden" : ""}"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}>
+<body hx-ext="popup-rpc" class="bg-base-200 text-base-content text-sm h-screen${embedded ? " overflow-hidden" : ""}"${currentId ? ` data-agent-id="${esc(currentId)}"` : ""}${sidebar ? ' data-presentation="sidebar"' : ""}>
 <div id="frame" class="relative flex h-screen">
-  ${embedded ? "" : ctx.fns.procs.ui.button({ action: "open-global-menu-mobile", html: '<i class="ph ph-squares-four text-xl" aria-hidden="true"></i>', appearance: "plain", title: "Agents and pages", ariaLabel: "Open agents and pages", class: "hidden", attrs: { id: "mobile-nav-button", onclick: "window.__navOpen?.()" } })}
-  ${embedded ? "" : `<nav id="quick-bar" aria-label="Quick access" class="my-2 ml-2 mr-1 flex h-[calc(100%-1rem)] w-10 shrink-0 flex-col items-center rounded-2xl border border-ui-border py-2 shadow-sm">
+  ${hideNavigation ? "" : ctx.fns.procs.ui.button({ action: "open-global-menu-mobile", html: '<i class="ph ph-squares-four text-xl" aria-hidden="true"></i>', appearance: "plain", title: "Agents and pages", ariaLabel: "Open agents and pages", class: "hidden", attrs: { id: "mobile-nav-button", onclick: "window.__navOpen?.()" } })}
+  ${hideNavigation ? "" : `<nav id="quick-bar" aria-label="Quick access" class="my-2 ml-2 mr-1 flex h-[calc(100%-1rem)] w-10 shrink-0 flex-col items-center rounded-2xl border border-ui-border py-2 shadow-sm">
     ${ctx.fns.procs.ui.button({ action: "open-global-menu", html: '<i class="ph ph-squares-four text-base" aria-hidden="true"></i>', appearance: "plain", title: "Global menu — ⌘/", ariaLabel: "Open global menu", class: "flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content", attrs: { onclick: "window.__navOpen?.()" } })}
     ${ctx.fns.procs.ui.button({ action: "toggle-theme", html: '<i class="ph ph-moon" aria-hidden="true"></i>', appearance: "plain", title: "Switch color theme", ariaLabel: "Switch color theme", class: "mt-1 flex size-7 items-center justify-center rounded-md text-base-content/60 hover:bg-base-300 hover:text-base-content", attrs: { id: "theme-toggle", "aria-pressed": "false" } })}
     <div id="quick-items" class="mt-2 flex min-h-0 flex-1 flex-col items-center gap-1" aria-label="Pinned pages"></div>
@@ -258,7 +268,7 @@ ${embedded ? "" : `<dialog id="app-popup" class="m-auto max-h-[85vh] w-[min(48re
     <div id="app-popup-body" class="app-popup-body min-h-0 flex-1 overflow-auto bg-base-200/60 p-5 text-xs text-base-content/70"></div>
   </div>
 </dialog>
-${ctx.fns.ui.navMenu({})}`}
+${hideNavigation ? "" : ctx.fns.ui.navMenu({})}`}
 ${ctx.fns.procs.ui.button({ action: "secure-input", appearance: "plain", ariaLabel: "Secure input", class: "hidden", attrs: { id: "secure-input-host", "hx-popup": "secureInput.current", "data-pending": (ctx.state as any).secureInput?.prompts?.size ? '1' : '0' } })}
 
 ${embedded ? `<script>document.addEventListener('keydown',function(event){if(event.key==='Escape'){event.preventDefault();window.parent.postMessage({type:'ui.close-popup'},location.origin)}})</script>` : `<script>window.addEventListener('message',function(event){if(event.origin!==location.origin||event.data?.type!=='ui.close-popup')return;var dialog=document.getElementById('app-popup');if(dialog?.open)dialog.close()})</script>`}

@@ -2,6 +2,9 @@
 export default async function (ctx: Context, session: Session | null, opts: { req: Request }): Promise<Response | void> {
     const url = new URL(opts.req.url);
     const password = await ctx.fns.auth.password({});
+    // Dedicated bridge owns its narrow authentication. Its bearer is never a UI/REPL credential.
+    if (url.pathname.startsWith('/sidebar/api/')) return ctx.fns.sidebar.bridge({ req: opts.req });
+    if (url.pathname.startsWith('/sidebar/approve/')) return ctx.fns.sidebar.approval({ req: opts.req });
     if (password) {
         const publicPath = url.pathname === "/auth/login" || url.pathname === "/auth/logout" || url.pathname === "/favicon.ico";
         const infrastructurePath = url.pathname === "/repl" || url.pathname.startsWith("/external/");

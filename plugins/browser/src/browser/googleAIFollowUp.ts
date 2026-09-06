@@ -16,7 +16,8 @@ export default async function (
 ) {
     const question = String(opts.question ?? "").trim();
     if (!question) throw new Error("browser.googleAIFollowUp: question is required");
-    const session = opts.session || "google-ai";
+    const scope = await ctx.fns.cdp.scope({ session: opts.session });
+    const session = scope.session || "google-ai";
     const timeoutMs = Math.max(5_000, Math.min(Number(opts.timeoutMs ?? 45_000), 120_000));
 
     const submitted = await ctx.fns.browser.evaluate({ session, expression: `(() => {

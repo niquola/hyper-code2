@@ -64,6 +64,50 @@ describe("ui.layout", () => {
     });
 
 
+    test("sidebar presentation reuses the live page without navigation and keeps popup hosts", async () => {
+        const ctx: any = await mkTestCtx();
+        const url = new URL("http://localhost/agent/ab?presentation=sidebar");
+        const session: any = { url, req: new Request(url) };
+        const main = '<div data-page="agent"><section id="chat-panel"><header>Chat</header><div id="messages" data-stream="live"></div></section><aside id="agent-meta-ab">Meta</aside></div>';
+        const html = await ctx.state.registry.ui.layout(ctx, session, { main, currentId: "ab" });
+        expect(html).toContain(main);
+        expect(html).toMatch(/<body[^>]*data-presentation="sidebar"/);
+        expect(html).toContain('data-agent-id="ab"');
+        for (const id of ["quick-bar", "nav-overlay", "mobile-nav-button", "theme-toggle"]) {
+            expect(html).not.toContain(`id="${id}"`);
+        }
+        for (const id of ["app-popup", "app-popup-body", "secure-input-host"]) {
+            expect(html).toContain(`id="${id}"`);
+        }
+        for (const script of ["/agent/chat.js", "/procs/events/client.js", "/ui/hotkeys.js", "/ui/popup.js", "/ui/meta.js"]) {
+            expect(html).toContain(`src="${script}"`);
+        }
+        // These scoped overrides follow (rather than live inside) the mobile media query.
+        expect(html).toMatch(/}\s*\/\* Sidebar presentation/);
+        expect(html).toContain('body[data-presentation="sidebar"] [data-page="agent"] > aside[id^="agent-meta-"] { display: none !important; }');
+        expect(html).toContain('body[data-presentation="sidebar"] #mobile-nav-button,');
+        expect(html).toContain('body[data-presentation="sidebar"] #chat-panel > header { padding-left: .55rem !important; }');
+        expect(html).toContain("event.data?.type!=='ui.close-popup'");
+    });
+
+    test("sidebar is explicit and does not change ordinary or embedded pages", async () => {
+        const ctx: any = await mkTestCtx();
+        for (const query of ["", "?presentation=other", "?presentation=sidebar&embed=1"]) {
+            const url = new URL(`http://localhost/agent/ab${query}`);
+            const html = await ctx.state.registry.ui.layout(ctx, { url, req: new Request(url) }, { main: "page" });
+            expect(html).not.toMatch(/<body[^>]*data-presentation="sidebar"/);
+            if (query.includes("embed=1")) {
+                expect(html).not.toContain('id="app-popup"');
+                expect(html).not.toContain('id="nav-overlay"');
+                expect(html).toContain("window.parent.postMessage({type:'ui.close-popup'}");
+            } else {
+                expect(html).toContain('id="app-popup"');
+                expect(html).toContain('id="nav-overlay"');
+                expect(html).toContain('id="mobile-nav-button"');
+            }
+        }
+    });
+
     test("host layout closes its popup when an embedded Files frame sends Escape", async () => {
         const ctx: any = await mkTestCtx();
         const html = await ctx.fns.ui.layout({ main: "", title: "t" });

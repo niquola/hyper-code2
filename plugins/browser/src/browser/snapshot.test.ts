@@ -9,7 +9,7 @@ function context(nodes: any[], page: any = { title: "Example", url: "https://exa
             browser: {
                 evaluate: async () => normalizedPage,
             },
-            cdp: {
+            cdp: { scope: async (opts: any) => ({ ...opts, bound: false }),
                 send: async ({ method }: any) => {
                     if (method === "Page.getFrameTree") return { frameTree: { frame: { id: "frame-1", loaderId: "loader-1" } } };
                     if (method === "Accessibility.enable") return {};

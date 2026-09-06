@@ -23,7 +23,8 @@ export default async function (
     const query = String(opts.query ?? "").trim();
     if (!query) throw new Error("browser.googleSearch: query is required");
     const count = Math.max(1, Math.min(Number(opts.count ?? 8), 20));
-    const session = opts.session || "google-search";
+    const scope = await ctx.fns.cdp.scope({ session: opts.session });
+    const session = scope.session || "google-search";
     const language = String(opts.language || "en").replace(/[^a-z-]/gi, "");
     const url = `https://www.google.com/search?q=${encodeURIComponent(query)}&hl=${encodeURIComponent(language)}`;
     try {

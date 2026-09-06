@@ -77,7 +77,8 @@ export default async function (
         timeoutMs?: number;
     },
 ): Promise<ActResult> {
-    const session = String(opts.session || "main");
+    const scope = await ctx.fns.cdp.scope({ session: opts.session });
+    const session = String(scope.session || "main");
     if (!Array.isArray(opts.actions) || opts.actions.length === 0) {
         throw new TypeError("browser.act: actions must be a non-empty array");
     }

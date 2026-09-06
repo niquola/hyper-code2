@@ -11,6 +11,8 @@ export default async function (
   /** Browser target identifier to close. */
   targetId?: string },
 ): Promise<{ closed: string }> {
+    const scope = await ctx.fns.cdp.scope({ session: opts.session, targetId: opts.targetId });
+    opts = { ...opts, session: scope.session, targetId: scope.targetId };
     const sessions: Map<string, any> | undefined = (ctx.state as any).cdp?.sessions;
     const handle = opts.session ? sessions?.get(opts.session) : null;
     const targetId = String(opts.targetId || handle?.targetId || "");
@@ -33,6 +35,12 @@ export default async function (
         };
         ws.onerror = () => { clearTimeout(timer); reject(new Error("CDP browser websocket failed")); };
     });
-    if (handle) { try { handle.ws.close(); } catch {} sessions?.delete(opts.session!); }
+    // Preserve every logical name pointing at the closed target: later calls must
+    // fail on that target, never silently create a replacement page.
+    for (const entry of sessions?.values() ?? []) {
+        if (entry.targetId !== targetId) continue;
+        entry.closed = true;
+        try { entry.ws?.close(); } catch {}
+    }
     return { closed: targetId };
 }

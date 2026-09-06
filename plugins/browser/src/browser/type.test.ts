@@ -9,7 +9,7 @@ test("types characters through CDP Input.insertText", async () => {
             press: async (opts: any) => { pressed.push(opts); return { key: opts.key }; },
             evaluate: async () => "Copenhagen",
         },
-        cdp: {
+        cdp: { scope: async (opts: any) => ({ ...opts, bound: false }),
             send: async (opts: any) => { sent.push(opts); return {}; },
         },
     } } as unknown as Context;
@@ -32,7 +32,7 @@ test("clear selects and removes existing content before typing", async () => {
             press: async ({ key }: any) => { pressed.push(key); return { key }; },
             evaluate: async () => "new",
         },
-        cdp: { send: async () => ({}) },
+        cdp: { scope: async (opts: any) => ({ ...opts, bound: false }), send: async () => ({}) },
     } } as unknown as Context;
 
     const result = await typeText(ctx, null, { target: { ref: "r1e1" }, text: "new", clear: true });
@@ -47,7 +47,7 @@ test("supports Unicode code points without splitting surrogate pairs", async () 
             press: async () => ({ key: "ArrowRight" }),
             evaluate: async () => "✈️",
         },
-        cdp: { send: async ({ params }: any) => { inserted.push(params.text); return {}; } },
+        cdp: { scope: async (opts: any) => ({ ...opts, bound: false }), send: async ({ params }: any) => { inserted.push(params.text); return {}; } },
     } } as unknown as Context;
 
     const result = await typeText(ctx, null, { target: { css: "input" }, text: "✈️" });

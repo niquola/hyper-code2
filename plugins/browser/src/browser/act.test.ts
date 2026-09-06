@@ -9,7 +9,7 @@ function fakeContext(options: { ambiguous?: boolean; fillFails?: boolean } = {})
             browser: {
                 evaluate: async () => ({ url: "https://example.test", title: "Example" }),
             },
-            cdp: {
+            cdp: { scope: async (opts: any) => ({ ...opts, bound: false }),
                 send: async ({ method, params }: any) => {
                     methods.push(method);
                     if (method === "Runtime.evaluate") {

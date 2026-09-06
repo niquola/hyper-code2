@@ -73,7 +73,8 @@ export default async function (
         sinceRevision?: string;
     } = {},
 ): Promise<SnapshotResult> {
-    const session = String(opts.session || "main");
+    const scope = await ctx.fns.cdp.scope({ session: opts.session });
+    const session = String(scope.session || "main");
     const mode: SnapshotMode = opts.mode ?? "interactive";
     if (!(["interactive", "text", "a11y", "markdown", "html"] as string[]).includes(mode)) {
         throw new Error(`browser.snapshot: unsupported mode ${String(opts.mode)}`);

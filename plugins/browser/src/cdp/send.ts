@@ -1,6 +1,8 @@
 // Send one command over a named CDP page session with a bounded wait.
 /**
- * Sends a command through a named Chrome DevTools Protocol session.
+ * Sends a CDP command exactly once through a named page session.
+ * Reconnects before sending if needed; never retries a command after an error or timeout,
+ * since a mutation may already have executed.
  */
 export default async function (
     ctx: Context,
@@ -15,8 +17,9 @@ export default async function (
   /** Maximum command duration in milliseconds. */
   timeoutMs?: number },
 ): Promise<any> {
-    const name = String(opts.session || "main");
-    let handle = await ctx.fns.cdp.session({ name });
+    const scope = await ctx.fns.cdp.scope({ session: opts.session });
+    if (scope.bound && /^(Target|Browser)\./.test(opts.method)) throw new Error("Browser-wide CDP commands are unavailable to a bound agent");
+    const handle = await ctx.fns.cdp.session({ name: scope.session, targetId: scope.targetId });
     const call = async () => {
         const id = ++handle.msgId;
         return await new Promise<any>((resolve, reject) => {
@@ -28,16 +31,15 @@ export default async function (
                 resolve: (value: any) => { clearTimeout(timer); resolve(value); },
                 reject: (error: any) => { clearTimeout(timer); reject(error); },
             });
-            handle.ws.send(JSON.stringify({ id, method: opts.method, params: opts.params ?? {} }));
+            try {
+                handle.ws.send(JSON.stringify({ id, method: opts.method, params: opts.params ?? {} }));
+            } catch (error) {
+                handle.pending.delete(id);
+                clearTimeout(timer);
+                reject(error);
+            }
         });
     };
 
-    try {
-        return await call();
-    } catch (error) {
-        try { handle.ws.close(); } catch {}
-        ((ctx.state as any).cdp?.sessions as Map<string, any> | undefined)?.delete(name);
-        handle = await ctx.fns.cdp.session({ name });
-        return await call().catch(() => { throw error; });
-    }
+    return await call();
 }

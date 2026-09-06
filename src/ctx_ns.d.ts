@@ -144,6 +144,7 @@ declare global {
             wakeMaster: Injected<typeof import("../.hyper/calendar/wakeMaster").default>;
         };
         cdp: {
+            scope: Injected<typeof import("../plugins/browser/src/cdp/scope").default>;
             send: Injected<typeof import("../plugins/browser/src/cdp/send").default>;
             session: Injected<typeof import("../plugins/browser/src/cdp/session").default>;
         };
@@ -989,6 +990,14 @@ declare global {
             startCodexLogin: Injected<typeof import("./settings/startCodexLogin").default>;
             startKimiLogin: Injected<typeof import("./settings/startKimiLogin").default>;
             status: Injected<typeof import("./settings/status").default>;
+        };
+        sidebar: {
+            approval: Injected<typeof import("./sidebar/approval").default>;
+            bindingForAgent: Injected<typeof import("./sidebar/bindingForAgent").default>;
+            bridge: Injected<typeof import("./sidebar/bridge").default>;
+            ensureSchema: Injected<typeof import("./sidebar/ensureSchema").default>;
+            requestOrigin: Injected<typeof import("./sidebar/requestOrigin").default>;
+            targetSnapshot: Injected<typeof import("./sidebar/targetSnapshot").default>;
         };
         skill: {
             greet: Injected<typeof import("../.hyper/skill/greet").default>;

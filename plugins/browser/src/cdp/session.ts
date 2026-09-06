@@ -2,7 +2,8 @@
 // creating a background tab. Runtime handles are deliberately in ctx.state,
 // never module globals, so hot reload does not fork the connection registry.
 /**
- * Creates or reuses a Chrome DevTools Protocol session.
+ * Creates or reconnects a named Chrome page session, preserving its original target.
+ * A disconnected or missing previously selected target never creates a replacement tab.
  */
 export default async function (
     ctx: Context,
@@ -13,17 +14,23 @@ export default async function (
   /** Existing browser target identifier to attach to. */
   targetId?: string } = {},
 ): Promise<any> {
+    const scope = await ctx.fns.cdp.scope({ session: opts.name, targetId: opts.targetId });
+    opts = { ...opts, name: scope.session, targetId: scope.targetId };
     const name = String(opts.name || "main");
     const state = ((ctx.state as any).cdp ??= { sessions: new Map() });
     const sessions: Map<string, any> = (state.sessions ??= new Map());
     const existing = sessions.get(name);
+    if (existing?.closed) throw new Error(`CDP target ${existing.targetId} was closed`);
+    if (existing?.targetId && opts.targetId && existing.targetId !== opts.targetId) {
+        throw new Error(`CDP session ${name} is already bound to target ${existing.targetId}`);
+    }
     if (existing?.ws?.readyState === WebSocket.OPEN) {
         existing.lastUsed = Date.now();
         return existing;
     }
 
     const browserUrl = String(ctx.env.CDP_BROWSER_URL || "http://127.0.0.1:9222").replace(/\/$/, "");
-    let targetId = opts.targetId;
+    let targetId = existing?.targetId || opts.targetId;
     if (!targetId) {
         const version = await fetch(`${browserUrl}/json/version`, { signal: AbortSignal.timeout(3000) });
         if (!version.ok) throw new Error(`Chrome CDP unavailable at ${browserUrl} (${version.status})`);
@@ -44,6 +51,8 @@ export default async function (
         });
     }
 
+    // Retain target identity even if the first connection attempt fails.
+    if (!existing) sessions.set(name, { name, targetId, ws: null, pending: new Map() });
     const wsUrl = `${browserUrl.replace(/^http/, "ws")}/devtools/page/${targetId}`;
     return await new Promise<any>((resolve, reject) => {
         const ws = new WebSocket(wsUrl);
@@ -62,6 +71,13 @@ export default async function (
             message.error ? pending.reject(new Error(message.error.message)) : pending.resolve(message.result);
         };
         ws.onerror = () => { clearTimeout(timer); reject(new Error(`CDP tab ${targetId} websocket failed`)); };
-        ws.onclose = () => { if (sessions.get(name) === handle) sessions.delete(name); };
+        ws.onclose = () => {
+            clearTimeout(timer);
+            const error = new Error(`CDP tab ${targetId} disconnected; command outcome may be unknown`);
+            for (const pending of handle.pending.values()) pending.reject(error);
+            handle.pending.clear();
+            reject(error);
+            // Keep the handle as a target-identity tombstone for reconnect.
+        };
     });
 }

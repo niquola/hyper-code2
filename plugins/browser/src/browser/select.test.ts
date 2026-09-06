@@ -5,7 +5,7 @@ function context(options: Array<{ value: string; label: string }>, multiple = fa
     let selected: string[] = [];
     const ctx = { state: {}, fns: {
         browser: { evaluate: async () => ({ url: "https://form.test", title: "Form" }) },
-        cdp: { send: async ({ method, params }: any) => {
+        cdp: { scope: async (opts: any) => ({ ...opts, bound: false }), send: async ({ method, params }: any) => {
             if (method === "Runtime.evaluate") return { result: { objectId: "select-1" } };
             if (method === "Runtime.callFunctionOn") {
                 const source = String(params.functionDeclaration || "");

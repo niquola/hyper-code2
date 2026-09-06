@@ -1,0 +1,19 @@
+:root { color-scheme: light dark; font: 13px system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.panel { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+header { flex: none; padding: 10px; border-bottom: 1px solid #8886; }
+#source { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#status { margin: 5px 0; opacity: .8; }
+nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button, input { font: inherit; padding: 6px 9px; }
+button, a { cursor: pointer; }
+a { color: light-dark(#164faf, #8db7ff); }
+#error { padding: 10px; margin: 0; background: light-dark(#fff0d0, #44351d); overflow-wrap: anywhere; }
+iframe { border: 0; width: 100%; flex: 1; min-height: 0; background: white; }
+[hidden] { display: none !important; }
+.options main { max-width: 650px; margin: 40px auto; padding: 20px; }
+.options p { line-height: 1.5; }
+label { display: block; margin-bottom: 8px; }
+input { width: 100%; }
+dd { margin: 4px 0 16px; overflow-wrap: anywhere; }

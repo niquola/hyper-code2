@@ -4,7 +4,7 @@ import search from "./googleSearch";
 test("navigates to Google and returns deduplicated compact results", async () => {
     let navigated: any;
     const closed: string[] = [];
-    const ctx = { fns: { browser: {
+    const ctx = { fns: { cdp: { scope: async (opts: any) => ({ ...opts, bound: false }) }, browser: {
         navigate: async (opts: any) => { navigated = opts; },
         evaluate: async () => ({ title: "q - Google Search", blocked: false, results: [
             { title: "One", url: "https://one.test", snippet: "first" },
@@ -25,7 +25,7 @@ test("navigates to Google and returns deduplicated compact results", async () =>
 });
 
 test("reports Google consent/CAPTCHA instead of returning an empty list", async () => {
-    const ctx = { fns: { browser: {
+    const ctx = { fns: { cdp: { scope: async (opts: any) => ({ ...opts, bound: false }) }, browser: {
         navigate: async () => {},
         evaluate: async () => ({ blocked: true, results: [] }),
         tabClose: async () => {},

@@ -12,6 +12,15 @@ export default async function (
   /** Session-name prefix to close. */
   prefix?: string },
 ): Promise<{ closed: string[] }> {
+    const scope = await ctx.fns.cdp.scope({});
+    if (scope.bound) {
+        for (const name of opts.sessions ?? []) await ctx.fns.cdp.scope({ session: name });
+        if (opts.prefix && !scope.session!.startsWith(opts.prefix)) throw new Error("Browser prefix does not select this agent's bound session");
+        const selected = opts.sessions?.includes(scope.session!) || (opts.prefix && scope.session!.startsWith(opts.prefix));
+        if (!selected) return { closed: [] };
+        await ctx.fns.browser.tabClose({ session: scope.session });
+        return { closed: [scope.session!] };
+    }
     const map: Map<string, any> = (ctx.state as any).cdp?.sessions ?? new Map();
     const names = opts.sessions?.length
         ? opts.sessions
