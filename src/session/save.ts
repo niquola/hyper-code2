@@ -6,8 +6,8 @@ agent: types.agent.Agent }): Promise<void> {
     const now = Date.now();
     await ctx.fns.procs.db.run({
         sql: `
-        INSERT INTO agents (id, title, workspace_dir, model, reasoning_effort, system_prompt, tools, scratchpad, reflection, sleep_context, goal, reflection_enabled, sleep_enabled, function_rag_enabled, status_line, status_line_every, parent_id, visibility, fork_offset, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM agents WHERE id = ?), ?), ?)
+        INSERT INTO agents (id, title, workspace_dir, model, reasoning_effort, system_prompt, tools, scratchpad, reflection, sleep_context, goal, reflection_enabled, sleep_enabled, function_rag_enabled, status_line, status_line_every, status_line_mode, parent_id, visibility, fork_offset, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM agents WHERE id = ?), ?), ?)
         ON CONFLICT(id) DO UPDATE SET
             model = excluded.model,
             title = excluded.title,
@@ -27,6 +27,7 @@ agent: types.agent.Agent }): Promise<void> {
             function_rag_enabled = excluded.function_rag_enabled,
             status_line = excluded.status_line,
             status_line_every = excluded.status_line_every,
+            status_line_mode = excluded.status_line_mode,
             updated_at = excluded.updated_at
     `,
         params: [
@@ -46,6 +47,7 @@ agent: types.agent.Agent }): Promise<void> {
             agent.functionRagEnabled === true,
             agent.statusLine ?? "",
             Math.max(1, Number(agent.statusLineEvery ?? 1)),
+            agent.statusLineMode ?? "global",
             agent.parentId ?? null,
             agent.visibility ?? "nav",
             agent.forkOffset ?? null,

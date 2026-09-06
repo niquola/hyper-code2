@@ -20,6 +20,8 @@ export type Agent = {
     scratchpad: Record<string, any>;
     parentId?: string | null;
     statusLine?: string;
+    /** Selects inherited global text, a local replacement, or no user status line. */
+    statusLineMode?: "global" | "custom" | "off";
     /** Controls where the agent is listed; it is not an access-control boundary. */
     visibility?: "nav" | "team" | "hidden";
     statusLineEvery?: number;

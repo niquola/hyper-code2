@@ -11,16 +11,19 @@ export default async function (
         /** Text used by the operation. */
     text: string;
         /** Every used by the operation. */
-    every?: number },
-): Promise<{ text: string; every: number }> {
+    every?: number;
+        /** Whether this agent inherits the global value, replaces it, or disables it. */
+    mode?: "global" | "custom" | "off" },
+): Promise<{ text: string; every: number; mode: "global" | "custom" | "off" }> {
     const text = String(opts.text ?? "").trim().slice(0, 500);
     const every = Math.max(1, Math.min(100, Math.floor(Number(opts.every ?? 1) || 1)));
+    const mode = opts.mode === "off" || opts.mode === "global" ? opts.mode : "custom";
     const result = await ctx.fns.procs.db.run({
-        sql: "UPDATE agents SET status_line = ?, status_line_every = ?, updated_at = ? WHERE id = ? AND archived_at IS NULL",
-        params: [text, every, Date.now(), opts.id],
+        sql: "UPDATE agents SET status_line = ?, status_line_every = ?, status_line_mode = ?, updated_at = ? WHERE id = ? AND archived_at IS NULL",
+        params: [text, every, mode, Date.now(), opts.id],
     });
     if (result.changes === 0) throw new Error(`agent not found: ${opts.id}`);
     const agent = (ctx.state as any).agent?.[opts.id];
-    if (agent) { agent.statusLine = text; agent.statusLineEvery = every; }
-    return { text, every };
+    if (agent) { agent.statusLine = text; agent.statusLineEvery = every; agent.statusLineMode = mode; }
+    return { text, every, mode };
 }

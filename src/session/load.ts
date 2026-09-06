@@ -18,6 +18,7 @@ id: string }): Promise<types.agent.Agent | null> {
         scratchpad: JSON.parse(row.scratchpad),
         messages: [],
         statusLine: row.status_line ?? "",
+        statusLineMode: row.status_line_mode === "custom" || row.status_line_mode === "off" ? row.status_line_mode : "global",
         statusLineEvery: Math.max(1, Number(row.status_line_every ?? 1)),
         reflection: row.reflection == null ? null : (typeof row.reflection === 'string' ? JSON.parse(row.reflection) : row.reflection),
         events: [],

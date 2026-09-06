@@ -8,8 +8,10 @@ export default async function (
     agent: types.agent.Agent },
 ): Promise<string> {
     const agent = opts.agent;
-    const userText = String(agent.statusLine ?? "").trim();
-    const every = Math.max(1, Number(agent.statusLineEvery ?? 1));
+    const mode = agent.statusLineMode ?? "global";
+    const globalText = mode === "global" ? String(await ctx.fns.settings.getString({ module: "agent", scopeType: "global", key: "globalStatusLine", fallback: "" }) ?? "").trim() : "";
+    const userText = mode === "custom" ? String(agent.statusLine ?? "").trim() : mode === "global" ? globalText : "";
+    const every = mode === "global" ? 1 : Math.max(1, Number(agent.statusLineEvery ?? 1));
     const row = ((await ctx.fns.procs.db.select({
         sql: "SELECT COUNT(*) AS n FROM messages WHERE agent_id = ? AND role = 'user' AND excluded_from_cursor = 0",
         params: [agent.id],

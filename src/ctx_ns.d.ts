@@ -439,10 +439,12 @@ declare global {
         knowledge: {
             agentMetaSection: Injected<typeof import("../plugins/knowledge/src/knowledge/agentMetaSection").default>;
             ensure: Injected<typeof import("../plugins/knowledge/src/knowledge/ensure").default>;
+            extractionSchema: Injected<typeof import("../plugins/knowledge/src/knowledge/extractionSchema").default>;
             find: Injected<typeof import("../plugins/knowledge/src/knowledge/find").default>;
             get: Injected<typeof import("../plugins/knowledge/src/knowledge/get").default>;
             importFiles: Injected<typeof import("../plugins/knowledge/src/knowledge/importFiles").default>;
             link: Injected<typeof import("../plugins/knowledge/src/knowledge/link").default>;
+            matchAnonymous: Injected<typeof import("../plugins/knowledge/src/knowledge/matchAnonymous").default>;
             matchPerson: Injected<typeof import("../plugins/knowledge/src/knowledge/matchPerson").default>;
             observe: Injected<typeof import("../plugins/knowledge/src/knowledge/observe").default>;
             rebuildSearch: Injected<typeof import("../plugins/knowledge/src/knowledge/rebuildSearch").default>;
@@ -1193,6 +1195,7 @@ declare global {
             type Result = import("./git/Result").Result;
         }
         namespace knowledge {
+            type ExtractionSpec = import("../plugins/knowledge/src/knowledge/ExtractionSpec").ExtractionSpec;
             type Mention = import("../plugins/knowledge/src/knowledge/Mention").Mention;
             type MentionResolution = import("../plugins/knowledge/src/knowledge/MentionResolution").MentionResolution;
         }
