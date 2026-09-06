@@ -4,8 +4,12 @@ import {DEFAULT_BASE, normalizeBase, panelPath, targetForTab, sourceLabel} from 
 let queue = Promise.resolve();
 const serial = fn => { const result = queue.then(fn); queue = result.catch(() => {}); return result; };
 let state;
-async function load() {
-  if (state) return state;
+let loading;
+function load() {
+  if (state) return Promise.resolve(state);
+  return loading ||= loadState();
+}
+async function loadState() {
   await chrome.storage.local.setAccessLevel({accessLevel: 'TRUSTED_CONTEXTS'});
   const local = await chrome.storage.local.get(['installationId', 'base']);
   if (!local.installationId) await chrome.storage.local.set({installationId: crypto.randomUUID()});
@@ -35,10 +39,10 @@ async function announce(record) {
 }
 async function ensure(tab) {
   let record = state.tabs[tab.id];
-  if (!record) {
-    record = {tabId: tab.id, windowId: tab.windowId, nonce: crypto.randomUUID(), label: sourceLabel(tab), status: 'Open panel to connect'};
-    state.tabs[tab.id] = record;
-    await save();
+  if (pendingActions.has(tab.id)) return record;
+  if (!record?.optedIn) {
+    await chrome.sidePanel.setOptions({tabId: tab.id, enabled: false});
+    return record;
   }
   record.windowId = tab.windowId;
   record.label = sourceLabel(tab);
@@ -67,7 +71,7 @@ async function closeTab(tabId) {
 }
 async function refresh(tabId, opening = false) {
   let record = state.tabs[tabId];
-  if (!record || (!opening && !record.opened)) return record;
+  if (!record?.optedIn || (!opening && !record.opened)) return record;
   record.opened = true;
   await save(); // Persist intent before a bind request: retry is backend-idempotent.
   try {
@@ -93,7 +97,9 @@ async function refresh(tabId, opening = false) {
 }
 async function boot() {
   await load();
-  await chrome.sidePanel.setPanelBehavior({openPanelOnActionClick: true});
+  // Clear the old installation's automatic/global action behavior as well.
+  await chrome.sidePanel.setPanelBehavior({openPanelOnActionClick: false});
+  await chrome.sidePanel.setOptions({enabled: false});
   const tabs = await chrome.tabs.query({});
   const live = new Set(tabs.map(tab => tab.id));
   for (const id of Object.keys(state.tabs)) if (!live.has(Number(id))) await closeTab(Number(id));
@@ -103,6 +109,26 @@ async function boot() {
 const ready = serial(boot);
 ready.catch(error => console.error('Sidebar initialization:', error));
 function event(fn) { return (...args) => { serial(async () => { await load(); await fn(...args); }).catch(error => console.error('Sidebar:', error)); }; }
+// Chrome drops the user gesture across even setOptions()'s promise (live-tested).
+// Issue both API calls synchronously, in order, before awaiting anything. Persist
+// through the queue before panel messages; a cold worker keeps the saved chat but
+// uses a fresh panel nonce. Boot must not disable a click pending initialization.
+const pendingActions = new Map();
+chrome.action.onClicked.addListener(tab => {
+  const nonce = state?.tabs[tab.id]?.nonce || crypto.randomUUID();
+  pendingActions.set(tab.id, {tab, nonce});
+  const configured = chrome.sidePanel.setOptions({tabId: tab.id, enabled: true, path: panelPath(tab.id, tab.windowId, nonce)});
+  const opened = chrome.sidePanel.open({tabId: tab.id});
+  Promise.all([configured, opened]).catch(error => console.error('Sidebar action:', error));
+  return serial(async () => {
+    await load();
+    let record = state.tabs[tab.id];
+    if (!record) record = state.tabs[tab.id] = {tabId: tab.id, status: 'Open panel to connect'};
+    Object.assign(record, {optedIn: true, nonce, windowId: tab.windowId, label: sourceLabel(tab)});
+    await save();
+    pendingActions.delete(tab.id);
+  }).catch(error => console.error('Sidebar action state:', error));
+});
 chrome.runtime.onInstalled.addListener(event(boot));
 chrome.runtime.onStartup.addListener(event(boot));
 chrome.tabs.onCreated.addListener(event(ensure));
@@ -154,7 +180,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       return {revoked: true};
     }
     const record = state.tabs[message.tabId];
-    if (!record || record.nonce !== message.nonce || record.windowId !== message.windowId) throw new Error('This panel is stale. Close and reopen it from its tab.');
+    if (!record?.optedIn || record.nonce !== message.nonce || record.windowId !== message.windowId) throw new Error('This panel is stale. Close and reopen it from its tab.');
     const current = await chrome.tabs.get(record.tabId);
     if (current.windowId !== record.windowId) throw new Error('Tab moved windows. Reopen its panel.');
     const result = await refresh(record.tabId, true);

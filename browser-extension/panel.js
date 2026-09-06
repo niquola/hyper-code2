@@ -1,4 +1,4 @@
-import {parsePanelIdentity, agentUrl} from './helpers.js';
+import {parsePanelIdentity, agentUrl, draftUrl} from './helpers.js';
 const identity = parsePanelIdentity(location.search);
 const source = document.querySelector('#source');
 const status = document.querySelector('#status');
@@ -32,13 +32,14 @@ function render(record) {
     return;
   }
   if (invalidated) return;
-  if (record.agentId && base) {
-    open.href = agentUrl(base, record.agentId, false);
+  if ((record.agentId || record.bindingId) && base) {
+    open.href = record.agentId ? agentUrl(base, record.agentId, false) : draftUrl(base, record.bindingId, false);
     open.hidden = false;
-    // Navigation/context changes never reload the existing composer or SSE stream.
-    if (mountedAgent !== record.agentId) {
-      chat.src = agentUrl(base, record.agentId);
-      mountedAgent = record.agentId;
+    // A mounted draft redirects itself after submit; context updates must not reload it.
+    const mountKey = record.bindingId || record.agentId;
+    if (mountedAgent !== mountKey) {
+      chat.src = record.agentId ? agentUrl(base, record.agentId) : draftUrl(base, record.bindingId);
+      mountedAgent = mountKey;
     }
     chat.hidden = false;
   }

@@ -21,6 +21,8 @@ export type State = Array<{
     icon: string;
     description: string;
     config: Record<string, any>;        // what workspace.json passed under this name
+    /** Trusted procs.domains declarations, exact hosts or explicit *.suffix rules. */
+    domains?: string[];
     optional: boolean;                  // waits to be named in workspace.json, and can be removed
     // Where its tab belongs when a host groups them: "left" is part of what is
     // being built (the clinical screens a project is written against), "right"

@@ -45,3 +45,10 @@ export function agentUrl(base, agentId, panel = true) {
   if (typeof agentId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(agentId)) throw new Error('Invalid agent ID');
   return `${normalizeBase(base)}/agent/${encodeURIComponent(agentId)}${panel ? '?presentation=sidebar' : ''}`;
 }
+
+
+/** Construct only the safe, local draft path; a binding id is not an auth token. */
+export function draftUrl(base, bindingId, panel = true) {
+  if (typeof bindingId !== 'string' || !/^[a-f0-9-]{36}$/.test(bindingId)) throw new Error('Invalid binding ID');
+  return `${normalizeBase(base)}/sidebar/draft/${bindingId}${panel ? '?presentation=sidebar' : ''}`;
+}

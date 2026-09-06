@@ -7,6 +7,7 @@
     "label": "Zulip",
     "icon": "ph-chat-circle",
     "optional": true,
-    "description": "Live Zulip client for channels, topics, messages, DMs and users across configured instances."
+    "description": "Live Zulip client for channels, topics, messages, DMs and users across configured instances.",
+    "domains": ["chat.fhir.org"]
   }
 }

@@ -110,6 +110,7 @@ export async function apply(ctx: Context, entries: any[], mounted: any[], opts: 
             icon: r.icon ?? "ph-squares-four",
             description: r.description ?? "",
             source: r.source ?? "core", from: r.from ?? null, dir: r.folder ?? r.dir, config: r.config ?? {},
+            domains: r.domains ?? [],
             // Carried through from `modules.discover`: `self` is the process
             // itself (the framework, this host's own src), `prefix` a supervised
             // project mounted under one. Neither is a module anybody manages, and

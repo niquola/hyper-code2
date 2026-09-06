@@ -7,6 +7,7 @@
     "label": "GitHub",
     "icon": "ph-github-logo",
     "optional": true,
-    "description": "GitHub repositories, issues, pull requests, search, reviews and guarded write operations."
+    "description": "GitHub repositories, issues, pull requests, search, reviews and guarded write operations.",
+    "domains": ["github.com", "api.github.com"]
   }
 }

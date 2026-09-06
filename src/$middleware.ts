@@ -6,6 +6,7 @@ export default async function (ctx: Context, session: Session | null, opts: { re
     if (url.pathname.startsWith('/sidebar/api/')) return ctx.fns.sidebar.bridge({ req: opts.req });
     if (url.pathname.startsWith('/sidebar/approve/')) return ctx.fns.sidebar.approval({ req: opts.req });
     if (password) {
+    if (url.pathname.startsWith('/sidebar/draft/')) return ctx.fns.sidebar.draft({ req: opts.req });
         const publicPath = url.pathname === "/auth/login" || url.pathname === "/auth/logout" || url.pathname === "/favicon.ico";
         const infrastructurePath = url.pathname === "/repl" || url.pathname.startsWith("/external/");
         if (!publicPath && !infrastructurePath) {

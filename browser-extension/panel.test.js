@@ -42,3 +42,25 @@ test('close/revoke invalidation unloads frame and link, and ignores stale respon
     }
   }
 });
+
+
+
+test('draft frame survives binding-to-agent context refresh without remount', async () => {
+  const old = {document: globalThis.document, chrome: globalThis.chrome, location: globalThis.location};
+  const nodes = new Map(); let mounts = 0; let listener;
+  for (const id of ['source', 'status', 'error', 'chat', 'open', 'retry', 'settings']) nodes.set(`#${id}`, {hidden: true, addEventListener() {}, removeAttribute(name) { delete this[name]; }});
+  Object.defineProperty(nodes.get('#chat'), 'src', {get() { return this.value; }, set(v) { mounts++; this.value = v; }, configurable: true});
+  const record = {tabId: 11, windowId: 2, nonce: 'draft', agentId: null, bindingId: '12345678-1234-1234-1234-123456789abc', status: 'Connected'};
+  try {
+    globalThis.document = {querySelector: selector => nodes.get(selector)};
+    globalThis.location = {search: '?tabId=11&windowId=2&nonce=draft'};
+    globalThis.chrome = {runtime: {sendMessage: async () => ({ok: true, data: {base: 'http://localhost:3010', record}}), onMessage: {addListener: fn => { listener = fn; }}, openOptionsPage() {}}};
+    await import(`./panel.js?draft-test=${Date.now()}`);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(nodes.get('#chat').src).toContain('/sidebar/draft/');expect(mounts).toBe(1);
+    listener({type: 'state', record: {...record, agentId: 'ab', label: 'Navigated'}});
+    expect(mounts).toBe(1);expect(nodes.get('#open').href).toBe('http://localhost:3010/agent/ab');
+  } finally {
+    for (const [key, value] of Object.entries(old)) { if (value === undefined) delete globalThis[key]; else globalThis[key] = value; }
+  }
+});

@@ -1,5 +1,5 @@
 import {describe, test, expect} from 'bun:test';
-import {DEFAULT_BASE, normalizeBase, panelPath, parsePanelIdentity, targetForTab, sourceLabel, agentUrl} from './helpers.js';
+import {DEFAULT_BASE, normalizeBase, panelPath, parsePanelIdentity, targetForTab, sourceLabel, agentUrl, draftUrl} from './helpers.js';
 
 describe('loopback configuration', () => {
   test('default and explicit ports', () => {
@@ -56,4 +56,12 @@ test('manifest is local MV3 with no injection or remote privileged scripts', asy
   const worker = await Bun.file(new URL('./worker.js', import.meta.url)).text();
   expect(worker).not.toContain('debugger.attach');
   expect(worker).toContain('chrome.debugger.getTargets()');
+});
+
+
+test('draft URL accepts only a safe binding identifier on configured loopback origin', () => {
+  const id = '12345678-1234-1234-1234-123456789abc';
+  expect(draftUrl(DEFAULT_BASE, id)).toBe(`${DEFAULT_BASE}/sidebar/draft/${id}?presentation=sidebar`);
+  for (const value of ['../agent/ab', `${id}?token=x`, 'https://evil.test', null]) expect(() => draftUrl(DEFAULT_BASE, value)).toThrow();
+  expect(() => draftUrl('http://evil.test', id)).toThrow();
 });

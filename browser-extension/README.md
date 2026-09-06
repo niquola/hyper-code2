@@ -9,8 +9,14 @@ Live native-panel, duplicate-tab isolation, iframe message/action, navigation an
 1. Start Hyper (default setting: `http://localhost:3010`) and its existing CDP-enabled Chrome profile. Hyper must reach **that same Chrome instance** through its configured browser CDP endpoint. No browser restart is performed by this extension.
 2. In Chrome 142+, open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the absolute `browser-extension/` directory. Pin the Hyper action if useful. Chrome warns about the sensitive `debugger` permission: we call only `chrome.debugger.getTargets()`, never `attach`.
 3. Open extension **Details → Extension options**. Set the actual Hyper loopback HTTP origin (localhost or 127.0.0.1, any port), then **Pair with Hyper**. A regular Hyper tab opens. Sign in to ordinary Hyper if required; review the displayed extension ID and explicitly approve. Return to options and **Check approval**.
-4. Open a normal source webpage and click the extension action. The first panel opening lazily binds a new ordinary agent, without running the LLM. If Chrome initially opened the default panel during installation, close and reopen it after initialization. Chrome chooses which side hosts panels; use Chrome settings to choose the right side.
-5. Write in the existing Hyper composer. **Open in Hyper** opens the same agent in a full tab. Source title/domain and connection errors remain visible above the iframe. If iframe login/cookies block the page, open Hyper directly and sign in; framing/auth worked in the tested Chrome 151/152 profile with Hyper password enabled, but restrictive cookie policies may differ. Top-level login alone cannot override cookie blocking.
+4. Open a normal source webpage and click the extension action. Opening binds a draft only: **no agent is created or started before the first message**. The draft uses the existing Hyper composer, with the tab title (no `Browser:` prefix) and default model. The panel is disabled by default: click the extension action separately on each tab where you want it. Switching to an untouched tab hides Hyper; returning to an opted-in tab restores its own panel/chat. Chrome chooses which side hosts panels; use Chrome settings to choose the right side.
+5. Submit a message using Enter or Send. Hyper creates one ordinary agent using the then-current tab title and `settings.modelDefault`, attaches the durable binding before enqueue, and opens that chat. Concurrent/retried first submits do not create or append twice. **Open in Hyper** opens this draft or the same existing agent in a full tab. The compact 30px toolbar keeps Open in Hyper, retry and settings; source/status are screen-reader-only, while errors remain visible. If iframe login/cookies block the page, open Hyper directly and sign in; restrictive cookie policies may differ.
+
+## Per-tab opening and upgrades
+
+Opt-in lives as `sidebar.tabs[tabId].optedIn` in `chrome.storage.session`, alongside the tab nonce and binding/chat identity. Boot, navigation, tab creation and activation never opt a tab in. Replaced tabs start disabled and do not inherit another tab's chat. Service-worker restarts restore explicit opt-ins; a full browser restart/extension reload may clear session storage. After updating from a version without `optedIn`, reopen desired tabs using the toolbar action: legacy records remain disabled, but any surviving bound chat/nonce is retained when explicitly reopened.
+
+The global panel and automatic action behavior are disabled. The action handler issues `setOptions({tabId, enabled:true, path})` then `open({tabId})` **synchronously, without awaiting between them**; state persistence is queued before incoming panel messages. A real Chrome CDP `Extensions.triggerAction` check showed that awaiting `setOptions` first loses the user gesture and Chrome rejects `open`. Back-to-back calls successfully opened/bound the native panel. Chrome's [sidePanel documentation](https://developer.chrome.com/docs/extensions/reference/api/sidePanel) specifies gesture-only opening and automatic hiding/restoring across disabled/enabled tabs. Focused live smoke checked untouched tabs disabled, only the clicked tab enabled, native panel `document.visibilityState` changing `visible → hidden → visible` on A → untouched B → A, stable nonce on return, and the 30px native toolbar with source/status clipped to 1px screen-reader-only nodes. Worker unit tests also cover restart, legacy opt-in, close/replacement and rejected stale panel messages.
 
 No build or npm dependencies. Test with:
 
@@ -30,7 +36,7 @@ cd browser-extension && bun test
 
 ## API
 
-See `../docs/research/browser-sidebar-contract.md`. Worker uses only JSON POST `/sidebar/api/{pair,status,bind,context,close,revoke}` with the narrow bridge bearer (except pair). Approval is a regular same-origin Hyper page. iframe authentication is Hyper's ordinary session, **not** the bridge token. `frameUrl` is deliberately reconstructed from the validated base + returned agent ID so a server response cannot point the privileged shell at another origin. UI path is `presentation=sidebar`, not legacy `embed=1`.
+See `../docs/research/browser-sidebar-contract.md`. Worker uses only JSON POST `/sidebar/api/{pair,status,bind,context,close,revoke}` with the narrow bridge bearer (except pair). Approval and draft submission are owner-session Hyper pages, **not** bearer-authorized. Frame URLs are reconstructed from the validated base plus a safe agent ID or UUID binding ID, never trusted as arbitrary server URLs. Draft path is `/sidebar/draft/:bindingId?presentation=sidebar`; existing chat path stays `/agent/:id?presentation=sidebar`. A mounted draft redirects itself after sending; subsequent context updates do not reload its composer. An interrupted first submission fails closed rather than automatically replaying; inspect the mapped chat or stuck binding before manual recovery.
 
 ## Security and limitations
 
@@ -42,9 +48,9 @@ Unrestricted Hyper tools outside the sidebar-specific binding guard may retain o
 
 Use isolated fixture tabs in the same CDP profile. This package does not install itself or restart Chrome.
 
-- Approve pairing; reject unapproved bridge calls. Confirm no agent exists until panel opens.
-- Open panels for two tabs at the same URL; verify different agents and correct target IDs.
-- Send a message through the existing composer, verify normal streaming/history/Stop.
+- Approve pairing; reject unapproved bridge calls. Open/reopen panels and navigate without sending: verify **zero new agents**.
+- Open panels for two tabs at the same URL; verify different draft binding IDs and correct targets, with no agents until submission.
+- Send through the shared composer; verify one creation even on double-submit, current tab title/default model, normal streaming/history/Stop.
 - Navigate/reload the first tab; verify agent and iframe stay unchanged, source updates.
 - Switch tabs and windows; ensure each panel retains its own identity. Move a tab and reopen its panel if stale.
 - Suspend/restart the worker, reopen panel; verify session storage preserves mapping.

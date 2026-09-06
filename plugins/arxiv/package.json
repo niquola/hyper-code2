@@ -7,6 +7,7 @@
     "label": "arXiv",
     "icon": "ph-article",
     "optional": true,
-    "description": "Public arXiv search, paper metadata, abstracts, citations, Markdown notes and PDF/source downloads."
+    "description": "Public arXiv search, paper metadata, abstracts, citations, Markdown notes and PDF/source downloads.",
+    "domains": ["arxiv.org"]
   }
 }

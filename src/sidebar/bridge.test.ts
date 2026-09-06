@@ -28,12 +28,16 @@ test('sidebar explicit approval, durable identity, context, restart and close',a
  expect((await approve('bad')).status).toBe(403);
  expect((await approve(p.nonce)).status).toBe(200);
  const identity={browserEpoch:'epoch-123456789012',tabId:1,targetId:'target-A'};
- const b=await(await call('bind',identity,pair.token)).json();expect(b.agentId).toBeString();expect(b.frameUrl).toEndWith('?presentation=sidebar');
+ const b=await(await call('bind',identity,pair.token)).json();expect(b.agentId).toBeNull();expect(b.frameUrl).toContain('/sidebar/draft/');expect(b.frameUrl).toEndWith('?presentation=sidebar');
  expect((await(await call('bind',identity,pair.token)).json()).agentId).toBe(b.agentId);
  expect((await call('bind',{...identity,targetId:'target-B'},pair.token)).status).toBe(409);
+ // Existing bound agents retain their identity and guards; draft binds never create one.
+ const existing=await ctx.fns.agent.start({model:'mock:echo'});b.agentId=existing.id;
+ await ctx.fns.procs.db.run({sql:'UPDATE sidebar_bindings SET agent_id=? WHERE id=?',params:[existing.id,b.bindingId]});
+ expect((await(await call('bind',identity,pair.token)).json()).agentId).toBe(existing.id);
  title='Navigation';const info=await ctx.fns.sidebar.bindingForAgent({agentId:b.agentId});expect(info.title).toBe('Navigation');expect(info.cdpSessionName).toBe('sidebar:'+b.bindingId);
  expect((await call('close',identity,pair.token)).status).toBe(200);expect((await call('bind',identity,pair.token)).status).toBe(409);expect((await ctx.fns.sidebar.bindingForAgent({agentId:b.agentId})).state).toBe('closed');
- const second=await(await call('bind',{...identity,tabId:2},pair.token)).json();expect(second.agentId).not.toBe(b.agentId);processId='process-2';expect((await ctx.fns.sidebar.bindingForAgent({agentId:second.agentId})).state).toBe('revoked');
+ const second=await(await call('bind',{...identity,tabId:2},pair.token)).json();expect(second.agentId).toBeNull();processId='process-2';expect((await call('context',{...identity,tabId:2},pair.token)).status).toBe(409);
  expect((await call('revoke',{},pair.token)).status).toBe(200);expect((await call('bind',{...identity,tabId:3},pair.token)).status).toBe(403);
  const pending=await(await call('pair')).json();
  expect((await call('revoke',{},pending.token)).status).toBe(200);

@@ -9,6 +9,7 @@ export default function (ctx: Context, _session: Session | null, _opts?: {}) {
             label: module.label,
             description: module.description,
             namespaces: module.namespaces,
+            domains: module.domains ?? [],
             functions: module.fns.length,
             routes: module.routes.length,
             path: module.dir,

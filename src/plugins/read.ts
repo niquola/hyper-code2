@@ -32,6 +32,7 @@ export default async function (
         label: plugin.label,
         description: plugin.description,
         path: plugin.dir,
+        domains: plugin.domains ?? [],
         namespaces: plugin.namespaces,
         routes: plugin.routes.length,
         source: plugin.source,

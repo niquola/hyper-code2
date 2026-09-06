@@ -6,7 +6,6 @@ import projectRootFn from "../project/projectRoot";
 import workdirFn from "../project/workdir";
 import modulePaths from "./paths";
 import readDeclared from "./readDeclared";
-import describe from "./describe";
 
 // The modules of this process = the app's src/ (namespace "") + proc's own core src (the
 // framework: http/repl/dev/config/lifecycle/…) + each mounted module's src.
@@ -36,6 +35,8 @@ export type Root = {
     folder?: string;   // the module directory itself — manifest and SKILL.md live here
     label?: string; icon?: string; description?: string; skill?: string | null;
     source?: "core" | "official" | "user" | "project" | "platform" | "external"; from?: string | null;
+    /** Trusted package procs.domains: exact hostnames or explicit *.suffix rules. */
+    domains?: string[];
     // The process itself — the framework and the host's own src. Mounted always,
     // removable never, and not a module anybody manages.
     self?: boolean;
@@ -53,6 +54,8 @@ export type Root = {
  */
 export default async function (ctx: Context, session: Session | null, _opts?: {}): Promise<Root[]> {
     const coreSrc = resolve(import.meta.dir, "../..");     // the framework's src root — this file lives in src/procs/modules/
+    // Bootstrap dependencies must also refresh when package metadata grammar changes.
+    const { default: describe } = await import("./describe?t=" + Date.now());
     const projectRoot = projectRootFn(ctx, session, {});   // boot({root}) / proc's repo root
     const appSrc = resolve(projectRoot, "src");
     const workdir = workdirFn(ctx, session, {});
