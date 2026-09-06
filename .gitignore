@@ -5,8 +5,10 @@ node_modules
 out
 dist
 *.tgz
-mobile/.derived/
-mobile/.derived-device/
+# Xcode build output. Every build lane makes its own directory, and they are
+# hundreds of megabytes each — one glob instead of naming them as they appear.
+mobile/.derived*/
+mobile/.archive/
 mobile/.runtime/
 
 mobile/**/*.xcuserstate
