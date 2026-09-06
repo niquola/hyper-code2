@@ -32,6 +32,9 @@
     },
     "crme": {
       "path": "/Users/niquola/.hyper/user/crme"
+    },
+    "flow": {
+      "path": "plugins/flow"
     }
   }
 }
