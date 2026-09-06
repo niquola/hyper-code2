@@ -76,7 +76,30 @@ export default async function (
         const primary = normalizeCodexWindow(detail?.primary_window ?? detail?.primary, now);
         const secondary = normalizeCodexWindow(detail?.secondary_window ?? detail?.secondary, now);
         if (!primary && !secondary) throw new Error("usage endpoint returned no quota windows");
-        await ctx.fns.llm.recordUsage({ provider: "codex", account, rateLimits: { primary, secondary }, planType: data?.plan_type ?? null, now });
+        const resetSummary = data?.rate_limit_reset_credits;
+        let resetCredits = resetSummary && Number.isFinite(Number(resetSummary.available_count)) ? {
+            availableCount: Number(resetSummary.available_count),
+            ...(Array.isArray(resetSummary.credits) ? { credits: resetSummary.credits.map(normalizeResetCredit) } : {}),
+        } : null;
+        if (resetCredits && resetCredits.availableCount > 0 && !resetCredits.credits) {
+            const detailRes = await ctx.fns.llm.connectFetch({
+                url: "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits",
+                ms: timeoutMs,
+                init: { method: "GET", headers: {
+                    authorization: `Bearer ${token}`,
+                    ...(accountId ? { "chatgpt-account-id": String(accountId) } : {}),
+                    "user-agent": "codex-cli",
+                } },
+            });
+            if (detailRes.ok) {
+                const detailData: any = await detailRes.json();
+                resetCredits = {
+                    availableCount: Number.isFinite(Number(detailData?.available_count)) ? Number(detailData.available_count) : resetCredits.availableCount,
+                    credits: Array.isArray(detailData?.credits) ? detailData.credits.map(normalizeResetCredit) : [],
+                };
+            }
+        }
+        await ctx.fns.llm.recordUsage({ provider: "codex", account, rateLimits: { primary, secondary }, planType: data?.plan_type ?? null, resetCredits, now });
     }
     
     async function refreshXai(ctx: Context, account: string, timeoutMs: number, now: number): Promise<void> {
@@ -173,6 +196,19 @@ export default async function (
             : null;
     }
     
+    function normalizeResetCredit(credit: any): any {
+        return {
+            id: String(credit?.id ?? ""),
+            resetType: credit?.reset_type ?? credit?.resetType,
+            status: credit?.status,
+            grantedAt: credit?.granted_at ?? credit?.grantedAt,
+            expiresAt: credit?.expires_at ?? credit?.expiresAt ?? null,
+            title: credit?.title ?? null,
+            description: credit?.description ?? null,
+        };
+    }
+
+
     function normalizeCodexWindow(window: any, now: number): any {
         if (!window || !Number.isFinite(Number(window.used_percent))) return undefined;
         const directReset = Number(window.resets_at ?? window.reset_at);
@@ -183,7 +219,7 @@ export default async function (
             resets_at: Number.isFinite(directReset) && directReset > 0 ? directReset : Number.isFinite(resetAfter) ? Math.floor(now / 1000) + resetAfter : null,
         };
     }
-    
+
     function decodeJwt(token: string): any {
         try { const part = token.split(".")[1]; return part ? JSON.parse(Buffer.from(part.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString()) : null; } catch { return null; }
     }

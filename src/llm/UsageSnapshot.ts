@@ -15,6 +15,8 @@ export type UsageSnapshot = {
     };
     /** Subscription plan reported by the provider, e.g. "prolite". */
     planType?: string | null;
+    /** Codex one-shot rate-limit reset credits, when reported by the usage endpoint. */
+    resetCredits?: { availableCount: number; credits?: Array<{ id: string; resetType?: string; status?: string; grantedAt?: string | number; expiresAt?: string | number | null; title?: string | null; description?: string | null }> } | null;
     /** When this snapshot was taken, ms epoch. */
     updatedAt: number;
     /** Where the numbers came from. */

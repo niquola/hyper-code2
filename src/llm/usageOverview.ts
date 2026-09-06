@@ -26,6 +26,7 @@ export default async function (
     usedPercent: number | null;
     resetsAt: number | null;
     planType: string | null;
+    resetCredits: types.llm.UsageSnapshot["resetCredits"];
     parkedAgents: number;
     tone: "neutral" | "warning" | "error";
     updatedAt: number;
@@ -89,6 +90,7 @@ export default async function (
             usedPercent,
             resetsAt: worst?.resetsAt ?? null,
             planType: snapshot.planType ?? null,
+            resetCredits: snapshot.resetCredits ?? null,
             parkedAgents: parkedCount.get(`${snapshot.provider}:${account}`) ?? 0,
             tone: usedPercent == null ? "neutral" : usedPercent >= alertAt ? "error" : usedPercent >= warnAt ? "warning" : "neutral",
             updatedAt: Number(snapshot.updatedAt ?? 0),
@@ -106,6 +108,7 @@ export default async function (
             usedPercent: null,
             resetsAt: null,
             planType: null,
+            resetCredits: null,
             parkedAgents: parkedCount.get(key) ?? 0,
             tone: "neutral",
             updatedAt: 0,

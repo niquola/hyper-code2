@@ -34,6 +34,7 @@ export default async function (
     usedPercent: number | null;
     resetsAt: number | null;
     planType: string | null;
+    resetCredits: types.llm.UsageSnapshot["resetCredits"];
     parkedAgents: number;
     needsReconnect: boolean;
 }>> {
@@ -120,6 +121,7 @@ function entry(provider: string, account: string, source: "file" | "oauth" | "ke
         usedPercent,
         resetsAt: known?.resetsAt ?? null,
         planType: known?.planType ?? null,
+        resetCredits: known?.resetCredits ?? null,
         parkedAgents: known?.parkedAgents ?? 0,
     };
 }

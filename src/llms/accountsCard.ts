@@ -12,7 +12,7 @@
  * @param opts.now Current time in ms, for testing.
  */
 export default function (ctx: Context, _session: Session | null, opts: {
-    /** Rows produced by llm.listAccounts. */ accounts: Array<{ provider: string; account: string; label: string; model: string; source: "file" | "oauth" | "keychain"; available: boolean; usedPercent: number | null; planType: string | null; resetsAt: number | null; parkedAgents: number; needsReconnect?: boolean }>;
+    /** Rows produced by llm.listAccounts. */ accounts: Array<{ provider: string; account: string; label: string; model: string; source: "file" | "oauth" | "keychain"; available: boolean; usedPercent: number | null; planType: string | null; resetsAt: number | null; resetCredits?: types.llm.UsageSnapshot["resetCredits"]; parkedAgents: number; needsReconnect?: boolean }>;
     /** Login flows currently pending or recently completed. */ logins?: Array<{ provider: string; account: string; status: "pending" | "connected" | "failed"; verificationUri: string | null; userCode: string | null; error: string | null }>;
     /** Current timestamp in ms. */ now?: number;
 }): string {
@@ -32,7 +32,10 @@ export default function (ctx: Context, _session: Session | null, opts: {
         const reconnect = a.needsReconnect
             ? ctx.fns.ui.popup({ method: "llms.loginPopupFor", params: { provider: a.provider === "anthropic-oauth" ? "claude-code" : a.provider, account: a.account }, tone: "warning", size: "xs", html: `<i class="ph ph-arrow-clockwise" aria-hidden="true"></i><span>Reconnect</span>` })
             : "";
-        const actions = `<span class="flex items-center gap-1">${reconnect}${remove(a)}</span>`;
+        const resetCount = a.provider === "codex" ? a.resetCredits?.availableCount : undefined;
+        const resetDetails = a.provider === "codex" && a.resetCredits?.credits?.length ? `<details class="text-[10px] text-base-content/50"><summary class="cursor-pointer">details</summary><div class="absolute z-20 mt-1 max-w-xs space-y-1 rounded-lg border border-ui-border bg-base-100 p-2 shadow-xl">${a.resetCredits.credits.map((credit: any) => `<div><div class="font-medium text-base-content/70">${esc(credit.title || credit.resetType || "Codex reset")}</div>${credit.description ? `<div>${esc(credit.description)}</div>` : ""}${credit.expiresAt ? `<div>expires ${esc(new Date(typeof credit.expiresAt === "number" ? (credit.expiresAt < 10_000_000_000 ? credit.expiresAt * 1000 : credit.expiresAt) : credit.expiresAt).toLocaleString())}</div>` : ""}</div>`).join("")}</div></details>` : "";
+        const reset = a.provider === "codex" && resetCount != null ? `<form method="POST" action="/llms/codex/reset" hx-post="/llms/codex/reset" hx-target="find .reset-result" hx-swap="innerHTML" class="flex items-center gap-1" onsubmit="return confirm('Use one of ${resetCount} Codex reset credits now?')"><input type="hidden" name="account" value="${esc(a.account)}"><span class="reset-result text-[10px] text-base-content/50">${resetCount} reset${resetCount === 1 ? "" : "s"}</span>${resetDetails}${resetCount > 0 ? ctx.fns.procs.ui.button({ action: "reset-codex-limit", label: "Reset limit", type: "submit", size: "xs", tone: "warning" }) : ""}</form>` : "";
+        const actions = `<span class="flex items-center gap-1">${reset}${reconnect}${remove(a)}</span>`;
         return ctx.fns.procs.ui.row({ entity: "llm-account", id: `${a.provider}/${a.account}`, status: a.needsReconnect ? "error" : status, cells: [
             { role: "account", text: a.account === "default" ? "main" : a.account, class: "w-28 shrink-0 font-mono text-xs font-medium" },
             ...(a.planType ? [{ role: "plan", text: planName(a.provider, a.planType), title: `Subscription plan: ${a.planType}`, class: "badge badge-sm shrink-0 capitalize text-base-content/65" }] : []),

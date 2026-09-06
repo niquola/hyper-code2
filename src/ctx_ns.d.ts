@@ -10,6 +10,7 @@ declare global {
             home: Injected<typeof import("./home").default>;
         };
         agent: {
+            acceptMessage: Injected<typeof import("./agent/acceptMessage").default>;
             archiveCompleted: Injected<typeof import("./agent/archiveCompleted").default>;
             archiveMember: Injected<typeof import("./agent/archiveMember").default>;
             ask: Injected<typeof import("./agent/ask").default>;
@@ -489,6 +490,7 @@ declare global {
             codexCliVersion: Injected<typeof import("./llm/codexCliVersion").default>;
             completeAnthropicOAuth: Injected<typeof import("./llm/completeAnthropicOAuth").default>;
             connectFetch: Injected<typeof import("./llm/connectFetch").default>;
+            consumeResetCredit: Injected<typeof import("./llm/consumeResetCredit").default>;
             decryptOAuthSecret: Injected<typeof import("./llm/decryptOAuthSecret").default>;
             encryptOAuthSecret: Injected<typeof import("./llm/encryptOAuthSecret").default>;
             exchangeAnthropicOAuth: Injected<typeof import("./llm/exchangeAnthropicOAuth").default>;
@@ -644,6 +646,7 @@ declare global {
         plugins: {
             add: Injected<typeof import("./plugins/add").default>;
             docs: Injected<typeof import("./plugins/docs").default>;
+            forUrl: Injected<typeof import("./plugins/forUrl").default>;
             functions: Injected<typeof import("./plugins/functions").default>;
             index: Injected<typeof import("./plugins/index").default>;
             list: Injected<typeof import("./plugins/list").default>;
@@ -653,6 +656,7 @@ declare global {
             reload: Injected<typeof import("./plugins/reload").default>;
             remove: Injected<typeof import("./plugins/remove").default>;
             search: Injected<typeof import("./plugins/search").default>;
+            siteHint: Injected<typeof import("./plugins/siteHint").default>;
             validate: Injected<typeof import("./plugins/validate").default>;
         };
         procs: {
@@ -995,6 +999,7 @@ declare global {
             approval: Injected<typeof import("./sidebar/approval").default>;
             bindingForAgent: Injected<typeof import("./sidebar/bindingForAgent").default>;
             bridge: Injected<typeof import("./sidebar/bridge").default>;
+            draft: Injected<typeof import("./sidebar/draft").default>;
             ensureSchema: Injected<typeof import("./sidebar/ensureSchema").default>;
             requestOrigin: Injected<typeof import("./sidebar/requestOrigin").default>;
             targetSnapshot: Injected<typeof import("./sidebar/targetSnapshot").default>;
@@ -1101,6 +1106,7 @@ declare global {
             agentMetaSection: Injected<typeof import("./ui/agentMetaSection").default>;
             agentMetaSectionHtml: Injected<typeof import("./ui/agentMetaSectionHtml").default>;
             chatColumn: Injected<typeof import("./ui/chatColumn").default>;
+            chatComposer: Injected<typeof import("./ui/chatComposer").default>;
             chatEventCard: Injected<typeof import("./ui/chatEventCard").default>;
             controlScript: Injected<typeof import("./ui/controlScript").default>;
             createAgent: Injected<typeof import("./ui/createAgent").default>;

@@ -7,7 +7,7 @@ const ctx: any = { fns: {
         row: (o: any) => JSON.stringify(o),
         heading: ({ title }: any) => title,
         empty: () => "empty",
-        button: () => "button",
+        button: (o: any) => JSON.stringify(o),
         toolbar: () => "toolbar",
     } },
     ui: {
@@ -19,7 +19,7 @@ const ctx: any = { fns: {
 
 test("accounts card groups consistently by provider and renders plan/storage metadata", () => {
     const html = accountsCard(ctx, null, { accounts: [
-        { provider: "codex", account: "default", label: "codex", model: "codex:gpt", source: "file", available: true, usedPercent: 12, planType: "team", resetsAt: null, parkedAgents: 0 },
+        { provider: "codex", account: "default", label: "codex", model: "codex:gpt", source: "file", available: true, usedPercent: 12, planType: "team", resetsAt: null, resetCredits: { availableCount: 3 }, parkedAgents: 0 },
         { provider: "anthropic-oauth", account: "pro", label: "pro", model: "anthropic-oauth/pro:claude", source: "oauth", available: true, usedPercent: 22, planType: "max", resetsAt: null, parkedAgents: 0 },
         { provider: "xai", account: "default", label: "Grok managed", model: "xai:grok", source: "oauth", available: true, usedPercent: null, planType: null, resetsAt: null, parkedAgents: 0 },
     ] });
@@ -31,6 +31,9 @@ test("accounts card groups consistently by provider and renders plan/storage met
     expect(html).toContain('"role":"plan","text":"Max"');
     expect(html).toContain('"role":"storage","text":"CLI storage"');
     expect(html).toContain('"role":"storage","text":"Encrypted by Hyper"');
+    expect(html).toContain("/llms/codex/reset");
+    expect(html).toContain("3 resets");
+    expect(html).toContain("Reset limit");
     expect(html).not.toContain("Accounts from filesystem");
     expect(html).not.toContain("Managed by Hyper");
 });

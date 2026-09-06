@@ -39,6 +39,8 @@ export default async function (
         resetsAt?: number | null;
         /** Plan name reported by the provider, e.g. "prolite". */
         planType?: string | null;
+        /** Codex reset-credit summary reported by the usage endpoint. */
+        resetCredits?: types.llm.UsageSnapshot["resetCredits"];
         /** Current timestamp in ms; defaults to Date.now(). */
         now?: number;
     },
@@ -131,6 +133,7 @@ export default async function (
         account,
         windows,
         planType: opts.planType ?? previous?.planType ?? null,
+        resetCredits: opts.resetCredits === undefined ? (previous?.resetCredits ?? null) : opts.resetCredits,
         updatedAt: now,
         source,
         warnedAt: shouldWarn ? now : warnedAt,

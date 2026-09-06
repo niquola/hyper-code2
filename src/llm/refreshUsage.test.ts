@@ -17,6 +17,7 @@ describe("llm.refreshUsage", () => {
             expect(opts.init.headers["chatgpt-account-id"]).toBe("acct-1");
             return new Response(JSON.stringify({
                 plan_type: "pro",
+                rate_limit_reset_credits: { available_count: 3, credits: [{ id: "credit-1", reset_type: "codex_rate_limits", status: "available", granted_at: "2026-06-17T00:00:00Z", expires_at: null, title: "Full reset" }] },
                 rate_limit: {
                     primary_window: { used_percent: 42, limit_window_seconds: 18_000, reset_at: Math.floor((NOW + 3_600_000) / 1000) },
                     secondary_window: { used_percent: 17, limit_window_seconds: 604_800, reset_after_seconds: 86_400 },
@@ -27,7 +28,7 @@ describe("llm.refreshUsage", () => {
         const result = await ctx.fns.llm.refreshUsage({ accounts: [{ provider: "codex", account: "work" }], maxAgeMs: 0, now: NOW });
         expect(result).toEqual([{ provider: "codex", account: "work", status: "refreshed", error: null }]);
         const usage = await ctx.fns.llm.usageOverview({ now: NOW });
-        expect(usage[0]).toMatchObject({ provider: "codex", account: "work", usedPercent: 42, planType: "pro" });
+        expect(usage[0]).toMatchObject({ provider: "codex", account: "work", usedPercent: 42, planType: "pro", resetCredits: { availableCount: 3, credits: [{ id: "credit-1", resetType: "codex_rate_limits" }] } });
     });
 
     test("fetches Claude OAuth usage and converts percentages for recordUsage", async () => {
