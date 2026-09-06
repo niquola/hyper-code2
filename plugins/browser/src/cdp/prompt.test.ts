@@ -6,7 +6,11 @@ test("bound metadata is refreshed on every request independent of transcript com
     let state = "active";
     let calls = 0;
     const ctx = { fns: {
-        tools: { promptSection: () => "tools" }, plugins: { list: () => [] },
+        tools: { promptSection: () => "tools" },
+        // An active binding makes fullSystemPrompt ask for the site hint, so the
+        // fake ctx has to answer it — otherwise the test fails on the caller's
+        // dependency rather than on anything it means to assert.
+        plugins: { list: () => [], siteHint: async () => "" },
         sidebar: { bindingForAgent: async ({agentId}: {agentId:string}) => {
             calls++; expect(agentId).toBe("a");
             return { bindingId:"b",targetId:"target-A",cdpSessionName:"sidebar:b",url:"https://example.test",title,state,contextRevision:calls };

@@ -146,6 +146,12 @@ declare global {
             send: Injected<typeof import("../plugins/browser/src/cdp/send").default>;
             session: Injected<typeof import("../plugins/browser/src/cdp/session").default>;
         };
+        chrome: {
+            ensure: Injected<typeof import("../plugins/browser/src/chrome/ensure").default>;
+            path: Injected<typeof import("../plugins/browser/src/chrome/path").default>;
+            profileDir: Injected<typeof import("../plugins/browser/src/chrome/profileDir").default>;
+            start: Injected<typeof import("../plugins/browser/src/chrome/start").default>;
+        };
         circleback: {
             actionItems: Injected<typeof import("../../.hyper/user/circleback/src/circleback/actionItems").default>;
             conn: Injected<typeof import("../../.hyper/user/circleback/src/circleback/conn").default>;

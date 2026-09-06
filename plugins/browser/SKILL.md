@@ -7,6 +7,51 @@ description: "Browser automation over Chrome DevTools Protocol (CDP) on :9222. U
 
 Drives the user's real Chrome through CDP. Chrome must expose a debugging endpoint at `CDP_BROWSER_URL` (default `http://127.0.0.1:9222`). The plugin attaches to existing tabs or creates named background tabs and keeps connection handles in runtime state.
 
+## Starting Chrome
+
+The plugin attaches to a running Chrome; it does not assume one exists. Bring it
+up through the plugin rather than by hand:
+
+```sh
+hyper repl 'await ctx.fns.chrome.ensure({})'          # start only if none answers
+hyper repl 'await ctx.fns.chrome.ensure({ noStart: true })'  # health check, never launches
+hyper repl 'await ctx.fns.chrome.start({})'           # force a fresh launch
+hyper repl 'await ctx.fns.chrome.profileDir({})'      # which profile would be used
+```
+
+**The profile is the point.** Chrome must open the directory that holds the
+logged-in sessions — the Google accounts, UpToDate, Ramp, everything the
+plugins reach through the browser. Starting on the wrong one looks exactly like
+"everything logged itself out". `chrome.profileDir` resolves it in this order:
+
+1. `CDP_USER_DATA_DIR` if set;
+2. `~/.hyper/browser/chrome-profile` — the Hyper-owned location;
+3. `~/uniskill/skills/browser/chrome-profile` — where the real ~3.7 GB of
+   sessions still lives after the uniskill migration, reported as `legacy: true`.
+
+Moving that directory into the Hyper-owned path is a deliberate step (copy it
+while Chrome is closed, then verify a login), not something the plugin does on
+its own.
+
+**Why a separate instance.** A Chrome already running on the default profile
+cannot be given a debugging port after the fact — the flag only applies at
+launch. So `chrome.start` opens its own instance on the profile above, and your
+everyday Chrome keeps running untouched.
+
+**Why tmux.** Chrome is launched inside a detached tmux session (`chrome-cdp`,
+override with `CDP_TMUX_SESSION`) instead of as a child of the runtime. A child
+shares the server's process group, so every Hyper restart would close the
+browser and drop the sessions the profile exists to keep.
+
+| variable | meaning | default |
+|---|---|---|
+| `CDP_BROWSER_URL` | endpoint the plugin talks to; its port is what Chrome opens | `http://127.0.0.1:9222` |
+| `CDP_USER_DATA_DIR` | user-data directory | resolved as above |
+| `CDP_PROFILE` | profile directory inside it | `Profile 1` |
+| `CDP_LOAD_EXTENSION` | unpacked extension, `""` to disable | bundled `arc-sidebar` when present |
+| `CDP_TMUX_SESSION` | session Chrome runs in | `chrome-cdp` |
+| `CHROME_BIN` | Chrome binary | platform default |
+
 ## Observe before acting
 
 Use `browser.snapshot` as the observation primitive:
