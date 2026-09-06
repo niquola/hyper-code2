@@ -1,0 +1,2 @@
+const sql=`ALTER TABLE hackernews.feeds ADD COLUMN IF NOT EXISTS title_only boolean NOT NULL DEFAULT false;ALTER TABLE hackernews.feeds ADD COLUMN IF NOT EXISTS typo_tolerance boolean NOT NULL DEFAULT true;`;
+export default{up:async(ctx:Context)=>{await ctx.fns.procs.db.exec({sql})},down:async(ctx:Context)=>{await ctx.fns.procs.db.exec({sql:"ALTER TABLE hackernews.feeds DROP COLUMN IF EXISTS title_only;ALTER TABLE hackernews.feeds DROP COLUMN IF EXISTS typo_tolerance"})}};
