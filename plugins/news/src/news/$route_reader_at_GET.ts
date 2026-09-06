@@ -1,7 +1,7 @@
 /** GET /news/reader/at — renders one cursor-positioned reader card and controls. */
 export default async function(ctx:Context,_session:Session|null,opts:{req:Request;params:Record<string,string>}){
  const esc=(v:any)=>ctx.fns.procs.ui.escape({text:String(v??"")}),u=new URL(opts.req.url),cur=u.searchParams.get("id")??"",source=u.searchParams.get("source")??"",q=(u.searchParams.get("q")??"").trim(),unread=u.searchParams.get("unread")!=="0";
- const where:string[]=[],base:any[]=[];if(source){where.push("source=?");base.push(source)}if(q){where.push("search_vector @@ websearch_to_tsquery('simple',?)");base.push(q)}if(unread&&!cur)where.push("read_at IS NULL");
+ const where:string[]=[],base:any[]=[];if(source){where.push("source=?");base.push(source)}if(q){where.push("search_vector @@ websearch_to_tsquery('simple',?)");base.push(q)}if(unread)where.push("read_at IS NULL");
  const condition=where.length?`WHERE ${where.join(" AND ")}`:"",order="coalesce(shown_at,fetched_at)";
  let item:any;if(cur)item=(await ctx.fns.procs.db.select({sql:"SELECT * FROM news.items WHERE id=?",params:[cur]}))[0];if(!item)item=(await ctx.fns.procs.db.select({sql:`SELECT * FROM news.items ${condition} ORDER BY ${order} DESC LIMIT 1`,params:base}))[0];
  if(!item)return `<main id="reader" class="flex flex-1 items-center justify-center"><div class="max-w-md text-center">${ctx.fns.procs.ui.empty({title:"Nothing to read",message:"This filter has no stored stories."})}</div></main>`;
