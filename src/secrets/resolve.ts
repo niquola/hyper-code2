@@ -22,6 +22,19 @@ export default async function (
     }
 
     if (ref.startsWith("op://")) {
+        // Every op:// resolution spawns the 1Password CLI, so it fails whenever
+        // the vault is locked — typically at boot, with nobody there to approve.
+        // `secrets.get` exists to avoid that: memory, then the encrypted local
+        // store, then here. A direct caller from outside the secrets module is
+        // almost always a mistake, so it is named in the log rather than left to
+        // be discovered by a dark tunnel weeks later.
+        const from = new Error().stack?.split("\n").slice(2).find(line => !/secrets\/(resolve|get)\./.test(line));
+        if (from && !/secrets\/get\./.test(from)) {
+            ctx.fns.procs.log.warn({
+                event: "secrets.resolve.direct",
+                msg: `op:// resolved without the cache — call ctx.fns.secrets.get instead (${from.trim().slice(0, 120)})`,
+            });
+        }
         const home = ctx.env.HOME ?? process.env.HOME ?? "";
         const path = [`${home}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin", ctx.env.PATH ?? process.env.PATH ?? ""]
             .filter(Boolean).join(":");

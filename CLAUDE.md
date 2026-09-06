@@ -114,6 +114,24 @@ bun script/repl.ts -f /tmp/play.js                     # from file; stdin works 
 
 Vendored `src/procs/` is upstream code: keep local patches minimal and marked with a `hyper-code2:` comment; prefer fixing upstream and re-vendoring.
 
+## Secrets
+
+- **Read secrets with `ctx.fns.secrets.get({ ref })`, never `secrets.resolve`.** `get` is
+  the door: process memory → the encrypted `local_secrets` table → 1Password only on a
+  miss, and it persists what it fetched. `resolve` is the bottom layer and *always* spawns
+  the `op` CLI, so it fails whenever the vault is locked — which is exactly what happens at
+  boot, after a reboot, with nobody there to approve a prompt. The tunnel went dark this
+  way and the UpToDate login broke the same day.
+- References are `env://NAME`, `op://vault/item/field`, or `secret://namespace/name` for
+  values written by `secrets.set` / `secureInput.prompt({ saveAs })` (local only, never
+  bootstrapped from a provider).
+- Guarded on both sides: `src/secrets/callers.test.ts` fails the suite if anything under
+  `src/` or `plugins/` calls `secrets.resolve`, and `resolve` itself logs
+  `secrets.resolve.direct` naming the caller — that one covers out-of-tree plugins in
+  `~/.hyper/user`, which no repository test can see.
+- A secret never reaches a log, an error message, a tool result or the transcript. Errors
+  say that a secret could not be resolved, not which one or why.
+
 ## What NOT to do
 
 - Don't use npm packages where a Bun built-in exists.
