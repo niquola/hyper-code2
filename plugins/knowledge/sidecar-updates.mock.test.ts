@@ -4,6 +4,7 @@ const load = async (path: string) => {
  const js = new Bun.Transpiler({loader:'ts'}).transformSync(await Bun.file(new URL(path, import.meta.url)).text()).replace('export default async function', 'return async function');
  return new Function(js)();
 };
+const schemaOf = (defs: any[]) => async () => ({ types: ['Person','Organization','Product','Concept','Standard'].map(type => ({ type, description: type, anonymous: false, required: [], hint: undefined })), attributes: defs.map(d => ({ name: d.id.slice(10), datatype: d.data.datatype ?? 'string', domain: [].concat(d.data.domain ?? []).map((x: string) => x.slice(7)), range: [].concat(d.data.range ?? []).map((x: string) => x.slice(7)), cardinality: d.data.cardinality === 'multi' ? 'multi' : 'single', vocabulary: d.data.vocabulary, description: '' })), vocabularies: {} });
 const writer = await load('./src/knowledge/setObservedMentions.ts');
 const updater = await load('./src/knowledge/updateSidecar.ts');
 function fixture(contents: string[] = ['Acme headline Old']) {
@@ -27,7 +28,7 @@ function fixture(contents: string[] = ['Acme headline Old']) {
  }};
  const parent:any={id:'parent',scratchpad:structuredClone(state.scratchpad)};
  const child={id:'child',parentId:'parent',scratchpad:{knowledgeSidecarFor:'parent',sourceMessageIdx:contents.length-1}};
- const ctx:any={state:{agent:{parent}},fns:{procs:{db:{select:async()=>[{parent_id:null,fork_offset:null}],conn:async()=>({begin:async(fn:any)=>{const backup=structuredClone(state);try{return await fn(tx);}catch(e){Object.assign(state,backup);throw e;}}})}},session:{getMessages:async()=>messages},knowledge:{resolveMentions:async({mentions}:any)=>mentions.map((mention:any)=>({mention,resolution:{status:'new',id:null,candidates:[]}}))},events:{refreshAgentMeta:()=>{}}}};
+ const ctx:any={state:{agent:{parent}},fns:{procs:{db:{select:async()=>[{parent_id:null,fork_offset:null}],conn:async()=>({begin:async(fn:any)=>{const backup=structuredClone(state);try{return await fn(tx);}catch(e){Object.assign(state,backup);throw e;}}})}},session:{getMessages:async()=>messages},knowledge:{extractionSchema:schemaOf(defs),resolveMentions:async({mentions}:any)=>mentions.map((mention:any)=>({mention,resolution:{status:'new',id:null,candidates:[]}}))},events:{refreshAgentMeta:()=>{}}}};
  const mention=(extra:any={})=>({id:'m1',type:'Organization',name:'Acme',entityId:'Organization/acme',evidence:contents.at(-1),confidence:1,sourceMessageIdx:contents.length-1,...extra});
  return {state,ctx,parent,child,mention,run:(mentions:any[])=>writer(ctx,{agent:child},{mentions})};
 }

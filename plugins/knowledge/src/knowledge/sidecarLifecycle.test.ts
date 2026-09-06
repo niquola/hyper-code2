@@ -9,7 +9,7 @@ function fixture(failSave = false) {
     const child: any = { id: 'child', scratchpad: {} };
     const archived: string[] = [];
     let prompt = '';
-    const ctx: any = { fns: { procs: { db: { select: async () => [] } }, session: {
+    const ctx: any = { fns: { knowledge: { extractionSchema: async () => ({ types: [], attributes: [], vocabularies: {} }) }, procs: { db: { select: async () => [] } }, session: {
         getMessages: async () => [{ idx: 2, role: 'tool', content: 'Company Alpha' }, { idx: 5, role: 'user', content: 'Review Alpha' }],
         fork: async () => child,
         save: async () => { if (failSave) throw new Error('save failed'); },

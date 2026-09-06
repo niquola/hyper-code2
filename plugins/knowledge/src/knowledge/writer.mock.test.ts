@@ -5,6 +5,7 @@ const load = async (name: string) => {
     const source = await Bun.file(new URL(`./${name}.ts`, import.meta.url)).text();
     return new Function(new Bun.Transpiler({ loader: "ts" }).transformSync(source).replace("export default", "return"))();
 };
+const schemaOf = (defs: any[]) => async () => ({ types: ['Person','Organization','Product','Concept','Standard'].map(type => ({ type, description: type, anonymous: false, required: [], hint: undefined })), attributes: defs.map(d => ({ name: d.id.slice(10), datatype: d.data.datatype ?? 'string', domain: [].concat(d.data.domain ?? []).map((x: string) => x.slice(7)), range: [].concat(d.data.range ?? []).map((x: string) => x.slice(7)), cardinality: d.data.cardinality === 'multi' ? 'multi' : 'single', vocabulary: d.data.vocabulary, description: '' })), vocabularies: {} });
 const mention = { id: "m1", type: "Organization", name: "日本会社", confidence: 1, evidence: "日本会社" };
 const fixture = (scratchpad: object = {}, fail = false) => {
     let committed: string[] = [], pending: string[] = [];
@@ -22,7 +23,7 @@ const fixture = (scratchpad: object = {}, fail = false) => {
             conn: async () => ({ begin: async (fn: (t: typeof tx) => Promise<unknown>) => { pending = []; try { const result = await fn(tx); committed.push(...pending); return result; } catch (e) { pending = []; throw e; } } }),
         } },
         session: { getMessages: async () => [{ role: "user", idx: 7, content: mention.name }] },
-        knowledge: { resolveMentions: async ({ mentions }: { mentions: object[] }) => mentions.map(m => ({ mention: m, resolution: { status: "new", candidates: [] } })) },
+        knowledge: { extractionSchema: schemaOf([]), resolveMentions: async ({ mentions }: { mentions: object[] }) => mentions.map(m => ({ mention: m, resolution: { status: "new", candidates: [] } })) },
         events: { refreshAgentMeta: () => {} },
     } };
     const session = { agent: { id: "child", parentId: "parent", scratchpad: { knowledgeSidecarFor: "parent", sourceMessageIdx: 7 } } };
@@ -56,7 +57,7 @@ test("writer Unicode IDs are stable ASCII-safe and source indices are verified",
 });
 test("resolver preserves Unicode, exact aliases and single-person ambiguity", async () => {
     const rows = [{ id: "Organization/jp", type: "Organization", data: { title: "日本会社", aka: ["JP"] } }, { id: "Person/alex", type: "Person", data: { title: "Alex" } }];
-    const ctx = { fns: { procs: { db: { select: async () => rows } } } };
+    const ctx = { fns: { procs: { db: { select: async () => rows } }, knowledge: { extractionSchema: schemaOf([]) } } };
     const r = await (await load("resolveMentions"))(ctx, null, { mentions: [mention, { ...mention, name: "JP" }, { ...mention, name: "Alex", type: "Person" }] });
     expect(r.map((x: { resolution: { status: string } }) => x.resolution.status)).toEqual(["matched", "matched", "ambiguous"]);
 });

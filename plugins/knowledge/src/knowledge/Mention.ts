@@ -2,9 +2,9 @@
 export type Mention = {
     /** Stable id within one extraction source (e.g. `m1`), kept across re-runs. */
     id: string;
-    /** Canonical entity type. */
-    type: "Person" | "Organization" | "Product" | "Concept" | "Standard";
-    /** Display name as mentioned. */
+    /** Canonical entity type; must be an `Entity/*` record flagged `extract: true` (see knowledge.extractionSchema). */
+    type: string;
+    /** Display name as mentioned. For anonymous types (Event, EventParticipation) a short synthesized label that need not appear in the evidence. */
     name: string;
     /** Other surface forms seen for the same entity. */
     /** Existing canonical ID from this chat's context; writer verifies type and canonical name/alias. */

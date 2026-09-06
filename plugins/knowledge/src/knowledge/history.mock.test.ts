@@ -2,6 +2,7 @@ import { test, expect } from "bun:test";
 // Standalone, transaction-aware in-memory fixture. Never imports Hyper or connects to a database.
 const source = await Bun.file(new URL("./setObservedMentions.ts", import.meta.url)).text();
 const writer = new Function(new Bun.Transpiler({ loader: "ts" }).transformSync(source).replace("export default", "return"))();
+const schemaOf = (defs: any[]) => async () => ({ types: ['Person','Organization','Product','Concept','Standard'].map(type => ({ type, description: type, anonymous: false, required: [], hint: undefined })), attributes: defs.map(d => ({ name: d.id.slice(10), datatype: d.data.datatype ?? 'string', domain: [].concat(d.data.domain ?? []).map((x: string) => x.slice(7)), range: [].concat(d.data.range ?? []).map((x: string) => x.slice(7)), cardinality: d.data.cardinality === 'multi' ? 'multi' : 'single', vocabulary: d.data.vocabulary, description: '' })), vocabularies: {} });
 const base = { id: "a", type: "Organization", name: "Acme", confidence: 1, evidence: "Acme" };
 function fixture(content: string, failAt = "") {
     let state = {
@@ -16,7 +17,7 @@ function fixture(content: string, failAt = "") {
     const ctx = { state: { agent: { parent: { scratchpad: {} } } }, fns: {
         session: { getMessages: async () => [{ idx: 7, role: "user", content }] },
         events: { refreshAgentMeta: () => {} },
-        knowledge: { resolveMentions: async ({ mentions }: any) => mentions.map((mention: any) => ({ mention, resolution: { status: mention.name === "Newco" ? "new" : "matched", id: mention.name === "Newco" ? undefined : "Organization/acme", candidates: [] } })) },
+        knowledge: { extractionSchema: schemaOf(defs), resolveMentions: async ({ mentions }: any) => mentions.map((mention: any) => ({ mention, resolution: { status: mention.name === "Newco" ? "new" : "matched", id: mention.name === "Newco" ? undefined : "Organization/acme", candidates: [] } })) },
         procs: { db: {
             select: async () => [{ parent_id: null, fork_offset: null }],
             conn: async () => ({ begin: async (fn: any) => {

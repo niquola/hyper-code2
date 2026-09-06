@@ -43,10 +43,9 @@ export default async function (ctx: Context, session: Session | null, opts: {
     };
     const ids = new Set<string>();
     const mentions = opts.mentions.map(m => {
-        if (!m || !text(m.id, 40) || ids.has(m.id) || !["Person", "Organization", "Product", "Concept", "Standard"].includes(m.type) || !text(m.name, 200) || !Number.isFinite(m.confidence) || m.confidence < 0 || m.confidence > 1) throw new Error("Invalid mention or duplicate mention id");
+        if (!m || !text(m.id, 40) || ids.has(m.id) || !text(m.type, 60) || !/^[A-Z][A-Za-z0-9]*$/.test(m.type) || !text(m.name, 200) || !Number.isFinite(m.confidence) || m.confidence < 0 || m.confidence > 1) throw new Error("Invalid mention or duplicate mention id");
         ids.add(m.id);
         const source = locate(m.evidence, m);
-        if (!m.evidence.includes(m.name)) throw new Error("Mention name must occur verbatim in evidence");
         if (m.aliases && (!Array.isArray(m.aliases) || m.aliases.length > 10 || m.aliases.some(a => !text(a, 200) || !m.evidence.includes(a)))) throw new Error("Aliases require literal evidence");
         if (m.attributes && (typeof m.attributes !== "object" || Array.isArray(m.attributes) || Object.keys(m.attributes).length > 20)) throw new Error("Invalid attributes");
         if (m.attributeUpdates && (!Array.isArray(m.attributeUpdates) || m.attributeUpdates.length > 20 || new Set(m.attributeUpdates.map(u => u.attribute)).size !== m.attributeUpdates.length)) throw new Error("Invalid updates");
@@ -66,6 +65,24 @@ export default async function (ctx: Context, session: Session | null, opts: {
         // Serialize with ordinary entity updates as well as other sidecar writers.
         await tx.unsafe("LOCK TABLE knowledge.entities IN SHARE ROW EXCLUSIVE MODE");
         const definitions = await tx.unsafe("SELECT id,data FROM knowledge.entities WHERE type='Attribute'");
+        // Extractable types, anonymous flags, required fields and vocabularies are data: Entity/Attribute/Concept records.
+        const schema = await ctx.fns.knowledge.extractionSchema({ tx });
+        const typeDef = new Map(schema.types.map(t => [t.type, t]));
+        const vocabularyOf = new Map(schema.attributes.filter(a => a.vocabulary).map(a => [a.name, new Set((schema.vocabularies[a.vocabulary!] ?? []).map(v => v.id))]));
+        const isAnonymous = (type: string) => typeDef.get(type)?.anonymous === true;
+        // `Entity/Entity` as range means any canonical type.
+        const inRange = (d: { range?: string | string[] }, type: string) => list(d.range).some(r => r === "Entity/Entity" || r === `Entity/${type}`);
+        for (const m of mentions) {
+            if (!typeDef.has(m.type)) throw new Error(`Unsupported mention type ${m.type}`);
+            if (!isAnonymous(m.type) && !m.evidence.includes(m.name)) throw new Error(`Mention name ${JSON.stringify(m.name)} must occur verbatim in evidence`);
+        }
+        const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v;
+        const isDateTime = (v: string) => isDate(v) || (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})?$/.test(v) && Number.isFinite(Date.parse(v)));
+        const scalarTypes = ["string", "text", "url", "date", "datetime"];
+        // Dates may be stated in prose ("5 марта 2026"); require the quote to carry the year or the day number rather than the ISO literal.
+        const valueEvidenced = (datatype: string, v: string, quote: string) => ["date", "datetime"].includes(datatype)
+            ? quote.includes(v) || quote.includes(v.slice(0, 4)) || new RegExp(`(?<!\\d)0?${Number(v.slice(8, 10))}(?!\\d)`).test(quote)
+            : quote.includes(v);
         const defs = new Map<string, { domain?: string | string[]; range?: string | string[]; datatype: string; cardinality?: string }>(definitions.map((d: { id: string; data: { domain?: string | string[]; range?: string | string[]; datatype: string; cardinality?: string } }) => [String(d.id).slice(10), d.data]));
         const definition = (type: string, key: string) => {
             const d = defs.get(key);
@@ -78,17 +95,31 @@ export default async function (ctx: Context, session: Session | null, opts: {
                 const values = list(value);
                 if ((Array.isArray(value) && value.some(v => typeof v !== "string")) || (!Array.isArray(value) && typeof value !== "string")) throw new Error(`Invalid value type for ${key}`);
                 if (!values.length || values.length > 10 || (Array.isArray(value) && d.cardinality !== "multi") || values.some(v => !text(v, 500))) throw new Error(`Invalid value for ${key}`);
-                if (!["string", "url", "date"].includes(d.datatype)) throw new Error(`Use relations for refs; unsupported datatype ${key}`);
+                if (!scalarTypes.includes(d.datatype)) throw new Error(`Attribute ${key} has datatype ${d.datatype}: reference attributes go into relations [{predicate,target,evidence}], not attributes`);
                 const quote = m.attributeEvidence?.[key];
-                if (!quote || !quote.includes(m.name) || values.some(v => !quote.includes(v))) throw new Error(`Unverified fact ${key}`);
+                if (!quote || (!isAnonymous(m.type) && !quote.includes(m.name)) || values.some(v => !valueEvidenced(d.datatype, v, quote))) throw new Error(`Unverified fact ${key}: attributeEvidence must contain the subject name and every value verbatim`);
                 locate(quote, m);
                 if (d.datatype === "url" && values.some(v => { try { return !["https:", "http:"].includes(new URL(v).protocol); } catch { return true; } })) throw new Error("Invalid URL");
-                if (d.datatype === "date" && values.some(v => !/^\d{4}-\d{2}-\d{2}$/.test(v) || !Number.isFinite(Date.parse(v)) || new Date(v).toISOString().slice(0, 10) !== v)) throw new Error("Invalid date");
+                if (d.datatype === "date" && values.some(v => !isDate(v))) throw new Error("Invalid date");
+                if (d.datatype === "datetime" && values.some(v => !isDateTime(v))) throw new Error("Invalid datetime");
             }
             for (const r of m.relations ?? []) {
                 const d = definition(m.type, r.predicate);
-                if (d.datatype !== "ref" || !text(r.target, 240) || !r.evidence || !r.evidence.includes(m.name)) throw new Error("Invalid reference relation");
+                if (d.datatype !== "ref" || !text(r.target, 240) || !r.evidence || (!isAnonymous(m.type) && !r.evidence.includes(m.name))) throw new Error("Invalid reference relation");
                 locate(r.evidence, m);
+            }
+        }
+        // Anonymous records (events, participations) are only viable when every required field is evidenced
+        // and its reference targets are canonical IDs or themselves viable mentions. Non-viable ones are skipped, not written.
+        const viable = new Set(mentions.map(m => m.id));
+        for (let changed = true; changed;) {
+            changed = false;
+            for (const m of mentions) {
+                if (!viable.has(m.id) || !isAnonymous(m.type) || m.entityId != null) continue;
+                const present = new Set(Object.keys(m.attributes ?? {}));
+                for (const r of m.relations ?? []) if (r.target.includes("/") || viable.has(r.target)) present.add(r.predicate);
+                for (const u of m.attributeUpdates ?? []) if (u.operation === "add") present.add(u.attribute);
+                if (!typeDef.get(m.type)!.required.every(k => present.has(k))) { viable.delete(m.id); changed = true; }
             }
         }
         const resolved = await ctx.fns.knowledge.resolveMentions({ mentions });
@@ -100,6 +131,7 @@ export default async function (ctx: Context, session: Session | null, opts: {
             await tx.unsafe(`INSERT INTO knowledge.entity_changes(subject,attribute,operation,before_value,after_value,source_agent_id,source_message_idx,url,evidence) VALUES($1,$2,$3,$4::jsonb,$5::jsonb,$6,$7,$8,$9)`, [subject, attribute, operation, JSON.stringify(before ?? null), JSON.stringify(after), source.agentId, source.idx, `hyper://agent/${source.agentId}/message/${source.idx}`, quote]);
         };
         const entityOf = new Map<string, string>();
+        const pending = new Map<string, { type: string; identity?: Record<string, string | string[]>; links: string[] }>();
         const newNames = new Map<string, string>();
         const created: string[] = [], skipped: string[] = [];
         let written = 0;
@@ -117,11 +149,41 @@ export default async function (ctx: Context, session: Session | null, opts: {
             if (m.entityId != null) {
                 if (!text(m.entityId, 240)) throw new Error("Invalid canonical ID");
                 const row = (await tx.unsafe("SELECT type,data FROM knowledge.entities WHERE id=$1", [m.entityId]))[0];
-                if (!row || row.type !== m.type || ![row.data.title, ...list(row.data.aka)].some(n => typeof n === "string" && n.normalize("NFKC").toLocaleLowerCase("und") === m.name.normalize("NFKC").toLocaleLowerCase("und"))) throw new Error("Unverified canonical identity");
+                // Named entities must match a canonical surface form; anonymous records (events) are identified by the id the extractor found via search.
+                if (!row || row.type !== m.type || (!isAnonymous(m.type) && ![row.data.title, ...list(row.data.aka), ...list(row.data.human_name)].some(n => typeof n === "string" && n.normalize("NFKC").toLocaleLowerCase("und") === m.name.normalize("NFKC").toLocaleLowerCase("und")))) throw new Error("Unverified canonical identity");
                 id = m.entityId;
-            } else if (r.status === "ambiguous") { skipped.push(m.id); facts.skipped += Object.keys(m.attributes ?? {}).length + (m.attributeUpdates?.length ?? 0) + (m.relations?.length ?? 0); continue; }
+            } else if (r.status === "ambiguous" || !viable.has(m.id)) { skipped.push(m.id); facts.skipped += Object.keys(m.attributes ?? {}).length + (m.attributeUpdates?.length ?? 0) + (m.relations?.length ?? 0); continue; }
+            let pendingIdentity: Record<string, string | string[]> | undefined;
             if (!id) {
-                const identity = `${m.type}/${m.name.normalize("NFKC").toLocaleLowerCase("und").replace(/\s+/gu, " ").trim()}`;
+                const anonymous = isAnonymous(m.type);
+                if (anonymous) {
+                    // Deterministic dedup by identity fields (+ shared links) so the same event mentioned twice never forks.
+                    const required = typeDef.get(m.type)!.required;
+                    const valueOf = (k: string): string | string[] | undefined => {
+                        if (m.attributes && Object.hasOwn(m.attributes, k)) return m.attributes[k];
+                        const rel = (m.relations ?? []).filter(r => r.predicate === k).map(r => entityOf.get(r.target) ?? (r.target.includes("/") ? r.target : undefined)).filter((v): v is string => !!v);
+                        if (rel.length) return defs.get(k)?.cardinality === "multi" ? rel : rel[0];
+                        const u = (m.attributeUpdates ?? []).find(u => u.attribute === k && u.operation === "add");
+                        return u?.value;
+                    };
+                    const identity: Record<string, string | string[]> = {};
+                    for (const k of required) { const v = valueOf(k); if (v == null) break; identity[k] = v; }
+                    if (Object.keys(identity).length === required.length) {
+                        const own = (m.relations ?? []).filter(r => !required.includes(r.predicate)).map(r => entityOf.get(r.target) ?? (r.target.includes("/") ? r.target : undefined));
+                        // Hubs in this batch pointing at this mention (participations → participants) corroborate identity.
+                        const viaHubs = mentions.filter(x => x.id !== m.id && (x.relations ?? []).some(r => r.target === m.id)).flatMap(x => (x.relations ?? []).filter(r => r.target !== m.id).map(r => entityOf.get(r.target) ?? (r.target.includes("/") ? r.target : undefined)));
+                        const linked = [...new Set([...own, ...viaHubs].filter((v): v is string => !!v))];
+                        const match = await ctx.fns.knowledge.matchAnonymous({ type: m.type, identity, linked, tx, pending: Object.fromEntries([...pending]) });
+                        if (match.status === "matched") id = match.id!;
+                        else if (match.status === "new") pendingIdentity = identity;
+                        else if (match.status === "ambiguous") { skipped.push(m.id); facts.skipped += Object.keys(m.attributes ?? {}).length + (m.attributeUpdates?.length ?? 0) + (m.relations?.length ?? 0); continue; }
+                    }
+                }
+            }
+            if (!id) {
+                const anonymous = isAnonymous(m.type);
+                // Anonymous records never merge by label: identity includes the source message so the same label on another turn is a new record.
+                const identity = `${m.type}/${m.name.normalize("NFKC").toLocaleLowerCase("und").replace(/\s+/gu, " ").trim()}${anonymous ? `@${m.sourceAgentId}/${m.sourceMessageIdx}` : ""}`;
                 id = newNames.get(identity);
                 if (!id) {
                     const ascii = m.name.normalize("NFKD").toLowerCase().replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "entity";
@@ -137,6 +199,7 @@ export default async function (ctx: Context, session: Session | null, opts: {
                 }
             }
             entityOf.set(m.id, id);
+            if (isAnonymous(m.type)) { const prev = pending.get(id); pending.set(id, { type: m.type, identity: prev?.identity ?? pendingIdentity, links: [...new Set([...(prev?.links ?? []), ...(m.relations ?? []).map(r => entityOf.get(r.target) ?? (r.target.includes("/") ? r.target : "")).filter(Boolean)])] }); }
         }
         const observe = async (subject: string, attribute: string, value: string | string[], quote: string, confidence: number, ref: types.knowledge.Mention) => {
             const source = locate(quote, ref);
@@ -163,7 +226,10 @@ export default async function (ctx: Context, session: Session | null, opts: {
                 const d = definition(m.type, r.predicate);
                 const targetMention = mentions.find(x => x.id === r.target);
                 const targetName = targetMention?.name ?? row?.data?.title;
-                if (!row || !list(d.range).includes(`Entity/${row.type}`) || !text(targetName, 200) || !r.evidence!.includes(targetName)) throw new Error("Unverified relation target or invalid range");
+                const vocabulary = vocabularyOf.get(r.predicate);
+                if (!row || !inRange(d, row.type) || !text(targetName, 200)) throw new Error("Unverified relation target or invalid range");
+                if (vocabulary) { if (!vocabulary.has(target)) throw new Error(`Relation target outside vocabulary for ${r.predicate}`); }
+                else if (!isAnonymous(row.type) && !r.evidence!.includes(targetName)) throw new Error("Unverified relation target or invalid range");
                 await fill(r.predicate, d.cardinality === "multi" ? [target] : target, r.evidence!);
                 // Only canonical refs are projected; conflicting observations must not create contradictory edges.
                 await tx.unsafe("DELETE FROM knowledge.relations WHERE subject=$1 AND predicate=$2", [subject, r.predicate]);
@@ -171,22 +237,25 @@ export default async function (ctx: Context, session: Session | null, opts: {
             }
             for (const u of m.attributeUpdates ?? []) {
                 const d = definition(m.type, u.attribute);
-                if (!["add", "correct"].includes(u.operation) || !["string", "url", "date", "ref"].includes(d.datatype) || Object.hasOwn(m.attributes ?? {}, u.attribute) || m.relations?.some(r => r.predicate === u.attribute)) throw new Error("Invalid or overlapping update");
+                if (!["add", "correct"].includes(u.operation) || ![...scalarTypes, "ref"].includes(d.datatype) || Object.hasOwn(m.attributes ?? {}, u.attribute) || m.relations?.some(r => r.predicate === u.attribute)) throw new Error("Invalid or overlapping update");
                 const values = list(u.value);
                 if ((typeof u.value !== "string" && !Array.isArray(u.value)) || (Array.isArray(u.value) && (d.cardinality !== "multi" || u.value.some(v => typeof v !== "string"))) || !values.length || values.length > 10 || values.some(v => !text(v, 500))) throw new Error("Invalid update value");
                 const source = locate(u.evidence, m);
                 let labels = values;
                 if (d.datatype === "ref") {
                     labels = [];
+                    const vocabulary = vocabularyOf.get(u.attribute);
                     for (const target of values) {
                         const row = (await tx.unsafe("SELECT type,data FROM knowledge.entities WHERE id=$1", [target]))[0];
-                        if (!row || !list(d.range).includes(`Entity/${row.type}`) || !text(row.data.title, 200)) throw new Error("Invalid update reference");
-                        labels.push(row.data.title);
+                        if (!row || !inRange(d, row.type) || !text(row.data.title, 200)) throw new Error("Invalid update reference");
+                        if (vocabulary && !vocabulary.has(target)) throw new Error(`Update target outside vocabulary for ${u.attribute}`);
+                        if (!vocabulary && !isAnonymous(row.type)) labels.push(row.data.title);
                     }
                 }
-                if (!u.evidence.includes(m.name) || labels.some(v => !u.evidence.includes(v))) throw new Error("Unverified update");
+                if ((!isAnonymous(m.type) && !u.evidence.includes(m.name)) || labels.some(v => !valueEvidenced(d.datatype, v, u.evidence))) throw new Error(`Unverified update ${u.attribute}: evidence must contain the subject name${labels.length ? " and every value verbatim (" + labels.map(v => JSON.stringify(v)).join(", ") + ")" : ""}`);
                 if (d.datatype === "url" && values.some(v => { try { return !["https:", "http:"].includes(new URL(v).protocol); } catch { return true; } })) throw new Error("Invalid URL");
-                if (d.datatype === "date" && values.some(v => !/^\d{4}-\d{2}-\d{2}$/.test(v) || !Number.isFinite(Date.parse(v)) || new Date(v).toISOString().slice(0, 10) !== v)) throw new Error("Invalid date");
+                if (d.datatype === "date" && values.some(v => !isDate(v))) throw new Error("Invalid date");
+                if (d.datatype === "datetime" && values.some(v => !isDateTime(v))) throw new Error("Invalid datetime");
                 const old = data[u.attribute];
                 if (u.operation === "correct") {
                     // Require explicit correction intent in the verified user quote,

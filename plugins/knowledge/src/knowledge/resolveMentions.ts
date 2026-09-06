@@ -1,7 +1,8 @@
 /**
  * Resolves mentions conservatively by Unicode-normalized exact title or alias equality.
  * Use before direct writes. Partial names, slug collisions and fuzzy search never authorize a match;
- * single-token people and competing exact identities remain ambiguous. This procedure never writes.
+ * single-token people and competing exact identities remain ambiguous. Anonymous types (Entity.anonymous)
+ * are never matched by label and always resolve as new. This procedure never writes.
  * @param opts.mentions Typed mentions to compare with canonical names and aliases.
  * @param opts.minScore Minimum candidate score; cannot promote uncertain candidates. @default 0.3
  */
@@ -11,8 +12,13 @@ export default async function (ctx: Context, _session: Session | null, opts: {
 }): Promise<Array<{ mention: types.knowledge.Mention; resolution: types.knowledge.MentionResolution }>> {
     if (!Array.isArray(opts.mentions) || opts.mentions.length > 40) throw new Error("Expected at most 40 mentions");
     const norm = (s: string) => s.normalize("NFKC").toLocaleLowerCase("und").replace(/\s+/gu, " ").trim();
-    const rows = await ctx.fns.procs.db.select({ sql: "SELECT id,type,data FROM knowledge.entities WHERE type IN ('Person','Organization','Product','Concept','Standard')", params: [] });
+    const schema = await ctx.fns.knowledge.extractionSchema({});
+    const extractable = new Set(schema.types.map(t => t.type));
+    const anonymous = new Set(schema.types.filter(t => t.anonymous).map(t => t.type));
+    if (opts.mentions.some(m => !extractable.has(m.type))) throw new Error("Unsupported mention type");
+    const rows = extractable.size ? await ctx.fns.procs.db.select({ sql: `SELECT id,type,data FROM knowledge.entities WHERE type IN (${[...extractable].map(() => "?").join(",")})`, params: [...extractable] }) : [];
     return opts.mentions.map(mention => {
+        if (anonymous.has(mention.type)) return { mention, resolution: { status: "new" as const, candidates: [] } };
         const names = [mention.name, ...(mention.aliases ?? [])].map(norm).filter(Boolean);
         const candidates: types.knowledge.MentionResolution["candidates"] = [];
         for (const row of rows) {

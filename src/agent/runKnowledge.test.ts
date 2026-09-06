@@ -70,7 +70,7 @@ describe('Knowledge completed-turn hook (isolated)', () => {
         const parent: any = { id: 'p', scratchpad: { knowledgeSidecar: { status: 'error', appliedSourceMessageIdx: 1, lastSuccessfulMessageIdx: 0, sourceMessageIdx: 9 } } };
         const child: any = { id: 'c' }; let requested: any; let archived = false;
         const ctx: any = { fns: {
-            procs: { db: { select: async () => [] } },
+            procs: { db: { select: async () => [] } }, knowledge: { extractionSchema: async () => ({ types: [], attributes: [], vocabularies: {} }) },
             session: { getMessages: async (o: any) => { requested = o; return [{ idx: 1, role: 'user', content: 'old' }, { idx: 2, role: 'tool', content: 'tool evidence' }, { idx: 4, role: 'user', content: 'future' }]; },
                 fork: async () => child, save: async () => {}, mutateScratchpad: async ({ mutate }: any) => ({ result: mutate(parent.scratchpad, 123), scratchpad: parent.scratchpad }), archive: async () => { archived = true; } },
             settings: { getNumber: async () => 1000 }, agent: { run: async () => { throw new Error('extraction failed'); } }, events: { refreshAgentMeta: () => {} },
