@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import home from "./home";
+import home from "./render";
 
 describe("home", () => {
     test("renders first-run checklist and links", async () => {

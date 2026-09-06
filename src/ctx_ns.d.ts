@@ -6,9 +6,6 @@ declare global {
     type Context = import("./Context").Context;
 
     interface FnsRegistry {
-        ".": {
-            home: Injected<typeof import("./home").default>;
-        };
         agent: {
             acceptMessage: Injected<typeof import("./agent/acceptMessage").default>;
             archiveCompleted: Injected<typeof import("./agent/archiveCompleted").default>;
@@ -437,6 +434,9 @@ declare global {
             resolveDocument: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/resolveDocument").default>;
             sleep: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/sleep").default>;
             validateForm: Injected<typeof import("../../.hyper/user/healthrepo/src/healthrepo/validateForm").default>;
+        };
+        home: {
+            render: Injected<typeof import("./home/render").default>;
         };
         knowledge: {
             agentMetaSection: Injected<typeof import("../plugins/knowledge/src/knowledge/agentMetaSection").default>;
@@ -924,15 +924,19 @@ declare global {
             encryptLocal: Injected<typeof import("./secrets/encryptLocal").default>;
             get: Injected<typeof import("./secrets/get").default>;
             getLocal: Injected<typeof import("./secrets/getLocal").default>;
+            parseRef: Injected<typeof import("./secrets/parseRef").default>;
             prompt: Injected<typeof import("./secrets/prompt").default>;
             putLocal: Injected<typeof import("./secrets/putLocal").default>;
             resolve: Injected<typeof import("./secrets/resolve").default>;
             resolveSetting: Injected<typeof import("./secrets/resolveSetting").default>;
+            set: Injected<typeof import("./secrets/set").default>;
         };
         secureInput: {
+            cancel: Injected<typeof import("./secureInput/cancel").default>;
             current: Injected<typeof import("./secureInput/current").default>;
             prompt: Injected<typeof import("./secureInput/prompt").default>;
             render: Injected<typeof import("./secureInput/render").default>;
+            request: Injected<typeof import("./secureInput/request").default>;
             submit: Injected<typeof import("./secureInput/submit").default>;
         };
         session: {
