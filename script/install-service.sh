@@ -51,13 +51,22 @@ esac
 [ -n "$BUN" ] || { echo "не найден bun в PATH" >&2; exit 1; }
 mkdir -p "$HOME/Library/LaunchAgents" "$ROOT/.runtime"
 
-# A server started by hand on the same port would fight the service for it.
+# Refuse to kill an unrelated application. An already-installed Hyper service
+# is stopped through launchd; the old tmux process is only removed when its cwd
+# and command identify this checkout.
+launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
 existing="$(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
 if [ -n "$existing" ]; then
-    echo "порт $PORT занят процессом $existing — останавливаю перед установкой"
+    cwd="$(lsof -a -p "$existing" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1)"
+    command="$(ps -o command= -p "$existing" 2>/dev/null || true)"
+    if [ "$cwd" != "$ROOT" ] || [[ "$command" != *"src/\$main.ts"* ]]; then
+        echo "порт $PORT занят посторонним процессом $existing ($command, cwd=$cwd); ничего не останавливаю" >&2
+        exit 1
+    fi
+    echo "останавливаю прежний Hyper PID $existing"
     kill "$existing" 2>/dev/null || true
-    sleep 2
-    kill -9 "$existing" 2>/dev/null || true
+    for _ in $(seq 1 20); do kill -0 "$existing" 2>/dev/null || break; sleep 0.25; done
+    if kill -0 "$existing" 2>/dev/null; then kill -9 "$existing"; fi
 fi
 # The tmux session this repo used before the service existed.
 tmux kill-session -t hyperd 2>/dev/null || true
@@ -72,7 +81,7 @@ cat > "$PLIST" <<PLIST_EOF
     <key>ProgramArguments</key>
     <array>
         <string>$BUN</string>
-        <string>src/\$main.ts</string>
+        <string>script/run-service.ts</string>
     </array>
 
     <key>WorkingDirectory</key><string>$ROOT</string>
@@ -96,11 +105,10 @@ cat > "$PLIST" <<PLIST_EOF
     <key>ThrottleInterval</key><integer>10</integer>
     <key>ProcessType</key><string>Interactive</string>
 
-    <!-- The log no longer depends on how the server was started: no tee, no
-         tmux pane to lose. stderr is separate so a stack trace is not buried
-         in request lines. -->
-    <key>StandardOutPath</key><string>$ROOT/.runtime/server.log</string>
-    <key>StandardErrorPath</key><string>$ROOT/.runtime/server.error.log</string>
+    <!-- run-service.ts owns bounded application logs; these files only capture
+         wrapper failures before it can start. -->
+    <key>StandardOutPath</key><string>$ROOT/.runtime/service.out.log</string>
+    <key>StandardErrorPath</key><string>$ROOT/.runtime/service.error.log</string>
 </dict>
 </plist>
 PLIST_EOF
@@ -109,10 +117,17 @@ launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
 launchctl bootstrap "$DOMAIN" "$PLIST"
 launchctl enable "$DOMAIN/$LABEL"
 
+ready=0
 printf 'жду ответа сервера'
 for _ in $(seq 1 30); do
-    if curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT/"; then echo; break; fi
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "http://127.0.0.1:$PORT/" || true)"
+    if [[ "$code" =~ ^[1-5][0-9][0-9]$ ]]; then ready=1; echo; break; fi
     printf '.'; sleep 2
 done
-echo
+if [ "$ready" -ne 1 ]; then
+    echo
+    echo "Hyper не ответил за 60 секунд" >&2
+    status
+    exit 1
+fi
 status
