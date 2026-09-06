@@ -24,7 +24,7 @@ parameters:
         type: string
     secrets:
       type: object
-      description: "Secret environment variables. Values must be op:// or env:// references; resolved values are redacted from output."
+      description: "Secret environment variables. Values must be op://, env:// or secret://namespace/name references (the latter written by secrets.set or secureInput.prompt({ saveAs })); resolved values are redacted from output."
       additionalProperties:
         type: string
     timeout:
@@ -36,7 +36,7 @@ parameters:
 ### `§bash`
 
 - Runs the body as a shell script via `bash -c`, in the workspace directory.
-- `secrets` maps environment variable names to `op://` or `env://` references. Values are injected only into the child process and redacted from captured output.
+- `secrets` maps environment variable names to `op://`, `env://` or `secret://namespace/name` references. Values are injected only into the child process and redacted from captured output. A `secret://` entry is created with `secureInput.prompt({ title, saveAs: "secret://ns/name" })` (the human types it, the model only sees the reference) or `secrets.set({ ref, value })`.
 - stdout comes back as the result; a non-zero exit returns `[exit N]` with stderr.
 
 Example:

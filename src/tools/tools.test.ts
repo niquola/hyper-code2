@@ -211,7 +211,7 @@ describe('bash options', () => {
             command: 'true', secrets: { TOKEN: 'plaintext' },
         } });
         expect(literal.isError).toBe(true);
-        expect(literal.output).toContain('must be an op:// or env:// reference');
+        expect(literal.output).toContain('must be an op://, env:// or secret:// reference');
 
         const badName = await ctx.fns.tools.call({ name: 'bash', args: {
             command: 'true', secrets: { 'BAD-NAME': 'env://TOKEN' },

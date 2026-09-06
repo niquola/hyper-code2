@@ -11,7 +11,7 @@ export default async function (
         cwd?: string;
         /** Additional environment variables. */
         env?: Record<string, string>;
-        /** Secret references exposed as environment variables. */
+        /** Secret references (op://, env:// or secret://namespace/name) exposed as environment variables; values are redacted from output. */
         secrets?: Record<string, string>;
         /** Timeout in seconds. */
         timeout?: number;
@@ -22,8 +22,8 @@ export default async function (
 
     for (const [name, ref] of Object.entries(opts.secrets ?? {})) {
         if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error(`invalid secret environment variable: ${name}`);
-        if (!ref.startsWith("op://") && !ref.startsWith("env://")) {
-            throw new Error(`secret ${name} must be an op:// or env:// reference`);
+        if (!ref.startsWith("op://") && !ref.startsWith("env://") && !ref.startsWith("secret://")) {
+            throw new Error(`secret ${name} must be an op://, env:// or secret:// reference`);
         }
         const value = await ctx.fns.secrets.get({ ref });
         if (!value) throw new Error(`secret ${name} could not be resolved`);
